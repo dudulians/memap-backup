@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MeMap</string>
+    <string name="title_activity_main">MeMap</string>
+    <string name="package_name">com.uliana.memap</string>
+    <string name="custom_url_scheme">com.uliana.memap</string>
+</resources>

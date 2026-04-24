@@ -1,0 +1,562 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium Design System for MeMap — "Botanica" palette
+   Warm cream canvas · sage · terracotta · night-sky · ochre
+   All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Botanica — warm cream canvas */
+    --background: 43 40% 97%;           /* #FBF8F2 cream */
+    --foreground: 30 10% 16%;            /* #2C2A26 graphite */
+
+    --card: 43 50% 99%;                  /* near-white cream */
+    --card-foreground: 30 10% 16%;
+
+    --popover: 43 50% 99%;
+    --popover-foreground: 30 10% 16%;
+
+    --primary: 12 55% 62%;               /* warm coral — softer, inviting */
+    --primary-foreground: 43 50% 99%;
+
+    --secondary: 41 25% 92%;             /* warm beige */
+    --secondary-foreground: 30 10% 16%;
+
+    --muted: 41 20% 93%;                 /* soft beige */
+    --muted-foreground: 30 8% 45%;
+
+    --accent: 41 35% 88%;                /* warm highlight */
+    --accent-foreground: 30 10% 16%;
+
+    --destructive: 8 55% 55%;            /* muted red for destructive actions only */
+    --destructive-foreground: 43 50% 99%;
+
+    --border: 40 15% 86%;                /* warm border */
+    --input: 40 15% 86%;
+    --ring: 12 55% 62%;
+
+    /* Life Stream Colors - Premium Pastels */
+    --emotions: 0 50% 80%;
+    --emotions-secondary: 340 45% 75%;
+    --emotions-gradient: linear-gradient(135deg, hsl(0 50% 80%), hsl(340 45% 75%));
+    
+    --body: 150 45% 75%;
+    --body-secondary: 160 40% 70%;
+    --body-gradient: linear-gradient(135deg, hsl(150 45% 75%), hsl(160 40% 70%));
+    
+    --connections: 15 75% 78%;
+    --connections-secondary: 20 70% 73%;
+    --connections-gradient: linear-gradient(135deg, hsl(15 75% 78%), hsl(20 70% 73%));
+    
+    --voice: 45 80% 73%;
+    --voice-secondary: 40 75% 68%;
+    --voice-gradient: linear-gradient(135deg, hsl(45 80% 73%), hsl(40 75% 68%));
+    
+    --health: 190 50% 75%;
+    --health-secondary: 195 45% 70%;
+    --health-gradient: linear-gradient(135deg, hsl(190 50% 75%), hsl(195 45% 70%));
+    
+    --curious: 270 45% 80%;
+    --curious-secondary: 265 40% 75%;
+    --curious-gradient: linear-gradient(135deg, hsl(270 45% 80%), hsl(265 40% 75%));
+    
+    --fun: 290 40% 78%;
+    --fun-secondary: 285 35% 73%;
+    --fun-gradient: linear-gradient(135deg, hsl(290 40% 78%), hsl(285 35% 73%));
+    
+    --social: 215 65% 78%;
+    --social-secondary: 220 60% 73%;
+    --social-gradient: linear-gradient(135deg, hsl(215 65% 78%), hsl(220 60% 73%));
+
+    /* Legacy mappings for backwards compatibility */
+    --mood: 0 50% 80%;
+    --mood-foreground: 0 50% 25%;
+    --mood-secondary: 340 45% 75%;
+    
+    --relationships: 15 75% 78%;
+    --relationships-foreground: 15 75% 25%;
+    --relationships-secondary: 20 70% 73%;
+    
+    --work: 45 80% 73%;
+    --work-foreground: 45 80% 25%;
+    --work-secondary: 40 75% 68%;
+    
+    --custom: 270 45% 80%;
+    --custom-foreground: 270 45% 25%;
+    --custom-secondary: 265 40% 75%;
+    
+    /* Pattern status colors — Botanica (soft & warm) */
+    --balanced: 125 28% 72%;             /* soft sage — "calm, ok" */
+    --balanced-foreground: 125 25% 22%;
+    --emerging: 38 62% 72%;              /* warm sand — "building up" */
+    --emerging-foreground: 30 35% 22%;
+    --strong: 10 60% 74%;                /* dusty coral — "signal" (soft, not alarming) */
+    --strong-foreground: 10 45% 25%;
+    --untracked: 40 20% 94%;             /* warm light beige */
+    --untracked-foreground: 30 8% 55%;
+
+    /* Reflection note accent */
+    --note: 210 31% 42%;                 /* #4A6B8A night-sky blue */
+
+    --radius: 1.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* ---------- Aurora theme: airy teal/indigo, glass, neon accents ---------- */
+  [data-theme="aurora"] {
+    --background: 200 40% 40%;          /* bright teal */
+    --foreground: 0 0% 100%;            /* pure white for max contrast */
+
+    --card: 195 30% 45%;                 /* glass base (further blended with alpha) */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 195 30% 45%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 172 85% 60%;              /* neon mint/teal */
+    --primary-foreground: 210 55% 10%;
+
+    --secondary: 200 30% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 200 25% 50%;
+    --muted-foreground: 195 30% 94%;
+
+    --accent: 172 70% 55%;
+    --accent-foreground: 195 80% 15%;
+
+    --destructive: 0 75% 65%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 195 30% 65%;
+    --input: 195 30% 65%;
+    --ring: 172 85% 60%;
+
+    /* Pattern status — aurora signals (brighter) */
+    --balanced: 160 70% 55%;
+    --balanced-foreground: 160 80% 12%;
+    --emerging: 45 90% 62%;
+    --emerging-foreground: 45 90% 15%;
+    --strong: 350 80% 68%;
+    --strong-foreground: 350 85% 18%;
+    --untracked: 200 22% 55%;
+    --untracked-foreground: 195 30% 94%;
+
+    --note: 190 80% 72%;
+  }
+
+  /* ---------- Aurora Light: white/airy with mint & sky accents ---------- */
+  [data-theme="aurora-light"] {
+    --background: 200 45% 97%;          /* near-white cool */
+    --foreground: 205 40% 18%;          /* deep teal ink */
+
+    --card: 200 50% 99%;
+    --card-foreground: 205 40% 18%;
+
+    --popover: 200 50% 99%;
+    --popover-foreground: 205 40% 18%;
+
+    --primary: 172 70% 42%;              /* deeper mint for contrast on white */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 40% 94%;
+    --secondary-foreground: 205 40% 18%;
+
+    --muted: 200 35% 94%;
+    --muted-foreground: 205 20% 45%;
+
+    --accent: 172 55% 50%;
+    --accent-foreground: 205 40% 15%;
+
+    --destructive: 350 70% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 30% 88%;
+    --input: 200 30% 88%;
+    --ring: 172 70% 42%;
+
+    /* Pattern status — aurora light: lighter bg + dark text so both opaque & tinted uses work */
+    --balanced: 160 55% 65%;
+    --balanced-foreground: 160 70% 18%;
+    --emerging: 38 85% 70%;
+    --emerging-foreground: 35 80% 18%;
+    --strong: 350 75% 72%;
+    --strong-foreground: 350 70% 25%;
+    --untracked: 200 30% 92%;
+    --untracked-foreground: 205 20% 45%;
+
+    --note: 190 70% 40%;
+  }
+
+  .dark {
+    --background: 222 20% 10%;
+    --foreground: 210 40% 98%;
+    --card: 222 20% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 20% 12%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 280 40% 65%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 280 40% 65%;
+    
+    --emotions: 0 40% 60%;
+    --emotions-secondary: 340 35% 55%;
+    --body: 150 35% 55%;
+    --body-secondary: 160 30% 50%;
+    --connections: 15 65% 58%;
+    --connections-secondary: 20 60% 53%;
+    --voice: 45 70% 53%;
+    --voice-secondary: 40 65% 48%;
+    --health: 190 40% 55%;
+    --health-secondary: 195 35% 50%;
+    --curious: 270 35% 60%;
+    --curious-secondary: 265 30% 55%;
+    --fun: 290 30% 58%;
+    --fun-secondary: 285 25% 53%;
+    --social: 215 55% 58%;
+    --social-secondary: 220 50% 53%;
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply text-foreground;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #FBF8F2 0%, #F4EFE6 100%);
+    background-attachment: fixed;
+    letter-spacing: 0.01em;
+  }
+
+  /* Serif for numerals & prominent headings — premium feel */
+  .font-serif-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.01em;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  
+  /* Subtle noise texture for warmth */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .dark body {
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  }
+
+  /* Aurora Light — white canvas with soft sky/mint orbs */
+  [data-theme="aurora-light"] body {
+    background:
+      radial-gradient(120% 70% at 10% 0%, rgba(186, 230, 253, 0.55) 0%, transparent 55%),
+      radial-gradient(90% 60% at 95% 15%, rgba(167, 243, 208, 0.55) 0%, transparent 50%),
+      radial-gradient(80% 60% at 50% 95%, rgba(199, 210, 254, 0.55) 0%, transparent 55%),
+      linear-gradient(180deg, #f6fbfd 0%, #eef6fa 50%, #e8f4f1 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+  }
+  [data-theme="aurora-light"] body::before {
+    display: none;
+  }
+
+  /* Aurora — airy gradient with glowing orbs */
+  [data-theme="aurora"] body {
+    background:
+      radial-gradient(120% 70% at 10% 0%, rgba(186, 230, 253, 0.55) 0%, transparent 55%),
+      radial-gradient(90% 60% at 95% 15%, rgba(110, 231, 183, 0.45) 0%, transparent 50%),
+      radial-gradient(80% 60% at 50% 95%, rgba(165, 180, 252, 0.50) 0%, transparent 55%),
+      linear-gradient(180deg, #3a7a96 0%, #4a8fa3 40%, #4fa89e 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+  }
+
+  /* Remove the warm noise texture under aurora — the gradient is the hero */
+  [data-theme="aurora"] body::before {
+    display: none;
+  }
+
+  /* Aurora typography — modern sans everywhere, no serif numerals */
+  [data-theme="aurora"],
+  [data-theme="aurora-light"] {
+    letter-spacing: 0.005em;
+  }
+  [data-theme="aurora"] h1,
+  [data-theme="aurora"] h2,
+  [data-theme="aurora"] h3,
+  [data-theme="aurora"] h4,
+  [data-theme="aurora-light"] h1,
+  [data-theme="aurora-light"] h2,
+  [data-theme="aurora-light"] h3,
+  [data-theme="aurora-light"] h4 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  /* Kill serif display on both aurora variants — numerals & headings should feel modern */
+  html[data-theme="aurora"] .font-serif,
+  html[data-theme="aurora"] .font-serif-display,
+  html[data-theme="aurora"] .italic,
+  html[data-theme="aurora-light"] .font-serif,
+  html[data-theme="aurora-light"] .font-serif-display,
+  html[data-theme="aurora-light"] .italic {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+    font-style: normal !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  
+  .font-playful {
+    font-family: 'Nunito', 'DM Sans', sans-serif;
+  }
+  
+  /* Hide scrollbar for horizontal scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Premium Card Styles */
+  .card-premium {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 1.5rem;
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.04), 0 2px 8px -2px rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .card-premium:hover {
+    box-shadow: 0 6px 30px -4px rgba(0, 0, 0, 0.06), 0 3px 10px -2px rgba(0, 0, 0, 0.03);
+  }
+  
+  .dark .card-premium {
+    background: rgba(34, 34, 34, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="aurora-light"] .card-premium {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.65) 100%
+    );
+    backdrop-filter: blur(24px) saturate(1.3);
+    -webkit-backdrop-filter: blur(24px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 8px 32px -4px rgba(30, 90, 120, 0.12),
+      0 2px 8px -2px rgba(30, 90, 120, 0.06),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+  }
+  [data-theme="aurora-light"] .card-premium:hover {
+    border-color: rgba(94, 234, 212, 0.45);
+    box-shadow:
+      0 12px 40px -4px rgba(30, 90, 120, 0.16),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  }
+
+  [data-theme="aurora"] .card-premium {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(255, 255, 255, 0.18) 100%
+    );
+    backdrop-filter: blur(24px) saturate(1.4);
+    -webkit-backdrop-filter: blur(24px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 8px 32px -4px rgba(15, 40, 60, 0.22),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+  }
+  [data-theme="aurora"] .card-premium:hover {
+    border-color: rgba(255, 255, 255, 0.45);
+    box-shadow:
+      0 12px 40px -4px rgba(15, 40, 60, 0.28),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.30);
+  }
+  
+  /* Floating Navigation */
+  .nav-floating {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    margin: 0 1rem 1rem 1rem;
+  }
+  
+  .dark .nav-floating {
+    background: rgba(34, 34, 34, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  [data-theme="aurora-light"] .nav-floating {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 -4px 24px rgba(30, 90, 120, 0.1);
+  }
+
+  [data-theme="aurora"] .nav-floating {
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+      0 -4px 24px rgba(0, 0, 0, 0.25),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+  
+  /* Breathing Space */
+  .breathing-space {
+    padding: 1.25rem;
+  }
+  
+  /* Animations */
+  .animate-fade-in {
+    animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .animate-glow {
+    animation: glow 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .animate-sparkle {
+    animation: sparkle 0.3s ease-out;
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-gentle {
+    animation: pulseGentle 2s ease-in-out infinite;
+  }
+  
+  /* Breathing Space */
+  .breathing-space {
+    padding: 1.5rem;
+  }
+  
+  @media (min-width: 768px) {
+    .breathing-space {
+      padding: 2rem;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    }
+    50% {
+      box-shadow: 0 4px 32px rgba(233, 166, 166, 0.3);
+    }
+  }
+  
+  @keyframes sparkle {
+    0% {
+      opacity: 0;
+      transform: scale(0.8) translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1) translateY(-8px);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.8) translateY(-16px);
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+  
+  @keyframes pulseGentle {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+}
