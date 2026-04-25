@@ -4,7 +4,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -28,6 +28,12 @@ import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
 import { DateSelector } from "./DateSelector";
+import {
+  getNotificationSettings,
+  saveNotificationSettings,
+  scheduleNotification,
+  requestNotificationPermissionDetailed,
+} from "@/lib/notifications";
 
 import { SwipeableTrackerCard } from "./SwipeableTrackerCard";
 import { calculateStreak, isStreakMilestone } from "@/lib/streaks";
@@ -73,6 +79,15 @@ export const TodayTab = () => {
     return () => window.removeEventListener("memap-language-changed", handler);
   }, []);
   const [ideasDismissed, setIdeasDismissed] = useState(() => localStorage.getItem("memap_ideas_dismissed") === "true");
+  // Notification opt-in banner. Shows when notifs aren't enabled and the
+  // user hasn't dismissed the prompt. Hidden forever after dismiss —
+  // they can still enable from Settings → Daily Reminders.
+  const [notifBannerDismissed, setNotifBannerDismissed] = useState(
+    () => localStorage.getItem("memap_notif_banner_dismissed") === "true"
+  );
+  const [notifsEnabled, setNotifsEnabled] = useState(
+    () => getNotificationSettings().enabled
+  );
 
   useEffect(() => {
     const sync = () => setIdeasDismissed(localStorage.getItem("memap_ideas_dismissed") === "true");
@@ -257,6 +272,48 @@ export const TodayTab = () => {
            !t.archived
     );
     return duplicate || null;
+  };
+
+  // Enable daily reminders inline from the Cards-screen banner. Asks
+  // for permission, saves the default 20:00 time + enabled flag, and
+  // schedules. On failure, surfaces a toast and leaves the banner so
+  // the user can try again or go to Settings.
+  const handleEnableNotifs = async () => {
+    const result = await requestNotificationPermissionDetailed();
+    if (!result.granted) {
+      const messages: Record<string, { title: string; description: string }> = {
+        "insecure-origin": {
+          title: t("permissions.insecureOriginTitle"),
+          description: t("permissions.insecureOriginDesc"),
+        },
+        unsupported: {
+          title: t("permissions.unsupportedTitle"),
+          description: t("permissions.unsupportedDesc"),
+        },
+        denied: {
+          title: t("permissions.deniedTitle"),
+          description: t("permissions.deniedDesc"),
+        },
+        unknown: {
+          title: t("permissions.unknownTitle"),
+          description: t("permissions.unknownDesc"),
+        },
+      };
+      const msg = messages[result.reason ?? "unknown"] ?? messages.unknown;
+      toast({ ...msg, variant: "destructive" });
+      return;
+    }
+    const current = getNotificationSettings();
+    const next = { ...current, enabled: true };
+    saveNotificationSettings(next);
+    scheduleNotification(next);
+    setNotifsEnabled(true);
+    toast({ title: t("today.notifBannerEnabled") });
+  };
+
+  const handleDismissNotifBanner = () => {
+    localStorage.setItem("memap_notif_banner_dismissed", "true");
+    setNotifBannerDismissed(true);
   };
 
   const handleDismissIdeas = () => {
@@ -599,6 +656,41 @@ export const TodayTab = () => {
           </div>
         )}
       </div>
+
+      {/* Notif opt-in banner — shown only when reminders are off and
+          the user hasn't dismissed the prompt. Tucked between the
+          header and Ideas of the Day so it gets noticed without
+          dominating the page. */}
+      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && (
+        <div className="card-premium p-3 flex items-start gap-3 animate-fade-in">
+          <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Bell className="h-4 w-4" strokeWidth={1.75} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-snug">
+              {t("today.notifBannerTitle")}
+            </p>
+            <p className="text-xs text-muted-foreground leading-snug mt-0.5">
+              {t("today.notifBannerBody")}
+            </p>
+            <div className="flex items-center gap-1.5 mt-2">
+              <Button
+                size="sm"
+                onClick={handleEnableNotifs}
+                className="rounded-full h-7 px-3 text-xs"
+              >
+                {t("today.notifBannerEnable")}
+              </Button>
+              <button
+                onClick={handleDismissNotifBanner}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors px-2 py-1"
+              >
+                {t("today.notifBannerDismiss")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ideas of the Day Banner */}
       {randomIdeas.length > 0 && !ideasDismissed && (
