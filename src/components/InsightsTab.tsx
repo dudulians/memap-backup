@@ -278,7 +278,7 @@ export const InsightsTab = () => {
 
               {stats.status === "warning" && (
                 <div 
-                  className="p-3 rounded-lg border-l-4"
+                  className="p-3 rounded-2xl border-l-4"
                   style={{ 
                     backgroundColor: "hsl(var(--destructive) / 0.1)",
                     borderLeftColor: "hsl(var(--destructive))"

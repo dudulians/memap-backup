@@ -563,7 +563,7 @@ export const OverviewCard = ({
               left, action buttons on the right. Saves vertical space so
               the calendar above stays visible without scrolling. */}
           {multiSelectMode && selectedDates.size > 0 && (
-            <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2 animate-fade-in">
+            <div className="flex items-center gap-2 bg-muted/40 rounded-2xl px-3 py-2 animate-fade-in">
               <p className="text-[11px] font-medium text-muted-foreground flex-shrink-0">
                 {selectedDates.size === 1 ? t("overview.datesSelectedOne") : t("overview.datesSelectedMany", { count: selectedDates.size })}
               </p>
@@ -647,7 +647,7 @@ export const OverviewCard = ({
             {notesForSelectedDate.slice(0, 2).map(note => (
               <div
                 key={note.id}
-                className="p-3 rounded-xl bg-muted/40 border border-border/60 cursor-pointer hover:bg-muted/60 transition-colors"
+                className="p-3 rounded-2xl bg-muted/40 border border-border/60 cursor-pointer hover:bg-muted/60 transition-colors"
                 onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
               >
                 <p className="text-xs text-foreground/80 line-clamp-2">{note.text}</p>
