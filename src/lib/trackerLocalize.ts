@@ -1,5 +1,6 @@
 import { LIFE_STREAMS, TRENDING_TEMPLATES_SOURCE } from "./lifeStreams";
 import { getLanguage } from "./i18n";
+import { polishRu, getPol } from "./genderPolish";
 
 /**
  * Display-time English → Russian mapping for tracker titles & question text.
@@ -214,11 +215,16 @@ const getMap = (): LookupMaps => {
 
 // Generic lookup for the active language. Picks the right direction map and
 // passes the input through unchanged if no translation exists (custom text).
+// When the active language is Russian, the result is also run through
+// polishRu so bracketed gender suffixes (e.g. "сделал(а)") resolve to the
+// user's actual `pol`. Custom user-typed strings still pass through both
+// stages — no map hit + polishRu is a no-op for text without brackets.
 const lookup = (m: DirectionalMap, input: string): string => {
   if (!input) return input;
   const lang = getLanguage();
   const dir = lang === "ru" ? m.enToRu : m.ruToEn;
-  return dir.get(input) ?? input;
+  const out = dir.get(input) ?? input;
+  return lang === "ru" ? polishRu(out, getPol()) : out;
 };
 
 export const localizeTrackerTitle = (title: string): string =>

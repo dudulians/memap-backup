@@ -246,10 +246,21 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   // Update one or more answer fields and persist. Spreads the new patch
   // over the existing answers so we never lose previous selections when
   // the user advances through the interview.
+  //
+  // When `pol` changes we dispatch `memap-pol-changed` so anything that
+  // caches the user's gender (e.g. the i18n polishRu post-processor)
+  // can invalidate and re-render gender-correct copy on the next tick.
   const patchAnswers = useCallback((patch: Partial<InterviewAnswers>) => {
     setAnswers((prev) => {
       const next = { ...prev, ...patch };
       writeInterview(next);
+      if (Object.prototype.hasOwnProperty.call(patch, "pol")) {
+        try {
+          window.dispatchEvent(new Event("memap-pol-changed"));
+        } catch {
+          // ignore — non-DOM environments
+        }
+      }
       return next;
     });
   }, []);

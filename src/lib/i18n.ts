@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import en from "@/locales/en";
 import ru from "@/locales/ru";
+import { polishRu, getPol } from "./genderPolish";
 
 // Two separate keys on purpose:
 //   LANGUAGE_KEY       — mirror of the active i18next language (may be
@@ -42,9 +43,28 @@ detector.addDetector({
   },
 });
 
+// Post-processor: resolves the bracketed gender suffixes used in Russian
+// source strings (e.g. "сделал(а)") according to the user's `pol`
+// answer captured during onboarding. English strings and Russian
+// strings without brackets pass through untouched. See
+// `src/lib/genderPolish.ts` for the full rules.
+const polishRuPostProcessor = {
+  type: "postProcessor" as const,
+  name: "polishRu",
+  process(value: string, _key: string | string[], _options: unknown, translator: { language?: string }): string {
+    if (typeof value !== "string") return value;
+    const lang = translator?.language || i18n.language;
+    if (typeof lang === "string" && lang.startsWith("ru")) {
+      return polishRu(value, getPol());
+    }
+    return value;
+  },
+};
+
 void i18n
   .use(detector)
   .use(initReactI18next)
+  .use(polishRuPostProcessor)
   .init({
     resources: {
       en: { translation: en },
@@ -53,6 +73,9 @@ void i18n
     fallbackLng: "en",
     supportedLngs: ["en", "ru"],
     interpolation: { escapeValue: false },
+    // Run polishRu after every t() lookup. It's a no-op for non-RU
+    // languages and for strings without bracket patterns.
+    postProcess: ["polishRu"],
     detection: {
       order: ["memapStorage", "navigator"],
       // No auto-cache on detection. We only want LANGUAGE_KEY + EXPLICIT_LANGUAGE_KEY
