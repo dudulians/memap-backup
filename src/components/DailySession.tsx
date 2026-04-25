@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ChevronRight, SkipForward, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
+import { X, ChevronRight, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -851,29 +851,29 @@ export const DailySession = ({
         </div>
       </div>
 
-      {/* Bottom buttons */}
-      <div className="p-4 space-y-3 flex-shrink-0 bg-background border-t">
+      {/* Bottom buttons — slimmed so the card area gets more vertical
+          room. Skip is a tiny inline text link instead of a full-width
+          button (it's already discoverable via swipe-down + the in-card
+          hint). No/Yes get default-size pills. */}
+      <div className="px-4 pt-2 pb-3 flex-shrink-0 bg-background border-t">
         <div className="grid grid-cols-2 gap-3">
           <Button
-            variant="outline"
-            size="lg"
             onClick={() => handleAnswer(false)}
             disabled={isAnimating}
             className={cn(
-              "rounded-full border-2",
+              "rounded-full border-2 h-10",
               noColorClass === "strong"
-                ? "border-strong/50 hover:bg-strong/10 text-strong"
-                : "border-balanced/60 hover:bg-balanced/10 text-balanced"
+                ? "bg-transparent border-strong/50 hover:bg-strong/10 text-strong"
+                : "bg-transparent border-balanced/60 hover:bg-balanced/10 text-balanced"
             )}
           >
             {t("common.no")}
           </Button>
           <Button
-            size="lg"
             onClick={() => handleAnswer(true)}
             disabled={isAnimating}
             className={cn(
-              "rounded-full",
+              "rounded-full h-10",
               yesColorClass === "strong"
                 ? "bg-strong hover:bg-strong/90 text-strong-foreground"
                 : "bg-balanced hover:bg-balanced/90 text-balanced-foreground"
@@ -882,15 +882,14 @@ export const DailySession = ({
             {t("common.yes")}
           </Button>
         </div>
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={handleSkip}
           disabled={isAnimating}
-          className="w-full text-muted-foreground"
+          className="block mx-auto mt-1.5 text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
         >
-          <SkipForward className="h-4 w-4 mr-2" />
           {t("dailySession.skipQuestion")}
-        </Button>
+        </button>
       </div>
     </div>
   );
