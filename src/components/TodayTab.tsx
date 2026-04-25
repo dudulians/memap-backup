@@ -546,15 +546,11 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Header row: title, streak chip, "+ Add", "Notes" link.
-          Cards screen replaces what used to be Today tab. The big "session
-          card" and "Yes/No buttons per tracker" are gone — those live
-          exclusively in the session reachable via the bottom-nav ▶. */}
+      {/* Header row: action buttons + streak. The bottom nav already
+          says "Карточки" so we don't repeat it as a heading — that was
+          chrome the user explicitly disliked. */}
       <div className="animate-fade-in space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xl font-serif font-medium tracking-tight">
-            {t("common.cards")}
-          </h2>
+        <div className="flex items-center justify-end gap-2">
           <div className="flex items-center gap-1.5">
             {/* Always-accessible Random Play — opens the session in play
                 mode straight away, no need to wait for the Done screen. */}

@@ -232,8 +232,8 @@ const Index = () => {
             <button
               onClick={() => { setActiveTab("cards"); setNotesSourceTab(null); }}
               className={`
-                flex flex-col items-center justify-center py-3 px-2 transition-all duration-300 rounded-xl mx-1
-                ${activeTab === "cards" ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground"}
+                flex flex-col items-center justify-center py-3 px-2 transition-all duration-300
+                ${activeTab === "cards" ? "text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}
               `}
             >
               <Layers className="h-5 w-5 mb-0.5" />
@@ -246,8 +246,8 @@ const Index = () => {
             <button
               onClick={() => { setActiveTab("patterns"); setNotesSourceTab(null); }}
               className={`
-                flex flex-col items-center justify-center py-3 px-2 transition-all duration-300 rounded-xl mx-1
-                ${activeTab === "patterns" ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground"}
+                flex flex-col items-center justify-center py-3 px-2 transition-all duration-300
+                ${activeTab === "patterns" ? "text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"}
               `}
             >
               <TrendingUp className="h-5 w-5 mb-0.5" />
