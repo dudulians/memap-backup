@@ -558,19 +558,21 @@ export const OverviewCard = ({
             ))}
           </div>
 
-          {/* Bulk edit panel */}
+          {/* Bulk edit panel — compact one-line layout: count on the
+              left, action buttons on the right. Saves vertical space so
+              the calendar above stays visible without scrolling. */}
           {multiSelectMode && selectedDates.size > 0 && (
-            <div className="bg-muted/50 rounded-xl p-3 space-y-2 animate-fade-in">
-              <p className="text-xs font-medium text-center">
+            <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2 animate-fade-in">
+              <p className="text-[11px] font-medium text-muted-foreground flex-shrink-0">
                 {selectedDates.size === 1 ? t("overview.datesSelectedOne") : t("overview.datesSelectedMany", { count: selectedDates.size })}
               </p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex items-center gap-1.5 ml-auto">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleBulkAction(false)}
                   className={cn(
-                    "h-8 text-xs rounded-full text-white",
+                    "h-7 px-3 text-xs rounded-full text-white",
                     activeTracker.problemWhen === "yes"
                       ? "bg-balanced hover:bg-balanced/90"
                       : "bg-strong hover:bg-strong/90"
@@ -583,7 +585,7 @@ export const OverviewCard = ({
                   size="sm"
                   onClick={() => handleBulkAction(true)}
                   className={cn(
-                    "h-8 text-xs rounded-full text-white",
+                    "h-7 px-3 text-xs rounded-full text-white",
                     activeTracker.problemWhen === "yes"
                       ? "bg-strong hover:bg-strong/90"
                       : "bg-balanced hover:bg-balanced/90"
@@ -592,10 +594,10 @@ export const OverviewCard = ({
                   {t("common.yes")}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={() => handleBulkAction(null)}
-                  className="h-8 text-xs rounded-full"
+                  className="h-7 px-2 text-xs rounded-full text-muted-foreground hover:text-foreground"
                 >
                   {t("common.clear")}
                 </Button>

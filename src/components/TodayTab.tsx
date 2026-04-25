@@ -94,6 +94,10 @@ export const TodayTab = () => {
   // templates, saved as source="play" trackers). Reset after the session
   // closes so the next manual ▶ tap goes back to normal mode.
   const [playMode, setPlayMode] = useState(false);
+  // Nonce that bumps every time the user starts a new play round. Used
+  // as part of DailySession's `key` so a fresh deck is built even when
+  // the user re-enters play mode while playMode was already true.
+  const [playRoundNonce, setPlayRoundNonce] = useState(0);
 
   // Selected date for viewing/editing entries (default: today)
   const [selectedDate, setSelectedDate] = useState(() => 
@@ -111,7 +115,17 @@ export const TodayTab = () => {
   // persists a change. Keeps Today's Yes/No pills in sync after edits.
   useEffect(() => {
     const sync = () => { loadData(); };
-    const openSession = () => setDailySessionOpen(true);
+    const openSession = (e: Event) => {
+      // If the open-session event carries a play-mode hint (e.g. coming
+      // back from Notes that was launched from a play round), enter play
+      // mode with a fresh nonce so a new round starts.
+      const detail = (e as CustomEvent).detail as { play?: boolean } | undefined;
+      if (detail?.play) {
+        setPlayMode(true);
+        setPlayRoundNonce((n) => n + 1);
+      }
+      setDailySessionOpen(true);
+    };
     const scrollToPlay = () => {
       // Wait a tick so trackers have re-rendered after a play round.
       setTimeout(() => {
@@ -519,14 +533,16 @@ export const TodayTab = () => {
           }}
           onDateChange={setSelectedDate}
           onPlayRandom={() => {
-            // Restart the session in play mode without unmounting it —
-            // toggling state remounts via key change below.
+            // Bump the nonce so DailySession remounts with a fresh deck
+            // even if playMode was already true (e.g. "play another round"
+            // from the play-mode Done screen).
             setPlayMode(true);
+            setPlayRoundNonce((n) => n + 1);
           }}
           playMode={playMode}
-          // Re-mount the session when playMode flips so the deck rebuilds
-          // fresh against the new mode.
-          key={playMode ? "play" : "normal"}
+          // Re-mount the session whenever play mode turns on or a new
+          // round is requested, so each round gets a fresh shuffle.
+          key={playMode ? `play-${playRoundNonce}` : "normal"}
         />
       )}
 
@@ -545,6 +561,7 @@ export const TodayTab = () => {
             <button
               onClick={() => {
                 setPlayMode(true);
+                setPlayRoundNonce((n) => n + 1);
                 setDailySessionOpen(true);
               }}
               aria-label={t("today.playRandomAria")}

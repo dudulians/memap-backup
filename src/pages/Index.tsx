@@ -74,12 +74,18 @@ const Index = () => {
 
   const [notesTargetDate, setNotesTargetDate] = useState<string | undefined>();
   const [notesSourceTab, setNotesSourceTab] = useState<Tab | null>(null);
+  // When set, the user came to Notes from the play-round Done screen.
+  // Notes back button should re-open the play session, not return to the
+  // Cards tab. Cleared once the back is taken.
+  const [notesFromPlay, setNotesFromPlay] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
-      const date = (e as CustomEvent).detail?.date as string | undefined;
+      const detail = (e as CustomEvent).detail as { date?: string; from?: string } | undefined;
+      const date = detail?.date;
       setNotesTargetDate(date);
       setNotesSourceTab((prev) => prev ?? (activeTab !== "notes" ? activeTab : null));
+      setNotesFromPlay(detail?.from === "play");
       setActiveTab("notes");
     };
     const cardsHandler = () => setActiveTab("cards");
@@ -93,8 +99,19 @@ const Index = () => {
 
   const handleNotesBack = () => {
     const target = notesSourceTab ?? "cards";
+    const wasPlay = notesFromPlay;
     setNotesSourceTab(null);
     setNotesTargetDate(undefined);
+    setNotesFromPlay(false);
+    // If the user came from a play round, re-open the play session
+    // instead of dropping them on the Cards tab.
+    if (wasPlay) {
+      setActiveTab("cards");
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("memap-open-session", { detail: { play: true } }));
+      }, 0);
+      return;
+    }
     setActiveTab(target);
   };
 

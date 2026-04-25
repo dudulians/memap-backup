@@ -461,6 +461,20 @@ export const DailySession = ({
         });
       }
       rows.push({
+        key: "note",
+        icon: Pencil,
+        title: t("dailySession.rowNoteTitle"),
+        subtitle: t("dailySession.rowNoteSubtitle"),
+        onClick: () => {
+          onComplete();
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("memap-open-notes", {
+              detail: { from: "play" },
+            }));
+          }, 0);
+        },
+      });
+      rows.push({
         key: "overview",
         icon: Home,
         title: t("dailySession.rowOverviewTitle"),
@@ -502,9 +516,14 @@ export const DailySession = ({
         title: t("dailySession.rowNoteTitle"),
         subtitle: t("dailySession.rowNoteSubtitle"),
         onClick: () => {
+          // Tag the source so Notes back returns to the play session
+          // instead of dropping the user on Cards.
+          const fromPlay = playMode;
           onComplete();
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
+            window.dispatchEvent(new CustomEvent("memap-open-notes", {
+              detail: { from: fromPlay ? "play" : "session" },
+            }));
           }, 0);
         },
       });
@@ -521,7 +540,26 @@ export const DailySession = ({
 
     return (
       <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto">
-        <div className="flex-1 flex flex-col items-center px-5 pt-12 pb-6 gap-6 animate-fade-in">
+        {/* Close affordance — drag handle pill + X button, same as the
+            in-session header so the dismiss gesture is consistent. */}
+        <div className="px-4 pt-2 pb-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="block mx-auto w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors mb-2"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="rounded-full bg-muted/40 hover:bg-muted h-9 w-9"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className="flex-1 flex flex-col items-center px-5 pt-4 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">
@@ -627,14 +665,29 @@ export const DailySession = ({
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
     >
-      {/* Header */}
-      <div className="px-4 pt-3 pb-2 border-b flex-shrink-0 space-y-2">
+      {/* Header — drag handle pill at the top makes the bottom-sheet
+          metaphor obvious, plus an explicit X. Either dismisses. */}
+      <div
+        className="px-4 pt-2 pb-2 border-b flex-shrink-0 space-y-2"
+        onClick={(e) => {
+          // tap on empty header area is fine; only the explicit handle
+          // pill below is the visual close affordance.
+          e.stopPropagation();
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("common.close")}
+          className="block mx-auto w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors mb-1.5"
+        />
         <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="rounded-full"
+          aria-label={t("common.close")}
+          className="rounded-full bg-muted/40 hover:bg-muted h-9 w-9"
         >
           <X className="h-5 w-5" />
         </Button>
@@ -648,7 +701,7 @@ export const DailySession = ({
             </p>
           )}
         </div>
-        <div className="w-10" />
+        <div className="w-9" />
         </div>
 
         {/* Date strip — last 7 days. Tap any to answer for that date.
