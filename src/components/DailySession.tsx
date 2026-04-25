@@ -395,6 +395,10 @@ export const DailySession = ({
     });
   };
 
+  // Pointer-down timestamp for velocity-based "flick" detection — short,
+  // fast swipes register as Yes/No even if their travel distance is small.
+  const touchStartTime = useRef<number>(0);
+
   // Unified pointer handlers (mouse + touch + pen)
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isAnimatingRef.current) return;
@@ -407,6 +411,7 @@ export const DailySession = ({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     touchStartX.current = e.clientX;
     touchStartY.current = e.clientY;
+    touchStartTime.current = Date.now();
     currentDx.current = 0;
     currentDy.current = 0;
   };
@@ -430,20 +435,31 @@ export const DailySession = ({
     const dy = currentDy.current;
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
+    const elapsed = Math.max(1, Date.now() - touchStartTime.current);
+    const velocityX = absX / elapsed; // px per ms
 
-    // Horizontal swipe wins easily (Yes/No). Skip needs a strong, clearly
-    // intentional downward swipe — bumped to 150px AND must dominate dx
-    // by 1.5x — so a diagonal yes/no isn't misread as skip.
-    if (absX > 80 && absX > absY) {
+    // Two ways to register a horizontal swipe:
+    //   1) Distance — moved at least 50px and the swipe is mostly horizontal
+    //   2) Velocity — fast flick (>=0.5 px/ms) with at least 25px of travel
+    // Either path is forgiving so the user doesn't have to drag all the way
+    // across the card; a quick wrist-flick works too.
+    const distanceTrigger = absX >= 50 && absX >= absY * 0.7;
+    const velocityTrigger = velocityX >= 0.5 && absX >= 25 && absX >= absY * 0.5;
+
+    if (distanceTrigger || velocityTrigger) {
       if (dx > 0) handleAnswer(true); else handleAnswer(false);
-    } else if (dy > 150 && absY > absX * 1.5) {
-      handleSkip();
-    } else {
-      setDragX(0);
-      setDragY(0);
-      currentDx.current = 0;
-      currentDy.current = 0;
+      return;
     }
+    // Skip-down stays strict — only a clearly intentional, mostly-vertical
+    // downward drag of 150+ counts as skip. Diagonal Yes/No takes priority.
+    if (dy > 150 && absY > absX * 1.5) {
+      handleSkip();
+      return;
+    }
+    setDragX(0);
+    setDragY(0);
+    currentDx.current = 0;
+    currentDy.current = 0;
   };
 
   if (completed) {
@@ -840,21 +856,30 @@ export const DailySession = ({
               : undefined
           }}
         >
-          {/* Swipe indicators — pinned to the card's corners so they ride along */}
+          {/* Swipe indicators — pinned to the card's corners. Appear at
+              30px so the user gets early "you're heading the right way"
+              confirmation before the 50px action threshold. Opacity ramps
+              up from 30→50 so the badge fades in proportional to commitment. */}
           <div className="relative w-full flex">
-            {dragX > 50 && (
-              <div className={cn(
-                "absolute top-6 left-6 px-4 py-2 rounded-full font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[-12deg] border-4",
-                yesIsSignificant ? "border-strong text-strong" : "border-balanced text-balanced"
-              )}>
+            {dragX > 30 && (
+              <div
+                className={cn(
+                  "absolute top-6 left-6 px-4 py-2 rounded-full font-bold text-lg uppercase tracking-wider z-10 rotate-[-12deg] border-4 transition-opacity",
+                  yesIsSignificant ? "border-strong text-strong" : "border-balanced text-balanced"
+                )}
+                style={{ opacity: Math.min(1, (dragX - 30) / 20) }}
+              >
                 {t("common.yes")}
               </div>
             )}
-            {dragX < -50 && (
-              <div className={cn(
-                "absolute top-6 right-6 px-4 py-2 rounded-full font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[12deg] border-4",
-                yesIsSignificant ? "border-balanced text-balanced" : "border-strong text-strong"
-              )}>
+            {dragX < -30 && (
+              <div
+                className={cn(
+                  "absolute top-6 right-6 px-4 py-2 rounded-full font-bold text-lg uppercase tracking-wider z-10 rotate-[12deg] border-4 transition-opacity",
+                  yesIsSignificant ? "border-balanced text-balanced" : "border-strong text-strong"
+                )}
+                style={{ opacity: Math.min(1, (-dragX - 30) / 20) }}
+              >
                 {t("common.no")}
               </div>
             )}
