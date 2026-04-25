@@ -183,10 +183,20 @@ const Index = () => {
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
           {/* Center floating ▶ Play button — opens the session via event
-              so TodayTab (which owns DailySession) can react. */}
+              so TodayTab (which owns DailySession) can react. If the user
+              is on Patterns/Notes the TodayTab is unmounted and won't hear
+              the event, so first we swap to Cards then dispatch on the
+              next tick once TodayTab's listener has attached. */}
           <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-20">
             <button
-              onClick={() => window.dispatchEvent(new Event("memap-open-session"))}
+              onClick={() => {
+                if (activeTab !== "cards") setActiveTab("cards");
+                // Defer so TodayTab mounts (when we just swapped tabs)
+                // and registers its window listener before we dispatch.
+                setTimeout(() => {
+                  window.dispatchEvent(new Event("memap-open-session"));
+                }, 0);
+              }}
               className="
                 w-16 h-16 rounded-full
                 bg-gradient-to-br from-primary to-primary/80

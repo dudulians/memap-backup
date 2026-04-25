@@ -297,6 +297,7 @@ const en = {
     emptyTitle: "No cards yet",
     emptyHint: "Add your first card — then you'll be able to swipe through your day in seconds.",
     addFirst: "Add my first card",
+    addNew: "Add card",
     streakDaysOne: "1 day in a row",
     streakDaysMany: "{{count}} days in a row",
     answeredToday: "Answered today",
@@ -455,6 +456,8 @@ const en = {
     backToToday: "Back to Today",
     toPatterns: "See my patterns",
     toOverview: "Today's overview",
+    fillYesterday: "Fill in yesterday",
+    addNote: "Write a note",
   },
 
   calendarEditor: {

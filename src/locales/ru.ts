@@ -299,6 +299,7 @@ const ru: Translation = {
     emptyTitle: "Пока нет карточек",
     emptyHint: "Добавь первую — и сможешь свайпать ответы за день за секунды.",
     addFirst: "Добавить первую карточку",
+    addNew: "Новая карточка",
     streakDaysOne: "день подряд",
     streakDaysMany: "{{count}} дн. подряд",
     answeredToday: "Сегодня отвечено",
@@ -457,6 +458,8 @@ const ru: Translation = {
     backToToday: "К сегодня",
     toPatterns: "Посмотреть наблюдения",
     toOverview: "Сегодняшний обзор",
+    fillYesterday: "Заполнить вчера",
+    addNote: "Написать заметку",
   },
 
   calendarEditor: {

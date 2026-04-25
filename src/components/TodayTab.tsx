@@ -478,7 +478,7 @@ export const TodayTab = () => {
               aria-label={t("common.addPattern")}
             >
               <Plus className="h-4 w-4 mr-1" />
-              {t("today.addFirst")}
+              {t("today.addNew")}
             </Button>
           </div>
         </div>

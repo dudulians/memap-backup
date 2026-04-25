@@ -402,24 +402,57 @@ export const DailySession = ({
                   : t("dailySession.newPatternsMany", { count: newPatternsAdded })}
               </p>
             )}
-            {/* Two paths from the completion screen:
-                – primary: see patterns (the reward — what the user came for)
-                – secondary: today's overview (streaks, ideas, list view) */}
-            <div className="flex flex-col items-center gap-3 pt-2">
+            {/* Action menu — primary "see patterns" CTA on top, then a
+                grid of secondary options. The user can stop here, or
+                keep "playing" (fill yesterday, write a note, browse stats). */}
+            <div className="flex flex-col items-stretch gap-3 pt-2 w-full max-w-sm mx-auto">
               {onGoToPatterns && (
                 <Button
                   onClick={onGoToPatterns}
-                  className="rounded-full px-8"
+                  className="rounded-full"
                   size="lg"
                 >
                   {t("dailySession.toPatterns")}
                 </Button>
               )}
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="rounded-full text-xs h-10"
+                  onClick={() => {
+                    if (onDateChange) {
+                      // jump to yesterday in the same session
+                      const y = new Date();
+                      y.setDate(y.getDate() - 1);
+                      const iso = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
+                      onDateChange(iso);
+                    }
+                  }}
+                  disabled={!onDateChange}
+                >
+                  {t("dailySession.fillYesterday")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="rounded-full text-xs h-10"
+                  onClick={() => {
+                    onComplete();
+                    // small delay so TodayTab is the active tab when we open Notes
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
+                    }, 0);
+                  }}
+                >
+                  {t("dailySession.addNote")}
+                </Button>
+              </div>
               <Button
                 onClick={onComplete}
-                variant={onGoToPatterns ? "ghost" : "default"}
-                className="rounded-full px-8"
-                size={onGoToPatterns ? "default" : "lg"}
+                variant="ghost"
+                className="rounded-full"
+                size="default"
               >
                 {onGoToPatterns
                   ? t("dailySession.toOverview")
@@ -520,55 +553,87 @@ export const DailySession = ({
         <Progress value={progress} className="h-1.5" />
       </div>
 
-      {/* Full-screen card area */}
-      <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-        <div 
+      {/* Card area — take all available vertical space, near-edge-to-edge
+          width, Tinder/Hinge feel. Card itself fills the container so the
+          question is huge and the gesture surface is massive. */}
+      <div className="flex-1 flex items-stretch justify-center p-3 overflow-hidden">
+        <div
           className={cn(
-            "w-full max-w-md transition-transform duration-300",
+            "w-full max-w-lg transition-transform duration-300 flex",
             swipeDirection === "right" && "translate-x-[120%] rotate-12",
             swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
             swipeDirection === "down" && "translate-y-[120%] opacity-50",
             isAnimating && !swipeDirection && "opacity-0"
           )}
           style={{
-            transform: !isAnimating && (dragX || dragY) 
-              ? `translateX(${dragX}px) translateY(${Math.max(0, dragY)}px) rotate(${dragX * 0.03}deg)` 
+            transform: !isAnimating && (dragX || dragY)
+              ? `translateX(${dragX}px) translateY(${Math.max(0, dragY)}px) rotate(${dragX * 0.04}deg)`
               : undefined
           }}
         >
-          {/* Swipe indicators */}
-          <div className="relative">
+          {/* Swipe indicators — pinned to the card's corners so they ride along */}
+          <div className="relative w-full flex">
             {dragX > 50 && (
               <div className={cn(
-                "absolute -left-2 top-1/2 -translate-y-1/2 -translate-x-full px-4 py-2 rounded-full font-semibold animate-fade-in z-10",
-                yesIsSignificant ? "bg-strong text-strong-foreground" : "bg-balanced text-balanced-foreground"
+                "absolute top-6 left-6 px-4 py-2 rounded-xl font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[-12deg] border-4",
+                yesIsSignificant ? "border-strong text-strong" : "border-balanced text-balanced"
               )}>
-                {t("common.yes")} ✓
+                {t("common.yes")}
               </div>
             )}
             {dragX < -50 && (
               <div className={cn(
-                "absolute -right-2 top-1/2 -translate-y-1/2 translate-x-full px-4 py-2 rounded-full font-semibold animate-fade-in z-10",
-                yesIsSignificant ? "bg-balanced text-balanced-foreground" : "bg-strong text-strong-foreground"
+                "absolute top-6 right-6 px-4 py-2 rounded-xl font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[12deg] border-4",
+                yesIsSignificant ? "border-balanced text-balanced" : "border-strong text-strong"
               )}>
-                {t("common.no")} ✗
+                {t("common.no")}
               </div>
             )}
             {dragY > 50 && (
-              <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 translate-y-full bg-muted text-muted-foreground px-4 py-2 rounded-full font-semibold animate-fade-in z-10">
+              <div className="absolute left-1/2 bottom-6 -translate-x-1/2 bg-muted text-muted-foreground px-4 py-2 rounded-full font-semibold animate-fade-in z-10">
                 {t("common.skip")} ↓
               </div>
             )}
 
-            <Card className="card-premium overflow-hidden shadow-lg">
-              <CardContent className="p-6 space-y-6">
-                {/* New badge + disable link */}
-                {currentQuestion.isNew && (
-                  <div className="flex flex-col items-center gap-1">
-                    <Badge className="bg-primary/20 text-primary border-primary/30">
+            <Card className="card-premium overflow-hidden shadow-2xl flex-1 flex flex-col">
+              <CardContent className="p-6 flex-1 flex flex-col">
+                {/* Top: category badge (compact) + optional new badge */}
+                <div className="flex items-start justify-between gap-2 flex-shrink-0">
+                  <Badge
+                    variant="secondary"
+                    className="text-[11px] px-2.5 py-1 rounded-full"
+                    style={{
+                      backgroundColor: `hsl(var(--${categoryColor}) / 0.15)`,
+                      color: `hsl(var(--${categoryColor}))`
+                    }}
+                  >
+                    {(() => {
+                      const QIcon = getTrackerIcon(currentQuestion.tracker.title, currentQuestion.tracker.category);
+                      return <QIcon className="h-3 w-3 mr-1 inline-block" strokeWidth={1.75} />;
+                    })()}
+                    {t(`categories.${currentQuestion.tracker.category}` as const)}
+                  </Badge>
+                  {currentQuestion.isNew && (
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
                       <Sparkles className="h-3 w-3 mr-1" />
                       {t("dailySession.newSuggestion")}
                     </Badge>
+                  )}
+                </div>
+
+                {/* Question — fills the card vertically, big serif type */}
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
+                    {localizeTrackerTitle(currentQuestion.tracker.title)}
+                  </p>
+                  <p className="font-serif text-2xl sm:text-3xl font-medium leading-snug text-foreground">
+                    {localizeTrackerQuestion(currentQuestion.tracker.questionText)}
+                  </p>
+                </div>
+
+                {/* "Don't show these" link — tiny, only for new suggestions */}
+                {currentQuestion.isNew && (
+                  <div className="flex justify-center pb-2 flex-shrink-0">
                     <button
                       onClick={handleDisableRecommendations}
                       className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
@@ -578,36 +643,11 @@ export const DailySession = ({
                   </div>
                 )}
 
-                {/* Category badge */}
-                <div className="flex items-center justify-center">
-                  <Badge
-                    variant="secondary"
-                    className="text-xs px-3 py-1"
-                    style={{ 
-                      backgroundColor: `hsl(var(--${categoryColor}) / 0.15)`,
-                      color: `hsl(var(--${categoryColor}))`
-                    }}
-                  >
-                    {(() => {
-                      const QIcon = getTrackerIcon(currentQuestion.tracker.title, currentQuestion.tracker.category);
-                      return <QIcon className="h-3.5 w-3.5 mr-1.5 inline-block" strokeWidth={1.75} />;
-                    })()}
-                    {localizeTrackerTitle(currentQuestion.tracker.title)} · {t(`categories.${currentQuestion.tracker.category}` as const)}
-                  </Badge>
-                </div>
-
-                {/* Question */}
-                <div className="text-center py-12">
-                  <p className="text-xl font-medium leading-relaxed">
-                    {localizeTrackerQuestion(currentQuestion.tracker.questionText)}
-                  </p>
-                </div>
-
-                {/* Swipe hints */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-4">
-                  <span>{t("dailySession.swipeNo")}</span>
-                  <span className="text-center">{t("dailySession.skipHint")}</span>
-                  <span>{t("dailySession.swipeYes")}</span>
+                {/* Subtle swipe hints — minimalist, faded */}
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 pt-2 flex-shrink-0">
+                  <span>← {t("common.no")}</span>
+                  <span>{t("dailySession.skipHint")}</span>
+                  <span>{t("common.yes")} →</span>
                 </div>
               </CardContent>
             </Card>
