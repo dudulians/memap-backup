@@ -322,9 +322,9 @@ export const OverviewCard = ({
 
   return (
     <Card className="card-premium overflow-hidden animate-fade-in">
-      <CardContent className="p-4">
+      <CardContent className="p-3">
         {/* Header with title, view toggle and pattern navigation arrows */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t("overview.heading")}</h2>
             <div className="flex items-center bg-muted/50 rounded-full p-0.5">
@@ -517,27 +517,29 @@ export const OverviewCard = ({
             </Button>
           </div>
 
-          {/* Weekday headers */}
+          {/* Weekday headers — compact so the calendar grid sits higher */}
           <div className="grid grid-cols-7 gap-0.5">
             {WEEKDAYS.map((day, i) => (
               <div
                 key={i}
-                className="text-center text-[10px] font-medium text-muted-foreground py-1"
+                className="text-center text-[10px] font-medium text-muted-foreground py-0.5"
               >
                 {day}
               </div>
             ))}
           </div>
 
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-1.5">
+          {/* Calendar grid — fixed-height rows (~32px each) so the whole
+              month fits above the bottom nav without scrolling. Was
+              aspect-square (~50px), eating ~100px across 6 rows. */}
+          <div className="grid grid-cols-7 gap-1">
             {calendarDays.map((day) => (
-              <div key={day.dateStr} className="aspect-square flex items-center justify-center">
+              <div key={day.dateStr} className="h-8 flex items-center justify-center">
               <button
                 onClick={() => handleDayClick(day)}
                 disabled={day.isFutureDate || !day.isCurrentMonth}
                 className={cn(
-                  "w-[82%] h-[82%] rounded-full flex items-center justify-center transition-all text-[10px] font-medium relative",
+                  "w-7 h-7 rounded-full flex items-center justify-center transition-all text-[10px] font-medium relative",
                   getStatusClass(day),
                   day.isCurrentMonth && !day.isFutureDate && "cursor-pointer",
                   !multiSelectMode && day.isSelected && day.isCurrentMonth && "ring-2 ring-primary ring-offset-1 ring-offset-background",
