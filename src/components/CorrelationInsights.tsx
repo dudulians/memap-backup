@@ -3,6 +3,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { getCategoryColor } from "@/lib/categoryHelpers";
 import { Lightbulb, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 
 interface CorrelationInsightsProps {
   trackers: Tracker[];
@@ -19,6 +21,7 @@ interface Correlation {
 }
 
 export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsProps) => {
+  const { t } = useTranslation();
   const correlations = useMemo(() => {
     const activeTrackers = trackers.filter((t) => !t.archived);
     if (activeTrackers.length < 2) return [];
@@ -88,18 +91,20 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
 
         const isPositive = phi > 0;
 
+        const aTitle = localizeTrackerTitle(a.title);
+        const bTitle = localizeTrackerTitle(b.title);
         let message: string;
         if (isPositive) {
           if (absPhi > 0.5) {
-            message = `${a.title} and ${b.title} tend to go together — when one is "Yes", the other usually is too.`;
+            message = t("correlations.posStrong", { a: aTitle, b: bTitle });
           } else {
-            message = `${a.title} and ${b.title} show a mild positive link.`;
+            message = t("correlations.posMild", { a: aTitle, b: bTitle });
           }
         } else {
           if (absPhi > 0.5) {
-            message = `${a.title} and ${b.title} tend to be opposites — a "Yes" on one often means "No" on the other.`;
+            message = t("correlations.negStrong", { a: aTitle, b: bTitle });
           } else {
-            message = `${a.title} and ${b.title} show a mild inverse pattern.`;
+            message = t("correlations.negMild", { a: aTitle, b: bTitle });
           }
         }
 
@@ -116,7 +121,7 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
 
     // Sort by strength
     return results.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)).slice(0, 5);
-  }, [trackers, entries]);
+  }, [trackers, entries, t]);
 
   if (correlations.length === 0) {
     return (
@@ -126,9 +131,9 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
             <Lightbulb className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-medium text-sm">Correlation Insights</h3>
+            <h3 className="font-medium text-sm">{t("correlations.title")}</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Keep tracking for at least 7 days across multiple patterns to discover connections between them.
+              {t("correlations.empty")}
             </p>
           </div>
         </div>
@@ -145,7 +150,7 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
           </div>
           <div>
             <h3 className="font-medium text-sm tracking-wide uppercase text-muted-foreground">
-              Discovered Connections
+              {t("correlations.heading")}
             </h3>
           </div>
         </div>
@@ -156,7 +161,7 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
             const colorB = getCategoryColor(c.trackerB.category);
             const strength = Math.abs(c.correlation);
             const strengthLabel =
-              strength > 0.5 ? "Strong" : strength > 0.35 ? "Moderate" : "Mild";
+              strength > 0.5 ? t("correlations.strong") : strength > 0.35 ? t("correlations.moderate") : t("correlations.mild");
 
             return (
               <div
@@ -172,7 +177,7 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
                       color: `hsl(var(--${colorA}))`,
                     }}
                   >
-                    {c.trackerA.title}
+                    {localizeTrackerTitle(c.trackerA.title)}
                   </span>
                   <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                   <span
@@ -182,7 +187,7 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
                       color: `hsl(var(--${colorB}))`,
                     }}
                   >
-                    {c.trackerB.title}
+                    {localizeTrackerTitle(c.trackerB.title)}
                   </span>
                 </div>
 
@@ -201,7 +206,7 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
                     {strengthLabel} {c.direction === "positive" ? "↑↑" : "↑↓"}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    Based on {c.sharedDays} shared days
+                    {t("correlations.sharedDays", { count: c.sharedDays })}
                   </span>
                 </div>
               </div>

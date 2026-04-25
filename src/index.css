@@ -115,25 +115,25 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
-  /* ---------- Aurora theme: airy teal/indigo, glass, neon accents ---------- */
+  /* ---------- Aurora theme: deep teal night with neon accents ---------- */
   [data-theme="aurora"] {
-    --background: 200 40% 40%;          /* bright teal */
+    --background: 200 45% 18%;          /* deep teal — lets coloured chips pop */
     --foreground: 0 0% 100%;            /* pure white for max contrast */
 
-    --card: 195 30% 45%;                 /* glass base (further blended with alpha) */
+    --card: 200 35% 22%;                 /* glass base (further blended with alpha) */
     --card-foreground: 0 0% 100%;
 
-    --popover: 195 30% 45%;
+    --popover: 200 35% 22%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 172 85% 60%;              /* neon mint/teal */
     --primary-foreground: 210 55% 10%;
 
-    --secondary: 200 30% 55%;
+    --secondary: 200 30% 32%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 200 25% 50%;
-    --muted-foreground: 195 30% 94%;
+    --muted: 200 25% 28%;
+    --muted-foreground: 195 40% 86%;     /* brighter so captions like "IDEAS OF THE DAY" stay legible */
 
     --accent: 172 70% 55%;
     --accent-foreground: 195 80% 15%;
@@ -141,8 +141,8 @@
     --destructive: 0 75% 65%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 195 30% 65%;
-    --input: 195 30% 65%;
+    --border: 195 30% 45%;
+    --input: 195 30% 45%;
     --ring: 172 85% 60%;
 
     /* Pattern status — aurora signals (brighter) */
@@ -152,7 +152,7 @@
     --emerging-foreground: 45 90% 15%;
     --strong: 350 80% 68%;
     --strong-foreground: 350 85% 18%;
-    --untracked: 200 22% 55%;
+    --untracked: 200 22% 40%;
     --untracked-foreground: 195 30% 94%;
 
     --note: 190 80% 72%;
@@ -306,13 +306,15 @@
     display: none;
   }
 
-  /* Aurora — airy gradient with glowing orbs */
+  /* Aurora — deep teal gradient with dim glowing orbs. Lower orb alpha
+     so chips and muted text keep their contrast; base gradient is darker
+     (L ~15-22%) for an actual night-mode feel. */
   [data-theme="aurora"] body {
     background:
-      radial-gradient(120% 70% at 10% 0%, rgba(186, 230, 253, 0.55) 0%, transparent 55%),
-      radial-gradient(90% 60% at 95% 15%, rgba(110, 231, 183, 0.45) 0%, transparent 50%),
-      radial-gradient(80% 60% at 50% 95%, rgba(165, 180, 252, 0.50) 0%, transparent 55%),
-      linear-gradient(180deg, #3a7a96 0%, #4a8fa3 40%, #4fa89e 100%);
+      radial-gradient(120% 70% at 10% 0%, rgba(186, 230, 253, 0.18) 0%, transparent 55%),
+      radial-gradient(90% 60% at 95% 15%, rgba(110, 231, 183, 0.16) 0%, transparent 50%),
+      radial-gradient(80% 60% at 50% 95%, rgba(165, 180, 252, 0.20) 0%, transparent 55%),
+      linear-gradient(180deg, #0f2a38 0%, #153a4c 45%, #1a4f52 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
   }

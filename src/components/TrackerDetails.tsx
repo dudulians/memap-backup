@@ -7,8 +7,12 @@ import { ArrowLeft, Lightbulb, ChevronLeft, ChevronRight, Check, X } from "lucid
 import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
 import { MonthlyCalendar } from "@/components/MonthlyCalendar";
 import { format } from "date-fns";
+import { ru as ruLocale } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/uuid";
+import { useTranslation } from "react-i18next";
+import { getLanguage } from "@/lib/i18n";
+import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerAdvice } from "@/lib/trackerLocalize";
 
 interface TrackerDetailsProps {
   tracker: Tracker;
@@ -28,9 +32,11 @@ export const TrackerDetails = ({
   currentIndex,
   onBack, 
   onNavigateTracker,
-  selectedDate, 
-  onDateSelect 
+  selectedDate,
+  onDateSelect
 }: TrackerDetailsProps) => {
+  const { t } = useTranslation();
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("questions");
@@ -114,7 +120,7 @@ export const TrackerDetails = ({
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t("loading")}</p>
       </div>
     );
   }
@@ -133,9 +139,9 @@ export const TrackerDetails = ({
   const canGoNext = trackers && currentIndex !== undefined && currentIndex < trackers.length - 1;
 
   // Format selected date for display
-  const selectedDateDisplay = effectiveSelectedDate 
-    ? format(new Date(effectiveSelectedDate + "T00:00:00"), "d MMMM yyyy")
-    : format(new Date(), "d MMMM yyyy");
+  const selectedDateDisplay = effectiveSelectedDate
+    ? format(new Date(effectiveSelectedDate + "T00:00:00"), "d MMMM yyyy", { locale: dateLocale })
+    : format(new Date(), "d MMMM yyyy", { locale: dateLocale });
 
   const currentEntry = getCurrentEntry();
   const currentAnswer = currentEntry?.value;
@@ -150,7 +156,7 @@ export const TrackerDetails = ({
         <div className="flex items-center justify-between mb-2">
           <Button variant="ghost" onClick={onBack} className="rounded-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            {t("trackerDetails.back")}
           </Button>
           
           {trackers && trackers.length > 1 && (
@@ -191,10 +197,10 @@ export const TrackerDetails = ({
             >
               <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
             </div>
-            {tracker.title}
+            {localizeTrackerTitle(tracker.title)}
           </CardTitle>
           <p className="text-xs font-medium" style={{ color: `hsl(var(--${categoryColor}))` }}>
-            {tracker.category}
+            {t(`categories.${tracker.category}` as const)}
           </p>
         </CardHeader>
       </Card>
@@ -210,7 +216,7 @@ export const TrackerDetails = ({
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Questions
+          {t("trackerDetails.questions")}
         </button>
         <button
           onClick={() => setActiveTab("calendar")}
@@ -221,7 +227,7 @@ export const TrackerDetails = ({
               : "text-muted-foreground hover:text-foreground"
           )}
         >
-          Calendar
+          {t("trackerDetails.calendar")}
         </button>
       </div>
 
@@ -235,7 +241,7 @@ export const TrackerDetails = ({
             {/* Selected date indicator */}
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
-                You are filling in for: <span className="font-medium">{selectedDateDisplay}</span>
+                {t("trackerDetails.fillingInFor")} <span className="font-medium">{selectedDateDisplay}</span>
               </p>
             </div>
 
@@ -248,7 +254,7 @@ export const TrackerDetails = ({
 
             {/* Swipe hint */}
             <p className="text-xs text-center text-muted-foreground">
-              ← Swipe left for No · Swipe right for Yes →
+              {t("trackerDetails.swipeHint")}
             </p>
           </div>
         )}
@@ -279,10 +285,10 @@ export const TrackerDetails = ({
               <Lightbulb className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
               <div>
                 <CardTitle className="text-lg text-primary mb-2">
-                  Reflection Suggested
+                  {t("trackerDetails.reflectionSuggested")}
                 </CardTitle>
                 <p className="text-sm text-foreground">
-                  {tracker.adviceAboveThreshold}
+                  {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
                 </p>
               </div>
             </div>
@@ -303,6 +309,7 @@ interface QuestionSwipeCardProps {
 const SWIPE_THRESHOLD = 100;
 
 const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCardProps) => {
+  const { t } = useTranslation();
   // If "yes" is the significant/problematic answer, yes=red and no=green; otherwise inverted
   const yesIsSignificant = tracker.problemWhen === "yes";
   const [swipeX, setSwipeX] = useState(0);
@@ -375,7 +382,7 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
       >
         <div className={`flex items-center gap-2 font-medium ${yesIsSignificant ? "text-balanced" : "text-strong"}`}>
           <X className="h-6 w-6" />
-          <span>No</span>
+          <span>{t("common.no")}</span>
         </div>
       </div>
       <div
@@ -383,7 +390,7 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
         style={{ opacity: swipeX > 0 ? getSwipeOpacity() : 0 }}
       >
         <div className={`flex items-center gap-2 font-medium ${yesIsSignificant ? "text-strong" : "text-balanced"}`}>
-          <span>Yes</span>
+          <span>{t("common.yes")}</span>
           <Check className="h-6 w-6" />
         </div>
       </div>
@@ -403,7 +410,7 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
       >
         <CardContent className="p-5">
           <p className="text-base leading-relaxed mb-5">
-            {tracker.questionText}
+            {localizeTrackerQuestion(tracker.questionText)}
           </p>
 
           {/* Current answer indicator */}
@@ -418,12 +425,12 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
                 )}
               >
                 {currentAnswer === true ? (
-                  <><Check className="h-3 w-3" />Yes</>
+                  <><Check className="h-3 w-3" />{t("common.yes")}</>
                 ) : (
-                  <><X className="h-3 w-3" />No</>
+                  <><X className="h-3 w-3" />{t("common.no")}</>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground">Current answer</span>
+              <span className="text-xs text-muted-foreground">{t("trackerDetails.currentAnswer")}</span>
             </div>
           )}
 
@@ -445,7 +452,7 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
               )}
             >
               <X className="h-5 w-5 mr-2" />
-              No
+              {t("common.no")}
             </Button>
             <Button
               variant="ghost"
@@ -463,7 +470,7 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
               )}
             >
               <Check className="h-5 w-5 mr-2" />
-              Yes
+              {t("common.yes")}
             </Button>
           </div>
         </CardContent>

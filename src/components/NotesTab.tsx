@@ -11,7 +11,11 @@ import { Note, getNotes, addNote, updateNote, deleteNote } from "@/lib/notes";
 import { Tracker } from "@/types/tracker";
 import { getTrackers } from "@/lib/storage";
 import { format, parseISO } from "date-fns";
+import { ru as ruLocale } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { getLanguage } from "@/lib/i18n";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface NotesTabProps {
@@ -21,6 +25,8 @@ interface NotesTabProps {
 }
 
 export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
+  const { t } = useTranslation();
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [notes, setNotes] = useState<Note[]>([]);
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,8 +72,8 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   const handleAddNote = async () => {
     if (!newNote.text.trim()) {
       toast({
-        title: "Note is empty",
-        description: "Please write something before saving.",
+        title: t("notesTab.noteEmpty"),
+        description: t("notesTab.noteEmptyDesc"),
         variant: "destructive",
       });
       return;
@@ -79,7 +85,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
       linkedPatternId: newNote.linkedPatternId || undefined,
     });
 
-    toast({ title: "Note added", description: "Your note has been saved." });
+    toast({ title: t("notesTab.noteAdded"), description: t("notesTab.noteAddedDesc") });
     setNewNote({ date: today, text: "", linkedPatternId: "" });
     setIsAdding(false);
     loadData();
@@ -94,7 +100,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
       date: editingNote.date,
     });
 
-    toast({ title: "Note updated", description: "Your changes have been saved." });
+    toast({ title: t("notesTab.noteUpdated"), description: t("notesTab.noteUpdatedDesc") });
     setEditingNote(null);
     loadData();
   };
@@ -103,7 +109,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
     if (!noteToDelete) return;
 
     await deleteNote(noteToDelete.id);
-    toast({ title: "Note deleted", description: "The note has been removed." });
+    toast({ title: t("notesTab.noteDeleted"), description: t("notesTab.noteDeletedDesc") });
     setDeleteDialogOpen(false);
     setNoteToDelete(null);
     loadData();
@@ -140,15 +146,15 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
             className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors -mt-2 animate-fade-in"
           >
             <ArrowLeft className="h-4 w-4" />
-            {backLabel ?? "Back"}
+            {backLabel ?? t("common.back")}
           </button>
         )}
 
         {/* Header */}
         <div className="text-center space-y-1 animate-fade-in">
-          <p className="text-lg font-medium tracking-wide">Your Notes</p>
+          <p className="text-lg font-medium tracking-wide">{t("notesTab.yourNotes")}</p>
           <p className="text-sm text-muted-foreground">
-            Reflections and thoughts tied to your days.
+            {t("notesTab.subtitle")}
           </p>
         </div>
 
@@ -159,13 +165,13 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
             className="w-full rounded-full animate-fade-in"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add note
+            {t("notesTab.addNote")}
           </Button>
         ) : isAdding ? (
           <Card className="card-premium animate-fade-in">
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm">New Note</h3>
+                <h3 className="font-medium text-sm">{t("notesTab.newNote")}</h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -180,7 +186,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Date</Label>
+                <Label className="text-xs">{t("notesTab.date")}</Label>
                 <Input
                   type="date"
                   value={newNote.date}
@@ -190,19 +196,19 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Linked pattern (optional)</Label>
+                <Label className="text-xs">{t("notesTab.linkedPattern")}</Label>
                 <Select
                   value={newNote.linkedPatternId || "none"}
                   onValueChange={(v) => setNewNote({ ...newNote, linkedPatternId: v === "none" ? "" : v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder={t("notesTab.none")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">{t("notesTab.none")}</SelectItem>
                     {trackers.map(tracker => (
                       <SelectItem key={tracker.id} value={tracker.id}>
-                        {tracker.title}
+                        {localizeTrackerTitle(tracker.title)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -210,9 +216,9 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Your note</Label>
+                <Label className="text-xs">{t("notesTab.yourNote")}</Label>
                 <Textarea
-                  placeholder="Write your reflection..."
+                  placeholder={t("notesTab.noteTextPh")}
                   value={newNote.text}
                   onChange={(e) => setNewNote({ ...newNote, text: e.target.value })}
                   className="min-h-[100px]"
@@ -220,7 +226,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <Button onClick={handleAddNote} className="w-full rounded-full">
-                Save Note
+                {t("notesTab.saveNote")}
               </Button>
             </CardContent>
           </Card>
@@ -231,7 +237,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
           <Card className="card-premium animate-fade-in">
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm">Edit Note</h3>
+                <h3 className="font-medium text-sm">{t("notesTab.editNote")}</h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -243,7 +249,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Date</Label>
+                <Label className="text-xs">{t("notesTab.date")}</Label>
                 <Input
                   type="date"
                   value={editingNote.date}
@@ -253,19 +259,19 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Linked pattern</Label>
+                <Label className="text-xs">{t("notesTab.linkedPatternEdit")}</Label>
                 <Select
                   value={editingNote.linkedPatternId || "none"}
                   onValueChange={(v) => setEditingNote({ ...editingNote, linkedPatternId: v === "none" ? "" : v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None" />
+                    <SelectValue placeholder={t("notesTab.none")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">{t("notesTab.none")}</SelectItem>
                     {trackers.map(tracker => (
                       <SelectItem key={tracker.id} value={tracker.id}>
-                        {tracker.title}
+                        {localizeTrackerTitle(tracker.title)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -273,7 +279,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Your note</Label>
+                <Label className="text-xs">{t("notesTab.yourNote")}</Label>
                 <Textarea
                   value={editingNote.text}
                   onChange={(e) => setEditingNote({ ...editingNote, text: e.target.value })}
@@ -282,7 +288,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               </div>
 
               <Button onClick={handleUpdateNote} className="w-full rounded-full">
-                Save Changes
+                {t("notesTab.saveChanges")}
               </Button>
             </CardContent>
           </Card>
@@ -295,14 +301,14 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search your notes..."
+              placeholder={t("notesTab.searchPlaceholder")}
               className="pl-9 pr-9 rounded-full bg-muted/40 border-border/60"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
+                aria-label={t("notesTab.clearSearch")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -312,17 +318,17 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
         {/* Notes List */}
         {loading ? (
-          <p className="text-center text-muted-foreground py-8">Loading...</p>
+          <p className="text-center text-muted-foreground py-8">{t("notesTab.loading")}</p>
         ) : notes.length === 0 && !isAdding ? (
           <div className="text-center py-12 space-y-2 animate-fade-in">
-            <p className="text-muted-foreground">No notes yet</p>
-            <p className="text-xs text-muted-foreground">Start writing your reflections</p>
+            <p className="text-muted-foreground">{t("notesTab.noNotesYet")}</p>
+            <p className="text-xs text-muted-foreground">{t("notesTab.startWriting")}</p>
           </div>
         ) : filteredNotes.length === 0 ? (
           <div className="text-center py-12 space-y-2 animate-fade-in">
-            <p className="text-muted-foreground">No notes match "{searchQuery}"</p>
+            <p className="text-muted-foreground">{t("notesTab.noMatch", { query: searchQuery })}</p>
             <button onClick={() => setSearchQuery("")} className="text-xs text-primary hover:underline">
-              Clear search
+              {t("notesTab.clearSearchBtn")}
             </button>
           </div>
         ) : (
@@ -335,7 +341,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               >
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  <span>{format(parseISO(date), "MMMM d, yyyy")}</span>
+                  <span>{format(parseISO(date), "MMMM d, yyyy", { locale: dateLocale })}</span>
                 </div>
 
                 {dateNotes.map(note => (
@@ -387,15 +393,15 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete note?</AlertDialogTitle>
+            <AlertDialogTitle>{t("notesTab.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone.
+              {t("notesTab.deleteDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteNote} className="bg-destructive text-destructive-foreground">
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

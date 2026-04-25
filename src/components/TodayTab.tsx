@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { getRandomIdeas } from "@/lib/lifeStreams";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -31,6 +33,8 @@ import { SwipeableTrackerCard } from "./SwipeableTrackerCard";
 import { calculateStreak, isStreakMilestone } from "@/lib/streaks";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { isToday, format } from "date-fns";
+import { ru as ruLocale } from "date-fns/locale";
+import { getLanguage } from "@/lib/i18n";
 import confetti from "canvas-confetti";
 import {
   DndContext,
@@ -52,11 +56,22 @@ import { CSS } from "@dnd-kit/utilities";
 import { uuid } from "@/lib/uuid";
 
 export const TodayTab = () => {
+  const { t } = useTranslation();
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const { toast } = useToast();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [randomIdeas] = useState(() => getRandomIdeas(4));
+  // Ideas of the day snapshot. Re-roll whenever the user switches language so
+  // the carousel text refreshes immediately (the selection is localized at the
+  // moment getRandomIdeas runs, so a stale snapshot would still render in the
+  // old language).
+  const [randomIdeas, setRandomIdeas] = useState(() => getRandomIdeas(4));
+  useEffect(() => {
+    const handler = () => setRandomIdeas(getRandomIdeas(4));
+    window.addEventListener("memap-language-changed", handler);
+    return () => window.removeEventListener("memap-language-changed", handler);
+  }, []);
   const [ideasDismissed, setIdeasDismissed] = useState(() => localStorage.getItem("memap_ideas_dismissed") === "true");
 
   useEffect(() => {
@@ -167,7 +182,7 @@ export const TodayTab = () => {
       setEntries(updatedEntries);
       try { await saveEntries(updatedEntries); }
       catch (err: any) {
-        toast({ title: "Save failed", description: String(err?.message || err), variant: "destructive" });
+        toast({ title: t("today.saveFailed"), description: String(err?.message || err), variant: "destructive" });
       }
     } else {
       const newEntry: TrackerEntry = {
@@ -180,7 +195,7 @@ export const TodayTab = () => {
       setEntries(updatedEntries);
       try { await saveEntries(updatedEntries); }
       catch (err: any) {
-        toast({ title: "Save failed", description: String(err?.message || err), variant: "destructive" });
+        toast({ title: t("today.saveFailed"), description: String(err?.message || err), variant: "destructive" });
       }
 
       if (isViewingToday) {
@@ -215,17 +230,17 @@ export const TodayTab = () => {
     localStorage.setItem("memap_ideas_dismissed", "true");
     setIdeasDismissed(true);
     toast({
-      title: "Ideas hidden",
-      description: "You can restore them in Settings.",
+      title: t("today.ideasHidden"),
+      description: t("today.ideasHiddenDesc"),
       action: (
         <ToastAction
-          altText="Restore ideas"
+          altText={t("today.restore")}
           onClick={() => {
             localStorage.setItem("memap_ideas_dismissed", "false");
             setIdeasDismissed(false);
           }}
         >
-          Restore
+          {t("today.restore")}
         </ToastAction>
       ),
     });
@@ -274,7 +289,7 @@ export const TodayTab = () => {
     };
 
     await createTrackerDirectly(newTracker);
-    toast({ title: "Tracker added", description: `"${newTracker.title}" has been added to your map.` });
+    toast({ title: t("today.trackerAdded"), description: t("today.trackerAddedDesc", { title: localizeTrackerTitle(newTracker.title) }) });
   };
 
   const handleOpenExisting = () => {
@@ -291,7 +306,7 @@ export const TodayTab = () => {
     setDuplicateDialogOpen(false);
     if (pendingTracker) {
       await createTrackerDirectly(pendingTracker);
-      toast({ title: "Tracker added", description: `"${pendingTracker.title}" has been added to your map.` });
+      toast({ title: t("today.trackerAdded"), description: t("today.trackerAddedDesc", { title: localizeTrackerTitle(pendingTracker.title) }) });
       setPendingTracker(null);
       setDuplicateTracker(null);
     }
@@ -321,11 +336,11 @@ export const TodayTab = () => {
     setTrackerToDelete(null);
 
     toast({
-      title: "Tracker deleted",
-      description: `"${deleted.title}" was removed.`,
+      title: t("today.trackerDeleted"),
+      description: t("today.trackerDeletedDesc", { title: localizeTrackerTitle(deleted.title) }),
       action: (
         <ToastAction
-          altText="Undo"
+          altText={t("today.undo")}
           onClick={async () => {
             const allTrackers = await getTrackers();
             const restored = [...allTrackers.filter(t => t.id !== deleted.id), deleted];
@@ -333,7 +348,7 @@ export const TodayTab = () => {
             setTrackers(previousTrackers);
           }}
         >
-          Undo
+          {t("today.undo")}
         </ToastAction>
       ),
     });
@@ -369,7 +384,7 @@ export const TodayTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-muted-foreground">{t("loading")}</p>
       </div>
     );
   }
@@ -378,9 +393,9 @@ export const TodayTab = () => {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 text-center space-y-6">
         <div className="space-y-2">
-          <p className="text-2xl font-medium">Today's map is forming…</p>
+          <p className="text-2xl font-medium">{t("today.emptyTitle")}</p>
           <p className="text-sm text-muted-foreground max-w-md">
-            Start by choosing a few areas you'd like to notice more clearly.
+            {t("today.emptyHint")}
           </p>
         </div>
         <Button
@@ -388,7 +403,7 @@ export const TodayTab = () => {
           className="rounded-full px-6"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Your First Tracker
+          {t("today.addFirst")}
         </Button>
         
         <AddTrackerModal
@@ -429,7 +444,7 @@ export const TodayTab = () => {
               <Flame className="h-3.5 w-3.5 text-primary" strokeWidth={2} fill="currentColor" />
               <span className="text-xs font-medium text-foreground">
                 <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
-                <span className="text-muted-foreground ml-1">day{globalStreak.currentStreak !== 1 ? "s" : ""} in a row</span>
+                <span className="text-muted-foreground ml-1">{globalStreak.currentStreak === 1 ? t("today.streakDaysOne") : t("today.streakDaysMany", { count: globalStreak.currentStreak })}</span>
               </span>
             </div>
           </div>
@@ -441,7 +456,7 @@ export const TodayTab = () => {
         />
         {!isSelectedDateToday && (
           <p className="text-xs text-center text-muted-foreground mt-2">
-            You are filling in for a past date
+            {t("today.fillingIn")}
           </p>
         )}
       </div>
@@ -461,17 +476,17 @@ export const TodayTab = () => {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm">
                   {isSelectedDateToday
-                    ? "Today's session"
-                    : `Session for ${format(selectedDateObj, "MMM d")}`}
+                    ? t("today.titleToday")
+                    : t("today.titleDate", { date: format(selectedDateObj, "MMM d", { locale: dateLocale }) })}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {isSelectedDateToday
-                    ? "Answer your daily questions in one flow"
-                    : "Fill in the answers you missed that day"}
+                    ? t("today.sessionSubtitle")
+                    : t("today.sessionSubtitlePast")}
                 </p>
               </div>
               <div className="rounded-full bg-primary text-primary-foreground px-4 py-1.5 text-sm font-medium">
-                Start
+                {t("today.startSession")}
               </div>
             </div>
           </CardContent>
@@ -482,11 +497,11 @@ export const TodayTab = () => {
       {randomIdeas.length > 0 && !ideasDismissed && (
         <div className="space-y-3 animate-fade-in">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Ideas of the day</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">{t("today.ideasOfTheDay")}</p>
             <button
               onClick={handleDismissIdeas}
               className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-              aria-label="Hide ideas"
+              aria-label={t("today.hideIdeas")}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -522,7 +537,7 @@ export const TodayTab = () => {
                           className="w-full text-xs rounded-full h-7 mt-2 bg-background/50 hover:bg-background border-muted-foreground/20 hover:border-muted-foreground/40"
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          Add to My Map
+                          {t("today.addToMyMap")}
                         </Button>
                       </CardContent>
                     </Card>
@@ -539,7 +554,7 @@ export const TodayTab = () => {
       {/* Today's Check-in Section */}
       <div className="space-y-3 animate-fade-in">
         <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          {isSelectedDateToday ? "Today's check-in" : "Check-in for this day"}
+          {isSelectedDateToday ? t("today.checkIn") : t("today.checkInPast")}
         </p>
         
         <DndContext
@@ -587,7 +602,7 @@ export const TodayTab = () => {
                 const TIcon = getTrackerIcon(selectedTrackerForDetails.title, selectedTrackerForDetails.category);
                 return <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />;
               })()}
-              <span>{selectedTrackerForDetails?.title}</span>
+              <span>{selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}</span>
             </SheetTitle>
           </SheetHeader>
           
@@ -604,21 +619,21 @@ export const TodayTab = () => {
               
               {/* Edit section at bottom */}
               <div className="mt-6 pt-4 border-t space-y-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-3">Settings</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-3">{t("today.trackerSettings")}</p>
                 <Button
                   variant="outline"
                   className="w-full justify-start"
                   onClick={() => setSettingsModalOpen(true)}
                 >
                   <SettingsIcon className="mr-2 h-4 w-4" />
-                  Edit Tracker Settings
+                  {t("today.editTrackerSettings")}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full justify-start"
                   onClick={handleArchiveTracker}
                 >
-                  Archive Tracker
+                  {t("today.archiveTracker")}
                 </Button>
                 <Button
                   variant="destructive"
@@ -628,7 +643,7 @@ export const TodayTab = () => {
                     setDeleteDialogOpen(true);
                   }}
                 >
-                  Delete Tracker
+                  {t("today.deleteTracker")}
                 </Button>
               </div>
             </div>
@@ -650,15 +665,15 @@ export const TodayTab = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{trackerToDelete?.title}"?</AlertDialogTitle>
+            <AlertDialogTitle>{t("today.deleteConfirmTitle", { title: trackerToDelete ? localizeTrackerTitle(trackerToDelete.title) : "" })}</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the tracker and its entries. You'll have a few seconds to undo after deleting.
+              {t("today.deleteConfirmDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTracker} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

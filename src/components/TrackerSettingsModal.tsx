@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { localizeTrackerQuestion, localizeTrackerAdvice } from "@/lib/trackerLocalize";
 
 interface TrackerSettingsModalProps {
   open: boolean;
@@ -28,6 +30,7 @@ const trackerSettingsSchema = z.object({
 
 export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: TrackerSettingsModalProps) => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     questionText: "",
     answerType: "boolean" as Tracker["answerType"],
@@ -44,14 +47,20 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
 
   useEffect(() => {
     if (tracker) {
+      // Localize stored EN strings into the active language for editing.
+      // Trackers seeded before the i18n rollout (or by template-pickers that
+      // hadn't been wired through localize* yet) are stored as English text
+      // even when the user is on Russian. Showing the raw English in the edit
+      // form would be confusing — and saving without changes would lock that
+      // English in. Prefer the localized text on load; the user can still edit.
       setFormData({
-        questionText: tracker.questionText,
+        questionText: localizeTrackerQuestion(tracker.questionText),
         answerType: tracker.answerType,
         periodDays: tracker.periodDays,
         threshold: tracker.threshold,
         problemWhen: tracker.problemWhen,
         category: tracker.category,
-        adviceAboveThreshold: tracker.adviceAboveThreshold,
+        adviceAboveThreshold: localizeTrackerAdvice(tracker.adviceAboveThreshold),
       });
       setPeriodDaysRaw(String(tracker.periodDays));
       setThresholdRaw(String(tracker.threshold));
@@ -70,7 +79,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       });
 
       if (validated.threshold > validated.periodDays) {
-        setErrors({ threshold: "Should be less than the tracking period" });
+        setErrors({ threshold: t("trackerSettings.thresholdGtPeriod") });
         return;
       }
 
@@ -85,8 +94,8 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       await onSave(updatedTracker);
       
       toast({
-        title: "Tracker updated",
-        description: "Your changes have been saved successfully.",
+        title: t("trackerSettings.updated"),
+        description: t("trackerSettings.updatedDesc"),
       });
 
       onClose();
@@ -109,16 +118,16 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Tracker</DialogTitle>
+          <DialogTitle>{t("trackerSettings.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Question Text */}
           <div className="space-y-2">
-            <Label htmlFor="questionText">Question text</Label>
+            <Label htmlFor="questionText">{t("trackerSettings.questionText")}</Label>
             <Textarea
               id="questionText"
-              placeholder="Type your question…"
+              placeholder={t("trackerSettings.questionTextPh")}
               value={formData.questionText}
               onChange={(e) => setFormData({ ...formData, questionText: e.target.value })}
               rows={3}
@@ -128,13 +137,13 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
               <p className="text-xs text-destructive">{errors.questionText}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Leave as is or edit to change how the question appears
+              {t("trackerSettings.questionHelp")}
             </p>
           </div>
 
           {/* Answer Type */}
           <div className="space-y-2">
-            <Label htmlFor="answerType">Answer type</Label>
+            <Label htmlFor="answerType">{t("trackerSettings.answerType")}</Label>
             <Select
               value={formData.answerType}
               onValueChange={(value) => setFormData({ ...formData, answerType: value as Tracker["answerType"] })}
@@ -143,18 +152,18 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
-                <SelectItem value="boolean">Yes / No</SelectItem>
+                <SelectItem value="boolean">{t("trackerSettings.answerBool")}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              How you'll answer this question in Today view
+              {t("trackerSettings.answerTypeHelp")}
             </p>
           </div>
 
           {/* Period + Threshold */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="periodDays">Track last N days</Label>
+              <Label htmlFor="periodDays">{t("addTracker.fieldPeriod")}</Label>
               <Input
                 id="periodDays"
                 type="number"
@@ -167,10 +176,10 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 }}
                 className={errors.periodDays ? "border-destructive" : ""}
               />
-              <p className="text-xs text-muted-foreground">How far back to look</p>
+              <p className="text-xs text-muted-foreground">{t("addTracker.fieldPeriodHelp")}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="threshold">Significant days to reflect</Label>
+              <Label htmlFor="threshold">{t("addTracker.fieldThreshold")}</Label>
               <Input
                 id="threshold"
                 type="number"
@@ -184,15 +193,15 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 className={errors.threshold ? "border-destructive" : ""}
               />
               {errors.threshold && <p className="text-xs text-destructive">{errors.threshold}</p>}
-              <p className="text-xs text-muted-foreground">Triggers reflection</p>
+              <p className="text-xs text-muted-foreground">{t("addTracker.fieldThresholdHelp")}</p>
             </div>
           </div>
 
           {/* Concerning answer */}
           <div className="space-y-2">
-            <Label>Which answer is a concern?</Label>
+            <Label>{t("addTracker.fieldConcern")}</Label>
             <p className="text-xs text-muted-foreground">
-              The concerning answer will be highlighted in red and counted toward the pattern threshold.
+              {t("addTracker.fieldConcernDesc")}
             </p>
             <div className="space-y-2 pt-1">
               <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
@@ -206,8 +215,8 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                   className="h-4 w-4 mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium">Yes is concerning</p>
-                  <p className="text-xs text-muted-foreground">Answering Yes counts as a significant day</p>
+                  <p className="text-sm font-medium">{t("addTracker.yesConcerning")}</p>
+                  <p className="text-xs text-muted-foreground">{t("addTracker.yesConcerningDesc")}</p>
                 </div>
               </label>
               <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
@@ -221,8 +230,8 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                   className="h-4 w-4 mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-medium">No is concerning</p>
-                  <p className="text-xs text-muted-foreground">Answering No counts as a significant day</p>
+                  <p className="text-sm font-medium">{t("addTracker.noConcerning")}</p>
+                  <p className="text-xs text-muted-foreground">{t("addTracker.noConcerningDesc")}</p>
                 </div>
               </label>
             </div>
@@ -230,7 +239,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category">Category (Life Stream)</Label>
+            <Label htmlFor="category">{t("trackerSettings.categoryLabel")}</Label>
             <Select
               value={formData.category}
               onValueChange={(value) => setFormData({ ...formData, category: value as Tracker["category"] })}
@@ -239,27 +248,27 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
-                <SelectItem value="Emotions">Emotions & Mind</SelectItem>
-                <SelectItem value="Body">Body & Sensations</SelectItem>
-                <SelectItem value="Connections">Connections & Love</SelectItem>
-                <SelectItem value="Voice">Voice & Behavior</SelectItem>
-                <SelectItem value="Health">Health & Routine</SelectItem>
-                <SelectItem value="Curious">Curious & Random</SelectItem>
-                <SelectItem value="Fun">Fun & Weird</SelectItem>
-                <SelectItem value="Social">Social & Digital</SelectItem>
+                <SelectItem value="Emotions">{t("trackerSettings.categoryEmotions")}</SelectItem>
+                <SelectItem value="Body">{t("trackerSettings.categoryBody")}</SelectItem>
+                <SelectItem value="Connections">{t("trackerSettings.categoryConnections")}</SelectItem>
+                <SelectItem value="Voice">{t("trackerSettings.categoryVoice")}</SelectItem>
+                <SelectItem value="Health">{t("trackerSettings.categoryHealth")}</SelectItem>
+                <SelectItem value="Curious">{t("trackerSettings.categoryCurious")}</SelectItem>
+                <SelectItem value="Fun">{t("trackerSettings.categoryFun")}</SelectItem>
+                <SelectItem value="Social">{t("trackerSettings.categorySocial")}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              This affects the color and grouping of your tracker
+              {t("trackerSettings.categoryHelp")}
             </p>
           </div>
 
           {/* Advice / Reflection */}
           <div className="space-y-2">
-            <Label htmlFor="adviceAboveThreshold">Reflection text (shown when pattern detected)</Label>
+            <Label htmlFor="adviceAboveThreshold">{t("trackerSettings.adviceLabel")}</Label>
             <Textarea
               id="adviceAboveThreshold"
-              placeholder="What would you like to remember when this pattern appears?"
+              placeholder={t("trackerSettings.advicePh")}
               value={formData.adviceAboveThreshold}
               onChange={(e) => setFormData({ ...formData, adviceAboveThreshold: e.target.value })}
               rows={3}
@@ -269,7 +278,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
               <p className="text-xs text-destructive">{errors.adviceAboveThreshold}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Optional text that appears in Patterns when threshold is exceeded
+              {t("trackerSettings.adviceHelp")}
             </p>
           </div>
 
@@ -281,7 +290,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
               onClick={onClose}
               disabled={saving}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleSave}
@@ -290,7 +299,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 background: 'linear-gradient(135deg, hsl(var(--curious)), hsl(var(--fun)))'
               }}
             >
-              {saving ? "Saving..." : "Save changes"}
+              {saving ? t("common.saving") : t("trackerSettings.saveChanges")}
             </Button>
           </div>
         </div>

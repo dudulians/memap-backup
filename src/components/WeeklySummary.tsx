@@ -1,6 +1,7 @@
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Minus, Calendar, Flame, Target } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface WeeklySummaryProps {
   trackers: Tracker[];
@@ -8,6 +9,7 @@ interface WeeklySummaryProps {
 }
 
 export const WeeklySummary = ({ trackers, entries }: WeeklySummaryProps) => {
+  const { t } = useTranslation();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -71,12 +73,12 @@ export const WeeklySummary = ({ trackers, entries }: WeeklySummaryProps) => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-sm tracking-wide uppercase text-muted-foreground">
-            This Week
+            {t("weekly.thisWeek")}
           </h3>
           <div className={`flex items-center gap-1 text-xs ${trendColor}`}>
             <TrendIcon className="h-3.5 w-3.5" />
             <span>
-              {daysTrend > 0 ? `+${daysTrend}` : daysTrend} vs last week
+              {t("weekly.vsLastWeek", { diff: daysTrend > 0 ? `+${daysTrend}` : daysTrend })}
             </span>
           </div>
         </div>
@@ -85,23 +87,23 @@ export const WeeklySummary = ({ trackers, entries }: WeeklySummaryProps) => {
           <div className="text-center p-3 rounded-2xl bg-muted/30">
             <Calendar className="h-4 w-4 mx-auto mb-1 text-primary" />
             <p className="text-2xl font-bold">{thisWeekDays}</p>
-            <p className="text-[10px] text-muted-foreground">Days Active</p>
+            <p className="text-[10px] text-muted-foreground">{t("weekly.daysActive")}</p>
           </div>
           <div className="text-center p-3 rounded-2xl bg-muted/30">
             <Flame className="h-4 w-4 mx-auto mb-1 text-connections" />
             <p className="text-2xl font-bold">{streak}</p>
-            <p className="text-[10px] text-muted-foreground">Day Streak</p>
+            <p className="text-[10px] text-muted-foreground">{t("weekly.dayStreak")}</p>
           </div>
           <div className="text-center p-3 rounded-2xl bg-muted/30">
             <Target className="h-4 w-4 mx-auto mb-1 text-health" />
             <p className="text-2xl font-bold">{completionRate}%</p>
-            <p className="text-[10px] text-muted-foreground">Completion</p>
+            <p className="text-[10px] text-muted-foreground">{t("weekly.completion")}</p>
           </div>
         </div>
 
         {thisWeekSignificant > 0 && (
           <p className="text-xs text-muted-foreground text-center">
-            <span className="font-semibold text-foreground">{thisWeekSignificant}</span> significant answers this week
+            {t("weekly.significantAnswers", { count: thisWeekSignificant })}
           </p>
         )}
       </div>

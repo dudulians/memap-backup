@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
 import { PatternsTab } from "@/components/PatternsTab";
 import { NotesTab } from "@/components/NotesTab";
-import { Home, TrendingUp, Plus, BookOpen, Settings } from "lucide-react";
+import { Home, TrendingUp, Plus, BookOpen, Settings, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
@@ -11,6 +12,7 @@ import { applyTheme, getTheme } from "@/lib/theme";
 type Tab = "today" | "patterns" | "notes";
 
 const Index = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -45,6 +47,28 @@ const Index = () => {
     setActiveTab(target);
   };
 
+  // Floating back-to-top button. One implementation on <main> covers
+  // every tab (Today / Patterns / Notes) — each tab is a tall-scrolling
+  // list and the user asked for a consistent return-to-top affordance.
+  const mainRef = useRef<HTMLElement>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const handler = () => setShowBackToTop(el.scrollTop > 300);
+    el.addEventListener("scroll", handler, { passive: true });
+    return () => el.removeEventListener("scroll", handler);
+  }, []);
+  // Reset scroll + hide the button whenever the active tab changes, so
+  // switching tabs always lands the user at the top of the new one.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+    setShowBackToTop(false);
+  }, [activeTab]);
+  const scrollMainToTop = () => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleTrackerAdded = () => {
     // Refresh the map, but keep the Add Tracker modal open so the user
     // can add multiple trackers in one go. They close it explicitly
@@ -53,7 +77,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative">
+    <div className="h-screen overflow-hidden flex flex-col relative">
       {/* Header - subtle and elegant */}
       <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 py-4">
         <h1 className="text-2xl font-serif font-medium text-center tracking-tight text-foreground">
@@ -65,7 +89,7 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto max-w-2xl w-full mx-auto px-4 py-6 pb-40">
+      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto max-w-2xl w-full mx-auto px-4 py-6 pb-40">
         {activeTab === "today" && <TodayTab key={`today-${refreshKey}`} />}
         {activeTab === "patterns" && <PatternsTab key={`patterns-${refreshKey}`} />}
         {activeTab === "notes" && (
@@ -73,10 +97,24 @@ const Index = () => {
             key={`notes-${refreshKey}`}
             targetDate={notesTargetDate}
             onBack={notesSourceTab ? handleNotesBack : undefined}
-            backLabel={notesSourceTab === "patterns" ? "Back to Patterns" : notesSourceTab === "today" ? "Back to Today" : undefined}
+            backLabel={notesSourceTab === "patterns" ? t("notes.backToPatterns") : notesSourceTab === "today" ? t("notes.backToToday") : undefined}
           />
         )}
       </main>
+
+      {/* Floating back-to-top — sits above the bottom nav, flush right so
+          it never overlaps the center "+" button. Appears once the user
+          has scrolled past ~300px in any tab. */}
+      {showBackToTop && (
+        <button
+          onClick={scrollMainToTop}
+          aria-label="Scroll to top"
+          className="fixed right-4 z-20 h-11 w-11 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform animate-fade-in"
+          style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      )}
 
       {/* Floating Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
@@ -112,7 +150,7 @@ const Index = () => {
               `}
             >
               <Home className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] font-medium">Today</span>
+              <span className="text-[10px] font-medium">{t("common.today")}</span>
             </button>
 
             {/* Patterns tab */}
@@ -124,7 +162,7 @@ const Index = () => {
               `}
             >
               <TrendingUp className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] font-medium">Patterns</span>
+              <span className="text-[10px] font-medium">{t("common.patterns")}</span>
             </button>
 
             {/* Notes tab */}
@@ -136,7 +174,7 @@ const Index = () => {
               `}
             >
               <BookOpen className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] font-medium">Notes</span>
+              <span className="text-[10px] font-medium">{t("common.notes")}</span>
             </button>
 
             {/* Settings — opens modal, not a tab */}
@@ -145,7 +183,7 @@ const Index = () => {
               className="flex flex-col items-center justify-center py-3 px-2 transition-all duration-300 text-muted-foreground/60 hover:text-muted-foreground border-l border-border/40"
             >
               <Settings className="h-4 w-4 mb-0.5" />
-              <span className="text-[10px]">Settings</span>
+              <span className="text-[10px]">{t("common.settings")}</span>
             </button>
           </div>
         </div>

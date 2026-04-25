@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { clearThresholdNotification } from "@/lib/notifications";
@@ -6,7 +7,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
-import { Lightbulb, AlertTriangle, ChevronRight } from "lucide-react";
+import { Lightbulb, AlertTriangle, ChevronRight, CalendarDays, Target, LineChart, GitCompare } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
 import { WeeklySummary } from "./WeeklySummary";
@@ -17,8 +20,10 @@ import { TrackerDetails } from "./TrackerDetails";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
+import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 export const PatternsTab = () => {
+  const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +45,16 @@ export const PatternsTab = () => {
   const [editingTracker, setEditingTracker] = useState<Tracker | null>(null);
   const [editingDate, setEditingDate] = useState<string>("");
   const [editingEntry, setEditingEntry] = useState<TrackerEntry | undefined>(undefined);
+
+  // Section tab: persisted across session reloads so the user lands back where
+  // they were, not on the first tab every time.
+  const [section, setSection] = useState<string>(() => {
+    try { return localStorage.getItem("memap_patterns_section") ?? "overview"; } catch { return "overview"; }
+  });
+  const handleSectionChange = (value: string) => {
+    setSection(value);
+    try { localStorage.setItem("memap_patterns_section", value); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     loadData();
@@ -217,41 +232,91 @@ export const PatternsTab = () => {
   if (trackers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 text-center space-y-2">
-        <p className="text-2xl font-medium">Patterns of Your Days</p>
+        <p className="text-2xl font-medium">{t("patterns.title")}</p>
         <p className="text-sm text-muted-foreground max-w-md">
-          Add your first tracker to start building patterns over time.
+          {t("patterns.emptyHint")}
         </p>
       </div>
     );
   }
 
+  // Rank so strong/action-signal patterns float to the top when the user
+  // opens the Signals tab. Within each tier, preserve the user's tracker
+  // order (which reflects their own sortIndex).
+  const statusRank: Record<"strong" | "emerging" | "balanced", number> = {
+    strong: 0,
+    emerging: 1,
+    balanced: 2,
+  };
+  const sortedTrackers = [...trackers].sort((a, b) => {
+    const sa = getTrackerStats(a).status;
+    const sb = getTrackerStats(b).status;
+    return statusRank[sa] - statusRank[sb];
+  });
+
+  const strongCount = trackers.filter((t) => getTrackerStats(t).status === "strong").length;
+
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
       <div className="text-center space-y-1 animate-fade-in">
-        <p className="text-lg font-medium tracking-wide">Patterns of Your Days</p>
+        <p className="text-lg font-medium tracking-wide">{t("patterns.title")}</p>
         <p className="text-sm text-muted-foreground">
-          {trackers.length === 1 ? "1 pattern tracked" : `${trackers.length} patterns tracked`}
+          {trackers.length === 1 ? t("patterns.countOne") : t("patterns.countMany", { count: trackers.length })}
         </p>
       </div>
 
-      {/* Overview Card with Calendar */}
-      <OverviewCard
-        trackers={trackers}
-        entries={entries}
-        selectedDate={selectedDate}
-        onDateSelect={setSelectedDate}
-        onTrackerSelect={handleOpenTrackerDetails}
-        onDayEdit={handleDayEdit}
-        onBulkAnswer={handleBulkAnswer}
-      />
+      {/* Section tabs — turns the old long scroll into 4 destinations,
+          each one screen-sized. The tab list stays sticky under the app
+          header so long tracker lists don't hide the nav. */}
+      <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
+        <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
+          <TabsList className="w-full grid grid-cols-4 h-auto p-1 rounded-2xl bg-muted/60">
+            <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto">
+              <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[10px] font-medium">{t("patterns.tabOverview")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="signals" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto relative">
+              <Target className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[10px] font-medium">{t("patterns.tabSignals")}</span>
+              {strongCount > 0 && (
+                <span className={cn(
+                  "absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center",
+                  "bg-strong text-strong-foreground"
+                )}>
+                  {strongCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="trends" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto">
+              <LineChart className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
+            </TabsTrigger>
+            <TabsTrigger value="links" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto">
+              <GitCompare className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[10px] font-medium">{t("patterns.tabLinks")}</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-      {/* Weekly Summary */}
-      <WeeklySummary trackers={trackers} entries={entries} />
+        {/* --- OVERVIEW: calendar grid + weekly summary ---------------- */}
+        <TabsContent value="overview" className="space-y-6 mt-4 animate-fade-in">
+          <OverviewCard
+            trackers={trackers}
+            entries={entries}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            onTrackerSelect={handleOpenTrackerDetails}
+            onDayEdit={handleDayEdit}
+            onBulkAnswer={handleBulkAnswer}
+          />
+          <WeeklySummary trackers={trackers} entries={entries} />
+        </TabsContent>
 
-      {/* Pattern Cards */}
-      <div className="space-y-4">
-        {trackers.map((tracker) => {
+        {/* --- SIGNALS: the pattern/action cards, strong first --------- */}
+        <TabsContent value="signals" className="mt-4 animate-fade-in">
+          <div className="space-y-4">
+        {sortedTrackers.map((tracker) => {
           const stats = getTrackerStats(tracker);
           const categoryColor = getCategoryColor(tracker.category);
           const Icon = getTrackerIcon(tracker.title, tracker.category);
@@ -284,10 +349,15 @@ export const PatternsTab = () => {
                     >
                       <Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: "hsl(var(--foreground))" }} />
                     </div>
-                    <div>
-                      <h3 className="font-medium text-base">{tracker.title}</h3>
-                      <p className="text-xs uppercase tracking-wider mt-1" style={{ color: `hsl(var(--${categoryColor}))` }}>
-                        {tracker.category}
+                    <div className="min-w-0">
+                      <h3 className="font-medium text-base">{localizeTrackerTitle(tracker.title)}</h3>
+                      {tracker.questionText && (
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                          {localizeTrackerQuestion(tracker.questionText)}
+                        </p>
+                      )}
+                      <p className="text-xs uppercase tracking-wider mt-1.5" style={{ color: `hsl(var(--${categoryColor}))` }}>
+                        {t(`categories.${tracker.category}`)}
                       </p>
                     </div>
                   </div>
@@ -301,9 +371,9 @@ export const PatternsTab = () => {
                         text-xs font-medium rounded-full px-3
                       `}
                     >
-                      {stats.status === "strong" && "Strong pattern"}
-                      {stats.status === "emerging" && "Emerging"}
-                      {stats.status === "balanced" && "Stable"}
+                      {stats.status === "strong" && t("patterns.strongPattern")}
+                      {stats.status === "emerging" && t("patterns.emerging")}
+                      {stats.status === "balanced" && t("patterns.stable")}
                     </Badge>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
                   </div>
@@ -316,11 +386,11 @@ export const PatternsTab = () => {
                       <span className="font-serif text-base font-medium tabular-nums text-foreground">{stats.significantDays}</span>
                       <span className="mx-1 text-muted-foreground/60">/</span>
                       <span className="tabular-nums">{tracker.threshold}</span>
-                      {" significant days"}
+                      {" "}{t("patterns.significantDays")}
                     </span>
                     {daysLeft > 0
-                      ? <span>{daysLeft} more to action signal</span>
-                      : <span className="font-medium" style={{ color: "hsl(var(--strong))" }}>Action signal reached</span>
+                      ? <span>{t("patterns.moreToAction", { count: daysLeft })}</span>
+                      : <span className="font-medium" style={{ color: "hsl(var(--strong))" }}>{t("patterns.actionReached")}</span>
                     }
                   </div>
                   <div className="w-full h-2.5 bg-muted/30 rounded-full overflow-hidden">
@@ -343,11 +413,11 @@ export const PatternsTab = () => {
                     <div className="flex items-center gap-2">
                       <Lightbulb className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(var(--strong))" }} />
                       <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: "hsl(var(--strong))" }}>
-                        Reflection suggested
+                        {t("patterns.reflectionSuggested")}
                       </p>
                     </div>
                     <p className="text-sm leading-relaxed text-foreground/80">
-                      {tracker.adviceAboveThreshold}
+                      {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
                     </p>
                   </div>
                 )}
@@ -362,7 +432,9 @@ export const PatternsTab = () => {
                   >
                     <AlertTriangle className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(var(--emerging))" }} />
                     <p className="text-xs" style={{ color: "hsl(var(--emerging))" }}>
-                      Pattern is building — {daysLeft} more significant day{daysLeft !== 1 ? "s" : ""} to the action signal
+                      {daysLeft === 1
+                        ? t("patterns.patternBuildingOne")
+                        : t("patterns.patternBuildingMany", { count: daysLeft })}
                     </p>
                   </div>
                 )}
@@ -370,20 +442,26 @@ export const PatternsTab = () => {
             </Card>
           );
         })}
-      </div>
+          </div>
+        </TabsContent>
 
-      {/* Trend & Correlation Chart */}
-      <TrendChart trackers={trackers} entries={entries} />
+        {/* --- TRENDS: dual-series chart over time --------------------- */}
+        <TabsContent value="trends" className="mt-4 animate-fade-in">
+          <TrendChart trackers={trackers} entries={entries} />
+        </TabsContent>
 
-      {/* Correlation Insights */}
-      <CorrelationInsights trackers={trackers} entries={entries} />
+        {/* --- LINKS: dependency / correlation insights ---------------- */}
+        <TabsContent value="links" className="mt-4 animate-fade-in">
+          <CorrelationInsights trackers={trackers} entries={entries} />
+        </TabsContent>
+      </Tabs>
 
-      {/* Disclaimer */}
+      {/* Disclaimer (always shown, regardless of tab) */}
       <div className="pt-6 mt-8">
         <p className="text-xs text-muted-foreground text-center px-4 leading-relaxed font-playful">
-          MeMap is a self-reflection tool – not a diagnostic app.
+          {t("patterns.disclaimer")}
           <br />
-          If your patterns feel overwhelming, consider talking to a professional.
+          {t("patterns.disclaimer2")}
         </p>
       </div>
 

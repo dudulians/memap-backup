@@ -27,6 +27,7 @@ import { TrackerDetails } from "./TrackerDetails";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -309,7 +310,7 @@ export const TrackersTab = () => {
               <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
             </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm truncate">{tracker.title}</h3>
+                        <h3 className="font-medium text-sm truncate">{localizeTrackerTitle(tracker.title)}</h3>
                         <p className="text-xs text-muted-foreground">{tracker.category}</p>
                       </div>
                       <Button
@@ -431,7 +432,7 @@ const SortableTrackerCard = ({
               <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-base truncate">{tracker.title}</h3>
+              <h3 className="font-medium text-base truncate">{localizeTrackerTitle(tracker.title)}</h3>
               <p
                 className="text-xs uppercase tracking-wider mt-1"
                 style={{ color: `hsl(var(--${categoryColor}))` }}
@@ -439,7 +440,7 @@ const SortableTrackerCard = ({
                 {tracker.category}
               </p>
               <p className="text-sm text-muted-foreground mt-2 font-playful line-clamp-2">
-                {tracker.questionText}
+                {localizeTrackerQuestion(tracker.questionText)}
               </p>
             </div>
           </div>

@@ -12,6 +12,11 @@ import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
 import { playSwipeSound, triggerHaptic as runHaptic } from "@/lib/feedback";
+import { useTranslation } from "react-i18next";
+import { getLanguage } from "@/lib/i18n";
+import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { ru as ruLocale } from "date-fns/locale";
+import { format } from "date-fns";
 
 interface DailySessionProps {
   trackers: Tracker[];
@@ -73,6 +78,8 @@ export const DailySession = ({
   onClose,
   onComplete,
 }: DailySessionProps) => {
+  const { t } = useTranslation();
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const settings = getSessionSettings();
   
   // Build the deck of unanswered questions + new suggestions
@@ -336,17 +343,21 @@ export const DailySession = ({
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center space-y-6 animate-fade-in">
             <div className="text-6xl mb-4">🎉</div>
-            <h1 className="text-2xl font-semibold">Session completed!</h1>
+            <h1 className="text-2xl font-semibold">{t("dailySession.completed")}</h1>
             <p className="text-muted-foreground">
               {deck.length === 0
-                ? "All caught up — nothing to answer today"
+                ? t("dailySession.caughtUp")
                 : answeredCount > 0
-                ? `You answered ${answeredCount} question${answeredCount !== 1 ? 's' : ''} today`
-                : "Session complete — see you tomorrow"}
+                ? (answeredCount === 1
+                    ? t("dailySession.answeredOne")
+                    : t("dailySession.answeredMany", { count: answeredCount }))
+                : t("dailySession.seeYouTomorrow")}
             </p>
             {newPatternsAdded > 0 && (
               <p className="text-sm text-primary">
-                {newPatternsAdded} new pattern{newPatternsAdded !== 1 ? 's' : ''} added
+                {newPatternsAdded === 1
+                  ? t("dailySession.newPatternsOne")
+                  : t("dailySession.newPatternsMany", { count: newPatternsAdded })}
               </p>
             )}
             <Button
@@ -354,7 +365,7 @@ export const DailySession = ({
               className="rounded-full px-8"
               size="lg"
             >
-              Back to Today
+              {t("dailySession.backToToday")}
             </Button>
           </div>
         </div>
@@ -393,14 +404,11 @@ export const DailySession = ({
         </Button>
         <div className="text-center">
           <p className="text-sm font-medium">
-            Question {currentIndex + 1} of {totalQuestions}
+            {t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
           </p>
           {selectedDate !== todayLocal() && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              Filling in for {(() => {
-                const d = new Date(selectedDate + "T00:00:00");
-                return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-              })()}
+              {t("dailySession.fillingInFor", { date: format(new Date(selectedDate + "T00:00:00"), "MMM d", { locale: dateLocale }) })}
             </p>
           )}
         </div>
@@ -435,7 +443,7 @@ export const DailySession = ({
                 "absolute -left-2 top-1/2 -translate-y-1/2 -translate-x-full px-4 py-2 rounded-full font-semibold animate-fade-in z-10",
                 yesIsSignificant ? "bg-strong text-strong-foreground" : "bg-balanced text-balanced-foreground"
               )}>
-                Yes ✓
+                {t("common.yes")} ✓
               </div>
             )}
             {dragX < -50 && (
@@ -443,12 +451,12 @@ export const DailySession = ({
                 "absolute -right-2 top-1/2 -translate-y-1/2 translate-x-full px-4 py-2 rounded-full font-semibold animate-fade-in z-10",
                 yesIsSignificant ? "bg-balanced text-balanced-foreground" : "bg-strong text-strong-foreground"
               )}>
-                No ✗
+                {t("common.no")} ✗
               </div>
             )}
             {dragY > 50 && (
               <div className="absolute left-1/2 -bottom-2 -translate-x-1/2 translate-y-full bg-muted text-muted-foreground px-4 py-2 rounded-full font-semibold animate-fade-in z-10">
-                Skip ↓
+                {t("common.skip")} ↓
               </div>
             )}
 
@@ -459,13 +467,13 @@ export const DailySession = ({
                   <div className="flex flex-col items-center gap-1">
                     <Badge className="bg-primary/20 text-primary border-primary/30">
                       <Sparkles className="h-3 w-3 mr-1" />
-                      New suggestion
+                      {t("dailySession.newSuggestion")}
                     </Badge>
                     <button
                       onClick={handleDisableRecommendations}
                       className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
                     >
-                      Don't show these
+                      {t("dailySession.dontShowThese")}
                     </button>
                   </div>
                 )}
@@ -484,22 +492,22 @@ export const DailySession = ({
                       const QIcon = getTrackerIcon(currentQuestion.tracker.title, currentQuestion.tracker.category);
                       return <QIcon className="h-3.5 w-3.5 mr-1.5 inline-block" strokeWidth={1.75} />;
                     })()}
-                    {currentQuestion.tracker.title} · {currentQuestion.tracker.category}
+                    {localizeTrackerTitle(currentQuestion.tracker.title)} · {t(`categories.${currentQuestion.tracker.category}` as const)}
                   </Badge>
                 </div>
 
                 {/* Question */}
                 <div className="text-center py-12">
                   <p className="text-xl font-medium leading-relaxed">
-                    {currentQuestion.tracker.questionText}
+                    {localizeTrackerQuestion(currentQuestion.tracker.questionText)}
                   </p>
                 </div>
 
                 {/* Swipe hints */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground pt-4">
-                  <span>← No</span>
-                  <span className="text-center">↓ Skip</span>
-                  <span>Yes →</span>
+                  <span>{t("dailySession.swipeNo")}</span>
+                  <span className="text-center">{t("dailySession.skipHint")}</span>
+                  <span>{t("dailySession.swipeYes")}</span>
                 </div>
               </CardContent>
             </Card>
@@ -522,7 +530,7 @@ export const DailySession = ({
                 : "border-balanced/60 hover:bg-balanced/10 text-balanced"
             )}
           >
-            No
+            {t("common.no")}
           </Button>
           <Button
             size="lg"
@@ -535,7 +543,7 @@ export const DailySession = ({
                 : "bg-balanced hover:bg-balanced/90 text-balanced-foreground"
             )}
           >
-            Yes
+            {t("common.yes")}
           </Button>
         </div>
         <Button
@@ -545,7 +553,7 @@ export const DailySession = ({
           className="w-full text-muted-foreground"
         >
           <SkipForward className="h-4 w-4 mr-2" />
-          Skip this question
+          {t("dailySession.skipQuestion")}
         </Button>
       </div>
     </div>

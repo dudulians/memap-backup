@@ -7,6 +7,10 @@ import { ChevronLeft, ChevronRight, Plus, CheckSquare, Square, FileText } from "
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import { getLanguage } from "@/lib/i18n";
+import { ru as ruLocale } from "date-fns/locale";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 
 type CalendarView = "month" | "year";
 
@@ -33,6 +37,8 @@ export const OverviewCard = ({
   onDayEdit,
   onBulkAnswer,
 }: OverviewCardProps) => {
+  const { t } = useTranslation();
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [activeTrackerIndex, setActiveTrackerIndex] = useState(0);
   const [displayMonth, setDisplayMonth] = useState(() => new Date());
   const [multiSelectMode, setMultiSelectMode] = useState(false);
@@ -159,10 +165,11 @@ export const OverviewCard = ({
         }
         cur = addDays(cur, 1);
       }
-      months.push({ monthDate, label: format(monthDate, "MMM"), days });
+      const lbl = format(monthDate, "MMM", { locale: dateLocale });
+      months.push({ monthDate, label: lbl.charAt(0).toUpperCase() + lbl.slice(1), days });
     }
     return months;
-  }, [entryMap, activeTracker, today]);
+  }, [entryMap, activeTracker, today, dateLocale]);
 
   // Calculate metrics for displayed month
   const monthStats = useMemo(() => {
@@ -286,11 +293,11 @@ export const OverviewCard = ({
     return (
       <Card className="card-premium overflow-hidden animate-fade-in">
         <CardContent className="p-6 text-center">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Overview</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">{t("overview.heading")}</h2>
           <div className="py-8 space-y-4">
-            <p className="text-lg font-medium text-foreground">No patterns tracked yet</p>
+            <p className="text-lg font-medium text-foreground">{t("overview.noPatternsTitle")}</p>
             <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              Start by adding your first tracker to see your patterns here.
+              {t("overview.noPatternsDesc")}
             </p>
             {onAddTracker && (
               <Button
@@ -298,7 +305,7 @@ export const OverviewCard = ({
                 className="rounded-full mt-2"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Start tracking
+                {t("overview.startTracking")}
               </Button>
             )}
           </div>
@@ -319,20 +326,20 @@ export const OverviewCard = ({
         {/* Header with title, view toggle and pattern navigation arrows */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Overview</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t("overview.heading")}</h2>
             <div className="flex items-center bg-muted/50 rounded-full p-0.5">
               <button
                 onClick={() => setCalendarView("month")}
                 className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-medium transition-all",
                   calendarView === "month" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
                 )}
-              >Month</button>
+              >{t("overview.month")}</button>
               <button
                 onClick={() => setCalendarView("year")}
                 className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-medium transition-all",
                   calendarView === "year" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
                 )}
-              >Year</button>
+              >{t("overview.year")}</button>
             </div>
           </div>
 
@@ -343,7 +350,7 @@ export const OverviewCard = ({
               size="icon"
               onClick={handlePrevTracker}
               className="h-7 w-7 rounded-full"
-              aria-label="Previous pattern"
+              aria-label={t("overview.prevPattern")}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -355,7 +362,7 @@ export const OverviewCard = ({
               size="icon"
               onClick={handleNextTracker}
               className="h-7 w-7 rounded-full"
-              aria-label="Next pattern"
+              aria-label={t("overview.nextPattern")}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -364,7 +371,7 @@ export const OverviewCard = ({
 
         {/* Pattern selector section */}
         <div className="mb-4">
-          <p className="text-xs text-muted-foreground mb-2 font-medium">Choose a pattern</p>
+          <p className="text-xs text-muted-foreground mb-2 font-medium">{t("overview.choosePattern")}</p>
           
           {/* Chips container with fade edges */}
           <div className="relative">
@@ -391,7 +398,7 @@ export const OverviewCard = ({
                     )}
                   >
                     <Icon className="h-3.5 w-3.5" strokeWidth={isActive ? 2.25 : 1.75} />
-                    <span>{tracker.title}</span>
+                    <span>{localizeTrackerTitle(tracker.title)}</span>
                   </button>
                 );
               })}
@@ -406,14 +413,14 @@ export const OverviewCard = ({
           onTouchEnd={handleTouchEnd}
         >
           <p className="text-sm mb-3">
-            <span className="text-muted-foreground">Calendar for: </span>
+            <span className="text-muted-foreground">{t("overview.calendarFor")} </span>
             <span className="font-medium text-foreground">{activeTracker.title}</span>
             <span className="text-muted-foreground"> · </span>
-            <span 
+            <span
               className="font-medium capitalize"
               style={{ color: `hsl(var(--${categoryColor}))` }}
             >
-              {activeTracker.category}
+              {t(`categories.${activeTracker.category}` as const)}
             </span>
           </p>
           
@@ -421,11 +428,11 @@ export const OverviewCard = ({
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="p-3 rounded-xl bg-muted/30 text-center">
               <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{monthStats.trackedDays}</p>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase">Days tracked</p>
+              <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("overview.daysTracked")}</p>
             </div>
             <div className="p-3 rounded-xl bg-muted/30 text-center">
               <p className="text-3xl font-serif font-medium tabular-nums tracking-tight text-strong">{monthStats.significantDays}</p>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase">Significant days</p>
+              <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("overview.significantDaysStat")}</p>
             </div>
           </div>
         </div>
@@ -468,9 +475,9 @@ export const OverviewCard = ({
             </div>
             {/* Legend */}
             <div className="flex items-center justify-center gap-4 text-[10px] pt-1 text-muted-foreground">
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-balanced" /><span>Balanced</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-strong" /><span>Significant</span></div>
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-muted/40 border border-border/30" /><span>Untracked</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-balanced" /><span>{t("overview.balanced")}</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-strong" /><span>{t("overview.significant")}</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm bg-muted/40 border border-border/30" /><span>{t("overview.untracked")}</span></div>
             </div>
           </div>
         )}
@@ -493,7 +500,10 @@ export const OverviewCard = ({
             </Button>
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-medium">
-                {format(displayMonth, "MMMM yyyy")}
+                {(() => {
+                  const s = format(displayMonth, "LLLL yyyy", { locale: dateLocale });
+                  return s.charAt(0).toUpperCase() + s.slice(1);
+                })()}
               </h3>
               {onBulkAnswer && (
                 <Button
@@ -503,9 +513,9 @@ export const OverviewCard = ({
                   className="h-6 px-2 text-[10px] rounded-full"
                 >
                   {multiSelectMode ? (
-                    <><CheckSquare className="h-3 w-3 mr-1" /> Multi</>
+                    <><CheckSquare className="h-3 w-3 mr-1" /> {t("overview.multi")}</>
                   ) : (
-                    <><Square className="h-3 w-3 mr-1" /> Multi</>
+                    <><Square className="h-3 w-3 mr-1" /> {t("overview.multi")}</>
                   )}
                 </Button>
               )}
@@ -566,7 +576,7 @@ export const OverviewCard = ({
           {multiSelectMode && selectedDates.size > 0 && (
             <div className="bg-muted/50 rounded-xl p-3 space-y-2 animate-fade-in">
               <p className="text-xs font-medium text-center">
-                {selectedDates.size} date{selectedDates.size !== 1 ? 's' : ''} selected
+                {selectedDates.size === 1 ? t("overview.datesSelectedOne") : t("overview.datesSelectedMany", { count: selectedDates.size })}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 <Button
@@ -580,7 +590,7 @@ export const OverviewCard = ({
                       : "bg-strong hover:bg-strong/90"
                   )}
                 >
-                  No
+                  {t("common.no")}
                 </Button>
                 <Button
                   variant="ghost"
@@ -593,7 +603,7 @@ export const OverviewCard = ({
                       : "bg-balanced hover:bg-balanced/90"
                   )}
                 >
-                  Yes
+                  {t("common.yes")}
                 </Button>
                 <Button
                   variant="outline"
@@ -601,7 +611,7 @@ export const OverviewCard = ({
                   onClick={() => handleBulkAction(null)}
                   className="h-8 text-xs rounded-full"
                 >
-                  Clear
+                  {t("common.clear")}
                 </Button>
               </div>
             </div>
@@ -611,21 +621,21 @@ export const OverviewCard = ({
           <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-[10px] pt-2 text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-balanced flex items-center justify-center text-[6px] text-balanced-foreground font-medium">7</div>
-              <span>Balanced</span>
+              <span>{t("overview.balanced")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-strong flex items-center justify-center text-[6px] text-strong-foreground font-medium">7</div>
-              <span>Significant</span>
+              <span>{t("overview.significant")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-card border border-untracked flex items-center justify-center text-[6px] text-untracked-foreground font-medium">7</div>
-              <span>Untracked</span>
+              <span>{t("overview.untracked")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="relative w-3 h-3 rounded-full bg-muted flex items-center justify-center">
                 <div className="w-2 h-[1.5px] rounded-full bg-foreground/60 absolute bottom-[15%] left-1/2 -translate-x-1/2" />
               </div>
-              <span>Note</span>
+              <span>{t("overview.noteLegend")}</span>
             </div>
           </div>
         </div>}
@@ -636,13 +646,13 @@ export const OverviewCard = ({
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <FileText className="h-3 w-3" />
-                {notesForSelectedDate.length === 1 ? "Note" : `${notesForSelectedDate.length} notes`} · {format(new Date(selectedDate + "T00:00:00"), "d MMM")}
+                {notesForSelectedDate.length === 1 ? t("overview.noteOne") : t("overview.noteMany", { count: notesForSelectedDate.length })} · {format(new Date(selectedDate + "T00:00:00"), "d MMM", { locale: dateLocale })}
               </p>
               <button
                 onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
                 className="text-xs text-primary hover:underline font-medium"
               >
-                Open in Notes →
+                {t("overview.openInNotes")}
               </button>
             </div>
             {notesForSelectedDate.slice(0, 2).map(note => (

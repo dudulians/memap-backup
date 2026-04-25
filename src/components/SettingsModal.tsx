@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { SUPPORTED_LANGUAGES, SupportedLanguage, setLanguage, getLanguage } from "@/lib/i18n";
+import { Languages } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getNotificationSettings, saveNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
@@ -16,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { resetTourSeen } from "@/components/OnboardingTour";
 import { getTheme, setTheme, AppTheme } from "@/lib/theme";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 
 interface SettingsModalProps {
   open: boolean;
@@ -69,7 +73,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [pendingImport, setPendingImport] = useState<BackupPayload | null>(null);
   const [ideasDismissed, setIdeasDismissed] = useState(() => localStorage.getItem("memap_ideas_dismissed") === "true");
   const [theme, setThemeState] = useState<AppTheme>(() => getTheme());
+  const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => getLanguage());
+  const { t } = useTranslation();
   const { toast } = useToast();
+
+  const handleLanguageChange = (lng: SupportedLanguage) => {
+    setCurrentLang(lng);
+    setLanguage(lng);
+  };
 
   const handleThemeChange = (next: AppTheme) => {
     setThemeState(next);
@@ -109,20 +120,20 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       if (!result.granted) {
         const messages: Record<string, { title: string; description: string }> = {
           "insecure-origin": {
-            title: "Notifications need the installed app",
-            description: "Web browsers block notifications on plain HTTP. Use the MeMap app, or open on HTTPS / localhost.",
+            title: t("permissions.insecureOriginTitle"),
+            description: t("permissions.insecureOriginDesc"),
           },
           unsupported: {
-            title: "Not supported in this browser",
-            description: "Your browser doesn't support web notifications. Use the installed MeMap app instead.",
+            title: t("permissions.unsupportedTitle"),
+            description: t("permissions.unsupportedDesc"),
           },
           denied: {
-            title: "Permission denied",
-            description: "Enable notifications for MeMap in your device settings, then try again.",
+            title: t("permissions.deniedTitle"),
+            description: t("permissions.deniedDesc"),
           },
           unknown: {
-            title: "Couldn't enable notifications",
-            description: "Something went wrong. Please try again.",
+            title: t("permissions.unknownTitle"),
+            description: t("permissions.unknownDesc"),
           },
         };
         const msg = messages[result.reason ?? "unknown"] ?? messages.unknown;
@@ -138,13 +149,13 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     if (enabled) {
       scheduleNotification(newSettings);
       toast({
-        title: "Notifications enabled",
-        description: `You'll receive a daily reminder at ${newSettings.time}`,
+        title: t("settings.notificationsEnabled"),
+        description: t("settings.notificationsEnabledDesc", { time: newSettings.time }),
       });
     } else {
       toast({
-        title: "Notifications disabled",
-        description: "Daily reminders have been turned off.",
+        title: t("settings.notificationsDisabled"),
+        description: t("settings.notificationsDisabledDesc"),
       });
     }
   };
@@ -157,8 +168,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     if (notificationSettings.enabled) {
       scheduleNotification(newSettings);
       toast({
-        title: "Time updated",
-        description: `Daily reminder set for ${time}`,
+        title: t("settings.timeUpdated"),
+        description: t("settings.timeUpdatedDesc", { time }),
       });
     }
   };
@@ -244,8 +255,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     URL.revokeObjectURL(url);
 
     toast({
-      title: "Export ready",
-      description: "CSV downloaded — open in Excel or Google Sheets.",
+      title: t("settings.exportReady"),
+      description: t("settings.exportReadyDesc"),
     });
   };
 
@@ -284,7 +295,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     a.click();
     URL.revokeObjectURL(url);
 
-    toast({ title: "Backup saved", description: "Keep this file safe to restore your data later." });
+    toast({ title: t("settings.backupSaved"), description: t("settings.backupSavedDesc") });
   };
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -307,8 +318,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       setImportDialogOpen(true);
     } catch {
       toast({
-        title: "Invalid backup",
-        description: "This file doesn't look like a MeMap backup.",
+        title: t("settings.invalidBackup"),
+        description: t("settings.invalidBackupDesc"),
         variant: "destructive",
       });
     }
@@ -330,7 +341,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
     setImportDialogOpen(false);
     setPendingImport(null);
-    toast({ title: "Data restored", description: "Your backup has been imported." });
+    toast({ title: t("settings.dataRestored"), description: t("settings.dataRestoredDesc") });
     setTimeout(() => window.location.reload(), 800);
   };
 
@@ -338,8 +349,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     localStorage.clear();
     setResetDialogOpen(false);
     toast({
-      title: "Data cleared",
-      description: "All data has been reset.",
+      title: t("settings.dataCleared"),
+      description: t("settings.dataClearedDesc"),
     });
     window.location.reload();
   };
@@ -367,11 +378,11 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             size="icon"
             onClick={onClose}
             className="rounded-full h-9 w-9 -ml-1"
-            aria-label="Back"
+            aria-label={t("common.back")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold">Settings</h1>
+          <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -381,20 +392,61 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
               <div className="flex items-center gap-3">
                 <Flame className="h-8 w-8 text-orange-500" />
                 <div className="flex-1">
-                  <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{globalStreak.currentStreak}<span className="text-sm font-sans font-normal text-muted-foreground ml-1.5">days</span></p>
-                  <p className="text-xs text-muted-foreground tracking-wide uppercase">Current streak</p>
+                  <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{globalStreak.currentStreak}<span className="text-sm font-sans font-normal text-muted-foreground ml-1.5">{t("settings.streakDays")}</span></p>
+                  <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakCurrent")}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xl font-serif font-medium tabular-nums text-muted-foreground">{globalStreak.longestStreak}</p>
-                  <p className="text-xs text-muted-foreground tracking-wide uppercase">Longest</p>
+                  <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakLongest")}</p>
                 </div>
               </div>
               {globalStreak.totalActiveDays > 0 && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  {globalStreak.totalActiveDays} total days of tracking
+                  {globalStreak.totalActiveDays === 1
+                    ? t("settings.streakTotalOne")
+                    : t("settings.streakTotalMany", { count: globalStreak.totalActiveDays })}
                 </p>
               )}
             </Card>
+
+            <Separator />
+
+            {/* Language */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Languages className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h3 className="font-medium text-sm">{t("language.settingsLabel")}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {t("language.subtitle")}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {SUPPORTED_LANGUAGES.map((lng) => {
+                      const isActive = currentLang === lng.code;
+                      return (
+                        <button
+                          key={lng.code}
+                          onClick={() => handleLanguageChange(lng.code)}
+                          className={`rounded-xl border p-2.5 text-left transition-all ${
+                            isActive
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border/50 hover:border-border bg-muted/20"
+                          }`}
+                        >
+                          <div className="text-sm font-medium">{lng.native}</div>
+                          {lng.native !== lng.name && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">{lng.name}</div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <Separator />
 
@@ -404,9 +456,9 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 <Palette className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-medium text-sm">Appearance</h3>
+                    <h3 className="font-medium text-sm">{t("settings.appearance")}</h3>
                     <p className="text-xs text-muted-foreground">
-                      Choose a visual style for MeMap
+                      {t("settings.appearanceDesc")}
                     </p>
                   </div>
 
@@ -421,10 +473,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     >
                       <div className="flex items-center gap-1.5">
                         <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">Classic</span>
+                        <span className="text-sm font-medium">{t("settings.themeClassic")}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground leading-snug">
-                        Warm journal
+                        {t("settings.themeClassicDesc")}
                       </span>
                     </button>
                     <button
@@ -437,10 +489,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     >
                       <div className="flex items-center gap-1.5">
                         <Sun className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">Aurora Light</span>
+                        <span className="text-sm font-medium">{t("settings.themeAuroraLight")}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground leading-snug">
-                        Airy white glass
+                        {t("settings.themeAuroraLightDesc")}
                       </span>
                     </button>
                     <button
@@ -453,10 +505,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     >
                       <div className="flex items-center gap-1.5">
                         <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">Aurora Dark</span>
+                        <span className="text-sm font-medium">{t("settings.themeAuroraDark")}</span>
                       </div>
                       <span className="text-[10px] text-muted-foreground leading-snug">
-                        Modern teal glass
+                        {t("settings.themeAuroraDarkDesc")}
                       </span>
                     </button>
                   </div>
@@ -472,15 +524,15 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 <Bell className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-medium text-sm">Daily Reminders</h3>
+                    <h3 className="font-medium text-sm">{t("settings.dailyRemindersTitle")}</h3>
                     <p className="text-xs text-muted-foreground">
-                      Get notified to check in each day
+                      {t("settings.dailyRemindersDesc")}
                     </p>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <Label htmlFor="notifications-toggle" className="text-sm">
-                      Enable notifications
+                      {t("settings.enableNotifications")}
                     </Label>
                     <Switch
                       id="notifications-toggle"
@@ -492,7 +544,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   {notificationSettings.enabled && (
                     <div className="space-y-4 animate-fade-in">
                       <div className="space-y-2">
-                        <Label className="text-sm">Reminder time</Label>
+                        <Label className="text-sm">{t("settings.reminderTime")}</Label>
                         <TimePickerField
                           value={notificationSettings.time}
                           onChange={handleTimeChange}
@@ -502,10 +554,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       <div className="flex items-start justify-between gap-3 pt-2 border-t border-border/30">
                         <div className="flex-1">
                           <Label htmlFor="threshold-toggle" className="text-sm">
-                            Action signal alerts
+                            {t("settings.actionSignalAlerts")}
                           </Label>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Get notified when a tracker hits its significant-day goal
+                            {t("settings.actionSignalAlertsDesc")}
                           </p>
                         </div>
                         <Switch
@@ -532,15 +584,15 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 <ListChecks className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-medium text-sm">Daily Session</h3>
+                    <h3 className="font-medium text-sm">{t("settings.dailySessionTitle")}</h3>
                     <p className="text-xs text-muted-foreground">
-                      Customize your daily check-in flow
+                      {t("settings.dailySessionDesc")}
                     </p>
                   </div>
 
                   <div className="flex items-center justify-between">
                     <Label htmlFor="suggested-toggle" className="text-sm">
-                      Include suggested questions
+                      {t("settings.includeSuggested")}
                     </Label>
                     <Switch
                       id="suggested-toggle"
@@ -553,7 +605,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <div className="flex items-center gap-2">
                       <Volume2 className="h-4 w-4 text-muted-foreground" />
                       <Label htmlFor="sound-toggle" className="text-sm">
-                        Sound & vibration
+                        {t("settings.soundAndVibration")}
                       </Label>
                     </div>
                     <Switch
@@ -565,7 +617,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
                   <div className="flex items-center justify-between">
                     <Label htmlFor="ideas-toggle" className="text-sm">
-                      Show tracker ideas
+                      {t("settings.showTrackerIdeas")}
                     </Label>
                     <Switch
                       id="ideas-toggle"
@@ -581,9 +633,9 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
             {/* Trackers Management */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm">Trackers</h3>
+              <h3 className="font-medium text-sm">{t("settings.trackersTitle")}</h3>
               <p className="text-xs text-muted-foreground">
-                Toggle trackers on/off for daily sessions
+                {t("settings.trackersDesc")}
               </p>
               
               <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -597,7 +649,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       const SIcon = getTrackerIcon(tracker.title, tracker.category);
                       return <SIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />;
                     })()}
-                    <span className="flex-1 text-sm truncate">{tracker.title}</span>
+                    <span className="flex-1 text-sm truncate">{localizeTrackerTitle(tracker.title)}</span>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -614,7 +666,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 ))}
                 {trackers.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No trackers yet
+                    {t("settings.noTrackersYet")}
                   </p>
                 )}
               </div>
@@ -624,7 +676,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
             {/* Help */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm">Help</h3>
+              <h3 className="font-medium text-sm">{t("settings.helpTitle")}</h3>
               <Button
                 variant="outline"
                 onClick={() => {
@@ -634,7 +686,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 className="w-full justify-start"
               >
                 <HelpCircle className="h-4 w-4 mr-2" />
-                Show app tour
+                {t("settings.showAppTour")}
               </Button>
             </div>
 
@@ -642,13 +694,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
             {/* Data & Privacy */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm">Data & Privacy</h3>
+              <h3 className="font-medium text-sm">{t("settings.dataPrivacyTitle")}</h3>
 
               <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/40 border border-border/30">
                 <Lock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your data lives only on this device — nothing is sent to a server or collected by us.
-                  Use <strong>Backup</strong> regularly to keep a safe copy, especially before changing devices.
+                  {t("settings.dataPrivacyLock")}
                 </p>
               </div>
 
@@ -658,7 +709,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 className="w-full justify-start"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Backup (full restore file)
+                {t("settings.backupFull")}
               </Button>
 
               <div className="relative">
@@ -667,11 +718,11 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   accept="application/json,.json"
                   onChange={handleFileSelected}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  aria-label="Import backup file"
+                  aria-label={t("settings.importBackupLabel")}
                 />
                 <Button variant="outline" className="w-full justify-start pointer-events-none">
                   <Upload className="h-4 w-4 mr-2" />
-                  Restore from backup
+                  {t("settings.restoreBackup")}
                 </Button>
               </div>
 
@@ -681,7 +732,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 className="w-full justify-start"
               >
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Export as CSV (Excel)
+                {t("settings.exportCsv")}
               </Button>
 
               <div className="pt-2">
@@ -689,9 +740,9 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   <Trash2 className="h-5 w-5 text-destructive mt-0.5" />
                   <div className="flex-1 space-y-2">
                     <div>
-                      <h3 className="font-medium text-sm text-destructive">Reset All Data</h3>
+                      <h3 className="font-medium text-sm text-destructive">{t("settings.resetAllTitle")}</h3>
                       <p className="text-xs text-muted-foreground">
-                        Clear all trackers, entries, streaks, and settings
+                        {t("settings.resetAllDesc")}
                       </p>
                     </div>
                     <Button
@@ -700,7 +751,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       onClick={() => setResetDialogOpen(true)}
                       className="w-full"
                     >
-                      Reset All Data
+                      {t("settings.resetAllBtn")}
                     </Button>
                   </div>
                 </div>
@@ -713,23 +764,19 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore from backup?</AlertDialogTitle>
+            <AlertDialogTitle>{t("settings.restoreConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingImport && (
-                <>
-                  This backup contains <strong>{pendingImport.trackers?.length ?? 0}</strong> trackers,{" "}
-                  <strong>{pendingImport.entries?.length ?? 0}</strong> entries, and{" "}
-                  <strong>{(pendingImport.notes?.length ?? 0) as number}</strong> notes.
-                  <br /><br />
-                  This will <strong>replace</strong> all current data on this device. This action cannot be undone.
-                </>
-              )}
+              {pendingImport && t("settings.restoreConfirmDesc", {
+                trackers: pendingImport.trackers?.length ?? 0,
+                entries: pendingImport.entries?.length ?? 0,
+                notes: pendingImport.notes?.length ?? 0,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingImport(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setPendingImport(null)}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmImport}>
-              Restore
+              {t("settings.restoreBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -738,15 +785,15 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t("settings.resetConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all your trackers, entries, streaks, notes, and settings. This action cannot be undone.
+              {t("settings.resetConfirmDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleResetData} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Reset Everything
+              {t("settings.resetEverything")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

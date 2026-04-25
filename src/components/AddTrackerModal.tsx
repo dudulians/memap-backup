@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Tracker } from "@/types/tracker";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
+import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerAdvice, localizeGroupTitle, localizeGroupDescription } from "@/lib/trackerLocalize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -16,6 +17,7 @@ import { Search, Plus, X, ArrowUp } from "lucide-react";
 import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { toast } from "@/hooks/use-toast";
 import { uuid } from "@/lib/uuid";
+import { useTranslation } from "react-i18next";
 
 interface AddTrackerModalProps {
   open: boolean;
@@ -32,6 +34,7 @@ interface AddTrackerModalProps {
  * mouse/keyboard `click` event on desktop.
  */
 const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void }) => {
+  const { t } = useTranslation();
   const firedRef = useRef(false);
   const resetSoon = () => {
     // Reset after the current event loop so both pointerup and click
@@ -56,7 +59,7 @@ const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void 
       aria-label={label}
     >
       <Plus className="h-4 w-4" />
-      Add
+      {t("addTracker.add")}
     </Button>
   );
 };
@@ -68,6 +71,7 @@ export const AddTrackerModal = ({
   onTrackerAdded,
   onNavigateToTracker,
 }: AddTrackerModalProps) => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"templates" | "custom">("templates");
   const [selectedTheme, setSelectedTheme] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,13 +105,16 @@ export const AddTrackerModal = ({
       group.templates.map(template => ({ ...template, groupTitle: group.title }))
     );
 
-    // If there's a search query, filter
+    // If there's a search query, filter — match against both English (stored)
+    // and Russian (displayed) strings so RU-language users can search in RU.
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      return allTemplates.filter(template => 
+      return allTemplates.filter(template =>
         template.title.toLowerCase().includes(query) ||
         template.questionText.toLowerCase().includes(query) ||
-        template.category.toLowerCase().includes(query)
+        template.category.toLowerCase().includes(query) ||
+        localizeTrackerTitle(template.title).toLowerCase().includes(query) ||
+        localizeTrackerQuestion(template.questionText).toLowerCase().includes(query)
       );
     }
 
@@ -138,33 +145,40 @@ export const AddTrackerModal = ({
     
     // Show success toast
     toast({
-      title: "Tracker added",
-      description: `"${newTracker.title}" has been added to your map`,
+      title: t("today.trackerAdded"),
+      description: t("today.trackerAddedDesc", { title: newTracker.title }),
     });
-    
+
     onTrackerAdded();
   };
 
   const handleTemplateSelect = async (template: typeof TEMPLATE_GROUPS[0]["templates"][0]) => {
-    // Check for duplicates
-    const duplicate = await checkForDuplicate(template.title, template.category);
-    
+    // When the user is on Russian, store the localized strings so the tracker
+    // persists in the active language from the moment it's created.
+    const localizedTitle = localizeTrackerTitle(template.title);
+    const localizedQuestion = localizeTrackerQuestion(template.questionText);
+    const localizedAdvice = localizeTrackerAdvice(template.adviceAboveThreshold);
+
+    // Check for duplicates (match against the localized title since that's
+    // what the user sees and what new trackers get stored as).
+    const duplicate = await checkForDuplicate(localizedTitle, template.category);
+
     if (duplicate) {
       // Store the pending tracker and show duplicate dialog
       const newTracker: Tracker = {
-        title: template.title,
-        questionText: template.questionText,
+        title: localizedTitle,
+        questionText: localizedQuestion,
         category: template.category,
         subcategory: template.subcategory,
         periodDays: template.periodDays,
         threshold: template.threshold,
         problemWhen: template.problemWhen,
-        adviceAboveThreshold: template.adviceAboveThreshold,
+        adviceAboveThreshold: localizedAdvice,
         answerType: "boolean",
         id: uuid(),
         createdAt: new Date().toISOString(),
       };
-      
+
       setPendingTracker(newTracker);
       setDuplicateTracker(duplicate);
       setDuplicateDialogOpen(true);
@@ -173,14 +187,14 @@ export const AddTrackerModal = ({
 
     // No duplicate - create directly
     const newTracker: Tracker = {
-      title: template.title,
-      questionText: template.questionText,
+      title: localizedTitle,
+      questionText: localizedQuestion,
       category: template.category,
       subcategory: template.subcategory,
       periodDays: template.periodDays,
       threshold: template.threshold,
       problemWhen: template.problemWhen,
-      adviceAboveThreshold: template.adviceAboveThreshold,
+      adviceAboveThreshold: localizedAdvice,
       answerType: "boolean",
       id: uuid(),
       createdAt: new Date().toISOString(),
@@ -222,10 +236,10 @@ export const AddTrackerModal = ({
     
     // Show success toast
     toast({
-      title: "Tracker added",
-      description: `"${newTracker.title}" has been added to your map`,
+      title: t("today.trackerAdded"),
+      description: t("today.trackerAddedDesc", { title: newTracker.title }),
     });
-    
+
     setFormData({
       title: "",
       questionText: "",
@@ -269,17 +283,21 @@ export const AddTrackerModal = ({
       filteredGroups = TEMPLATE_GROUPS.filter(group => group.id === selectedTheme);
     }
 
-    // If there's a search query, return flat list of matching templates
+    // If there's a search query, return flat list of matching templates.
+    // Match against both English (stored) and Russian (displayed) strings so
+    // Russian-speaking users can search using the terms they see.
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      const allTemplates = filteredGroups.flatMap(group => 
+      const allTemplates = filteredGroups.flatMap(group =>
         group.templates.map(template => ({ ...template, groupTitle: group.title }))
       );
-      
-      return allTemplates.filter(template => 
+
+      return allTemplates.filter(template =>
         template.title.toLowerCase().includes(query) ||
         template.questionText.toLowerCase().includes(query) ||
-        template.category.toLowerCase().includes(query)
+        template.category.toLowerCase().includes(query) ||
+        localizeTrackerTitle(template.title).toLowerCase().includes(query) ||
+        localizeTrackerQuestion(template.questionText).toLowerCase().includes(query)
       );
     }
 
@@ -373,8 +391,8 @@ export const AddTrackerModal = ({
           <div className="w-10 h-1.5 rounded-full bg-muted-foreground/30 mb-2" />
         </div>
         <div className="flex items-center justify-between px-5 pb-3 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur-md z-10">
-          <h2 className="text-lg font-semibold">Add Tracker</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-9 w-9" aria-label="Close">
+          <h2 className="text-lg font-semibold">{t("addTracker.title")}</h2>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-9 w-9" aria-label={t("common.close")}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -383,24 +401,24 @@ export const AddTrackerModal = ({
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as "templates" | "custom")} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="templates">Use Template</TabsTrigger>
-            <TabsTrigger value="custom">Create Custom</TabsTrigger>
+            <TabsTrigger value="templates">{t("addTracker.useTemplate")}</TabsTrigger>
+            <TabsTrigger value="custom">{t("addTracker.createCustom")}</TabsTrigger>
           </TabsList>
 
           {/* Templates Tab */}
           <TabsContent value="templates" className="space-y-6 mt-0">
             {/* Theme Dropdown */}
             <div className="space-y-2">
-              <Label htmlFor="theme-select">Select a theme</Label>
+              <Label htmlFor="theme-select">{t("addTracker.selectTheme")}</Label>
               <Select value={selectedTheme} onValueChange={setSelectedTheme}>
                 <SelectTrigger id="theme-select" className="w-full">
-                  <SelectValue placeholder="Choose a theme" />
+                  <SelectValue placeholder={t("addTracker.chooseTheme")} />
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50">
-                  <SelectItem value="all">All themes</SelectItem>
+                  <SelectItem value="all">{t("addTracker.allThemes")}</SelectItem>
                   {TEMPLATE_GROUPS.map(group => (
                     <SelectItem key={group.id} value={group.id}>
-                      {group.title}
+                      {localizeGroupTitle(group.title)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -409,7 +427,7 @@ export const AddTrackerModal = ({
 
             {/* Search Input with Dropdown */}
             <div className="space-y-2">
-              <Label htmlFor="search-templates">Search templates</Label>
+              <Label htmlFor="search-templates">{t("addTracker.searchTemplates")}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
                 <Input
@@ -420,7 +438,7 @@ export const AddTrackerModal = ({
                   autoCorrect="off"
                   autoCapitalize="off"
                   spellCheck={false}
-                  placeholder="Search templates (migraine, sleep, work…)"
+                  placeholder={t("addTracker.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -440,7 +458,7 @@ export const AddTrackerModal = ({
                 <div className="absolute left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-[280px] overflow-y-auto">
                   {dropdownTemplates.length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
-                      No templates found. Try different keywords.
+                      {t("addTracker.noTemplatesFound")}
                     </div>
                   ) : (
                     <div className="py-1">
@@ -458,10 +476,10 @@ export const AddTrackerModal = ({
                           >
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm truncate">
-                                {template.title}
+                                {localizeTrackerTitle(template.title)}
                               </p>
                               <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                                {template.questionText}
+                                {localizeTrackerQuestion(template.questionText)}
                               </p>
                             </div>
                             <Badge
@@ -472,14 +490,14 @@ export const AddTrackerModal = ({
                                 color: `hsl(var(--${categoryColor}))`
                               }}
                             >
-                              {template.category}
+                              {t(`categories.${template.category}`)}
                             </Badge>
                           </button>
                         );
                       })}
                       {dropdownTemplates.length > 10 && (
                         <p className="text-xs text-muted-foreground text-center py-2">
-                          +{dropdownTemplates.length - 10} more results
+                          {t("addTracker.moreResults", { count: dropdownTemplates.length - 10 })}
                         </p>
                       )}
                     </div>
@@ -487,16 +505,16 @@ export const AddTrackerModal = ({
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Type to search or scroll through suggestions below
+                {t("addTracker.searchTypeHint")}
               </p>
             </div>
 
             {/* Templates Display - Suggested Ideas */}
             <div className="space-y-4">
               <div className="pt-4 mt-4">
-                <h3 className="font-semibold text-base mb-1">Suggested ideas</h3>
+                <h3 className="font-semibold text-base mb-1">{t("addTracker.suggestedIdeas")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Browse popular templates by category
+                  {t("addTracker.suggestedIdeasDesc")}
                 </p>
               </div>
               
@@ -504,14 +522,16 @@ export const AddTrackerModal = ({
                 // Search Results (Flat List)
                 <>
                   <div>
-                    <h3 className="font-semibold text-base">Search results</h3>
+                    <h3 className="font-semibold text-base">{t("addTracker.searchResults")}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} found
+                      {filteredTemplates.length === 1
+                        ? t("addTracker.templatesFoundOne")
+                        : t("addTracker.templatesFoundMany", { count: filteredTemplates.length })}
                     </p>
                   </div>
                   {filteredTemplates.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-6">
-                      No templates match your search. Try different keywords or switch to "Create Custom" tab.
+                      {t("addTracker.noMatchHint")}
                     </p>
                   ) : (
                     <div className="space-y-2">
@@ -525,7 +545,7 @@ export const AddTrackerModal = ({
                           >
                             <CardHeader className="pb-2">
                               <div className="flex items-start justify-between gap-2">
-                                <CardTitle className="text-base">{template.title}</CardTitle>
+                                <CardTitle className="text-base">{localizeTrackerTitle(template.title)}</CardTitle>
                                 <Badge
                                   variant="secondary"
                                   className="text-xs flex-shrink-0"
@@ -534,14 +554,14 @@ export const AddTrackerModal = ({
                                     color: `hsl(var(--${categoryColor}))`
                                   }}
                                 >
-                                  {template.category}
+                                  {t(`categories.${template.category}`)}
                                 </Badge>
                               </div>
                             </CardHeader>
                             <CardContent className="pb-3">
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                                  {template.questionText}
+                                  {localizeTrackerQuestion(template.questionText)}
                                 </p>
                                 <Button
                                   type="button"
@@ -549,10 +569,10 @@ export const AddTrackerModal = ({
                                   onClick={(e) => { e.stopPropagation(); handleTemplateSelect(template); }}
                                   style={{ touchAction: "manipulation" }}
                                   className="flex-shrink-0 h-9 rounded-full shadow-sm gap-1 px-3"
-                                  aria-label={`Add ${template.title}`}
+                                  aria-label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
                                 >
                                   <Plus className="h-4 w-4" />
-                                  Add
+                                  {t("addTracker.add")}
                                 </Button>
                               </div>
                             </CardContent>
@@ -568,8 +588,8 @@ export const AddTrackerModal = ({
               {filteredGroups.map((group) => (
                 <div key={group.id} className="space-y-3">
                   <div>
-                    <h3 className="font-semibold text-base">{group.title}</h3>
-                    <p className="text-sm text-muted-foreground">{group.description}</p>
+                    <h3 className="font-semibold text-base">{localizeGroupTitle(group.title)}</h3>
+                    <p className="text-sm text-muted-foreground">{localizeGroupDescription(group.description)}</p>
                   </div>
                   <div className="space-y-2">
                     {group.templates.map((template) => {
@@ -582,7 +602,7 @@ export const AddTrackerModal = ({
                         >
                           <CardHeader className="pb-2">
                             <div className="flex items-start justify-between gap-2">
-                              <CardTitle className="text-base">{template.title}</CardTitle>
+                              <CardTitle className="text-base">{localizeTrackerTitle(template.title)}</CardTitle>
                               <Badge
                                 variant="secondary"
                                 className="text-xs flex-shrink-0"
@@ -591,17 +611,17 @@ export const AddTrackerModal = ({
                                   color: `hsl(var(--${categoryColor}))`
                                 }}
                               >
-                                {template.category}
+                                {t(`categories.${template.category}`)}
                               </Badge>
                             </div>
                           </CardHeader>
                           <CardContent className="pb-3">
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                                {template.questionText}
+                                {localizeTrackerQuestion(template.questionText)}
                               </p>
                               <AddTemplateButton
-                                label={`Add ${template.title}`}
+                                label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
                                 onAdd={() => handleTemplateSelect(template)}
                               />
                             </div>
@@ -620,17 +640,17 @@ export const AddTrackerModal = ({
           {/* Custom Tracker Tab */}
           <TabsContent value="custom" className="space-y-4 mt-0">
             <div className="space-y-1">
-              <h3 className="font-semibold text-base">Create your own tracker</h3>
+              <h3 className="font-semibold text-base">{t("addTracker.customHeader")}</h3>
               <p className="text-sm text-muted-foreground">
-                Define a custom question, period, and threshold that matters to you.
+                {t("addTracker.customDesc")}
               </p>
             </div>
             <form onSubmit={handleCustomSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">{t("addTracker.fieldTitle")}</Label>
                 <Input
                   id="title"
-                  placeholder="e.g., Morning meditation"
+                  placeholder={t("addTracker.fieldTitlePh")}
                   value={formData.title}
                   onChange={(e) =>
                     setFormData({ ...formData, title: e.target.value })
@@ -640,10 +660,10 @@ export const AddTrackerModal = ({
               </div>
 
               <div>
-                <Label htmlFor="questionText">Question</Label>
+                <Label htmlFor="questionText">{t("addTracker.fieldQuestion")}</Label>
                 <Input
                   id="questionText"
-                  placeholder="e.g., Did you meditate this morning?"
+                  placeholder={t("addTracker.fieldQuestionPh")}
                   value={formData.questionText}
                   onChange={(e) =>
                     setFormData({ ...formData, questionText: e.target.value })
@@ -653,7 +673,7 @@ export const AddTrackerModal = ({
               </div>
 
               <div>
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">{t("addTracker.fieldCategory")}</Label>
                 <Select 
                   value={formData.category} 
                   onValueChange={(value) => setFormData({ ...formData, category: value as Tracker["category"] })}
@@ -662,21 +682,21 @@ export const AddTrackerModal = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background z-50">
-                    <SelectItem value="Emotions">Emotions</SelectItem>
-                    <SelectItem value="Body">Body</SelectItem>
-                    <SelectItem value="Connections">Connections</SelectItem>
-                    <SelectItem value="Voice">Voice</SelectItem>
-                    <SelectItem value="Health">Health</SelectItem>
-                    <SelectItem value="Curious">Curious</SelectItem>
-                    <SelectItem value="Fun">Fun</SelectItem>
-                    <SelectItem value="Social">Social</SelectItem>
+                    <SelectItem value="Emotions">{t("categories.Emotions")}</SelectItem>
+                    <SelectItem value="Body">{t("categories.Body")}</SelectItem>
+                    <SelectItem value="Connections">{t("categories.Connections")}</SelectItem>
+                    <SelectItem value="Voice">{t("categories.Voice")}</SelectItem>
+                    <SelectItem value="Health">{t("categories.Health")}</SelectItem>
+                    <SelectItem value="Curious">{t("categories.Curious")}</SelectItem>
+                    <SelectItem value="Fun">{t("categories.Fun")}</SelectItem>
+                    <SelectItem value="Social">{t("categories.Social")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="periodDays">Track last N days</Label>
+                  <Label htmlFor="periodDays">{t("addTracker.fieldPeriod")}</Label>
                   <Input
                     id="periodDays"
                     type="number"
@@ -689,10 +709,10 @@ export const AddTrackerModal = ({
                     }}
                     min={1}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">How far back to look</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("addTracker.fieldPeriodHelp")}</p>
                 </div>
                 <div>
-                  <Label htmlFor="threshold">Significant days to reflect</Label>
+                  <Label htmlFor="threshold">{t("addTracker.fieldThreshold")}</Label>
                   <Input
                     id="threshold"
                     type="number"
@@ -705,14 +725,14 @@ export const AddTrackerModal = ({
                     }}
                     min={1}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Triggers reflection</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("addTracker.fieldThresholdHelp")}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Which answer is a concern?</Label>
+                <Label>{t("addTracker.fieldConcern")}</Label>
                 <p className="text-xs text-muted-foreground">
-                  The concerning answer will be highlighted in red and counted toward the pattern threshold.
+                  {t("addTracker.fieldConcernDesc")}
                 </p>
                 <div className="space-y-2 pt-1">
                   <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
@@ -726,8 +746,8 @@ export const AddTrackerModal = ({
                       className="h-4 w-4 mt-0.5"
                     />
                     <div>
-                      <p className="text-sm font-medium">Yes is concerning</p>
-                      <p className="text-xs text-muted-foreground">Answering Yes counts as a significant day</p>
+                      <p className="text-sm font-medium">{t("addTracker.yesConcerning")}</p>
+                      <p className="text-xs text-muted-foreground">{t("addTracker.yesConcerningDesc")}</p>
                     </div>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
@@ -741,8 +761,8 @@ export const AddTrackerModal = ({
                       className="h-4 w-4 mt-0.5"
                     />
                     <div>
-                      <p className="text-sm font-medium">No is concerning</p>
-                      <p className="text-xs text-muted-foreground">Answering No counts as a significant day</p>
+                      <p className="text-sm font-medium">{t("addTracker.noConcerning")}</p>
+                      <p className="text-xs text-muted-foreground">{t("addTracker.noConcerningDesc")}</p>
                     </div>
                   </label>
                 </div>
@@ -750,11 +770,11 @@ export const AddTrackerModal = ({
 
               <div>
                 <Label htmlFor="adviceAboveThreshold">
-                  Reflection if threshold exceeded
+                  {t("addTracker.fieldAdvice")}
                 </Label>
                 <Textarea
                   id="adviceAboveThreshold"
-                  placeholder="What should you reflect on when the pattern becomes significant?"
+                  placeholder={t("addTracker.fieldAdvicePh")}
                   value={formData.adviceAboveThreshold}
                   onChange={(e) =>
                     setFormData({
@@ -768,7 +788,7 @@ export const AddTrackerModal = ({
               </div>
 
               <Button type="submit" className="w-full sticky bottom-0 shadow-lg">
-                Create Custom Tracker
+                {t("addTracker.createCustomBtn")}
               </Button>
             </form>
           </TabsContent>
@@ -781,7 +801,7 @@ export const AddTrackerModal = ({
           <button
             onClick={scrollToTop}
             className="absolute bottom-6 right-6 z-20 h-11 w-11 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform animate-fade-in"
-            aria-label="Scroll to top"
+            aria-label={t("addTracker.scrollToTop")}
           >
             <ArrowUp className="h-5 w-5" />
           </button>

@@ -3,6 +3,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
+import { useTranslation } from "react-i18next";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import {
   LineChart,
   Line,
@@ -72,6 +74,7 @@ const laneY = (index: number, total: number): number => {
 };
 
 export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
+  const { t } = useTranslation();
   const [range, setRange] = useState<TimeRange>("30d");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -164,7 +167,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
     const idx = visibleTrackers.findIndex(
       (_, i) => Math.abs(laneY(i, visibleTrackers.length) - v) < 0.02
     );
-    return idx >= 0 ? visibleTrackers[idx].title.slice(0, 2) : "";
+    return idx >= 0 ? localizeTrackerTitle(visibleTrackers[idx].title).slice(0, 2) : "";
   };
 
   // Y axis for aggregated mode
@@ -179,7 +182,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="font-medium text-sm tracking-wide uppercase text-muted-foreground">
-            Trend & Correlation
+            {t("trendChart.title")}
           </h3>
           <div className="flex gap-1">
             {(["7d", "30d", "90d", "1y"] as TimeRange[]).map((r) => (
@@ -203,7 +206,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
               onClick={() => setSelectedIds(new Set())}
               className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
             >
-              All
+              {t("trendChart.showAll")}
             </button>
           )}
           {activeTrackers.map((t) => {
@@ -230,7 +233,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
                   const LIcon = getTrackerIcon(t.title, t.category);
                   return <LIcon className="h-3 w-3" strokeWidth={1.75} />;
                 })()}
-                <span className="truncate max-w-[80px]">{t.title}</span>
+                <span className="truncate max-w-[80px]">{localizeTrackerTitle(t.title)}</span>
               </button>
             );
           })}
@@ -279,7 +282,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
                   const tracker = activeTrackers.find((t) => t.id === name);
                   if (!tracker || value === null) return [null, null];
                   if (isAggregated && value === 0) return [null, null];
-                  const label = tracker.title;
+                  const label = localizeTrackerTitle(tracker.title);
                   return isAggregated
                     ? [`${value}d`, label]
                     : ["✓", label];
@@ -321,9 +324,9 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
         <p className="text-[10px] text-center text-muted-foreground">
           {isAggregated
             ? range === "1y"
-              ? "Days per month · lines rising together = correlation"
-              : "Days per week · lines rising together = correlation"
-            : "Each dot = significant day · tap chips to compare"}
+              ? t("trendChart.footerAggYear")
+              : t("trendChart.footerAggWeek")
+            : t("trendChart.footerDots")}
         </p>
       </div>
     </Card>

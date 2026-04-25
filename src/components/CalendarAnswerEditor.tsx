@@ -5,8 +5,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Check, X, FileText, Plus, StickyNote } from "lucide-react";
 import { format } from "date-fns";
+import { ru as ruLocale } from "date-fns/locale";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import { getLanguage } from "@/lib/i18n";
+import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 interface CalendarAnswerEditorProps {
   open: boolean;
@@ -25,6 +29,8 @@ export const CalendarAnswerEditor = ({
   existingEntry,
   onSave,
 }: CalendarAnswerEditorProps) => {
+  const { t } = useTranslation();
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [selectedValue, setSelectedValue] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const swipeStartX = useRef(0);
@@ -47,7 +53,7 @@ export const CalendarAnswerEditor = ({
   }, [open, existingEntry, date]);
 
   const categoryColor = getCategoryColor(tracker.category);
-  const formattedDate = format(new Date(date + "T00:00:00"), "MMMM d, yyyy");
+  const formattedDate = format(new Date(date + "T00:00:00"), "MMMM d, yyyy", { locale: dateLocale });
   const yesIsSignificant = tracker.problemWhen === "yes";
 
   const handleSave = async (value: boolean) => {
@@ -95,7 +101,7 @@ export const CalendarAnswerEditor = ({
       <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="pb-2">
           <SheetTitle className="text-base font-semibold">
-            {format(new Date(date + "T00:00:00"), "d MMM yyyy")}
+            {format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
           </SheetTitle>
         </SheetHeader>
 
@@ -106,7 +112,7 @@ export const CalendarAnswerEditor = ({
               const CIcon = getTrackerIcon(tracker.title, tracker.category);
               return <CIcon className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />;
             })()}
-            <span className="font-medium text-foreground">{tracker.title}</span>
+            <span className="font-medium text-foreground">{localizeTrackerTitle(tracker.title)}</span>
           </p>
 
           {/* Question card with swipe */}
@@ -140,7 +146,7 @@ export const CalendarAnswerEditor = ({
               className="relative z-10 transition-transform"
               style={{ transform: `translateX(${swipeOffset * 0.3}px)` }}
             >
-              <p className="text-sm leading-relaxed text-foreground">{tracker.questionText}</p>
+              <p className="text-sm leading-relaxed text-foreground">{localizeTrackerQuestion(tracker.questionText)}</p>
             </div>
           </div>
 
@@ -160,7 +166,7 @@ export const CalendarAnswerEditor = ({
               )}
             >
               <X className="h-5 w-5 mr-2" />
-              No
+              {t("common.no")}
             </Button>
             <Button
               variant="ghost"
@@ -176,12 +182,12 @@ export const CalendarAnswerEditor = ({
               )}
             >
               <Check className="h-5 w-5 mr-2" />
-              Yes
+              {t("common.yes")}
             </Button>
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
-            Tap a button or swipe the question card
+            {t("calendarEditor.tapOrSwipe")}
           </p>
 
           {/* Divider */}
@@ -191,7 +197,7 @@ export const CalendarAnswerEditor = ({
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <StickyNote className="h-3 w-3" />
-              Notes for this day
+              {t("calendarEditor.notesForDay")}
             </p>
 
             {/* Existing notes */}
@@ -210,7 +216,7 @@ export const CalendarAnswerEditor = ({
 
             {notes.length === 0 && !showNoteInput && (
               <p className="text-xs text-muted-foreground text-center py-1">
-                No notes for this day yet
+                {t("calendarEditor.noNotesYet")}
               </p>
             )}
 
@@ -225,7 +231,7 @@ export const CalendarAnswerEditor = ({
                 className="w-full rounded-xl h-10 text-sm gap-1.5 border-dashed border-primary/40 text-primary hover:bg-primary/5"
               >
                 <Plus className="h-4 w-4" />
-                Add a note for this day
+                {t("calendarEditor.addNoteForDay")}
               </Button>
             )}
 
@@ -236,7 +242,7 @@ export const CalendarAnswerEditor = ({
                   autoFocus
                   value={newNoteText}
                   onChange={e => setNewNoteText(e.target.value)}
-                  placeholder="Write a note for this day…"
+                  placeholder={t("calendarEditor.noteInputPh")}
                   rows={3}
                   className="w-full text-sm rounded-xl border border-border bg-muted/30 p-3 resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground"
                 />
@@ -247,7 +253,7 @@ export const CalendarAnswerEditor = ({
                     onClick={() => { setShowNoteInput(false); setNewNoteText(""); }}
                     className="flex-1 rounded-full text-xs h-8"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     size="sm"
@@ -255,7 +261,7 @@ export const CalendarAnswerEditor = ({
                     disabled={savingNote || !newNoteText.trim()}
                     className="flex-1 rounded-full text-xs h-8"
                   >
-                    Save note
+                    {t("calendarEditor.saveNote")}
                   </Button>
                 </div>
               </div>

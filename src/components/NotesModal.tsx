@@ -14,6 +14,7 @@ import { getTrackers } from "@/lib/storage";
 import { format, parseISO } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 
 interface NotesModalProps {
   open: boolean;
@@ -192,7 +193,7 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
                         <SelectItem value="none">None</SelectItem>
                         {trackers.map(tracker => (
                           <SelectItem key={tracker.id} value={tracker.id}>
-                            {tracker.title}
+                            {localizeTrackerTitle(tracker.title)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -255,7 +256,7 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
                         <SelectItem value="none">None</SelectItem>
                         {trackers.map(tracker => (
                           <SelectItem key={tracker.id} value={tracker.id}>
-                            {tracker.title}
+                            {localizeTrackerTitle(tracker.title)}
                           </SelectItem>
                         ))}
                       </SelectContent>

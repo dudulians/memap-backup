@@ -6,6 +6,8 @@ import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
 import { AlertCircle } from "lucide-react";
 import { getEntries } from "@/lib/storage";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 interface DuplicateTrackerDialogProps {
   open: boolean;
@@ -22,6 +24,7 @@ export const DuplicateTrackerDialog = ({
   onOpenExisting,
   onCreateAnyway,
 }: DuplicateTrackerDialogProps) => {
+  const { t } = useTranslation();
   const [trackingDays, setTrackingDays] = useState(0);
 
   useEffect(() => {
@@ -62,9 +65,9 @@ export const DuplicateTrackerDialog = ({
               <AlertCircle className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <DialogTitle className="text-lg">You're already tracking this</DialogTitle>
+              <DialogTitle className="text-lg">{t("duplicate.title")}</DialogTitle>
               <DialogDescription className="mt-1.5">
-                This tracker is already on your map. You can keep using the existing one or create a new copy.
+                {t("duplicate.desc")}
               </DialogDescription>
             </div>
           </div>
@@ -80,22 +83,21 @@ export const DuplicateTrackerDialog = ({
                 <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-base">{existingTracker.title}</h3>
+                <h3 className="font-medium text-base">{localizeTrackerTitle(existingTracker.title)}</h3>
                 <p className="text-xs uppercase tracking-wider mt-1" style={{ color: `hsl(var(--${categoryColor}))` }}>
-                  {existingTracker.category}
+                  {t(`categories.${existingTracker.category}` as const)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2 font-playful">
-                  {existingTracker.questionText}
+                  {localizeTrackerQuestion(existingTracker.questionText)}
                 </p>
               </div>
             </div>
             
             <div className="pt-3">
               <p className="text-xs text-muted-foreground">
-                You've been tracking this for{" "}
-                <span className="font-medium text-foreground">
-                  {trackingDays} {trackingDays === 1 ? "day" : "days"}
-                </span>
+                {trackingDays === 1
+                  ? t("duplicate.trackingForOne")
+                  : t("duplicate.trackingForMany", { count: trackingDays })}
               </p>
             </div>
           </div>
@@ -107,7 +109,7 @@ export const DuplicateTrackerDialog = ({
             onClick={onCreateAnyway}
             className="w-full sm:w-auto order-2 sm:order-1"
           >
-            Create another anyway
+            {t("duplicate.createAnother")}
           </Button>
           <Button
             onClick={onOpenExisting}
@@ -116,7 +118,7 @@ export const DuplicateTrackerDialog = ({
               background: `linear-gradient(135deg, hsl(var(--${categoryColor})), hsl(var(--${categoryColor}-secondary)))`
             }}
           >
-            Open existing tracker
+            {t("duplicate.openExisting")}
           </Button>
         </DialogFooter>
       </DialogContent>

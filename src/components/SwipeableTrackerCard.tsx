@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { GripVertical, Check, X, Trash2 } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 interface SwipeableTrackerCardProps {
   tracker: Tracker;
@@ -42,6 +44,7 @@ export const SwipeableTrackerCard = ({
   showButtons = true,
   compact = false,
 }: SwipeableTrackerCardProps) => {
+  const { t } = useTranslation();
   const [swipeX, setSwipeX] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const [showDeleteBar, setShowDeleteBar] = useState(false);
@@ -156,7 +159,7 @@ export const SwipeableTrackerCard = ({
       >
         <div className={`flex items-center gap-2 font-medium ${yesIsSignificant ? "text-balanced" : "text-strong"}`}>
           <X className="h-6 w-6" />
-          <span>No</span>
+          <span>{t("common.no")}</span>
         </div>
       </div>
       <div
@@ -164,7 +167,7 @@ export const SwipeableTrackerCard = ({
         style={{ opacity: swipeX > 0 ? getSwipeOpacity() : 0 }}
       >
         <div className={`flex items-center gap-2 font-medium ${yesIsSignificant ? "text-strong" : "text-balanced"}`}>
-          <span>Yes</span>
+          <span>{t("common.yes")}</span>
           <Check className="h-6 w-6" />
         </div>
       </div>
@@ -220,9 +223,9 @@ export const SwipeableTrackerCard = ({
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className={cn("font-medium mb-1 leading-snug", compact ? "text-sm" : "text-base")}>{tracker.title}</h3>
+              <h3 className={cn("font-medium mb-1 leading-snug", compact ? "text-sm" : "text-base")}>{localizeTrackerTitle(tracker.title)}</h3>
               <p className={cn("text-muted-foreground/80 leading-relaxed line-clamp-2", compact ? "text-xs" : "text-sm")}>
-                {tracker.questionText}
+                {localizeTrackerQuestion(tracker.questionText)}
               </p>
             </div>
             {dragHandleProps && (
@@ -230,7 +233,7 @@ export const SwipeableTrackerCard = ({
                 {...dragHandleProps}
                 data-drag-handle
                 className="touch-none cursor-grab active:cursor-grabbing p-1 hover:bg-muted/40 rounded-md transition-colors flex-shrink-0 opacity-40 hover:opacity-100"
-                aria-label="Drag to reorder"
+                aria-label={t("swipeCard.dragToReorder")}
                 onClick={(e) => e.stopPropagation()}
               >
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -261,7 +264,7 @@ export const SwipeableTrackerCard = ({
                 )}
               >
                 <X className="h-4 w-4 mr-1.5" />
-                No
+                {t("common.no")}
               </Button>
               <Button
                 variant="ghost"
@@ -280,7 +283,7 @@ export const SwipeableTrackerCard = ({
                 )}
               >
                 <Check className="h-4 w-4 mr-1.5" />
-                Yes
+                {t("common.yes")}
               </Button>
             </div>
           )}
@@ -299,23 +302,23 @@ export const SwipeableTrackerCard = ({
                 {currentAnswer === true ? (
                   <>
                     <Check className="h-3 w-3" />
-                    Yes
+                    {t("common.yes")}
                   </>
                 ) : (
                   <>
                     <X className="h-3 w-3" />
-                    No
+                    {t("common.no")}
                   </>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground">Swipe to change</span>
+              <span className="text-xs text-muted-foreground">{t("swipeCard.swipeToChange")}</span>
             </div>
           )}
 
           {/* Swipe hint for unanswered (when no buttons) */}
           {!showButtons && !isAnswered && (
             <div className="mt-3 text-xs text-muted-foreground text-center">
-              ← Swipe left for No · Swipe right for Yes →
+              {t("swipeCard.swipeHint")}
             </div>
           )}
         </div>
@@ -334,7 +337,7 @@ export const SwipeableTrackerCard = ({
               }}
             >
               <Trash2 className="h-4 w-4 mr-1.5" />
-              Delete
+              {t("common.delete")}
             </Button>
             <Button
               variant="ghost"
@@ -345,7 +348,7 @@ export const SwipeableTrackerCard = ({
                 setShowDeleteBar(false);
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         )}

@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/popover";
 import { ChevronLeft, ChevronRight, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ru as ruLocale } from "date-fns/locale";
+import { getLanguage } from "@/lib/i18n";
 
 interface DateSelectorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -16,6 +18,7 @@ interface DateSelectorProps {
 }
 
 export const DateSelector = ({ selectedDate, onDateChange, highlightedDates = [] }: DateSelectorProps) => {
+  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const dateObj = new Date(selectedDate + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -64,7 +67,7 @@ export const DateSelector = ({ selectedDate, onDateChange, highlightedDates = []
             )}
           >
             <CalendarIcon className="h-4 w-4" />
-            {format(dateObj, "d MMMM yyyy")}
+            {format(dateObj, "d MMMM yyyy", { locale: dateLocale })}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="center">

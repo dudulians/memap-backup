@@ -9,6 +9,7 @@ import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } fro
 import { generateRandomEntriesForLastNDays, clearAllEntries } from "@/lib/demoData";
 import { Sparkles, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
 
 export const InsightsTab = () => {
   const [trackers, setTrackers] = useState<Tracker[]>([]);
@@ -227,7 +228,7 @@ export const InsightsTab = () => {
                     <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{tracker.title}</CardTitle>
+                    <CardTitle className="text-lg">{localizeTrackerTitle(tracker.title)}</CardTitle>
                     <p className="text-xs font-medium mt-1" style={{ color: `hsl(var(--${categoryColor}))` }}>
                       {tracker.category}
                     </p>
@@ -284,7 +285,7 @@ export const InsightsTab = () => {
                   }}
                 >
                   <p className="text-sm font-medium text-destructive">
-                    {tracker.adviceAboveThreshold}
+                    {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
                   </p>
                 </div>
               )}
