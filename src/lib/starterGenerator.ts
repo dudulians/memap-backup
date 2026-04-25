@@ -2,9 +2,9 @@ import { Tracker, ProblemWhen } from "@/types/tracker";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
 import { TEMPLATE_GROUPS } from "./templateGroups";
 import {
-  localizeTrackerTitle,
-  localizeTrackerQuestion,
-  localizeTrackerAdvice,
+  localizeTrackerTitleRaw,
+  localizeTrackerQuestionRaw,
+  localizeTrackerAdviceRaw,
 } from "./trackerLocalize";
 
 // --- Public types ---------------------------------------------------
@@ -384,15 +384,19 @@ const pickTop = (
   return picked;
 };
 
+// Generated starters are STORED as trackers, not just displayed. Use
+// the raw (non-polishing) variants so the bracketed neutral form is
+// preserved on disk — that lets the user change pol later and have
+// the tracker re-render correctly. polishRu runs at display time.
 const toGenerated = (tpl: NormalizedTemplate): GeneratedStarter => ({
-  title: localizeTrackerTitle(tpl.title),
-  questionText: localizeTrackerQuestion(tpl.questionText),
+  title: localizeTrackerTitleRaw(tpl.title),
+  questionText: localizeTrackerQuestionRaw(tpl.questionText),
   category: tpl.category,
   subcategory: tpl.subcategory,
   periodDays: tpl.periodDays,
   threshold: tpl.threshold,
   problemWhen: tpl.problemWhen,
-  adviceAboveThreshold: localizeTrackerAdvice(tpl.adviceAboveThreshold),
+  adviceAboveThreshold: localizeTrackerAdviceRaw(tpl.adviceAboveThreshold),
 });
 
 // --- Public API -----------------------------------------------------

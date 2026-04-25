@@ -2,7 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import { Tracker } from "@/types/tracker";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
-import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerAdvice, localizeGroupTitle, localizeGroupDescription } from "@/lib/trackerLocalize";
+import {
+  localizeTrackerTitle,
+  localizeTrackerQuestion,
+  localizeTrackerTitleRaw,
+  localizeTrackerQuestionRaw,
+  localizeTrackerAdviceRaw,
+  localizeGroupTitle,
+  localizeGroupDescription,
+} from "@/lib/trackerLocalize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -154,10 +162,13 @@ export const AddTrackerModal = ({
 
   const handleTemplateSelect = async (template: typeof TEMPLATE_GROUPS[0]["templates"][0]) => {
     // When the user is on Russian, store the localized strings so the tracker
-    // persists in the active language from the moment it's created.
-    const localizedTitle = localizeTrackerTitle(template.title);
-    const localizedQuestion = localizeTrackerQuestion(template.questionText);
-    const localizedAdvice = localizeTrackerAdvice(template.adviceAboveThreshold);
+    // persists in the active language from the moment it's created. We use
+    // the *Raw variants here so the bracketed neutral form ("сделал(а)")
+    // is preserved on disk — polishRu runs at display time and respects
+    // the user's current pol, even if it changes later.
+    const localizedTitle = localizeTrackerTitleRaw(template.title);
+    const localizedQuestion = localizeTrackerQuestionRaw(template.questionText);
+    const localizedAdvice = localizeTrackerAdviceRaw(template.adviceAboveThreshold);
 
     // Check for duplicates (match against the localized title since that's
     // what the user sees and what new trackers get stored as).

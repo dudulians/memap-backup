@@ -219,12 +219,25 @@ const getMap = (): LookupMaps => {
 // polishRu so bracketed gender suffixes (e.g. "сделал(а)") resolve to the
 // user's actual `pol`. Custom user-typed strings still pass through both
 // stages — no map hit + polishRu is a no-op for text without brackets.
+// Display-time lookup: maps EN↔RU AND polishes RU output by the user's
+// stored pol. Use this for ALL render-time strings.
 const lookup = (m: DirectionalMap, input: string): string => {
   if (!input) return input;
   const lang = getLanguage();
   const dir = lang === "ru" ? m.enToRu : m.ruToEn;
   const out = dir.get(input) ?? input;
   return lang === "ru" ? polishRu(out, getPol()) : out;
+};
+
+// Storage lookup: same map switch but DOES NOT polish — keeps the
+// neutral bracketed form intact so a tracker stored at gender-A can be
+// re-rendered correctly when the user later picks gender-B. Use this
+// when seeding new trackers (onboarding, AddTracker, play round, etc.).
+const lookupRaw = (m: DirectionalMap, input: string): string => {
+  if (!input) return input;
+  const lang = getLanguage();
+  const dir = lang === "ru" ? m.enToRu : m.ruToEn;
+  return dir.get(input) ?? input;
 };
 
 export const localizeTrackerTitle = (title: string): string =>
@@ -235,6 +248,18 @@ export const localizeTrackerQuestion = (q: string): string =>
 
 export const localizeTrackerAdvice = (a: string): string =>
   lookup(getMap().advices, a);
+
+// Storage variants — return localized but un-polished text. Stored
+// trackers therefore keep "сделал(а)"-style brackets, and polishRu
+// runs at display time via the regular localize* functions above.
+export const localizeTrackerTitleRaw = (title: string): string =>
+  lookupRaw(getMap().titles, title);
+
+export const localizeTrackerQuestionRaw = (q: string): string =>
+  lookupRaw(getMap().questions, q);
+
+export const localizeTrackerAdviceRaw = (a: string): string =>
+  lookupRaw(getMap().advices, a);
 
 export const localizeGroupTitle = (title: string): string =>
   lookup(getMap().groupTitles, title);
