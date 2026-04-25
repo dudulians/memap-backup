@@ -455,7 +455,7 @@ export const AddTrackerModal = ({
               
               {/* Dropdown results */}
               {searchOpen && (
-                <div className="absolute left-0 right-0 mt-1 bg-background border rounded-lg shadow-lg z-50 max-h-[280px] overflow-y-auto">
+                <div className="absolute left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg z-50 max-h-[280px] overflow-y-auto">
                   {dropdownTemplates.length === 0 ? (
                     <div className="py-6 text-center text-sm text-muted-foreground">
                       {t("addTracker.noTemplatesFound")}

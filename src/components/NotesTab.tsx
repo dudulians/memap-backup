@@ -225,7 +225,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
                 />
               </div>
 
-              <Button onClick={handleAddNote} className="w-full rounded-full">
+              <Button onClick={handleAddNote} className="w-full rounded-xl">
                 {t("notesTab.saveNote")}
               </Button>
             </CardContent>
@@ -287,7 +287,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
                 />
               </div>
 
-              <Button onClick={handleUpdateNote} className="w-full rounded-full">
+              <Button onClick={handleUpdateNote} className="w-full rounded-xl">
                 {t("notesTab.saveChanges")}
               </Button>
             </CardContent>

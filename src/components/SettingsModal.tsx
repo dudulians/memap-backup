@@ -388,7 +388,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
             {/* Current Streak Display */}
-            <Card className="p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+            <Card className="p-4 rounded-3xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
               <div className="flex items-center gap-3">
                 <Flame className="h-8 w-8 text-orange-500" />
                 <div className="flex-1">
@@ -642,7 +642,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 {trackers.map(tracker => (
                   <div
                     key={tracker.id}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                    className="flex items-center gap-3 p-2 rounded-xl bg-muted/30"
                   >
                     <GripVertical className="h-4 w-4 text-muted-foreground/50" />
                     {(() => {

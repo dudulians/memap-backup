@@ -232,7 +232,7 @@ export const SwipeableTrackerCard = ({
               <button
                 {...dragHandleProps}
                 data-drag-handle
-                className="touch-none cursor-grab active:cursor-grabbing p-1 hover:bg-muted/40 rounded-md transition-colors flex-shrink-0 opacity-40 hover:opacity-100"
+                className="touch-none cursor-grab active:cursor-grabbing p-1 hover:bg-muted/40 rounded-lg transition-colors flex-shrink-0 opacity-40 hover:opacity-100"
                 aria-label={t("swipeCard.dragToReorder")}
                 onClick={(e) => e.stopPropagation()}
               >

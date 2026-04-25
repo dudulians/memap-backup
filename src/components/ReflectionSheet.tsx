@@ -31,7 +31,7 @@ const CycleCard = ({ cycle }: { cycle: ReflectionCycle }) => {
   const pct = Math.min(Math.round((cycle.significantDays / cycle.threshold) * 100), 100);
 
   return (
-    <div className="p-3 rounded-xl bg-muted/30 border border-border/40 space-y-2">
+    <div className="p-3 rounded-2xl bg-muted/30 border border-border/40 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium">
           {fmtLocal(start)} – {fmtLocal(end)} {format(end, "yyyy")}
@@ -204,7 +204,7 @@ export const ReflectionSheet = ({
                 <button
                   onClick={() => setOpenCalendar(openCalendar === "start" ? null : "start")}
                   className={cn(
-                    "text-sm font-semibold px-2 py-0.5 rounded-lg transition-colors hover:bg-muted/60",
+                    "text-sm font-semibold px-2 py-0.5 rounded-full transition-colors hover:bg-muted/60",
                     customStartStr && customStartStr !== fmtInput(defaultStart)
                       ? "bg-primary/10 text-primary"
                       : openCalendar === "start" ? "bg-muted/60" : "text-foreground"
@@ -238,7 +238,7 @@ export const ReflectionSheet = ({
                 <button
                   onClick={() => setOpenCalendar(openCalendar === "end" ? null : "end")}
                   className={cn(
-                    "text-sm font-semibold px-2 py-0.5 rounded-lg transition-colors hover:bg-muted/60",
+                    "text-sm font-semibold px-2 py-0.5 rounded-full transition-colors hover:bg-muted/60",
                     customEndStr && customEndStr !== fmtInput(today)
                       ? "bg-primary/10 text-primary"
                       : openCalendar === "end" ? "bg-muted/60" : "text-foreground"

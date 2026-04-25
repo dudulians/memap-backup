@@ -210,7 +210,7 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
                     />
                   </div>
 
-                  <Button onClick={handleAddNote} className="w-full rounded-full">
+                  <Button onClick={handleAddNote} className="w-full rounded-xl">
                     Save Note
                   </Button>
                 </CardContent>
@@ -272,7 +272,7 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
                     />
                   </div>
 
-                  <Button onClick={handleUpdateNote} className="w-full rounded-full">
+                  <Button onClick={handleUpdateNote} className="w-full rounded-xl">
                     Save Changes
                   </Button>
                 </CardContent>

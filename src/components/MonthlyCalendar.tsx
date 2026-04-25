@@ -210,11 +210,11 @@ export const MonthlyCalendar = ({
 
       {/* Month stats */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-lg bg-muted/50 text-center">
+        <div className="p-3 rounded-2xl bg-muted/50 text-center">
           <p className="text-xl font-bold">{monthStats.trackedDays}</p>
           <p className="text-xs text-muted-foreground">Days tracked</p>
         </div>
-        <div className="p-3 rounded-lg bg-muted/50 text-center">
+        <div className="p-3 rounded-2xl bg-muted/50 text-center">
           <p className="text-xl font-bold">{monthStats.significantDays}</p>
           <p className="text-xs text-muted-foreground">Significant days</p>
         </div>
@@ -258,7 +258,7 @@ export const MonthlyCalendar = ({
 
       {/* Bulk edit panel */}
       {multiSelectMode && selectedDates.size > 0 && (
-        <div className="fixed bottom-20 left-4 right-4 bg-background border rounded-xl shadow-lg p-4 space-y-3 z-40 animate-fade-in">
+        <div className="fixed bottom-20 left-4 right-4 bg-background border rounded-2xl shadow-lg p-4 space-y-3 z-40 animate-fade-in">
           <p className="text-sm font-medium text-center">
             {selectedDates.size} date{selectedDates.size !== 1 ? 's' : ''} selected
           </p>

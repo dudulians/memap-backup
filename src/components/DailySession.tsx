@@ -731,7 +731,7 @@ export const DailySession = ({
                     key={iso}
                     onClick={() => onDateChange(iso)}
                     className={cn(
-                      "flex-1 flex flex-col items-center justify-center py-1 rounded-lg transition-all",
+                      "flex-1 flex flex-col items-center justify-center py-1 rounded-full transition-all",
                       isSelected
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:bg-muted/40"
@@ -777,7 +777,7 @@ export const DailySession = ({
           <div className="relative w-full flex">
             {dragX > 50 && (
               <div className={cn(
-                "absolute top-6 left-6 px-4 py-2 rounded-xl font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[-12deg] border-4",
+                "absolute top-6 left-6 px-4 py-2 rounded-full font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[-12deg] border-4",
                 yesIsSignificant ? "border-strong text-strong" : "border-balanced text-balanced"
               )}>
                 {t("common.yes")}
@@ -785,7 +785,7 @@ export const DailySession = ({
             )}
             {dragX < -50 && (
               <div className={cn(
-                "absolute top-6 right-6 px-4 py-2 rounded-xl font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[12deg] border-4",
+                "absolute top-6 right-6 px-4 py-2 rounded-full font-bold text-lg uppercase tracking-wider animate-fade-in z-10 rotate-[12deg] border-4",
                 yesIsSignificant ? "border-balanced text-balanced" : "border-strong text-strong"
               )}>
                 {t("common.no")}

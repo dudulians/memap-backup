@@ -932,13 +932,13 @@ const CalendarScreen = ({ onNext, onBack, onSkipStep }: { onNext: () => void; on
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-2">
-          <div className="text-center py-1.5 rounded-xl bg-muted/40">
+          <div className="text-center py-1.5 rounded-2xl bg-muted/40">
             <div className="font-serif text-xl font-medium leading-none">{tracked}</div>
             <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5">
               {t("onboarding.calendar.daysTracked")}
             </div>
           </div>
-          <div className="text-center py-1.5 rounded-xl bg-strong/10">
+          <div className="text-center py-1.5 rounded-2xl bg-strong/10">
             <div key={significant} className="font-serif text-xl font-medium leading-none text-strong animate-fade-in">
               {significant}
             </div>
@@ -1538,7 +1538,7 @@ const AddTrackerScreen = ({ onNext, onBack, onSkipStep }: { onNext: () => void; 
           {sampleTemplates.map((tpl) => (
             <div
               key={tpl.title}
-              className="flex items-center justify-between gap-2 p-2 rounded-lg border border-border/50 bg-card"
+              className="flex items-center justify-between gap-2 p-2 rounded-xl border border-border/50 bg-card"
               // No fade-in animation here — keyframe lives only on
               // PatternScreen and this card would stay invisible otherwise.
             >
