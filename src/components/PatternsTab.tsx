@@ -267,28 +267,45 @@ export const PatternsTab = () => {
           header so long tracker lists don't hide the nav. */}
       <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
         <div className="sticky top-0 z-30 -mx-4 px-4 py-1.5 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
-          <TabsList className="w-full grid grid-cols-4 h-auto p-1 rounded-2xl bg-muted/60">
-            <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
+          {/* Underline-style tabs — no outer container pill, no inner
+              pill. Active state is just bolder text + a thin
+              underline. Eliminates the "pill in pill" geometry problem
+              entirely (no curves to mismatch). Apple uses this style on
+              iOS Settings, App Store category headers, etc. */}
+          <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-transparent rounded-none gap-0">
+            <TabsTrigger
+              value="overview"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
+            >
               <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabOverview")}</span>
             </TabsTrigger>
-            <TabsTrigger value="signals" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto relative">
+            <TabsTrigger
+              value="signals"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
+            >
               <Target className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabSignals")}</span>
               {strongCount > 0 && (
                 <span className={cn(
-                  "absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center",
+                  "absolute top-0 right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center",
                   "bg-strong text-strong-foreground"
                 )}>
                   {strongCount}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="trends" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
+            <TabsTrigger
+              value="trends"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
+            >
               <LineChart className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
             </TabsTrigger>
-            <TabsTrigger value="links" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
+            <TabsTrigger
+              value="links"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
+            >
               <GitCompare className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabLinks")}</span>
             </TabsTrigger>
