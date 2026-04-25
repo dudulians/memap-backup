@@ -3,17 +3,22 @@ import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
 import { PatternsTab } from "@/components/PatternsTab";
 import { NotesTab } from "@/components/NotesTab";
-import { Home, TrendingUp, Plus, BookOpen, Settings, ArrowUp } from "lucide-react";
+import { Layers, TrendingUp, Play, Settings, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
 import { applyTheme, getTheme } from "@/lib/theme";
+import { getTrackers, getEntries } from "@/lib/storage";
 
-type Tab = "today" | "patterns" | "notes";
+// "today" tab is renamed conceptually to "cards" — it's now the trackers
+// management view, no Yes/No inputs (those live exclusively in the session).
+// "notes" is no longer in bottom nav but still routable so Cards/Patterns
+// can link into it.
+type Tab = "cards" | "patterns" | "notes";
 
 const Index = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<Tab>("today");
+  const [activeTab, setActiveTab] = useState<Tab>("cards");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -23,7 +28,48 @@ const Index = () => {
     applyTheme(getTheme());
     if (shouldShowTour()) {
       setTourOpen(true);
+      return;
     }
+    // Cold-launch: if there are unanswered questions for today, auto-open
+    // the daily session as the home screen. This is the new product
+    // direction — the session is the core flow, the lists/patterns are
+    // secondary surfaces. We dispatch an event after a tiny delay so
+    // TodayTab is mounted and listening.
+    (async () => {
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const [trackers, entries] = await Promise.all([
+          getTrackers(),
+          getEntries(),
+        ]);
+        const active = trackers.filter((tr) => !tr.archived);
+        if (active.length === 0) return;
+        const answeredIds = new Set(
+          entries.filter((e) => e.date === today).map((e) => e.trackerId)
+        );
+        const hasUnanswered = active.some((tr) => !answeredIds.has(tr.id));
+        if (!hasUnanswered) return;
+        // Defer to next tick so TodayTab's mount-time event listener is up.
+        setTimeout(() => {
+          window.dispatchEvent(new Event("memap-open-session"));
+        }, 0);
+      } catch {
+        // best-effort — never block app start
+      }
+    })();
+  }, []);
+
+  // Listen for tab-switch events dispatched by deep components (e.g. the
+  // DailySession completion screen's "see my patterns" button).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab as Tab | undefined;
+      if (tab === "today" || tab === "patterns" || tab === "notes") {
+        setActiveTab(tab);
+      }
+    };
+    window.addEventListener("memap-switch-tab", handler);
+    return () => window.removeEventListener("memap-switch-tab", handler);
   }, []);
 
   const [notesTargetDate, setNotesTargetDate] = useState<string | undefined>();
@@ -36,12 +82,17 @@ const Index = () => {
       setNotesSourceTab((prev) => prev ?? (activeTab !== "notes" ? activeTab : null));
       setActiveTab("notes");
     };
+    const cardsHandler = () => setActiveTab("cards");
     window.addEventListener("memap-open-notes", handler);
-    return () => window.removeEventListener("memap-open-notes", handler);
+    window.addEventListener("memap-open-cards", cardsHandler);
+    return () => {
+      window.removeEventListener("memap-open-notes", handler);
+      window.removeEventListener("memap-open-cards", cardsHandler);
+    };
   }, [activeTab]);
 
   const handleNotesBack = () => {
-    const target = notesSourceTab ?? "patterns";
+    const target = notesSourceTab ?? "cards";
     setNotesSourceTab(null);
     setNotesTargetDate(undefined);
     setActiveTab(target);
@@ -78,7 +129,9 @@ const Index = () => {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col relative">
-      {/* Header - subtle and elegant */}
+      {/* Header - subtle and elegant. Settings cog moved to top-right
+          since it's a rare-use destination — frees up bottom-nav for
+          the three primary surfaces (Cards, Session, Patterns). */}
       <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 py-4">
         <h1 className="text-2xl font-serif font-medium text-center tracking-tight text-foreground">
           <span className="italic">Me</span>Map
@@ -86,11 +139,18 @@ const Index = () => {
         <p className="text-[10px] text-center text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
           track · notice · act
         </p>
+        <button
+          onClick={() => setSettingsModalOpen(true)}
+          aria-label={t("common.settings")}
+          className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+        >
+          <Settings className="h-5 w-5" strokeWidth={1.75} />
+        </button>
       </header>
 
       {/* Main Content */}
       <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto max-w-2xl w-full mx-auto px-4 py-6 pb-40">
-        {activeTab === "today" && <TodayTab key={`today-${refreshKey}`} />}
+        {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
         {activeTab === "patterns" && <PatternsTab key={`patterns-${refreshKey}`} />}
         {activeTab === "notes" && (
           <NotesTab
@@ -116,15 +176,19 @@ const Index = () => {
         </button>
       )}
 
-      {/* Floating Bottom Navigation */}
+      {/* Floating Bottom Navigation. New product direction: the daily
+          session is the primary action, so the center button is a giant
+          ▶ Play that opens the session. Cards & Patterns are the side
+          surfaces. Settings moved to the header cog. */}
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
-          {/* Center floating + button */}
+          {/* Center floating ▶ Play button — opens the session via event
+              so TodayTab (which owns DailySession) can react. */}
           <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-20">
             <button
-              onClick={() => setAddModalOpen(true)}
+              onClick={() => window.dispatchEvent(new Event("memap-open-session"))}
               className="
-                w-14 h-14 rounded-full 
+                w-16 h-16 rounded-full
                 bg-gradient-to-br from-primary to-primary/80
                 text-primary-foreground
                 shadow-lg shadow-primary/30
@@ -133,27 +197,29 @@ const Index = () => {
                 hover:scale-110 hover:shadow-xl hover:shadow-primary/40
                 active:scale-95
               "
-              aria-label="Add new pattern"
+              aria-label={t("common.startSession")}
             >
-              <Plus className="h-7 w-7" strokeWidth={2.5} />
+              <Play className="h-7 w-7 ml-0.5" strokeWidth={2} fill="currentColor" />
             </button>
           </div>
 
-          {/* Navigation bar - 4 items with space in middle for + button */}
-          <div className="nav-floating grid grid-cols-4 overflow-hidden">
-            {/* Today tab */}
+          {/* 2 sides — Cards on the left, Patterns on the right. The
+              center column is a placeholder for the floating ▶. */}
+          <div className="nav-floating grid grid-cols-3 overflow-hidden">
             <button
-              onClick={() => { setActiveTab("today"); setNotesSourceTab(null); }}
+              onClick={() => { setActiveTab("cards"); setNotesSourceTab(null); }}
               className={`
                 flex flex-col items-center justify-center py-3 px-2 transition-all duration-300 rounded-xl mx-1
-                ${activeTab === "today" ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground"}
+                ${activeTab === "cards" ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground"}
               `}
             >
-              <Home className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] font-medium">{t("common.today")}</span>
+              <Layers className="h-5 w-5 mb-0.5" />
+              <span className="text-[10px] font-medium">{t("common.cards")}</span>
             </button>
 
-            {/* Patterns tab */}
+            {/* Center spacer — the ▶ button is positioned absolutely above. */}
+            <div aria-hidden="true" />
+
             <button
               onClick={() => { setActiveTab("patterns"); setNotesSourceTab(null); }}
               className={`
@@ -163,27 +229,6 @@ const Index = () => {
             >
               <TrendingUp className="h-5 w-5 mb-0.5" />
               <span className="text-[10px] font-medium">{t("common.patterns")}</span>
-            </button>
-
-            {/* Notes tab */}
-            <button
-              onClick={() => { setActiveTab("notes"); setNotesSourceTab(null); }}
-              className={`
-                flex flex-col items-center justify-center py-3 px-2 transition-all duration-300 rounded-xl mx-1
-                ${activeTab === "notes" ? "text-foreground bg-muted" : "text-muted-foreground hover:text-foreground"}
-              `}
-            >
-              <BookOpen className="h-5 w-5 mb-0.5" />
-              <span className="text-[10px] font-medium">{t("common.notes")}</span>
-            </button>
-
-            {/* Settings — opens modal, not a tab */}
-            <button
-              onClick={() => setSettingsModalOpen(true)}
-              className="flex flex-col items-center justify-center py-3 px-2 transition-all duration-300 text-muted-foreground/60 hover:text-muted-foreground border-l border-border/40"
-            >
-              <Settings className="h-4 w-4 mb-0.5" />
-              <span className="text-[10px]">{t("common.settings")}</span>
             </button>
           </div>
         </div>

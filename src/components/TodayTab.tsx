@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { getRandomIdeas } from "@/lib/lifeStreams";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -107,11 +107,17 @@ export const TodayTab = () => {
   // persists a change. Keeps Today's Yes/No pills in sync after edits.
   useEffect(() => {
     const sync = () => { loadData(); };
+    const openSession = () => setDailySessionOpen(true);
     window.addEventListener("memap-entries-changed", sync);
     window.addEventListener("memap-trackers-changed", sync);
+    // Index dispatches this on cold launch when there are unanswered
+    // questions for today, and TodayTab dispatches it from the session card.
+    // Both paths land here so DailySession ownership stays in TodayTab.
+    window.addEventListener("memap-open-session", openSession);
     return () => {
       window.removeEventListener("memap-entries-changed", sync);
       window.removeEventListener("memap-trackers-changed", sync);
+      window.removeEventListener("memap-open-session", openSession);
     };
   }, []);
 
@@ -391,9 +397,12 @@ export const TodayTab = () => {
 
   if (trackers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full px-6 text-center space-y-6">
+      <div className="flex flex-col items-center justify-center h-full px-6 text-center space-y-6 -mt-12">
+        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+          <Play className="h-9 w-9 text-primary ml-1" strokeWidth={1.75} fill="currentColor" />
+        </div>
         <div className="space-y-2">
-          <p className="text-2xl font-medium">{t("today.emptyTitle")}</p>
+          <p className="text-2xl font-serif font-medium">{t("today.emptyTitle")}</p>
           <p className="text-sm text-muted-foreground max-w-md">
             {t("today.emptyHint")}
           </p>
@@ -421,7 +430,9 @@ export const TodayTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Daily Session Mode */}
+      {/* Daily Session Mode. The "see my patterns" exit on the completion
+          screen needs Index to swap the active tab — we dispatch
+          `memap-switch-tab` and Index listens. */}
       {dailySessionOpen && (
         <DailySession
           trackers={trackers}
@@ -433,11 +444,45 @@ export const TodayTab = () => {
             setDailySessionOpen(false);
             loadData();
           }}
+          onGoToPatterns={() => {
+            setDailySessionOpen(false);
+            loadData();
+            window.dispatchEvent(
+              new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } })
+            );
+          }}
+          onDateChange={setSelectedDate}
         />
       )}
 
-      {/* Date Selector + Streak */}
+      {/* Header row: title, streak chip, "+ Add", "Notes" link.
+          Cards screen replaces what used to be Today tab. The big "session
+          card" and "Yes/No buttons per tracker" are gone — those live
+          exclusively in the session reachable via the bottom-nav ▶. */}
       <div className="animate-fade-in space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-xl font-serif font-medium tracking-tight">
+            {t("common.cards")}
+          </h2>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }))}
+              className="text-xs px-3 py-1.5 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t("common.notesLink")}
+            </button>
+            <Button
+              size="sm"
+              onClick={() => setAddTrackerModalOpen(true)}
+              className="rounded-full px-3 h-8"
+              aria-label={t("common.addPattern")}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {t("today.addFirst")}
+            </Button>
+          </div>
+        </div>
+
         {globalStreak.currentStreak > 0 && (
           <div className="flex items-center justify-center">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
@@ -449,49 +494,7 @@ export const TodayTab = () => {
             </div>
           </div>
         )}
-        <DateSelector
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          highlightedDates={datesWithEntries}
-        />
-        {!isSelectedDateToday && (
-          <p className="text-xs text-center text-muted-foreground mt-2">
-            {t("today.fillingIn")}
-          </p>
-        )}
       </div>
-
-      {/* Session Card — works for any selected date, not just today.
-          Past dates: the user is back-filling a day they missed. */}
-      {trackers.length > 0 && (
-        <Card
-          className="card-premium animate-fade-in overflow-hidden cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-          onClick={() => setDailySessionOpen(true)}
-        >
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Play className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm">
-                  {isSelectedDateToday
-                    ? t("today.titleToday")
-                    : t("today.titleDate", { date: format(selectedDateObj, "MMM d", { locale: dateLocale }) })}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {isSelectedDateToday
-                    ? t("today.sessionSubtitle")
-                    : t("today.sessionSubtitlePast")}
-                </p>
-              </div>
-              <div className="rounded-full bg-primary text-primary-foreground px-4 py-1.5 text-sm font-medium">
-                {t("today.startSession")}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Ideas of the Day Banner */}
       {randomIdeas.length > 0 && !ideasDismissed && (
@@ -551,38 +554,46 @@ export const TodayTab = () => {
         </div>
       )}
 
-      {/* Today's Check-in Section */}
+      {/* Tracker list — Cards mode. Tap a card to open its details
+          (where stats, calendar, edit live). The session is the only
+          place to answer Yes/No, so no input controls here.
+          The little dot on the right shows whether today's answer
+          has been recorded — green = answered, dim = unanswered. */}
       <div className="space-y-3 animate-fade-in">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          {isSelectedDateToday ? t("today.checkIn") : t("today.checkInPast")}
-        </p>
-        
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={trackers.map((t) => t.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-4">
-              {trackers.map((tracker) => (
-                <SortableSwipeCard
-                  key={tracker.id}
-                  tracker={tracker}
-                  selectedDateEntry={getSelectedDateEntry(tracker.id)}
-                  onAnswer={handleAnswer}
-                  onOpenDetails={handleOpenTrackerDetails}
-                  onDelete={(t) => {
-                    setTrackerToDelete(t);
-                    setDeleteDialogOpen(true);
-                  }}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="space-y-2">
+          {trackers.map((tracker) => {
+            const TIcon = getTrackerIcon(tracker.title, tracker.category);
+            const todayEntry = getSelectedDateEntry(tracker.id);
+            const answered = todayEntry !== undefined;
+            return (
+              <Card
+                key={tracker.id}
+                onClick={() => handleOpenTrackerDetails(tracker)}
+                className="card-premium cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+              >
+                <CardContent className="p-3.5 flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0">
+                    <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{localizeTrackerTitle(tracker.title)}</p>
+                    {tracker.questionText && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {localizeTrackerQuestion(tracker.questionText)}
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      answered ? "bg-primary" : "bg-muted-foreground/20"
+                    }`}
+                    aria-label={answered ? t("today.answeredToday") : t("today.notAnsweredToday")}
+                  />
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
       
       <DuplicateTrackerDialog

@@ -17,6 +17,8 @@ import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
+import { calculateGlobalStreak } from "@/lib/globalStreak";
+import { Flame } from "lucide-react";
 
 interface DailySessionProps {
   trackers: Tracker[];
@@ -24,7 +26,16 @@ interface DailySessionProps {
   selectedDate: string;
   onAnswer: (trackerId: string, value: boolean) => Promise<void>;
   onClose: () => void;
+  // Called when the user picks "today's overview" on the completion screen
+  // (or when the deck is empty and the user closes). Lands them on Today.
   onComplete: () => void;
+  // Optional second exit on the completion screen — "see my patterns".
+  // If omitted, only the "today's overview" button is shown (back-compat).
+  onGoToPatterns?: () => void;
+  // When provided, the session shows a 7-day date strip in its header so
+  // the user can switch which day they're answering for without leaving.
+  // The parent owns `selectedDate` and updates it on this callback.
+  onDateChange?: (date: string) => void;
 }
 
 interface SessionQuestion {
@@ -77,6 +88,8 @@ export const DailySession = ({
   onAnswer,
   onClose,
   onComplete,
+  onGoToPatterns,
+  onDateChange,
 }: DailySessionProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -140,13 +153,24 @@ export const DailySession = ({
     return [...unansweredQuestions, ...newQuestions];
   }, [trackers, entries, selectedDate, settings.includeSuggestedQuestions]);
 
-  const [deck] = useState<SessionQuestion[]>(() => buildDeck());
+  // Deck rebuilds when selectedDate changes — that lets the date-strip in
+  // the header navigate to other days without unmounting the session.
+  const [deck, setDeck] = useState<SessionQuestion[]>(() => buildDeck());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
   const [newPatternsAdded, setNewPatternsAdded] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | "down" | null>(null);
   const [completed, setCompleted] = useState(false);
+
+  // Re-pull deck whenever the selected date changes via the date-strip.
+  // Clearing answeredCount here would lie about progress within a single
+  // mount, so we keep it; only the cards for the new day are reloaded.
+  useEffect(() => {
+    setDeck(buildDeck());
+    setCurrentIndex(0);
+    setCompleted(false);
+  }, [selectedDate, buildDeck]);
   
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -338,11 +362,14 @@ export const DailySession = ({
   };
 
   if (completed) {
+    // Compute streak fresh on the completion screen — the user just
+    // finished a session, give them the up-to-date number as reward.
+    const streak = calculateGlobalStreak(entries);
     return (
       <div className="fixed inset-0 bg-background z-50 flex flex-col">
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center space-y-6 animate-fade-in">
-            <div className="text-6xl mb-4">🎉</div>
+            <div className="text-6xl mb-2">🎉</div>
             <h1 className="text-2xl font-semibold">{t("dailySession.completed")}</h1>
             <p className="text-muted-foreground">
               {deck.length === 0
@@ -353,6 +380,21 @@ export const DailySession = ({
                     : t("dailySession.answeredMany", { count: answeredCount }))
                 : t("dailySession.seeYouTomorrow")}
             </p>
+            {streak.currentStreak > 0 && (
+              <div className="flex items-center justify-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-orange-500/15 to-orange-600/5 border border-orange-500/20">
+                  <Flame className="h-4 w-4 text-orange-500" strokeWidth={2} fill="currentColor" />
+                  <span className="text-sm font-medium text-foreground">
+                    <span className="font-serif text-base font-semibold tabular-nums">{streak.currentStreak}</span>
+                    <span className="text-muted-foreground ml-1.5">
+                      {streak.currentStreak === 1
+                        ? t("today.streakDaysOne")
+                        : t("today.streakDaysMany", { count: streak.currentStreak })}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
             {newPatternsAdded > 0 && (
               <p className="text-sm text-primary">
                 {newPatternsAdded === 1
@@ -360,13 +402,30 @@ export const DailySession = ({
                   : t("dailySession.newPatternsMany", { count: newPatternsAdded })}
               </p>
             )}
-            <Button
-              onClick={onComplete}
-              className="rounded-full px-8"
-              size="lg"
-            >
-              {t("dailySession.backToToday")}
-            </Button>
+            {/* Two paths from the completion screen:
+                – primary: see patterns (the reward — what the user came for)
+                – secondary: today's overview (streaks, ideas, list view) */}
+            <div className="flex flex-col items-center gap-3 pt-2">
+              {onGoToPatterns && (
+                <Button
+                  onClick={onGoToPatterns}
+                  className="rounded-full px-8"
+                  size="lg"
+                >
+                  {t("dailySession.toPatterns")}
+                </Button>
+              )}
+              <Button
+                onClick={onComplete}
+                variant={onGoToPatterns ? "ghost" : "default"}
+                className="rounded-full px-8"
+                size={onGoToPatterns ? "default" : "lg"}
+              >
+                {onGoToPatterns
+                  ? t("dailySession.toOverview")
+                  : t("dailySession.backToToday")}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -393,7 +452,8 @@ export const DailySession = ({
       onPointerCancel={endPointer}
     >
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b flex-shrink-0">
+      <div className="px-4 pt-3 pb-2 border-b flex-shrink-0 space-y-2">
+        <div className="flex items-center justify-between">
         <Button
           variant="ghost"
           size="icon"
@@ -413,6 +473,46 @@ export const DailySession = ({
           )}
         </div>
         <div className="w-10" />
+        </div>
+
+        {/* Date strip — last 7 days. Tap any to answer for that date.
+            Future dates are excluded — you can't pre-fill tomorrow. */}
+        {onDateChange && (() => {
+          const todayStr = todayLocal();
+          const days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            return { iso, dayNum: d.getDate(), date: d };
+          });
+          return (
+            <div className="flex items-center justify-between gap-1">
+              {days.map(({ iso, dayNum, date }) => {
+                const isSelected = iso === selectedDate;
+                const isToday = iso === todayStr;
+                const weekday = format(date, "EEEEEE", { locale: dateLocale });
+                return (
+                  <button
+                    key={iso}
+                    onClick={() => onDateChange(iso)}
+                    className={cn(
+                      "flex-1 flex flex-col items-center justify-center py-1 rounded-lg transition-all",
+                      isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted/40"
+                    )}
+                  >
+                    <span className="text-[9px] uppercase tracking-wider opacity-70">{weekday}</span>
+                    <span className={cn(
+                      "text-sm font-medium tabular-nums",
+                      isToday && !isSelected && "text-foreground"
+                    )}>{dayNum}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Progress bar */}
