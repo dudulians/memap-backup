@@ -257,26 +257,28 @@ export const PatternsTab = () => {
   const strongCount = trackers.filter((t) => getTrackerStats(t).status === "strong").length;
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Header */}
-      <div className="text-center space-y-1 animate-fade-in">
-        <p className="text-lg font-medium tracking-wide">{t("patterns.title")}</p>
-        <p className="text-sm text-muted-foreground">
+    <div className="space-y-3 pb-20">
+      {/* Compact header — single line, sits inline with the title.
+          Saves vertical space so the calendar / chart shows above the
+          fold without scrolling on a typical mobile viewport. */}
+      <div className="flex items-baseline justify-between animate-fade-in">
+        <h2 className="text-lg font-serif font-medium tracking-tight">{t("patterns.title")}</h2>
+        <span className="text-xs text-muted-foreground tabular-nums">
           {trackers.length === 1 ? t("patterns.countOne") : t("patterns.countMany", { count: trackers.length })}
-        </p>
+        </span>
       </div>
 
       {/* Section tabs — turns the old long scroll into 4 destinations,
           each one screen-sized. The tab list stays sticky under the app
           header so long tracker lists don't hide the nav. */}
       <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
-        <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
+        <div className="sticky top-0 z-30 -mx-4 px-4 py-1.5 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
           <TabsList className="w-full grid grid-cols-4 h-auto p-1 rounded-2xl bg-muted/60">
-            <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto">
+            <TabsTrigger value="overview" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
               <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabOverview")}</span>
             </TabsTrigger>
-            <TabsTrigger value="signals" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto relative">
+            <TabsTrigger value="signals" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto relative">
               <Target className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabSignals")}</span>
               {strongCount > 0 && (
@@ -288,11 +290,11 @@ export const PatternsTab = () => {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="trends" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto">
+            <TabsTrigger value="trends" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
               <LineChart className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
             </TabsTrigger>
-            <TabsTrigger value="links" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-2 h-auto">
+            <TabsTrigger value="links" className="rounded-xl data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
               <GitCompare className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabLinks")}</span>
             </TabsTrigger>

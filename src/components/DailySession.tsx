@@ -393,9 +393,12 @@ export const DailySession = ({
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
 
+    // Horizontal swipe wins easily (Yes/No). Skip needs a strong, clearly
+    // intentional downward swipe — bumped to 150px AND must dominate dx
+    // by 1.5x — so a diagonal yes/no isn't misread as skip.
     if (absX > 80 && absX > absY) {
       if (dx > 0) handleAnswer(true); else handleAnswer(false);
-    } else if (dy > 80 && absY > absX) {
+    } else if (dy > 150 && absY > absX * 1.5) {
       handleSkip();
     } else {
       setDragX(0);
@@ -429,55 +432,92 @@ export const DailySession = ({
       tone?: "primary" | "default";
     };
     const rows: ActionRow[] = [];
-    if (onGoToPatterns) {
+    // After a play round, the obvious next step is "go check the cards
+    // you just collected and decide what to keep" — make that the
+    // primary action. Goes to Cards and dispatches an event the section
+    // can use to scroll itself into view.
+    if (playMode) {
       rows.push({
-        key: "patterns",
-        icon: BarChart3,
-        title: t("dailySession.rowPatternsTitle"),
-        subtitle: t("dailySession.rowPatternsSubtitle"),
-        onClick: onGoToPatterns,
+        key: "review-play",
+        icon: Shuffle,
+        title: t("dailySession.rowReviewPlayTitle"),
+        subtitle: t("dailySession.rowReviewPlaySubtitle"),
+        onClick: () => {
+          onComplete();
+          setTimeout(() => {
+            window.dispatchEvent(new Event("memap-scroll-to-play"));
+          }, 0);
+        },
         tone: "primary",
       });
-    }
-    if (onDateChange) {
+      // Keep the option to play another round straight away.
+      if (onPlayRandom) {
+        rows.push({
+          key: "another-round",
+          icon: Shuffle,
+          title: t("dailySession.rowAnotherRoundTitle"),
+          subtitle: t("dailySession.rowAnotherRoundSubtitle"),
+          onClick: onPlayRandom,
+        });
+      }
       rows.push({
-        key: "yesterday",
-        icon: CalendarDays,
-        title: t("dailySession.rowYesterdayTitle"),
-        subtitle: t("dailySession.rowYesterdaySubtitle"),
-        onClick: () => onDateChange(yesterdayIso),
+        key: "overview",
+        icon: Home,
+        title: t("dailySession.rowOverviewTitle"),
+        subtitle: t("dailySession.rowOverviewSubtitle"),
+        onClick: onComplete,
+      });
+    } else {
+      if (onGoToPatterns) {
+        rows.push({
+          key: "patterns",
+          icon: BarChart3,
+          title: t("dailySession.rowPatternsTitle"),
+          subtitle: t("dailySession.rowPatternsSubtitle"),
+          onClick: onGoToPatterns,
+          tone: "primary",
+        });
+      }
+      if (onDateChange) {
+        rows.push({
+          key: "yesterday",
+          icon: CalendarDays,
+          title: t("dailySession.rowYesterdayTitle"),
+          subtitle: t("dailySession.rowYesterdaySubtitle"),
+          onClick: () => onDateChange(yesterdayIso),
+        });
+      }
+      if (onPlayRandom) {
+        rows.push({
+          key: "random",
+          icon: Shuffle,
+          title: t("dailySession.rowRandomTitle"),
+          subtitle: t("dailySession.rowRandomSubtitle"),
+          onClick: onPlayRandom,
+        });
+      }
+      rows.push({
+        key: "note",
+        icon: Pencil,
+        title: t("dailySession.rowNoteTitle"),
+        subtitle: t("dailySession.rowNoteSubtitle"),
+        onClick: () => {
+          onComplete();
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
+          }, 0);
+        },
+      });
+      rows.push({
+        key: "overview",
+        icon: Home,
+        title: onGoToPatterns
+          ? t("dailySession.rowOverviewTitle")
+          : t("dailySession.backToToday"),
+        subtitle: t("dailySession.rowOverviewSubtitle"),
+        onClick: onComplete,
       });
     }
-    if (onPlayRandom) {
-      rows.push({
-        key: "random",
-        icon: Shuffle,
-        title: t("dailySession.rowRandomTitle"),
-        subtitle: t("dailySession.rowRandomSubtitle"),
-        onClick: onPlayRandom,
-      });
-    }
-    rows.push({
-      key: "note",
-      icon: Pencil,
-      title: t("dailySession.rowNoteTitle"),
-      subtitle: t("dailySession.rowNoteSubtitle"),
-      onClick: () => {
-        onComplete();
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
-        }, 0);
-      },
-    });
-    rows.push({
-      key: "overview",
-      icon: Home,
-      title: onGoToPatterns
-        ? t("dailySession.rowOverviewTitle")
-        : t("dailySession.backToToday"),
-      subtitle: t("dailySession.rowOverviewSubtitle"),
-      onClick: onComplete,
-    });
 
     return (
       <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto">
@@ -502,7 +542,11 @@ export const DailySession = ({
               </div>
             )}
             <p className="text-sm text-muted-foreground max-w-xs pt-1">
-              {deck.length === 0
+              {playMode
+                ? (answeredCount === 1
+                    ? t("dailySession.playRoundOne")
+                    : t("dailySession.playRoundMany", { count: answeredCount }))
+                : deck.length === 0
                 ? t("dailySession.caughtUp")
                 : answeredCount > 0
                 ? (answeredCount === 1
@@ -688,7 +732,7 @@ export const DailySession = ({
                 {t("common.no")}
               </div>
             )}
-            {dragY > 50 && (
+            {dragY > 80 && (
               <div className="absolute left-1/2 bottom-6 -translate-x-1/2 bg-muted text-muted-foreground px-4 py-2 rounded-full font-semibold animate-fade-in z-10">
                 {t("common.skip")} ↓
               </div>

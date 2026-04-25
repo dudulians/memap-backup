@@ -4,7 +4,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -112,16 +112,25 @@ export const TodayTab = () => {
   useEffect(() => {
     const sync = () => { loadData(); };
     const openSession = () => setDailySessionOpen(true);
+    const scrollToPlay = () => {
+      // Wait a tick so trackers have re-rendered after a play round.
+      setTimeout(() => {
+        const el = document.getElementById("play-round-section");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    };
     window.addEventListener("memap-entries-changed", sync);
     window.addEventListener("memap-trackers-changed", sync);
     // Index dispatches this on cold launch when there are unanswered
     // questions for today, and TodayTab dispatches it from the session card.
     // Both paths land here so DailySession ownership stays in TodayTab.
     window.addEventListener("memap-open-session", openSession);
+    window.addEventListener("memap-scroll-to-play", scrollToPlay);
     return () => {
       window.removeEventListener("memap-entries-changed", sync);
       window.removeEventListener("memap-trackers-changed", sync);
       window.removeEventListener("memap-open-session", openSession);
+      window.removeEventListener("memap-scroll-to-play", scrollToPlay);
     };
   }, []);
 
@@ -531,6 +540,19 @@ export const TodayTab = () => {
             {t("common.cards")}
           </h2>
           <div className="flex items-center gap-1.5">
+            {/* Always-accessible Random Play — opens the session in play
+                mode straight away, no need to wait for the Done screen. */}
+            <button
+              onClick={() => {
+                setPlayMode(true);
+                setDailySessionOpen(true);
+              }}
+              aria-label={t("today.playRandomAria")}
+              className="h-8 w-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+              title={t("today.playRandom")}
+            >
+              <Shuffle className="h-4 w-4" />
+            </button>
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }))}
               className="text-xs px-3 py-1.5 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -698,7 +720,7 @@ export const TodayTab = () => {
             )}
 
             {playTrackers.length > 0 && (
-              <div className="space-y-3 animate-fade-in">
+              <div id="play-round-section" className="space-y-3 animate-fade-in scroll-mt-20">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">

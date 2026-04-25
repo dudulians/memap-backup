@@ -311,6 +311,8 @@ const en = {
     playRoundClearedDesc: "Removed {{count}} cards",
     keepPlayCard: "Keep this card",
     deletePlayCard: "Delete this card",
+    playRandom: "Random round",
+    playRandomAria: "Start a random round",
 
     hideIdeas: "Hide ideas",
     ideasHidden: "Ideas hidden",
@@ -477,6 +479,12 @@ const en = {
     rowNoteSubtitle: "Capture how today felt",
     rowOverviewTitle: "Today's overview",
     rowOverviewSubtitle: "Your cards and ideas",
+    rowReviewPlayTitle: "Review my play cards",
+    rowReviewPlaySubtitle: "Keep what you like, drop the rest",
+    rowAnotherRoundTitle: "Play another round",
+    rowAnotherRoundSubtitle: "10 more random questions",
+    playRoundOne: "1 card added to your play round",
+    playRoundMany: "{{count}} cards added to your play round",
   },
 
   calendarEditor: {

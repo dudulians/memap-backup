@@ -313,6 +313,8 @@ const ru: Translation = {
     playRoundClearedDesc: "Удалено карточек: {{count}}",
     keepPlayCard: "Оставить эту карточку",
     deletePlayCard: "Удалить эту карточку",
+    playRandom: "Случайный раунд",
+    playRandomAria: "Запустить случайный раунд",
 
     hideIdeas: "Скрыть идеи",
     ideasHidden: "Идеи скрыты",
@@ -479,6 +481,12 @@ const ru: Translation = {
     rowNoteSubtitle: "Зафиксировать, каким был день",
     rowOverviewTitle: "Сегодняшний обзор",
     rowOverviewSubtitle: "Твои карточки и идеи",
+    rowReviewPlayTitle: "Посмотреть свои случайные карточки",
+    rowReviewPlaySubtitle: "Что-то оставить, остальное — удалить",
+    rowAnotherRoundTitle: "Сыграть ещё раунд",
+    rowAnotherRoundSubtitle: "Ещё 10 случайных вопросов",
+    playRoundOne: "Добавлена 1 карточка в случайный раунд",
+    playRoundMany: "Добавлено карточек в случайный раунд: {{count}}",
   },
 
   calendarEditor: {

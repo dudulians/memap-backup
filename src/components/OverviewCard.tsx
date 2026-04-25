@@ -369,18 +369,18 @@ export const OverviewCard = ({
           </div>
         </div>
 
-        {/* Pattern selector section */}
-        <div className="mb-4">
-          <p className="text-xs text-muted-foreground mb-2 font-medium">{t("overview.choosePattern")}</p>
-          
-          {/* Chips container with fade edges */}
+        {/* Pattern chips — moved tight to the top so the calendar is
+            visible above the fold. The previously-redundant
+            "Календарь для:" label is dropped — the active chip already
+            highlights the chosen tracker. */}
+        <div className="mb-2">
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-card to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-card to-transparent z-10 pointer-events-none" />
-            
-            <div 
+
+            <div
               ref={chipsContainerRef}
-              className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide scroll-smooth"
+              className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide scroll-smooth"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {trackers.map((tracker, index) => {
@@ -391,7 +391,7 @@ export const OverviewCard = ({
                     key={tracker.id}
                     onClick={() => setActiveTrackerIndex(index)}
                     className={cn(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-full text-xs whitespace-nowrap transition-all duration-200 flex-shrink-0",
+                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs whitespace-nowrap transition-all duration-200 flex-shrink-0",
                       isActive
                         ? "bg-foreground text-background font-semibold shadow-md scale-105"
                         : "bg-muted/40 text-muted-foreground hover:bg-muted/70 font-medium"
@@ -406,35 +406,21 @@ export const OverviewCard = ({
           </div>
         </div>
 
-        {/* Active tracker info */}
-        <div 
-          className="mb-4"
+        {/* Compact stats row — single line, replaces the two big tiles
+            so the calendar comes up immediately. */}
+        <div
+          className="flex items-center justify-between gap-3 px-1 mb-3 text-xs"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          <p className="text-sm mb-3">
-            <span className="text-muted-foreground">{t("overview.calendarFor")} </span>
-            <span className="font-medium text-foreground">{activeTracker.title}</span>
-            <span className="text-muted-foreground"> · </span>
-            <span
-              className="font-medium capitalize"
-              style={{ color: `hsl(var(--${categoryColor}))` }}
-            >
-              {t(`categories.${activeTracker.category}` as const)}
-            </span>
-          </p>
-          
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="p-3 rounded-xl bg-muted/30 text-center">
-              <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{monthStats.trackedDays}</p>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("overview.daysTracked")}</p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/30 text-center">
-              <p className="text-3xl font-serif font-medium tabular-nums tracking-tight text-strong">{monthStats.significantDays}</p>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("overview.significantDaysStat")}</p>
-            </div>
-          </div>
+          <span className="text-muted-foreground">
+            <span className="font-serif text-base font-medium tabular-nums text-foreground mr-1">{monthStats.trackedDays}</span>
+            {t("overview.daysTracked").toLowerCase()}
+          </span>
+          <span className="text-muted-foreground">
+            <span className="font-serif text-base font-medium tabular-nums text-strong mr-1">{monthStats.significantDays}</span>
+            {t("overview.significantDaysStat").toLowerCase()}
+          </span>
         </div>
 
         {/* Year View */}
