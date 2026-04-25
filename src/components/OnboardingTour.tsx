@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,12 @@ import {
   SupportedLanguage,
   EXPLICIT_LANGUAGE_KEY,
 } from "@/lib/i18n";
+import {
+  generateStarterPack,
+  hasMeaningfulInterviewSignal,
+  GeneratedStarter,
+} from "@/lib/starterGenerator";
+import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -148,6 +154,58 @@ const seedDefaultTrackers = async (t: TFn) => {
   }
 };
 
+// Seed the user's tracker list with a personalised pack derived from
+// interview answers. Falls back to seedDefaultTrackers when the pack is
+// empty (e.g. no meaningful interview signal). De-dupes by title.
+const seedGeneratedTrackers = async (
+  pack: GeneratedStarter[],
+  t: TFn
+): Promise<void> => {
+  if (pack.length === 0) {
+    await seedDefaultTrackers(t);
+    return;
+  }
+  try {
+    localStorage.setItem("memap_ideas_dismissed", "false");
+  } catch {
+    // ignore
+  }
+  try {
+    const existing = await getTrackers();
+    const existingTitles = new Set(
+      existing.map((x) => x.title.trim().toLowerCase())
+    );
+    const now = new Date().toISOString();
+    const today = new Date().toISOString().split("T")[0];
+    const baseSort = existing.length;
+    const additions: Tracker[] = [];
+    pack.forEach((meta, i) => {
+      if (existingTitles.has(meta.title.trim().toLowerCase())) return;
+      additions.push({
+        id: `${Date.now()}-gen-${i}`,
+        title: meta.title,
+        category: meta.category,
+        subcategory: meta.subcategory,
+        questionText: meta.questionText,
+        answerType: "boolean",
+        periodDays: meta.periodDays,
+        threshold: meta.threshold,
+        problemWhen: meta.problemWhen,
+        adviceAboveThreshold: meta.adviceAboveThreshold,
+        createdAt: now,
+        sortIndex: baseSort + i,
+        cycleStartDate: today,
+      });
+    });
+    if (additions.length > 0) {
+      await saveTrackers([...existing, ...additions]);
+    }
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("seedGeneratedTrackers failed:", e);
+  }
+};
+
 // --- Component ------------------------------------------------------
 
 interface OnboardingTourProps {
@@ -196,11 +254,20 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
     });
   }, []);
 
-  // Skip-all safety net (top-right X). Seeds the 5 default trackers,
-  // un-dismisses Ideas of the Day, finishes. Same logic StackReveal
-  // uses on step 4 — kept in one place via seedDefaultTrackers.
+  // Skip-all safety net (top-right X). If the interview already has
+  // meaningful signal (focus, context, or goal answers), seed a
+  // personalised pack derived from those answers; otherwise fall back to
+  // the universal-5 default seed. Either way, un-dismisses Ideas of the
+  // Day and finishes. Reads fresh interview state from localStorage so
+  // it picks up answers persisted by the in-flight component state.
   const skipSetup = useCallback(async () => {
-    await seedDefaultTrackers(t);
+    const fresh = readInterview();
+    if (hasMeaningfulInterviewSignal(fresh)) {
+      const pack = generateStarterPack(fresh, 5);
+      await seedGeneratedTrackers(pack, t);
+    } else {
+      await seedDefaultTrackers(t);
+    }
     finish();
   }, [finish, t]);
 
@@ -282,6 +349,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
           )}
           {step === 4 && (
             <StackRevealScreen
+              answers={answers}
               onBack={() => setStep(3)}
               onFinish={finish}
             />
@@ -765,26 +833,61 @@ const GoalScreen = ({
   );
 };
 
-// --- Screen 4: Stack reveal (STUB for Part A) -----------------------
-// Part A: always seeds the 5 default trackers, regardless of interview
-// answers. Part B will replace this with personalised generation +
-// animated card reveal.
+// --- Screen 4: Stack reveal -----------------------------------------
+// Generates a personalised 5-card pack from interview answers and shows
+// the user the chosen titles + questions before seeding. If interview is
+// empty (user skipped everything), falls back to the universal-5 set so
+// there's always something to show.
 
 const StackRevealScreen = ({
+  answers,
   onBack,
   onFinish,
 }: {
+  answers: InterviewAnswers;
   onBack: () => void;
   onFinish: () => void;
 }) => {
   const { t } = useTranslation();
   const [creating, setCreating] = useState(false);
 
+  // Compute the pack once on mount based on the interview state we got
+  // handed. We deliberately do NOT recompute on every answers change —
+  // the user has already moved past the question screens by the time
+  // they reach this step, so a stable preview is correct.
+  const pack = useMemo<GeneratedStarter[]>(() => {
+    return generateStarterPack(answers, 5);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fallback rows for the preview when there's no interview signal —
+  // mirrors what seedDefaultTrackers will actually create so the user
+  // sees the truthful 5 cards either way.
+  const fallbackPreview = useMemo(
+    () =>
+      DEFAULT_STARTERS.map((meta) => ({
+        title: t(`onboarding.defaultStarters.${meta.titleKey}`),
+        questionText: t(`onboarding.defaultStarters.${meta.questionKey}`),
+        category: meta.category,
+      })),
+    [t],
+  );
+
+  const previewRows: Array<{
+    title: string;
+    questionText: string;
+    category: Tracker["category"];
+  }> = pack.length > 0 ? pack : fallbackPreview;
+
   const handleGo = async () => {
     if (creating) return;
     setCreating(true);
     try {
-      await seedDefaultTrackers(t);
+      if (pack.length > 0) {
+        await seedGeneratedTrackers(pack, t);
+      } else {
+        await seedDefaultTrackers(t);
+      }
     } finally {
       setCreating(false);
       onFinish();
@@ -800,9 +903,43 @@ const StackRevealScreen = ({
       <h2 className="font-serif text-2xl font-medium text-center mb-2">
         {t("onboarding.stackReveal.title")}
       </h2>
-      <p className="text-sm text-muted-foreground text-center mb-6 max-w-[320px]">
+      <p className="text-sm text-muted-foreground text-center mb-5 max-w-[320px]">
         {t("onboarding.stackReveal.subtitle")}
       </p>
+
+      <div className="w-full max-w-[360px] space-y-2 mb-5">
+        {previewRows.map((row, i) => {
+          const Icon = getTrackerIcon(row.title, row.category);
+          // Use inline style + CSS var (same pattern as SwipeableTrackerCard)
+          // because Tailwind's JIT can't resolve dynamic class names like
+          // `bg-${colorVar}/15` reliably for every category at build time.
+          const colorVar = getCategoryColor(row.category);
+          return (
+            <div
+              key={`${row.title}-${i}`}
+              className="rounded-2xl bg-muted/30 p-3 flex items-start gap-3"
+            >
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  backgroundColor: `hsl(var(--${colorVar}) / 0.15)`,
+                  color: `hsl(var(--${colorVar}-foreground, var(--foreground)))`,
+                }}
+              >
+                <Icon className="h-4.5 w-4.5" strokeWidth={1.75} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm leading-snug">
+                  {row.title}
+                </div>
+                <div className="text-xs text-muted-foreground leading-snug mt-0.5">
+                  {row.questionText}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <Button
         size="lg"
