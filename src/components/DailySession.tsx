@@ -207,11 +207,17 @@ export const DailySession = ({
   // Re-pull deck whenever the selected date changes via the date-strip.
   // Clearing answeredCount here would lie about progress within a single
   // mount, so we keep it; only the cards for the new day are reloaded.
+  // BUT in playMode the deck must stay frozen for the duration of the
+  // round — otherwise every answer mutates `trackers`, which changes
+  // `buildDeck`, which would re-shuffle and re-include cards the user
+  // already skipped. Each new round gets a fresh deck via a parent
+  // `key` change, not via this effect.
   useEffect(() => {
+    if (playMode) return;
     setDeck(buildDeck());
     setCurrentIndex(0);
     setCompleted(false);
-  }, [selectedDate, buildDeck]);
+  }, [selectedDate, buildDeck, playMode]);
   
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
