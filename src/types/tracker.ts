@@ -27,6 +27,10 @@ export interface Tracker {
   sortIndex?: number;
   cycleStartDate?: string;    // YYYY-MM-DD — start of current observation window
   cycles?: ReflectionCycle[]; // history of completed cycles
+  // Marker for "play round" cards — created by random-play mode and shown
+  // in a separate section on Cards. User can bulk-delete, or "promote"
+  // them to regular cards (which clears this flag).
+  source?: "play";
 }
 
 export interface TrackerEntry {

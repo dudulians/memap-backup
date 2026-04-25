@@ -90,6 +90,10 @@ export const TodayTab = () => {
   const [trackerToDelete, setTrackerToDelete] = useState<Tracker | null>(null);
   const [addTrackerModalOpen, setAddTrackerModalOpen] = useState(false);
   const [dailySessionOpen, setDailySessionOpen] = useState(false);
+  // When true, the next session opens in random-play mode (10 random new
+  // templates, saved as source="play" trackers). Reset after the session
+  // closes so the next manual ▶ tap goes back to normal mode.
+  const [playMode, setPlayMode] = useState(false);
 
   // Selected date for viewing/editing entries (default: today)
   const [selectedDate, setSelectedDate] = useState(() => 
@@ -256,6 +260,54 @@ export const TodayTab = () => {
     const updatedTrackers = [...trackers, newTracker];
     await saveTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
+  };
+
+  // Promote a play-round card to a regular tracker — drop the source
+  // marker so it leaves the "Play round" section and joins normal cards.
+  const promotePlayTracker = async (tracker: Tracker) => {
+    const updated = trackers.map((t) =>
+      t.id === tracker.id ? { ...t, source: undefined } : t
+    );
+    await saveTrackers(updated);
+    setTrackers(updated);
+    toast({
+      title: t("today.playCardKept"),
+      description: t("today.playCardKeptDesc", { title: localizeTrackerTitle(tracker.title) }),
+    });
+  };
+
+  // Bulk-delete all play-marked trackers + their entries. Heavy hammer,
+  // confirmed via toast undo so accidental taps are recoverable.
+  const deleteAllPlayCards = async () => {
+    const playIds = new Set(
+      trackers.filter((t) => t.source === "play").map((t) => t.id)
+    );
+    if (playIds.size === 0) return;
+    const previousTrackers = trackers;
+    const previousEntries = entries;
+    const updatedTrackers = trackers.filter((t) => !playIds.has(t.id));
+    const updatedEntries = entries.filter((e) => !playIds.has(e.trackerId));
+    setTrackers(updatedTrackers);
+    setEntries(updatedEntries);
+    await saveTrackers(updatedTrackers);
+    await saveEntries(updatedEntries);
+    toast({
+      title: t("today.playRoundCleared"),
+      description: t("today.playRoundClearedDesc", { count: playIds.size }),
+      action: (
+        <ToastAction
+          altText={t("today.undo")}
+          onClick={async () => {
+            await saveTrackers(previousTrackers);
+            await saveEntries(previousEntries);
+            setTrackers(previousTrackers);
+            setEntries(previousEntries);
+          }}
+        >
+          {t("today.undo")}
+        </ToastAction>
+      ),
+    });
   };
 
   const handleAddIdea = async (idea: any) => {
@@ -439,19 +491,33 @@ export const TodayTab = () => {
           entries={entries}
           selectedDate={selectedDate}
           onAnswer={handleAnswer}
-          onClose={() => setDailySessionOpen(false)}
+          onClose={() => {
+            setDailySessionOpen(false);
+            setPlayMode(false);
+          }}
           onComplete={() => {
             setDailySessionOpen(false);
+            setPlayMode(false);
             loadData();
           }}
           onGoToPatterns={() => {
             setDailySessionOpen(false);
+            setPlayMode(false);
             loadData();
             window.dispatchEvent(
               new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } })
             );
           }}
           onDateChange={setSelectedDate}
+          onPlayRandom={() => {
+            // Restart the session in play mode without unmounting it —
+            // toggling state remounts via key change below.
+            setPlayMode(true);
+          }}
+          playMode={playMode}
+          // Re-mount the session when playMode flips so the deck rebuilds
+          // fresh against the new mode.
+          key={playMode ? "play" : "normal"}
         />
       )}
 
@@ -554,47 +620,111 @@ export const TodayTab = () => {
         </div>
       )}
 
-      {/* Tracker list — Cards mode. Tap a card to open its details
-          (where stats, calendar, edit live). The session is the only
-          place to answer Yes/No, so no input controls here.
-          The little dot on the right shows whether today's answer
-          has been recorded — green = answered, dim = unanswered. */}
-      <div className="space-y-3 animate-fade-in">
-        <div className="space-y-2">
-          {trackers.map((tracker) => {
-            const TIcon = getTrackerIcon(tracker.title, tracker.category);
-            const todayEntry = getSelectedDateEntry(tracker.id);
-            const answered = todayEntry !== undefined;
-            return (
-              <Card
-                key={tracker.id}
-                onClick={() => handleOpenTrackerDetails(tracker)}
-                className="card-premium cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
-              >
-                <CardContent className="p-3.5 flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0">
-                    <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+      {/* Tracker list — Cards mode. Split into regular cards and
+          "Play round" cards (created by random-play mode). Play cards
+          live in their own section so users can prune/promote them
+          without polluting their real tracking surface. */}
+      {(() => {
+        const regularTrackers = trackers.filter((tr) => tr.source !== "play");
+        const playTrackers = trackers.filter((tr) => tr.source === "play");
+
+        const renderTrackerCard = (tracker: Tracker, isPlay: boolean) => {
+          const TIcon = getTrackerIcon(tracker.title, tracker.category);
+          const todayEntry = getSelectedDateEntry(tracker.id);
+          const answered = todayEntry !== undefined;
+          return (
+            <Card
+              key={tracker.id}
+              onClick={() => handleOpenTrackerDetails(tracker)}
+              className="card-premium cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+            >
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0">
+                  <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{localizeTrackerTitle(tracker.title)}</p>
+                  {tracker.questionText && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {localizeTrackerQuestion(tracker.questionText)}
+                    </p>
+                  )}
+                </div>
+                {isPlay ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        promotePlayTracker(tracker);
+                      }}
+                      aria-label={t("today.keepPlayCard")}
+                      className="h-7 w-7 rounded-full bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTrackerToDelete(tracker);
+                        setDeleteDialogOpen(true);
+                      }}
+                      aria-label={t("today.deletePlayCard")}
+                      className="h-7 w-7 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{localizeTrackerTitle(tracker.title)}</p>
-                    {tracker.questionText && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {localizeTrackerQuestion(tracker.questionText)}
-                      </p>
-                    )}
-                  </div>
+                ) : (
                   <div
                     className={`w-2 h-2 rounded-full flex-shrink-0 ${
                       answered ? "bg-primary" : "bg-muted-foreground/20"
                     }`}
                     aria-label={answered ? t("today.answeredToday") : t("today.notAnsweredToday")}
                   />
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        };
+
+        return (
+          <>
+            {regularTrackers.length > 0 && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="space-y-2">
+                  {regularTrackers.map((tracker) => renderTrackerCard(tracker, false))}
+                </div>
+              </div>
+            )}
+
+            {playTrackers.length > 0 && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      🎲 {t("today.playRoundSection")}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                      {t("today.playRoundHint")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteAllPlayCards()}
+                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full px-3 h-8"
+                  >
+                    {t("today.deleteAllPlay")}
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {playTrackers.map((tracker) => renderTrackerCard(tracker, true))}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
       
       <DuplicateTrackerDialog
         open={duplicateDialogOpen}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { X, ChevronRight, SkipForward, Sparkles } from "lucide-react";
+import { X, ChevronRight, SkipForward, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -36,6 +36,14 @@ interface DailySessionProps {
   // the user can switch which day they're answering for without leaving.
   // The parent owns `selectedDate` and updates it on this callback.
   onDateChange?: (date: string) => void;
+  // Triggered from the Done screen — starts a 10-card "play round" of
+  // random new templates. The parent decides what that flow looks like.
+  onPlayRandom?: () => void;
+  // When true, the session runs in "random play" mode: the deck is 10
+  // random NEW templates (not the user's regular trackers), and any card
+  // answered is saved as a tracker tagged with `source: "play"` so it
+  // shows in a separate Cards section the user can prune later.
+  playMode?: boolean;
 }
 
 interface SessionQuestion {
@@ -90,14 +98,47 @@ export const DailySession = ({
   onComplete,
   onGoToPatterns,
   onDateChange,
+  onPlayRandom,
+  playMode = false,
 }: DailySessionProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const settings = getSessionSettings();
   
-  // Build the deck of unanswered questions + new suggestions
+  // Build the deck of unanswered questions + new suggestions.
+  // In `playMode`, the deck is 10 random new templates regardless of the
+  // user's existing trackers — pure exploration / play.
   const buildDeck = useCallback((): SessionQuestion[] => {
     const existingTrackerIds = new Set(trackers.map(t => t.id));
+
+    if (playMode) {
+      const allTemplates = TEMPLATE_GROUPS.flatMap((group) => group.templates);
+      const existingTitles = new Set(
+        trackers.map((t) => t.title.toLowerCase().trim())
+      );
+      const available = allTemplates.filter(
+        (tpl) => !existingTitles.has(tpl.title.toLowerCase().trim())
+      );
+      const shuffled = [...available].sort(() => Math.random() - 0.5);
+      const picked = shuffled.slice(0, 10);
+      return picked.map((tpl) => ({
+        tracker: {
+          id: `play-${tpl.id}`,
+          title: tpl.title,
+          questionText: tpl.questionText,
+          category: tpl.category,
+          subcategory: tpl.subcategory,
+          periodDays: tpl.periodDays,
+          threshold: tpl.threshold,
+          problemWhen: tpl.problemWhen,
+          adviceAboveThreshold: tpl.adviceAboveThreshold,
+          answerType: "boolean" as const,
+          createdAt: new Date().toISOString(),
+        },
+        isNew: true,
+        templateId: tpl.id,
+      }));
+    }
     
     // Step 1: Get unanswered questions from active trackers
     const unansweredQuestions = trackers
@@ -239,10 +280,13 @@ export const DailySession = ({
           // regardless of Yes/No. Previously we only saved on Yes, so a
           // No answer was silently thrown away and the user wondered
           // why they even answered it.
+          // In playMode, mark with source="play" so the Cards screen
+          // groups these into a "Play round" section the user can prune.
           const newTracker: Tracker = {
             ...currentQuestion.tracker,
             id: uuid(),
             createdAt: new Date().toISOString(),
+            ...(playMode ? { source: "play" as const } : {}),
           };
           const existingTrackers = await getTrackers();
           await saveTrackers([...existingTrackers, newTracker]);
@@ -365,13 +409,99 @@ export const DailySession = ({
     // Compute streak fresh on the completion screen — the user just
     // finished a session, give them the up-to-date number as reward.
     const streak = calculateGlobalStreak(entries);
+
+    // Action rows for the Done screen. Each row = icon, title, subtitle,
+    // chevron. Clean tappable list — much more attention-grabbing than
+    // a stack of mismatched-style buttons. The "play random" row invites
+    // the user to keep going if they want.
+    const yesterdayIso = (() => {
+      const y = new Date();
+      y.setDate(y.getDate() - 1);
+      return `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
+    })();
+
+    type ActionRow = {
+      key: string;
+      icon: typeof BarChart3;
+      title: string;
+      subtitle: string;
+      onClick: () => void;
+      tone?: "primary" | "default";
+    };
+    const rows: ActionRow[] = [];
+    if (onGoToPatterns) {
+      rows.push({
+        key: "patterns",
+        icon: BarChart3,
+        title: t("dailySession.rowPatternsTitle"),
+        subtitle: t("dailySession.rowPatternsSubtitle"),
+        onClick: onGoToPatterns,
+        tone: "primary",
+      });
+    }
+    if (onDateChange) {
+      rows.push({
+        key: "yesterday",
+        icon: CalendarDays,
+        title: t("dailySession.rowYesterdayTitle"),
+        subtitle: t("dailySession.rowYesterdaySubtitle"),
+        onClick: () => onDateChange(yesterdayIso),
+      });
+    }
+    if (onPlayRandom) {
+      rows.push({
+        key: "random",
+        icon: Shuffle,
+        title: t("dailySession.rowRandomTitle"),
+        subtitle: t("dailySession.rowRandomSubtitle"),
+        onClick: onPlayRandom,
+      });
+    }
+    rows.push({
+      key: "note",
+      icon: Pencil,
+      title: t("dailySession.rowNoteTitle"),
+      subtitle: t("dailySession.rowNoteSubtitle"),
+      onClick: () => {
+        onComplete();
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
+        }, 0);
+      },
+    });
+    rows.push({
+      key: "overview",
+      icon: Home,
+      title: onGoToPatterns
+        ? t("dailySession.rowOverviewTitle")
+        : t("dailySession.backToToday"),
+      subtitle: t("dailySession.rowOverviewSubtitle"),
+      onClick: onComplete,
+    });
+
     return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center space-y-6 animate-fade-in">
-            <div className="text-6xl mb-2">🎉</div>
-            <h1 className="text-2xl font-semibold">{t("dailySession.completed")}</h1>
-            <p className="text-muted-foreground">
+      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto">
+        <div className="flex-1 flex flex-col items-center px-5 pt-12 pb-6 gap-6 animate-fade-in">
+          {/* Hero moment — confetti emoji + the streak number as the
+              centerpiece. Big serif numeral grabs attention. */}
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="text-5xl">🎉</div>
+            {streak.currentStreak > 0 && (
+              <div className="flex flex-col items-center">
+                <div className="font-serif text-7xl font-medium tabular-nums leading-none text-foreground">
+                  {streak.currentStreak}
+                </div>
+                <div className="flex items-center gap-1.5 mt-2">
+                  <Flame className="h-4 w-4 text-orange-500" strokeWidth={2} fill="currentColor" />
+                  <span className="text-sm text-muted-foreground">
+                    {streak.currentStreak === 1
+                      ? t("today.streakDaysOne")
+                      : t("today.streakDaysMany", { count: streak.currentStreak })}
+                  </span>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-muted-foreground max-w-xs pt-1">
               {deck.length === 0
                 ? t("dailySession.caughtUp")
                 : answeredCount > 0
@@ -380,85 +510,54 @@ export const DailySession = ({
                     : t("dailySession.answeredMany", { count: answeredCount }))
                 : t("dailySession.seeYouTomorrow")}
             </p>
-            {streak.currentStreak > 0 && (
-              <div className="flex items-center justify-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-br from-orange-500/15 to-orange-600/5 border border-orange-500/20">
-                  <Flame className="h-4 w-4 text-orange-500" strokeWidth={2} fill="currentColor" />
-                  <span className="text-sm font-medium text-foreground">
-                    <span className="font-serif text-base font-semibold tabular-nums">{streak.currentStreak}</span>
-                    <span className="text-muted-foreground ml-1.5">
-                      {streak.currentStreak === 1
-                        ? t("today.streakDaysOne")
-                        : t("today.streakDaysMany", { count: streak.currentStreak })}
-                    </span>
-                  </span>
-                </div>
-              </div>
-            )}
             {newPatternsAdded > 0 && (
-              <p className="text-sm text-primary">
+              <p className="text-xs text-primary">
                 {newPatternsAdded === 1
                   ? t("dailySession.newPatternsOne")
                   : t("dailySession.newPatternsMany", { count: newPatternsAdded })}
               </p>
             )}
-            {/* Action menu — primary "see patterns" CTA on top, then a
-                grid of secondary options. The user can stop here, or
-                keep "playing" (fill yesterday, write a note, browse stats). */}
-            <div className="flex flex-col items-stretch gap-3 pt-2 w-full max-w-sm mx-auto">
-              {onGoToPatterns && (
-                <Button
-                  onClick={onGoToPatterns}
-                  className="rounded-full"
-                  size="lg"
+          </div>
+
+          {/* Action list — vertical, each row touchable. Primary action
+              gets a tinted background; rest are clean rows. */}
+          <div className="w-full max-w-sm space-y-2">
+            {rows.map((row) => {
+              const Icon = row.icon;
+              const primary = row.tone === "primary";
+              return (
+                <button
+                  key={row.key}
+                  onClick={row.onClick}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.99]",
+                    primary
+                      ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
+                      : "bg-muted/30 border border-transparent hover:bg-muted/50"
+                  )}
                 >
-                  {t("dailySession.toPatterns")}
-                </Button>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="rounded-full text-xs h-10"
-                  onClick={() => {
-                    if (onDateChange) {
-                      // jump to yesterday in the same session
-                      const y = new Date();
-                      y.setDate(y.getDate() - 1);
-                      const iso = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
-                      onDateChange(iso);
-                    }
-                  }}
-                  disabled={!onDateChange}
-                >
-                  {t("dailySession.fillYesterday")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="default"
-                  className="rounded-full text-xs h-10"
-                  onClick={() => {
-                    onComplete();
-                    // small delay so TodayTab is the active tab when we open Notes
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
-                    }, 0);
-                  }}
-                >
-                  {t("dailySession.addNote")}
-                </Button>
-              </div>
-              <Button
-                onClick={onComplete}
-                variant="ghost"
-                className="rounded-full"
-                size="default"
-              >
-                {onGoToPatterns
-                  ? t("dailySession.toOverview")
-                  : t("dailySession.backToToday")}
-              </Button>
-            </div>
+                  <div
+                    className={cn(
+                      "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                      primary
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" strokeWidth={1.75} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("text-sm font-medium", primary && "text-primary")}>
+                      {row.title}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {row.subtitle}
+                    </p>
+                  </div>
+                  <ChevronRight className={cn("h-4 w-4 flex-shrink-0", primary ? "text-primary" : "text-muted-foreground/40")} />
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
