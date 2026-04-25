@@ -54,6 +54,10 @@ export const PatternsTab = () => {
   const handleSectionChange = (value: string) => {
     setSection(value);
     try { localStorage.setItem("memap_patterns_section", value); } catch { /* ignore */ }
+    // Tell the parent <main> scroller to jump back to the top — without
+    // this, switching from a deep-scrolled Signals to Overview drops the
+    // user mid-calendar instead of showing the new section's top.
+    window.dispatchEvent(new Event("memap-scroll-main-top"));
   };
 
   useEffect(() => {

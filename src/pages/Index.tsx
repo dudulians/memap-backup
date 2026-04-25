@@ -251,6 +251,17 @@ const Index = () => {
     mainRef.current?.scrollTo({ top: 0 });
     setShowBackToTop(false);
   }, [activeTab]);
+  // Same treatment for sub-section switches inside Patterns — dispatched
+  // by PatternsTab.handleSectionChange. Without this, scrolling deep
+  // into Signals and then jumping to Overview leaves the user mid-page.
+  useEffect(() => {
+    const handler = () => {
+      mainRef.current?.scrollTo({ top: 0 });
+      setShowBackToTop(false);
+    };
+    window.addEventListener("memap-scroll-main-top", handler);
+    return () => window.removeEventListener("memap-scroll-main-top", handler);
+  }, []);
   const scrollMainToTop = () => {
     mainRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
