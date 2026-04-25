@@ -7,6 +7,7 @@ import { Layers, TrendingUp, Play, Settings, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
+import { CoachmarkTour, shouldShowCoachmark, type CoachmarkStep } from "@/components/CoachmarkTour";
 import { applyTheme, getTheme } from "@/lib/theme";
 import { getTrackers, getEntries } from "@/lib/storage";
 
@@ -23,6 +24,74 @@ const Index = () => {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [tourOpen, setTourOpen] = useState(false);
+  const [coachmarkOpen, setCoachmarkOpen] = useState(false);
+
+  // Coachmark steps — each highlights a real UI element by data-attribute.
+  // Order is roughly "what you'll do every day" → "deeper features".
+  const coachmarkSteps: CoachmarkStep[] = [
+    {
+      id: "cards",
+      targetSelector: "[data-coachmark='cards-list']",
+      titleKey: "coachmark.cardsTitle",
+      bodyKey: "coachmark.cardsBody",
+      requireTab: "cards",
+      placement: "top",
+      padding: 4,
+    },
+    {
+      id: "play",
+      targetSelector: "[data-coachmark='play-button']",
+      titleKey: "coachmark.playTitle",
+      bodyKey: "coachmark.playBody",
+      shape: "circle",
+      placement: "top",
+      padding: 8,
+    },
+    {
+      id: "shuffle",
+      targetSelector: "[data-coachmark='shuffle-button']",
+      titleKey: "coachmark.shuffleTitle",
+      bodyKey: "coachmark.shuffleBody",
+      shape: "circle",
+      placement: "bottom",
+      padding: 6,
+      requireTab: "cards",
+    },
+    {
+      id: "add",
+      targetSelector: "[data-coachmark='add-button']",
+      titleKey: "coachmark.addTitle",
+      bodyKey: "coachmark.addBody",
+      placement: "bottom",
+      padding: 6,
+      requireTab: "cards",
+    },
+    {
+      id: "notes",
+      targetSelector: "[data-coachmark='notes-link']",
+      titleKey: "coachmark.notesTitle",
+      bodyKey: "coachmark.notesBody",
+      placement: "bottom",
+      padding: 6,
+      requireTab: "cards",
+    },
+    {
+      id: "patterns",
+      targetSelector: "[data-coachmark='patterns-tab']",
+      titleKey: "coachmark.patternsTitle",
+      bodyKey: "coachmark.patternsBody",
+      placement: "top",
+      padding: 6,
+    },
+    {
+      id: "settings",
+      targetSelector: "[data-coachmark='settings-button']",
+      titleKey: "coachmark.settingsTitle",
+      bodyKey: "coachmark.settingsBody",
+      placement: "bottom",
+      padding: 6,
+    },
+  ];
 
   useEffect(() => {
     applyTheme(getTheme());
@@ -153,6 +222,7 @@ const Index = () => {
           <span className="italic">Me</span>Map
         </h1>
         <button
+          data-coachmark="settings-button"
           onClick={() => setSettingsModalOpen(true)}
           aria-label={t("common.settings")}
           className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
@@ -202,6 +272,7 @@ const Index = () => {
               next tick once TodayTab's listener has attached. */}
           <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-20">
             <button
+              data-coachmark="play-button"
               onClick={() => {
                 if (activeTab !== "cards") setActiveTab("cards");
                 // Defer so TodayTab mounts (when we just swapped tabs)
@@ -244,6 +315,7 @@ const Index = () => {
             <div aria-hidden="true" />
 
             <button
+              data-coachmark="patterns-tab"
               onClick={() => { setActiveTab("patterns"); setNotesSourceTab(null); }}
               className={`
                 flex flex-col items-center justify-center py-2.5 px-2 my-1 mr-1 rounded-[20px] transition-all duration-300
@@ -280,7 +352,23 @@ const Index = () => {
         onClose={() => {
           setTourOpen(false);
           setRefreshKey((k) => k + 1);
+          // After the interview-style onboarding ends, kick off the
+          // interactive coachmark tour so the user gets a guided walk
+          // through real UI rather than abstract demo screens.
+          if (shouldShowCoachmark()) {
+            // Land on Cards first so the cards-list target exists.
+            setActiveTab("cards");
+            setTimeout(() => setCoachmarkOpen(true), 400);
+          }
         }}
+      />
+
+      {/* Coachmark interactive tour */}
+      <CoachmarkTour
+        open={coachmarkOpen}
+        steps={coachmarkSteps}
+        onClose={() => setCoachmarkOpen(false)}
+        onRequestTab={(tab) => setActiveTab(tab)}
       />
     </div>
   );

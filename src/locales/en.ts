@@ -77,7 +77,7 @@ const en = {
 
     goal: {
       title: "Why this app, for you?",
-      subtitle: "Pick one",
+      subtitle: "Pick any that fit",
       patterns: {
         title: "Notice patterns",
         subtitle: "See what's actually shaping my days",
@@ -110,10 +110,10 @@ const en = {
       stressQ: "Did I feel stressed today?",
       moveTitle: "Movement",
       moveQ: "Did I move my body today?",
-      moodTitle: "Mood",
-      moodQ: "Was I in a good mood today?",
-      restTitle: "Rest",
-      restQ: "Did I feel rested today?",
+      connectionTitle: "Close ones",
+      connectionQ: "Did I talk to someone close today?",
+      joyTitle: "Joy",
+      joyQ: "Did I do something just for fun today?",
     },
   },
 
@@ -563,6 +563,26 @@ const en = {
   notes: {
     backToPatterns: "Back to Patterns",
     backToToday: "Back to Today",
+  },
+
+  coachmark: {
+    next: "Next",
+    done: "Done",
+    skip: "Skip",
+    cardsTitle: "These are your cards",
+    cardsBody: "Each one is a yes/no question about your day. Tap any card to see its stats and history.",
+    playTitle: "Start a session",
+    playBody: "The main button. Tap to open a deck of your cards — swipe Yes or No, one card at a time.",
+    shuffleTitle: "Random round",
+    shuffleBody: "Want to explore? Tap to get 10 random new questions. You can keep, delete or pass on each.",
+    addTitle: "Add a card",
+    addBody: "Add your own questions — pick from templates or write something custom.",
+    notesTitle: "Notes",
+    notesBody: "When yes/no isn't enough, write a free-form note about the day here.",
+    patternsTitle: "Patterns",
+    patternsBody: "Here you'll see your patterns: a calendar view, trends, and links between answers.",
+    settingsTitle: "Settings",
+    settingsBody: "Language, theme, data backup, notifications — all here.",
   },
 
   loading: "Loading...",

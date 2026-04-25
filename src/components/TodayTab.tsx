@@ -555,6 +555,7 @@ export const TodayTab = () => {
             {/* Always-accessible Random Play — opens the session in play
                 mode straight away, no need to wait for the Done screen. */}
             <button
+              data-coachmark="shuffle-button"
               onClick={() => {
                 setPlayMode(true);
                 setPlayRoundNonce((n) => n + 1);
@@ -567,12 +568,14 @@ export const TodayTab = () => {
               <Shuffle className="h-4 w-4" />
             </button>
             <button
+              data-coachmark="notes-link"
               onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }))}
               className="text-xs px-3 py-1.5 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               {t("common.notesLink")}
             </button>
             <Button
+              data-coachmark="add-button"
               size="sm"
               onClick={() => setAddTrackerModalOpen(true)}
               className="rounded-full px-3 h-8"
@@ -725,7 +728,7 @@ export const TodayTab = () => {
         return (
           <>
             {regularTrackers.length > 0 && (
-              <div className="space-y-3 animate-fade-in">
+              <div data-coachmark="cards-list" className="space-y-3 animate-fade-in">
                 <div className="space-y-2">
                   {regularTrackers.map((tracker) => renderTrackerCard(tracker, false))}
                 </div>

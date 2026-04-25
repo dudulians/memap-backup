@@ -41,6 +41,7 @@ type FocusArea =
   | "money"
   | "hobbies";
 type Goal = "patterns" | "habit" | "understand" | "doctor";
+const ALL_GOALS: Goal[] = ["patterns", "habit", "understand", "doctor"];
 
 interface InterviewAnswers {
   pol?: Pol;
@@ -49,7 +50,8 @@ interface InterviewAnswers {
   hasKids?: boolean;
   hasPets?: boolean;
   hasPartner?: boolean;
-  goal?: Goal;
+  // Goal is now multi-select — users may have several reasons at once.
+  goal?: Goal[];
 }
 
 const readInterview = (): InterviewAnswers => {
@@ -86,12 +88,15 @@ interface DefaultStarterMeta {
   problemWhen: "yes" | "no";
 }
 
+// Five universal starters covering five DIFFERENT life domains, so the
+// new user gets a varied picture from day one rather than five flavours
+// of "how I feel" or "how I sleep".
 const DEFAULT_STARTERS: DefaultStarterMeta[] = [
-  { id: "sleep",  titleKey: "sleepTitle",  questionKey: "sleepQ",  category: "Health",   problemWhen: "no"  },
-  { id: "stress", titleKey: "stressTitle", questionKey: "stressQ", category: "Emotions", problemWhen: "yes" },
-  { id: "move",   titleKey: "moveTitle",   questionKey: "moveQ",   category: "Body",     problemWhen: "no"  },
-  { id: "mood",   titleKey: "moodTitle",   questionKey: "moodQ",   category: "Emotions", problemWhen: "no"  },
-  { id: "rest",   titleKey: "restTitle",   questionKey: "restQ",   category: "Health",   problemWhen: "no"  },
+  { id: "sleep",      titleKey: "sleepTitle",      questionKey: "sleepQ",      category: "Health",      problemWhen: "no"  },
+  { id: "stress",     titleKey: "stressTitle",     questionKey: "stressQ",     category: "Emotions",    problemWhen: "yes" },
+  { id: "move",       titleKey: "moveTitle",       questionKey: "moveQ",       category: "Body",        problemWhen: "no"  },
+  { id: "connection", titleKey: "connectionTitle", questionKey: "connectionQ", category: "Connections", problemWhen: "no"  },
+  { id: "joy",        titleKey: "joyTitle",        questionKey: "joyQ",        category: "Fun",         problemWhen: "no"  },
 ];
 
 type TFn = (key: string) => string;
@@ -705,12 +710,19 @@ const GoalScreen = ({
       <div className="space-y-2 mb-3">
         {GOAL_OPTIONS.map((opt) => {
           const Icon = opt.icon;
-          const isSelected = answers.goal === opt.id;
+          const current = answers.goal ?? [];
+          const isSelected = current.includes(opt.id);
+          const toggle = () => {
+            const next = isSelected
+              ? current.filter((g) => g !== opt.id)
+              : [...current, opt.id];
+            onPatch({ goal: next });
+          };
           return (
             <button
               key={opt.id}
               type="button"
-              onClick={() => onPatch({ goal: opt.id })}
+              onClick={toggle}
               data-onb-interactive
               style={{ touchAction: "manipulation" }}
               className={cn(
@@ -823,4 +835,6 @@ export const resetTourSeen = () => {
   localStorage.removeItem(EXPLICIT_LANGUAGE_KEY);
   // Forget previous interview answers too so the new tour starts blank.
   localStorage.removeItem(INTERVIEW_KEY);
+  // And re-arm the post-onboarding coachmark walkthrough.
+  localStorage.removeItem("memap_coachmark_seen");
 };
