@@ -436,15 +436,14 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.30);
   }
   
-  /* Floating Navigation — full pill so the inner active-tab pill nests
-     perfectly (concentric arcs). With 1.5rem corners the outer was a
-     rounded rectangle while the inner active was a true pill, and the
-     curvatures didn't match at the corners. */
+  /* Floating Navigation — radius matches `.card-premium` (1.5rem) so
+     the whole UI shares one corner language. Inner active pills should
+     use `rounded-[20px]` (24 - 4px padding) so they nest concentrically. */
   .nav-floating {
     background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border-radius: 9999px;
+    border-radius: 1.5rem;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.6);
     margin: 0 1rem 1rem 1rem;

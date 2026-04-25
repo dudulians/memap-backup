@@ -267,12 +267,12 @@ export const PatternsTab = () => {
           header so long tracker lists don't hide the nav. */}
       <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
         <div className="sticky top-0 z-30 -mx-4 px-4 py-1.5 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
-          <TabsList className="w-full grid grid-cols-4 h-auto p-1 rounded-full bg-muted/60">
-            <TabsTrigger value="overview" className="rounded-full data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
+          <TabsList className="w-full grid grid-cols-4 h-auto p-1 rounded-3xl bg-muted/60">
+            <TabsTrigger value="overview" className="rounded-[20px] data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
               <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabOverview")}</span>
             </TabsTrigger>
-            <TabsTrigger value="signals" className="rounded-full data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto relative">
+            <TabsTrigger value="signals" className="rounded-[20px] data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto relative">
               <Target className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabSignals")}</span>
               {strongCount > 0 && (
@@ -284,11 +284,11 @@ export const PatternsTab = () => {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="trends" className="rounded-full data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
+            <TabsTrigger value="trends" className="rounded-[20px] data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
               <LineChart className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
             </TabsTrigger>
-            <TabsTrigger value="links" className="rounded-full data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
+            <TabsTrigger value="links" className="rounded-[20px] data-[state=active]:shadow-sm flex flex-col gap-0.5 py-1.5 h-auto">
               <GitCompare className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabLinks")}</span>
             </TabsTrigger>
