@@ -203,6 +203,38 @@ export const DailySession = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | "down" | null>(null);
   const [completed, setCompleted] = useState(false);
+  // Sheet-style drag-down-to-dismiss: track Y translation of the whole
+  // session when the user grabs the drag-handle pill at the top.
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const sheetDragStartY = useRef<number | null>(null);
+  const sheetPointerId = useRef<number | null>(null);
+
+  const onSheetDragStart = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    sheetPointerId.current = e.pointerId;
+    sheetDragStartY.current = e.clientY;
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+  };
+  const onSheetDragMove = (e: React.PointerEvent) => {
+    if (sheetPointerId.current !== e.pointerId || sheetDragStartY.current === null) return;
+    e.stopPropagation();
+    const dy = e.clientY - sheetDragStartY.current;
+    setSheetDragY(Math.max(0, dy));
+  };
+  const onSheetDragEnd = (e: React.PointerEvent) => {
+    if (sheetPointerId.current !== e.pointerId) return;
+    e.stopPropagation();
+    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+    sheetPointerId.current = null;
+    sheetDragStartY.current = null;
+    if (sheetDragY > 100) {
+      // Past the dismiss threshold — fade and close
+      setSheetDragY(window.innerHeight);
+      setTimeout(() => { setSheetDragY(0); onClose(); }, 220);
+    } else {
+      setSheetDragY(0);
+    }
+  };
 
   // Re-pull deck whenever the selected date changes via the date-strip.
   // Clearing answeredCount here would lie about progress within a single
@@ -545,16 +577,33 @@ export const DailySession = ({
     }
 
     return (
-      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto"
+        style={{
+          transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
+          transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
+          opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
+        }}
+      >
         {/* Close affordance — drag handle pill + X button, same as the
-            in-session header so the dismiss gesture is consistent. */}
+            in-session header so the dismiss gesture is consistent.
+            Tap closes; drag down past 100px also closes. */}
         <div className="px-4 pt-2 pb-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.close")}
-            className="block mx-auto w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors mb-2"
-          />
+          <div
+            className="block mx-auto w-32 h-6 -my-1 flex items-center justify-center mb-1 cursor-grab active:cursor-grabbing"
+            style={{ touchAction: "none" }}
+            onPointerDown={onSheetDragStart}
+            onPointerMove={onSheetDragMove}
+            onPointerUp={onSheetDragEnd}
+            onPointerCancel={onSheetDragEnd}
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.close")}
+              className="w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
+            />
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -665,14 +714,20 @@ export const DailySession = ({
   return (
     <div
       className="fixed inset-0 bg-background z-50 flex flex-col"
-      style={{ touchAction: "none" }}
+      style={{
+        touchAction: "none",
+        transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
+        transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
+        opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
+      }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
     >
       {/* Header — drag handle pill at the top makes the bottom-sheet
-          metaphor obvious, plus an explicit X. Either dismisses. */}
+          metaphor obvious, plus an explicit X. Tap or drag-down on the
+          pill dismisses; the X always works too. */}
       <div
         className="px-4 pt-2 pb-2 border-b flex-shrink-0 space-y-2"
         onClick={(e) => {
@@ -681,12 +736,24 @@ export const DailySession = ({
           e.stopPropagation();
         }}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("common.close")}
-          className="block mx-auto w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors mb-1.5"
-        />
+        {/* Wider tap/drag area around the pill so swipe-down is easier
+            to grab — the visible pill is still small but the touch
+            target is generous. */}
+        <div
+          className="block mx-auto w-32 h-6 -my-1 flex items-center justify-center cursor-grab active:cursor-grabbing"
+          style={{ touchAction: "none" }}
+          onPointerDown={onSheetDragStart}
+          onPointerMove={onSheetDragMove}
+          onPointerUp={onSheetDragEnd}
+          onPointerCancel={onSheetDragEnd}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
+          />
+        </div>
         <div className="flex items-center justify-between">
         <Button
           variant="ghost"
