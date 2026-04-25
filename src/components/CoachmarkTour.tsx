@@ -28,6 +28,13 @@ export interface CoachmarkStep {
   padding?: number;
   shape?: "rect" | "circle";
   requireTab?: "cards" | "patterns";
+  /**
+   * When the step lives inside a Patterns sub-tab, set this so the
+   * tour switches Patterns to the right section before measuring.
+   * The host listens for this on `memap-patterns-section` and updates
+   * its inner Tabs state.
+   */
+  requirePatternsSection?: "overview" | "signals" | "trends" | "links";
 }
 
 interface Rect {
@@ -92,6 +99,18 @@ export const CoachmarkTour = ({ open, steps, onClose, onRequestTab }: CoachmarkT
     onRequestTab?.(step.requireTab);
   }, [open, step?.requireTab, onRequestTab]);
 
+  // If the step lives in a Patterns sub-section, dispatch a window
+  // event the host PatternsTab listens to and updates its inner
+  // Tabs state. Then the locator retries until the new content mounts.
+  useEffect(() => {
+    if (!open || !step?.requirePatternsSection) return;
+    window.dispatchEvent(
+      new CustomEvent("memap-patterns-section", {
+        detail: { section: step.requirePatternsSection },
+      })
+    );
+  }, [open, step?.requirePatternsSection]);
+
   // Locate the target for the current step. Retry a few times so we
   // catch the case where the host is mid-tab-switch and the element
   // hasn't mounted yet.
@@ -153,20 +172,62 @@ export const CoachmarkTour = ({ open, steps, onClose, onRequestTab }: CoachmarkT
 
   if (!open || !step) return null;
 
-  // Bubble position: above or below the target rect. If we don't have a
-  // rect yet, center the bubble on screen.
-  const placement = step.placement ?? (rect && rect.top > window.innerHeight / 2 ? "top" : "bottom");
-  const bubbleTop = rect
-    ? placement === "top"
-      ? rect.top - 8
-      : rect.top + rect.height + 8
-    : window.innerHeight / 2;
-  const bubbleTransform = rect
-    ? placement === "top"
-      ? "translate(-50%, -100%)"
-      : "translate(-50%, 0)"
-    : "translate(-50%, -50%)";
-  const bubbleLeft = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  // Bubble position — auto-flips to whichever side has more room and
+  // clamps horizontally + vertically so it never spills off the viewport.
+  // Bubble dimensions are best-estimated from the max-w-[300px] design;
+  // we use 300x180 as the planning size, then let the actual element
+  // shrink as needed.
+  const VW = window.innerWidth;
+  const VH = window.innerHeight;
+  const BUBBLE_W = Math.min(300, VW * 0.88);
+  const BUBBLE_H_EST = 180;
+  const SAFE_TOP = 16;
+  const SAFE_BOTTOM = 16;
+  const SAFE_SIDE = 12;
+
+  let bubbleTop: number;
+  let bubbleLeft: number;
+  let bubbleTransform = "translate(0, 0)";
+
+  if (rect && !isMissing) {
+    const desiredPlacement =
+      step.placement ?? (rect.top > VH / 2 ? "top" : "bottom");
+    // Auto-flip if the chosen side has < estimated bubble height of room.
+    const roomTop = rect.top - SAFE_TOP;
+    const roomBottom = VH - (rect.top + rect.height) - SAFE_BOTTOM;
+    const finalPlacement =
+      desiredPlacement === "top"
+        ? roomTop >= BUBBLE_H_EST
+          ? "top"
+          : "bottom"
+        : roomBottom >= BUBBLE_H_EST
+        ? "bottom"
+        : "top";
+
+    bubbleTop =
+      finalPlacement === "top"
+        ? rect.top - 8 - BUBBLE_H_EST
+        : rect.top + rect.height + 8;
+    // Clamp vertically so the bubble can't go off-screen even if the
+    // target is close to an edge.
+    bubbleTop = Math.max(
+      SAFE_TOP,
+      Math.min(bubbleTop, VH - BUBBLE_H_EST - SAFE_BOTTOM)
+    );
+
+    // Center horizontally on the target, then clamp inside the viewport.
+    const centerX = rect.left + rect.width / 2;
+    bubbleLeft = Math.max(
+      SAFE_SIDE + BUBBLE_W / 2,
+      Math.min(centerX, VW - SAFE_SIDE - BUBBLE_W / 2)
+    );
+    bubbleTransform = "translate(-50%, 0)";
+  } else {
+    // Target not located — center the bubble on screen.
+    bubbleTop = VH / 2 - BUBBLE_H_EST / 2;
+    bubbleLeft = VW / 2;
+    bubbleTransform = "translate(-50%, 0)";
+  }
 
   // Spotlight shape — circle uses border-radius 9999px, rect uses 16px.
   const spotlightRadius =
@@ -230,12 +291,13 @@ export const CoachmarkTour = ({ open, steps, onClose, onRequestTab }: CoachmarkT
       <div
         data-coachmark-bubble
         className={cn(
-          "absolute max-w-[300px] w-[88vw] rounded-2xl bg-background shadow-xl border border-border p-4 animate-fade-in"
+          "absolute max-w-[300px] w-[88vw] rounded-2xl bg-background shadow-xl border border-border p-4 animate-fade-in overflow-y-auto"
         )}
         style={{
           top: bubbleTop,
           left: bubbleLeft,
           transform: bubbleTransform,
+          maxHeight: `${VH - SAFE_TOP - SAFE_BOTTOM}px`,
         }}
         onClick={(e) => e.stopPropagation()}
       >

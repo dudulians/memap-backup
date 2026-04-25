@@ -60,6 +60,20 @@ export const PatternsTab = () => {
     loadData();
   }, []);
 
+  // Listen for external section-switch requests (e.g. from the
+  // coachmark tour driving a step that lives on a specific sub-tab).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const next = (e as CustomEvent).detail?.section as string | undefined;
+      if (next === "overview" || next === "signals" || next === "trends" || next === "links") {
+        setSection(next);
+        try { localStorage.setItem("memap_patterns_section", next); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("memap-patterns-section", handler);
+    return () => window.removeEventListener("memap-patterns-section", handler);
+  }, []);
+
   const loadData = async () => {
     const [trackersData, entriesData] = await Promise.all([
       getTrackers(),
@@ -282,6 +296,7 @@ export const PatternsTab = () => {
             </TabsTrigger>
             <TabsTrigger
               value="signals"
+              data-coachmark="patterns-signals-tab"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
             >
               <Target className="h-4 w-4" strokeWidth={1.75} />
@@ -297,6 +312,7 @@ export const PatternsTab = () => {
             </TabsTrigger>
             <TabsTrigger
               value="trends"
+              data-coachmark="patterns-trends-tab"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
             >
               <LineChart className="h-4 w-4" strokeWidth={1.75} />
@@ -304,6 +320,7 @@ export const PatternsTab = () => {
             </TabsTrigger>
             <TabsTrigger
               value="links"
+              data-coachmark="patterns-links-tab"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
             >
               <GitCompare className="h-4 w-4" strokeWidth={1.75} />

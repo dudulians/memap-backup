@@ -380,6 +380,7 @@ export const OverviewCard = ({
 
             <div
               ref={chipsContainerRef}
+              data-coachmark="overview-chips"
               className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide scroll-smooth"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
@@ -496,6 +497,7 @@ export const OverviewCard = ({
                   variant={multiSelectMode ? "default" : "outline"}
                   size="sm"
                   onClick={toggleMultiSelect}
+                  data-coachmark="multi-select-toggle"
                   className="h-6 px-2 text-[10px] rounded-full"
                 >
                   {multiSelectMode ? (
