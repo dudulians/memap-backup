@@ -146,27 +146,23 @@ const Index = () => {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col relative">
-      {/* Header - subtle and elegant. Settings cog moved to top-right
-          since it's a rare-use destination — frees up bottom-nav for
-          the three primary surfaces (Cards, Session, Patterns). */}
-      <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 py-4">
-        <h1 className="text-2xl font-serif font-medium text-center tracking-tight text-foreground">
+      {/* Header — slim, single-line. Brand tagline removed to free
+          vertical space; the gear icon stays anchored top-right. */}
+      <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 py-2.5">
+        <h1 className="text-lg font-serif font-medium text-center tracking-tight text-foreground">
           <span className="italic">Me</span>Map
         </h1>
-        <p className="text-[10px] text-center text-muted-foreground tracking-[0.2em] uppercase mt-0.5">
-          track · notice · act
-        </p>
         <button
           onClick={() => setSettingsModalOpen(true)}
           aria-label={t("common.settings")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+          className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >
-          <Settings className="h-5 w-5" strokeWidth={1.75} />
+          <Settings className="h-4 w-4" strokeWidth={1.75} />
         </button>
       </header>
 
       {/* Main Content */}
-      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto max-w-2xl w-full mx-auto px-4 py-6 pb-40">
+      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto max-w-2xl w-full mx-auto px-4 py-4 pb-32">
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
         {activeTab === "patterns" && <PatternsTab key={`patterns-${refreshKey}`} />}
         {activeTab === "notes" && (

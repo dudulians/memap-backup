@@ -258,15 +258,9 @@ export const PatternsTab = () => {
 
   return (
     <div className="space-y-3 pb-20">
-      {/* Compact header — single line, sits inline with the title.
-          Saves vertical space so the calendar / chart shows above the
-          fold without scrolling on a typical mobile viewport. */}
-      <div className="flex items-baseline justify-between animate-fade-in">
-        <h2 className="text-lg font-serif font-medium tracking-tight">{t("patterns.title")}</h2>
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {trackers.length === 1 ? t("patterns.countOne") : t("patterns.countMany", { count: trackers.length })}
-        </span>
-      </div>
+      {/* No title row here — the tab bar is the heading. Tracker count
+          shown subtly inside the tabs strip (right side) so there's no
+          dedicated header row eating vertical space. */}
 
       {/* Section tabs — turns the old long scroll into 4 destinations,
           each one screen-sized. The tab list stays sticky under the app
