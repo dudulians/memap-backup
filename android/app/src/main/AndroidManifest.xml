@@ -38,4 +38,26 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Notifications: required so the system asks the user on Android
+         13+ (API 33). Before this, schedule() silently fails on
+         TIRAMISU+. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Exact-time alarms for daily reminders. Without these, repeating
+         alarms set via AlarmManager are inexact and Android batches
+         them (Doze mode), which can delay an 08:00 reminder by 30-60
+         minutes. SCHEDULE_EXACT_ALARM was introduced in Android 12
+         (API 31) and requires runtime confirmation; USE_EXACT_ALARM
+         was added in Android 13 (API 33) for apps where exact timing
+         is core to the feature. MeMap's daily check-in reminder
+         qualifies — a notification 45 minutes late silently breaks
+         the streak-building habit. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Re-arm scheduled notifications after device reboot. Without
+         this the daily reminder silently disappears the first time
+         the user restarts their phone. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>
