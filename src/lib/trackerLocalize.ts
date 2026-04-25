@@ -111,7 +111,7 @@ const ONBOARDING_STARTER_QUESTION_PAIRS: Array<[string, string]> = [
   ["Did I move my body enough today?", "Двигал(а) ли я достаточно сегодня?"],
   ["Did I spend quality time with someone close?", "Провёл(а) ли я качественное время с кем-то близким?"],
   ["Did I say what I wanted to say today?", "Сказал(а) ли я сегодня то, что хотел(а) сказать?"],
-  ["Was there something today that recharged me?", "Было ли сегодня что-то, что меня наполнило?"],
+  ["Did something make me smile today?", "Заставило ли меня что-то улыбнуться сегодня?"],
   ["Was my space comfortable today?", "Было ли моё пространство комфортным сегодня?"],
   // Hero example questions (in case any user stored them as tracker question text)
   ["Did I argue with my partner today?", "Я сегодня ссорился с партнёром?"],
