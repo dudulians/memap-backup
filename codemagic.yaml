@@ -36,7 +36,7 @@ workflows:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.uliana.memap"
-      node: 20.11.0
+      node: 22.11.0
       xcode: latest
       cocoapods: default
 
