@@ -431,6 +431,7 @@ const en = {
     skipQuestion: "Skip this question",
     completed: "Session completed!",
     caughtUp: "All caught up — nothing to answer today",
+    caughtUpForDate: "All filled for {{date}}",
     answeredOne: "You answered 1 question today",
     answeredMany: "You answered {{count}} questions today",
     seeYouTomorrow: "Session complete — see you tomorrow",

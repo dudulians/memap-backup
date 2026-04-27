@@ -435,6 +435,7 @@ const ru: Translation = {
     skipQuestion: "Пропустить этот вопрос",
     completed: "Сессия завершена!",
     caughtUp: "Всё заполнено — сегодня отвечать нечего",
+    caughtUpForDate: "Всё заполнено за {{date}}",
     answeredOne: "Сегодня ты ответил(а) на 1 вопрос",
     answeredMany: "Сегодня ты ответил(а) на {{count}} вопросов",
     seeYouTomorrow: "Сессия завершена — до завтра",

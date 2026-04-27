@@ -57,6 +57,18 @@ export const TrackerDetails = ({
 
   useEffect(() => {
     loadEntries();
+    // Re-pull entries when anything else in the app saves a change
+    // (e.g. the user just answered the tracker via the Play swipe deck
+    // while TrackerDetails was sitting open behind it). Without this,
+    // significantCount stays frozen on the initial mount snapshot — so
+    // the reflection block doesn't switch back from "Time to reflect"
+    // to "If this becomes frequent" after the user corrects a wrong
+    // tap.
+    const refresh = () => { loadEntries(); };
+    window.addEventListener("memap-entries-changed", refresh);
+    return () => {
+      window.removeEventListener("memap-entries-changed", refresh);
+    };
   }, []);
 
   const loadEntries = async () => {

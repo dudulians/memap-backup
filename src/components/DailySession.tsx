@@ -235,10 +235,24 @@ export const DailySession = ({
   // `key` change, not via this effect.
   useEffect(() => {
     if (playMode) return;
-    setDeck(buildDeck());
+    const newDeck = buildDeck();
+    setDeck(newDeck);
     setCurrentIndex(0);
-    setCompleted(false);
-  }, [selectedDate, buildDeck, playMode]);
+    // If the user navigates (via the date strip OR the past-dates
+    // calendar) to a date that's already fully answered, the deck is
+    // empty AND there's no `currentQuestion` to render — we'd
+    // otherwise hit `if (!currentQuestion) return null` and the whole
+    // sheet would silently disappear, stranding the user with no
+    // visible Play and an `open` state stuck at true. Instead, jump
+    // straight to the Done screen for that day so the user keeps
+    // their context, sees "all answered for [date]", and can pick
+    // another date or close.
+    const hasEntriesForDate = entries.some((e) => {
+      if (e.date !== selectedDate) return false;
+      return trackers.some((t) => t.id === e.trackerId && !t.archived);
+    });
+    setCompleted(newDeck.length === 0 && hasEntriesForDate);
+  }, [selectedDate, buildDeck, playMode, entries, trackers]);
   
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -616,7 +630,15 @@ export const DailySession = ({
                     ? t("dailySession.playRoundOne")
                     : t("dailySession.playRoundMany", { count: answeredCount }))
                 : deck.length === 0
-                ? t("dailySession.caughtUp")
+                // Tell the user *which* day is filled. Without the date,
+                // the message reads "all caught up for today" no matter
+                // which past day they navigated to — confusing if they
+                // got here by tapping April 25 in the calendar.
+                ? selectedDate !== todayLocal()
+                  ? t("dailySession.caughtUpForDate", {
+                      date: format(new Date(selectedDate + "T00:00:00"), "d MMMM", { locale: dateLocale }),
+                    })
+                  : t("dailySession.caughtUp")
                 : answeredCount > 0
                 ? (answeredCount === 1
                     ? t("dailySession.answeredOne")
