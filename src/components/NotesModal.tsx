@@ -122,7 +122,8 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
 
   const getTrackerName = (id?: string) => {
     if (!id) return null;
-    return trackers.find(t => t.id === id)?.title;
+    const raw = trackers.find(t => t.id === id)?.title;
+    return raw ? localizeTrackerTitle(raw) : null;
   };
 
   // Group notes by date

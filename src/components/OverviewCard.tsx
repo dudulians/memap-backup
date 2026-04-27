@@ -54,15 +54,24 @@ export const OverviewCard = ({
     return () => window.removeEventListener("memap-notes-changed", reloadNotes);
   }, []);
 
+  // Only surface notes that are linked to the currently-active tracker
+  // on its calendar — otherwise a partner-conflict note bleeds into the
+  // migraine calendar and confuses the per-tracker view.
+  const activeTrackerId = trackers[activeTrackerIndex]?.id;
+  const notesForActiveTracker = useMemo(
+    () => notes.filter(n => n.linkedPatternId === activeTrackerId),
+    [notes, activeTrackerId]
+  );
+
   const noteDatesSet = useMemo(() => {
     const s = new Set<string>();
-    notes.forEach(n => s.add(n.date));
+    notesForActiveTracker.forEach(n => s.add(n.date));
     return s;
-  }, [notes]);
+  }, [notesForActiveTracker]);
 
   const notesForSelectedDate = useMemo(
-    () => notes.filter(n => n.date === selectedDate),
-    [notes, selectedDate]
+    () => notesForActiveTracker.filter(n => n.date === selectedDate),
+    [notesForActiveTracker, selectedDate]
   );
   const swipeStartX = useRef(0);
   const chipsContainerRef = useRef<HTMLDivElement>(null);

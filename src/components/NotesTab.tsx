@@ -117,7 +117,8 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
   const getTrackerName = (id?: string) => {
     if (!id) return null;
-    return trackers.find(t => t.id === id)?.title;
+    const raw = trackers.find(t => t.id === id)?.title;
+    return raw ? localizeTrackerTitle(raw) : null;
   };
 
   const filteredNotes = searchQuery.trim()
