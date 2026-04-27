@@ -246,6 +246,12 @@ export const DailySession = ({
   const [sheetDragY, setSheetDragY] = useState(0);
   const sheetDragStartY = useRef<number | null>(null);
   const sheetPointerId = useRef<number | null>(null);
+  // iOS-style tap/drag disambiguation refs for the Done sheet — used
+  // by onDoneDragStart/Move/End/ClickCapture below. Must live at the
+  // component top level (hooks rule), not inside the `if (completed)`
+  // branch where they're consumed.
+  const isDraggingRef = useRef(false);
+  const wasDraggingRef = useRef(false);
 
   const onSheetDragStart = (e: React.PointerEvent) => {
     // Don't hijack pointer-down that lands on an interactive element —
@@ -654,8 +660,6 @@ export const DailySession = ({
     // is read by an onClickCapture handler at the wrapper.
     const DRAG_START_PX = 10;
     const DISMISS_PX = 180;
-    const isDraggingRef = useRef(false);
-    const wasDraggingRef = useRef(false);
 
     const onDoneDragStart = (e: React.PointerEvent) => {
       sheetPointerId.current = e.pointerId;
