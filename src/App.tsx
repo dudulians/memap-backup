@@ -9,6 +9,8 @@ import NotFound from "./pages/NotFound";
 import { getNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { primeAudio } from "@/lib/feedback";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,35 @@ const App = () => {
     // see Russian text on their lock screen for the next 7 days.
     window.addEventListener("memap-language-changed", refreshSchedule);
 
+    // Tap-on-notification deep-link. Whenever the user taps the
+    // daily reminder on the lock screen / notification center, we
+    // want them to land directly on the Cards tab AND have the
+    // swipe deck open ready to go — not just sit on the home screen
+    // and force them to find Play themselves.
+    //
+    // The TodayTab listens for `memap-open-session`; Index listens
+    // for `memap-switch-tab`. Dispatching both gives "switch tab,
+    // then open the session" without coupling either component to
+    // the notification API.
+    let notifSubPromise: Promise<{ remove: () => Promise<void> } | null> | null = null;
+    if (Capacitor.isNativePlatform()) {
+      notifSubPromise = LocalNotifications.addListener(
+        "localNotificationActionPerformed",
+        () => {
+          // Switch active tab to Cards (Index owns the activeTab state).
+          window.dispatchEvent(
+            new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }),
+          );
+          // Open the daily session immediately. setTimeout(0) defers
+          // until the tab change has propagated and TodayTab is mounted
+          // and listening for the open-session event.
+          setTimeout(() => {
+            window.dispatchEvent(new Event("memap-open-session"));
+          }, 50);
+        },
+      );
+    }
+
     // Attach AudioContext unlock handlers so the first swipe-sound after
     // a cold app launch actually plays. Mobile browsers & Capacitor
     // WebView block audio until a user gesture.
@@ -37,6 +68,7 @@ const App = () => {
 
     return () => {
       window.removeEventListener("memap-language-changed", refreshSchedule);
+      notifSubPromise?.then((sub) => sub?.remove()).catch(() => {});
     };
   }, []);
 
