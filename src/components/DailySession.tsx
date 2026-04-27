@@ -644,95 +644,13 @@ export const DailySession = ({
       });
     }
 
-    // iOS-style sheet dismiss: drag starts from anywhere on the sheet
-    // body — including action rows. Differentiator from "tap" is total
-    // movement: if the finger barely moved, it's a tap (button fires
-    // normally); if it moved past a small drag-start threshold (10px
-    // vertical), we take over as a drag. Past 180px → dismiss.
-    //
-    // Why a two-stage threshold:
-    //   – 10px (DRAG_START): below this, ignore — let button taps work.
-    //   – 180px (DISMISS):   below this, snap back; above, close.
-    //
-    // We also need to swallow the click event that would normally fire
-    // on the row the user pressed on — if the drag took over, the
-    // implicit pointerup → click should not bubble. `wasDragging` flag
-    // is read by an onClickCapture handler at the wrapper.
-    const DRAG_START_PX = 10;
-    const DISMISS_PX = 180;
-
-    const onDoneDragStart = (e: React.PointerEvent) => {
-      sheetPointerId.current = e.pointerId;
-      sheetDragStartY.current = e.clientY;
-      isDraggingRef.current = false;
-    };
-    const onDoneDragMove = (e: React.PointerEvent) => {
-      if (sheetPointerId.current !== e.pointerId || sheetDragStartY.current === null) return;
-      const dy = e.clientY - sheetDragStartY.current;
-      if (dy <= DRAG_START_PX && !isDraggingRef.current) return;
-      if (!isDraggingRef.current) {
-        // crossed the start threshold — take over as a drag
-        isDraggingRef.current = true;
-        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
-      }
-      setSheetDragY(Math.max(0, dy));
-    };
-    const onDoneDragEnd = (e: React.PointerEvent) => {
-      if (sheetPointerId.current !== e.pointerId) return;
-      const wasDrag = isDraggingRef.current;
-      if (wasDrag) {
-        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      }
-      sheetPointerId.current = null;
-      sheetDragStartY.current = null;
-      isDraggingRef.current = false;
-
-      if (wasDrag) {
-        // Suppress the click event that would otherwise fire on the
-        // row under the finger when the user "tapped and dragged".
-        wasDraggingRef.current = true;
-        // Clear the flag in the next tick — by then click will have
-        // either fired (and been swallowed) or never reached us.
-        setTimeout(() => { wasDraggingRef.current = false; }, 50);
-
-        if (sheetDragY > DISMISS_PX) {
-          setSheetDragY(window.innerHeight);
-          setTimeout(() => { setSheetDragY(0); onClose(); }, 220);
-        } else {
-          setSheetDragY(0);
-        }
-      } else {
-        setSheetDragY(0);
-      }
-    };
-    // Capture-phase click handler runs BEFORE the row's onClick. If
-    // we just finished a drag, swallow the click so the action menu
-    // doesn't fire spuriously.
-    const onDoneClickCapture = (e: React.MouseEvent) => {
-      if (wasDraggingRef.current) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-
     return (
       <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
         <SheetContent
           side="bottom"
-          className="max-h-[88vh] h-auto rounded-t-3xl overflow-y-auto p-0 flex flex-col"
-          style={{
-            transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
-            transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
-          }}
+          className="max-h-[80vh] h-auto rounded-t-3xl overflow-y-auto p-0 flex flex-col"
         >
-        <div
-          className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in"
-          onPointerDown={onDoneDragStart}
-          onPointerMove={onDoneDragMove}
-          onPointerUp={onDoneDragEnd}
-          onPointerCancel={onDoneDragEnd}
-          onClickCapture={onDoneClickCapture}
-        >
+        <div className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">

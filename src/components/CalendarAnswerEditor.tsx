@@ -98,7 +98,7 @@ export const CalendarAnswerEditor = ({
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
+      <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="pb-2">
           <SheetTitle className="text-base font-semibold">
             {format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}

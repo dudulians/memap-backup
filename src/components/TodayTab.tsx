@@ -882,7 +882,7 @@ export const TodayTab = () => {
           scroll to the bottom of the calendar to find Edit / Archive
           / Delete. */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl overflow-y-auto">
           <SheetHeader>
             <div className="flex items-center justify-between gap-3 pr-6">
               <SheetTitle className="flex items-center gap-2 min-w-0">

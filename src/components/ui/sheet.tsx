@@ -57,8 +57,13 @@ interface SheetContentProps
 /**
  * When `side="bottom"`, the sheet gets:
  *   - a drag-handle pill at the top (visual affordance for swipe-down)
- *   - a swipe-down-to-close gesture anchored on the handle area only,
- *     so the body content scrolls freely.
+ *   - swipe-down-to-close from ANYWHERE on the body, iOS-style:
+ *       • below 10px of vertical movement → tap (button onClick fires)
+ *       • past 10px → take over as drag, suppress the upcoming click
+ *       • past 180px on release → animate out and close
+ *       • below 180px → snap back, also suppress the click
+ *   - if the body has been scrolled, drag yields to scroll until the
+ *     user reaches scrollTop=0, mirroring iOS bottom-sheet behaviour.
  * The handle proxies close by clicking the hidden SheetPrimitive.Close,
  * which lets Radix handle animations and restores focus correctly.
  */
@@ -69,28 +74,94 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     const dragStart = React.useRef<number | null>(null);
     const activePointer = React.useRef<number | null>(null);
     const closeBtnRef = React.useRef<HTMLButtonElement | null>(null);
+    // Local ref to the SheetPrimitive.Content node so we can check
+    // its scrollTop (the consumers usually set overflow-y-auto on it
+    // via className). We merge into the forwarded `ref` below.
+    const contentRef = React.useRef<HTMLDivElement | null>(null);
+    const setRefs = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        contentRef.current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      },
+      [ref],
+    );
+    // iOS-style tap/drag disambiguation refs
+    const isDraggingRef = React.useRef(false);
+    const wasDraggingRef = React.useRef(false);
+    const startedAtScrollTop = React.useRef(false);
 
+    const DRAG_START_PX = 10;
+    const DISMISS_PX = 180;
+
+    // Drag handle (small pill at the top) — direct grab+drag, no
+    // tap-vs-drag disambiguation needed since the handle isn't a button.
     const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
       activePointer.current = e.pointerId;
       try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
       dragStart.current = e.clientY;
+      isDraggingRef.current = true;
     };
-    const onHandlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+
+    // Body — pointer events on the entire sheet content. Buttons inside
+    // still receive tap clicks because we wait for movement past
+    // DRAG_START_PX before calling setPointerCapture.
+    const onBodyPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (activePointer.current !== null) return;
+      activePointer.current = e.pointerId;
+      dragStart.current = e.clientY;
+      isDraggingRef.current = false;
+      // Only allow drag-to-dismiss when the content is scrolled to the
+      // top — otherwise downward swipes should scroll, not dismiss.
+      // The SheetPrimitive.Content node carries overflow-y-auto from
+      // consumers; check its scrollTop directly.
+      const el = contentRef.current;
+      startedAtScrollTop.current = !el || el.scrollTop <= 0;
+    };
+
+    const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
       if (activePointer.current !== e.pointerId || dragStart.current === null) return;
       const dy = e.clientY - dragStart.current;
+      // If we never crossed the start threshold and aren't already
+      // dragging, ignore — keeps native scroll responsive.
+      if (!isDraggingRef.current && (dy <= DRAG_START_PX || !startedAtScrollTop.current)) return;
+      if (!isDraggingRef.current) {
+        isDraggingRef.current = true;
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+      }
       setDragY(Math.max(0, dy));
     };
-    const onHandlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+
+    const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
       if (activePointer.current !== e.pointerId) return;
+      const wasDrag = isDraggingRef.current;
       try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
       activePointer.current = null;
       dragStart.current = null;
-      if (dragY > 120) {
-        // Let Radix close so the slide-out animation + focus restore run.
-        setDragY(0);
-        closeBtnRef.current?.click();
+      isDraggingRef.current = false;
+
+      if (wasDrag) {
+        wasDraggingRef.current = true;
+        setTimeout(() => { wasDraggingRef.current = false; }, 50);
+        if (dragY > DISMISS_PX) {
+          setDragY(0);
+          closeBtnRef.current?.click();
+        } else {
+          setDragY(0);
+        }
       } else {
         setDragY(0);
+      }
+    };
+
+    // Capture-phase click — if the pointer just finished a drag,
+    // swallow the click that would otherwise fire on the underlying
+    // button. Without this, "drag down + release on a row" would
+    // both dismiss the sheet AND trigger the row's onClick.
+    const onBodyClickCapture = (e: React.MouseEvent) => {
+      if (wasDraggingRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
       }
     };
 
@@ -98,7 +169,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       <SheetPortal>
         <SheetOverlay />
         <SheetPrimitive.Content
-          ref={ref}
+          ref={setRefs}
           className={cn(sheetVariants({ side }), isBottom && !hideDragHandle && "pt-8", className)}
           style={
             isBottom && dragY > 0
@@ -110,16 +181,32 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
           {isBottom && !hideDragHandle && (
             <div
               onPointerDown={onHandlePointerDown}
-              onPointerMove={onHandlePointerMove}
-              onPointerUp={onHandlePointerEnd}
-              onPointerCancel={onHandlePointerEnd}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerEnd}
+              onPointerCancel={onPointerEnd}
               className="absolute inset-x-0 top-0 flex justify-center pt-2 pb-3 cursor-grab active:cursor-grabbing touch-none select-none z-10"
               aria-label="Drag down to close"
             >
               <div className="w-10 h-1.5 rounded-full bg-muted-foreground/30" />
             </div>
           )}
-          {children}
+          {/* Body wrapper for the iOS-style drag-anywhere dismiss. The
+              wrapper takes pointer events for the entire sheet contents
+              and proxies them to the dismiss logic above. */}
+          {isBottom ? (
+            <div
+              onPointerDown={onBodyPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerEnd}
+              onPointerCancel={onPointerEnd}
+              onClickCapture={onBodyClickCapture}
+              className="contents"
+            >
+              {children}
+            </div>
+          ) : (
+            children
+          )}
           <SheetPrimitive.Close
             ref={closeBtnRef}
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none"

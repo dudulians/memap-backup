@@ -501,7 +501,7 @@ export const PatternsTab = () => {
 
       {/* Bottom Sheet for Tracker Details */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               {selectedTrackerForDetails && (() => {

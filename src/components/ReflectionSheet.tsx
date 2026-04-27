@@ -159,7 +159,7 @@ export const ReflectionSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) { setConfirming(false); onClose(); } }}>
-      <SheetContent side="bottom" className="h-[82vh] overflow-y-auto rounded-t-3xl">
+      <SheetContent side="bottom" className="h-[80vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader className="pb-4">
           <SheetTitle className="flex items-center gap-2 text-base">
             {(() => {
