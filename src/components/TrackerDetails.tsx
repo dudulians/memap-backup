@@ -180,25 +180,26 @@ export const TrackerDetails = ({
         </div>
       )}
 
-      {/* Title card. Actions live at the bottom of the view now —
-          since the rest is compact (no calendar) the user reaches the
-          manage row without scrolling on a normal screen. */}
-      <Card className="card-premium">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-              style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.22)` }}
-            >
-              <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
-            </div>
-            {localizeTrackerTitle(tracker.title)}
-          </CardTitle>
-          <p className="text-xs font-medium" style={{ color: `hsl(var(--${categoryColor}))` }}>
-            {t(`categories.${tracker.category}` as const)}
-          </p>
-        </CardHeader>
-      </Card>
+      {/* Slim header — just the category as a quiet uppercase label,
+          tracker title sits in the answer card right below. The big
+          title card was eating ~80px of vertical space without earning
+          it; the answer card already carries the user's attention. */}
+      <div className="flex items-center justify-center gap-1.5 -mb-1">
+        <Icon
+          className="h-3.5 w-3.5"
+          style={{ color: `hsl(var(--${categoryColor}))` }}
+          strokeWidth={1.75}
+        />
+        <span
+          className="text-[10px] font-semibold tracking-[0.2em] uppercase"
+          style={{ color: `hsl(var(--${categoryColor}))` }}
+        >
+          {t(`categories.${tracker.category}` as const)}
+        </span>
+      </div>
+      <h2 className="text-base font-medium text-center -mt-0.5">
+        {localizeTrackerTitle(tracker.title)}
+      </h2>
 
       {/* Quick answer for the selected date. Shows the question once
           and the Yes/No buttons inline so answering doesn't require
