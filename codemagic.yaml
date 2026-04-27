@@ -60,13 +60,16 @@ workflows:
           # Capacitor 8 on Windows generates Package.swift with backslash
           # path separators (..\..\..\node_modules\...) which Swift PM
           # on macOS cannot resolve — plugins silently fail to link and
-          # things like Haptics don't fire. Force-replace backslashes
-          # with forward slashes after every sync.
+          # native APIs like Haptics return success but do nothing.
+          # Force-rewrite backslashes to forward slashes via Python (sed
+          # backslash escaping is too quirky between bash + macOS sed).
           PKG="$CM_BUILD_DIR/ios/App/CapApp-SPM/Package.swift"
           if [ -f "$PKG" ]; then
-            sed -i '' 's|\\\\|/|g' "$PKG"
-            echo "==> Patched Package.swift path separators:"
-            grep "node_modules" "$PKG" || true
+            echo "==> Package.swift BEFORE patch:"
+            grep "node_modules" "$PKG" || echo "(no node_modules lines)"
+            python3 -c "p='$PKG'; d=open(p).read(); open(p,'w').write(d.replace(chr(92),'/'))"
+            echo "==> Package.swift AFTER patch:"
+            grep "node_modules" "$PKG" || echo "(no node_modules lines)"
           fi
 
       - name: Set up code signing

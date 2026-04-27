@@ -434,6 +434,8 @@ const en = {
     rowPatternsSubtitle: "Trends, links, signals",
     rowYesterdayTitle: "Fill in yesterday",
     rowYesterdaySubtitle: "Catch up on missed cards",
+    rowPastDatesTitle: "Fill in past days",
+    rowPastDatesSubtitle: "Pick any day to back-fill",
     rowRandomTitle: "Try a play round",
     rowRandomSubtitle: "10 random questions, just for fun",
     rowNoteTitle: "Write a note",

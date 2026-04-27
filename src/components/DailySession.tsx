@@ -5,6 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { X, ChevronRight, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
@@ -500,11 +502,6 @@ export const DailySession = ({
     // chevron. Clean tappable list — much more attention-grabbing than
     // a stack of mismatched-style buttons. The "play random" row invites
     // the user to keep going if they want.
-    const yesterdayIso = (() => {
-      const y = new Date();
-      y.setDate(y.getDate() - 1);
-      return `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, "0")}-${String(y.getDate()).padStart(2, "0")}`;
-    })();
 
     type ActionRow = {
       key: string;
@@ -577,11 +574,13 @@ export const DailySession = ({
       }
       if (onDateChange) {
         rows.push({
-          key: "yesterday",
+          key: "past-dates",
           icon: CalendarDays,
-          title: t("dailySession.rowYesterdayTitle"),
-          subtitle: t("dailySession.rowYesterdaySubtitle"),
-          onClick: () => onDateChange(yesterdayIso),
+          title: t("dailySession.rowPastDatesTitle"),
+          subtitle: t("dailySession.rowPastDatesSubtitle"),
+          // No onClick — the row is wrapped in a Popover below so the
+          // user can pick any past date, not just yesterday.
+          onClick: () => { /* opened via Popover */ },
         });
       }
       if (onPlayRandom) {
@@ -631,7 +630,18 @@ export const DailySession = ({
       // entire session. On iOS WebView the unmount semantics are
       // strict and this fires reliably; on web it sometimes slips by.
       // Either way: don't depend on Sheet for the Done state.
-      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto"
+        style={{
+          transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
+          transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
+          opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
+        }}
+        onPointerDown={onSheetDragStart}
+        onPointerMove={onSheetDragMove}
+        onPointerUp={onSheetDragEnd}
+        onPointerCancel={onSheetDragEnd}
+      >
         <div className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
@@ -680,16 +690,67 @@ export const DailySession = ({
             {rows.map((row) => {
               const Icon = row.icon;
               const primary = row.tone === "primary";
+              const buttonClasses = cn(
+                "w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.99]",
+                primary
+                  ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
+                  : "bg-muted/30 border border-transparent hover:bg-muted/50",
+              );
+
+              // Special case: "past-dates" row opens a calendar
+              // popover instead of firing a static onClick — the
+              // user picks any past day, not just yesterday.
+              if (row.key === "past-dates" && onDateChange) {
+                return (
+                  <Popover key={row.key}>
+                    <PopoverTrigger asChild>
+                      <button className={buttonClasses}>
+                        <div
+                          className={cn(
+                            "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                            primary
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-background text-foreground",
+                          )}
+                        >
+                          <Icon className="h-5 w-5" strokeWidth={1.75} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-medium", primary && "text-primary")}>{row.title}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{row.subtitle}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="center">
+                      <CalendarPicker
+                        mode="single"
+                        locale={dateLocale}
+                        onSelect={(d) => {
+                          if (d) {
+                            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                            onDateChange(iso);
+                          }
+                        }}
+                        // Block today and future — this row is for
+                        // back-filling, today is what the regular
+                        // session is already for.
+                        disabled={(d) => {
+                          const t = new Date();
+                          t.setHours(0, 0, 0, 0);
+                          return d >= t;
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                );
+              }
+
               return (
                 <button
                   key={row.key}
                   onClick={row.onClick}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.99]",
-                    primary
-                      ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
-                      : "bg-muted/30 border border-transparent hover:bg-muted/50"
-                  )}
+                  className={buttonClasses}
                 >
                   <div
                     className={cn(

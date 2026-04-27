@@ -437,6 +437,8 @@ const ru: Translation = {
     rowPatternsSubtitle: "Тренды, связи, сигналы",
     rowYesterdayTitle: "Заполнить вчера",
     rowYesterdaySubtitle: "Догнать пропущенные карточки",
+    rowPastDatesTitle: "Заполнить прошлые дни",
+    rowPastDatesSubtitle: "Выбери любой день и догони пропуски",
     rowRandomTitle: "Сыграть случайный раунд",
     rowRandomSubtitle: "10 случайных вопросов, для интереса",
     rowNoteTitle: "Написать заметку",
