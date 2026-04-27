@@ -75,15 +75,29 @@ workflows:
           echo "==> Initialize keychain"
           keychain initialize
 
+          echo "==> Revoke stale distribution certificates"
+          # Apple limits us to 2 active distribution certificates per
+          # team. We generate an ephemeral private key for each build,
+          # so any cert created on a previous build is useless to us
+          # (its key is gone). Revoke them before creating a fresh one
+          # — otherwise the API returns 409 ("You already have a
+          # current Distribution certificate") and the build dies.
+          EXISTING_IDS=$(app-store-connect certificates list \
+            --type IOS_DISTRIBUTION \
+            --json 2>/dev/null \
+            | python3 -c "import json,sys; data=json.load(sys.stdin); print(' '.join(c['id'] for c in data))" \
+            || echo "")
+          if [ -n "$EXISTING_IDS" ]; then
+            for cert_id in $EXISTING_IDS; do
+              echo "    revoke $cert_id"
+              app-store-connect certificates revoke "$cert_id" || true
+            done
+          fi
+
           echo "==> Generate private key for the new distribution cert"
-          # Codemagic's CLI can create the iOS Distribution certificate
-          # via App Store Connect API, but it needs a private key on
-          # disk to bind to. We just generate a fresh 2048-bit RSA key
-          # for this build; the cert + key get downloaded together by
-          # fetch-signing-files below.
           openssl genrsa -out /tmp/cert_private_key.pem 2048
 
-          echo "==> Fetch signing files (creates cert + profile if missing)"
+          echo "==> Fetch signing files (creates cert + profile)"
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --certificate-key=@file:/tmp/cert_private_key.pem \
