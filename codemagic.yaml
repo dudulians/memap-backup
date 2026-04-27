@@ -64,27 +64,21 @@ workflows:
           echo "==> Initialize keychain"
           keychain initialize
 
-          echo "==> List existing certificates (before)"
-          app-store-connect certificates list --type IOS_DISTRIBUTION || true
+          echo "==> Generate private key for the new distribution cert"
+          # Codemagic's CLI can create the iOS Distribution certificate
+          # via App Store Connect API, but it needs a private key on
+          # disk to bind to. We just generate a fresh 2048-bit RSA key
+          # for this build; the cert + key get downloaded together by
+          # fetch-signing-files below.
+          openssl genrsa -out /tmp/cert_private_key.pem 2048
 
-          echo "==> Create iOS Distribution certificate if missing"
-          # --save downloads the .p12 to ~/Library/MobileDevice/Certificates
-          # and stores the private key alongside. If a cert already exists,
-          # this exits non-zero — we ignore that and just fetch existing.
-          app-store-connect certificates create \
-            --type IOS_DISTRIBUTION \
-            --save || \
-          app-store-connect certificates list \
-            --type IOS_DISTRIBUTION \
-            --save \
-            --certificate-key-passphrase "" || true
-
-          echo "==> Fetch (or create) provisioning profile"
+          echo "==> Fetch signing files (creates cert + profile if missing)"
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key=@file:/tmp/cert_private_key.pem \
             --create
 
-          echo "==> Add downloaded certs to keychain"
+          echo "==> Add downloaded cert to keychain"
           keychain add-certificates
 
           echo "==> Patch Xcode project to use the fetched profile"
