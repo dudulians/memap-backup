@@ -352,13 +352,13 @@ export const OverviewCard = ({
             </div>
           </div>
 
-          {/* Tracker switcher used to be small chevron arrows + count
-              here. Removed — they were tiny tap targets, sat right at
-              the page edge (causing accidental embla section swipes
-              when fingers brushed past), and were redundant with the
-              chip strip below which is the actual best-practice
-              tracker selector (same pattern as Apple Music category
-              tabs / Spotify horizontal tabs). */}
+          {/* Just the count — no chevron arrows. Tapping the chips
+              strip below is the real way to switch tracker. The arrows
+              were tiny + sat at the page edge, causing accidental embla
+              section swipes when fingers brushed past. */}
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {activeTrackerIndex + 1}/{trackers.length}
+          </span>
         </div>
 
         {/* Pattern chips — moved tight to the top so the calendar is

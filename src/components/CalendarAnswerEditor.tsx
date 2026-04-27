@@ -114,7 +114,7 @@ export const CalendarAnswerEditor = ({
 
       {/* Body opts out of vaul drag so internal scroll is unimpeded.
           Dismiss-by-drag still works from the pill / top header. */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-4 pb-8" data-vaul-no-drag>
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-4 pb-8">
           {/* Pattern info */}
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             {(() => {

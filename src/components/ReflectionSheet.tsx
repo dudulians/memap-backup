@@ -176,7 +176,7 @@ export const ReflectionSheet = ({
 
       {/* Body opts out of vaul drag so internal scroll is unimpeded.
           Dismiss-by-drag still works from the pill / top header. */}
-      <div className="flex-1 overflow-y-auto px-6 space-y-5 pb-8" data-vaul-no-drag>
+      <div className="flex-1 overflow-y-auto px-6 space-y-5 pb-8">
 
           {/* Observation window block */}
           <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/30">

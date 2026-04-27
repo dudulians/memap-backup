@@ -842,10 +842,11 @@ export const DailySession = ({
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
-        // Tells vaul to NOT treat this region's pointer events as
-        // drawer-drag — we have our own card-swipe handlers and they
-        // need full control of the gesture.
-        data-vaul-no-drag
+        // No data-vaul-no-drag here. vaul's direction-lock only
+        // claims drag on vertical-dominant motion; card swipes are
+        // horizontal (yes/no) so they still fire normally. Card
+        // skip-down gesture is lost — but the explicit Skip text
+        // button at the bottom still works for that.
       >
       <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">

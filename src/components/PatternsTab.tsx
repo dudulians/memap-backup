@@ -590,7 +590,7 @@ export const PatternsTab = () => {
       >
         {/* Body opts out of vaul drag so internal scroll is unimpeded.
             Dismiss-by-drag still works from the pill / top region. */}
-        <div className="flex-1 overflow-y-auto" data-vaul-no-drag>
+        <div className="flex-1 overflow-y-auto">
           {selectedTrackerForDetails && (
             <TrackerDetails
               tracker={selectedTrackerForDetails}
