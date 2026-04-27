@@ -923,27 +923,31 @@ export const TodayTab = () => {
       <BottomSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        className="h-[80vh] overflow-y-auto"
+        className="h-[80vh]"
         ariaTitle={selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : "Tracker details"}
       >
-        {selectedTrackerForDetails && (
-          <div className="mt-2">
-            <TrackerDetails
-              tracker={selectedTrackerForDetails}
-              trackers={trackers}
-              currentIndex={selectedTrackerIndex}
-              onNavigateTracker={handleNavigateTracker}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-              onEdit={() => setSettingsModalOpen(true)}
-              onArchive={handleArchiveTracker}
-              onDelete={() => {
-                setTrackerToDelete(selectedTrackerForDetails);
-                setDeleteDialogOpen(true);
-              }}
-            />
-          </div>
-        )}
+        {/* Body opts out of vaul drag so internal scroll is unimpeded.
+            Dismiss-by-drag still works from the pill / top region. */}
+        <div className="flex-1 overflow-y-auto" data-vaul-no-drag>
+          {selectedTrackerForDetails && (
+            <div className="mt-2">
+              <TrackerDetails
+                tracker={selectedTrackerForDetails}
+                trackers={trackers}
+                currentIndex={selectedTrackerIndex}
+                onNavigateTracker={handleNavigateTracker}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+                onEdit={() => setSettingsModalOpen(true)}
+                onArchive={handleArchiveTracker}
+                onDelete={() => {
+                  setTrackerToDelete(selectedTrackerForDetails);
+                  setDeleteDialogOpen(true);
+                }}
+              />
+            </div>
+          )}
+        </div>
       </BottomSheet>
 
       {/* Tracker Settings Modal */}

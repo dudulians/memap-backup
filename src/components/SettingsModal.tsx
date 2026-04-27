@@ -387,10 +387,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
   return (
     <>
-      {/* Settings as a vaul-based bottom sheet — drag-from-anywhere
-          coordinates correctly with internal scroll (the long settings
-          list scrolls; pulling down from scrollTop=0 dismisses), the
-          underlying app peeks from the top, no lost context. */}
+      {/* Settings bottom sheet. Header bar stays drag-eligible (vaul
+          will dismiss when pulled), but the long scrollable body opts
+          out of body-drag with data-vaul-no-drag. Without that, vaul's
+          gesture detection fights native scroll: once the list has
+          been scrolled, every subsequent pull-down is interpreted as
+          "still scrolling" and never escalates to dismiss. The Apple
+          Maps / Apple Music pattern is exactly this — you drag the
+          pill or the top header, never the body. */}
       <BottomSheet
         open={open}
         onOpenChange={(v) => { if (!v) onClose(); }}
@@ -401,7 +405,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" data-vaul-no-drag>
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
             {/* Current Streak Display */}
             <Card className="p-4 rounded-3xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">

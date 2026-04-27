@@ -505,19 +505,23 @@ export const PatternsTab = () => {
       <BottomSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        className="h-[80vh] overflow-y-auto"
+        className="h-[80vh]"
         ariaTitle={selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : "Tracker details"}
       >
-        {selectedTrackerForDetails && (
-          <TrackerDetails
-            tracker={selectedTrackerForDetails}
-            trackers={trackers}
-            currentIndex={selectedTrackerIndex}
-            onNavigateTracker={handleNavigateTracker}
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-          />
-        )}
+        {/* Body opts out of vaul drag so internal scroll is unimpeded.
+            Dismiss-by-drag still works from the pill / top region. */}
+        <div className="flex-1 overflow-y-auto" data-vaul-no-drag>
+          {selectedTrackerForDetails && (
+            <TrackerDetails
+              tracker={selectedTrackerForDetails}
+              trackers={trackers}
+              currentIndex={selectedTrackerIndex}
+              onNavigateTracker={handleNavigateTracker}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
+          )}
+        </div>
       </BottomSheet>
 
       {/* Calendar Answer Editor */}

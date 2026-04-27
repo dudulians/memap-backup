@@ -161,10 +161,10 @@ export const ReflectionSheet = ({
     <BottomSheet
       open={open}
       onOpenChange={(o) => { if (!o) { setConfirming(false); onClose(); } }}
-      className="h-[80vh] overflow-y-auto"
+      className="h-[80vh]"
       ariaTitle={localizeTrackerTitle(tracker.title)}
     >
-      <div className="px-6 pt-3 pb-4">
+      <div className="px-6 pt-3 pb-4 flex-shrink-0">
         <h2 className="flex items-center gap-2 text-base font-semibold">
           {(() => {
             const RIcon = getTrackerIcon(tracker.title, tracker.category);
@@ -174,7 +174,9 @@ export const ReflectionSheet = ({
         </h2>
       </div>
 
-      <div className="px-6 space-y-5 pb-8">
+      {/* Body opts out of vaul drag so internal scroll is unimpeded.
+          Dismiss-by-drag still works from the pill / top header. */}
+      <div className="flex-1 overflow-y-auto px-6 space-y-5 pb-8" data-vaul-no-drag>
 
           {/* Observation window block */}
           <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/30">

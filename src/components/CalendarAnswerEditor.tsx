@@ -103,16 +103,18 @@ export const CalendarAnswerEditor = ({
     <BottomSheet
       open={open}
       onOpenChange={(isOpen) => !isOpen && onClose()}
-      className="h-auto max-h-[80vh] overflow-y-auto"
+      className="h-auto max-h-[80vh]"
       ariaTitle={format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
     >
-      <div className="px-6 pt-3 pb-2">
+      <div className="px-6 pt-3 pb-2 flex-shrink-0">
         <h2 className="text-base font-semibold">
           {format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
         </h2>
       </div>
 
-      <div className="px-6 space-y-4 pb-8">
+      {/* Body opts out of vaul drag so internal scroll is unimpeded.
+          Dismiss-by-drag still works from the pill / top header. */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-4 pb-8" data-vaul-no-drag>
           {/* Pattern info */}
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             {(() => {
