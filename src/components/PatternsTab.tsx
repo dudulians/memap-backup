@@ -341,7 +341,7 @@ export const PatternsTab = () => {
   const strongCount = trackers.filter((t) => getTrackerStats(t).status === "strong").length;
 
   return (
-    <div className="space-y-3 pb-20">
+    <div className="space-y-3">
       {/* No title row here — the tab bar is the heading. Tracker count
           shown subtly inside the tabs strip (right side) so there's no
           dedicated header row eating vertical space. */}

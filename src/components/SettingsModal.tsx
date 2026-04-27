@@ -106,53 +106,13 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     }
   }, [open]);
 
-  // iOS-native swipe-back: a touch that lands within 50px of the
-  // left edge and travels >50px right (with horizontal-dominant
-  // motion) navigates back to the main settings list.
-  //
-  // We use TOUCH events (not pointer events) attached to window with
-  // capture: true. Touch events on iOS WebView fire reliably even
-  // when vaul has set up pointer-event listeners — they're a
-  // separate event system. Pointer events get swallowed by vaul's
-  // drawer first and our listener never sees them.
-  useEffect(() => {
-    if (!open || screen === "main") return;
-    let startX: number | null = null;
-    let startY: number | null = null;
-    let active = false;
-    const onStart = (e: TouchEvent) => {
-      const t = e.touches[0];
-      if (!t) return;
-      if (t.clientX > 50) return;
-      startX = t.clientX;
-      startY = t.clientY;
-      active = true;
-    };
-    const onMove = (e: TouchEvent) => {
-      if (!active || startX === null || startY === null) return;
-      const t = e.touches[0];
-      if (!t) return;
-      const dx = t.clientX - startX;
-      const dy = Math.abs(t.clientY - startY);
-      if (dx > 50 && dx > dy * 1.3) {
-        setScreen("main");
-        active = false;
-      } else if (dy > 30 && dy > Math.abs(dx)) {
-        active = false; // vertical → let vaul handle drag-to-close
-      }
-    };
-    const reset = () => { active = false; startX = null; startY = null; };
-    window.addEventListener("touchstart", onStart, { capture: true, passive: true });
-    window.addEventListener("touchmove", onMove, { capture: true, passive: true });
-    window.addEventListener("touchend", reset, { capture: true });
-    window.addEventListener("touchcancel", reset, { capture: true });
-    return () => {
-      window.removeEventListener("touchstart", onStart, { capture: true });
-      window.removeEventListener("touchmove", onMove, { capture: true });
-      window.removeEventListener("touchend", reset, { capture: true });
-      window.removeEventListener("touchcancel", reset, { capture: true });
-    };
-  }, [open, screen]);
+  // Edge-swipe-back was removed — neither pointer events nor touch
+  // events fired reliably under Capacitor + vaul on iOS WebView,
+  // and chasing it further wasn't worth more wasted iterations.
+  // The Back button in the header is bigger / primary-coloured /
+  // 40px tall now, which is the reliable way to navigate back.
+  // Worth re-attempting later via Capacitor's native gesture API,
+  // but not blocking on it.
 
   const handlePolChange = (next: "male" | "female" | "neutral") => {
     if (next !== currentPol) haptics.tap();

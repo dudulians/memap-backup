@@ -403,6 +403,13 @@ export const DailySession = ({
   const touchStartTime = useRef<number>(0);
 
   // Unified pointer handlers (mouse + touch + pen)
+  // Direction lock: we only "claim" the pointer (via setPointerCapture)
+  // once we're sure the user is doing a horizontal card-swipe. If
+  // they're swiping vertically instead, we yield — that lets vaul
+  // pick up the gesture for drag-to-close, which is why the Play
+  // sheet now closes as smoothly as Settings/Cards.
+  const hasClaimedSwipe = useRef(false);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isAnimatingRef.current) return;
     const target = e.target as HTMLElement;
@@ -411,7 +418,10 @@ export const DailySession = ({
     if (activePointerId.current !== null) return;
 
     activePointerId.current = e.pointerId;
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    // Deliberately NOT calling setPointerCapture here. We capture
+    // only in pointermove once we've confirmed horizontal-dominant
+    // motion — see comment on hasClaimedSwipe above.
+    hasClaimedSwipe.current = false;
     touchStartX.current = e.clientX;
     touchStartY.current = e.clientY;
     touchStartTime.current = Date.now();
@@ -423,6 +433,28 @@ export const DailySession = ({
     if (activePointerId.current !== e.pointerId) return;
     const dx = e.clientX - touchStartX.current;
     const dy = e.clientY - touchStartY.current;
+
+    // Direction-lock once movement is meaningful.
+    if (!hasClaimedSwipe.current) {
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      // Not enough motion yet to decide.
+      if (absDx < 10 && absDy < 10) return;
+      if (absDx > absDy) {
+        // Horizontal-dominant ⇒ this is a card yes/no swipe. Claim
+        // the pointer so finger excursions outside the card don't
+        // drop the gesture.
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+        hasClaimedSwipe.current = true;
+      } else {
+        // Vertical-dominant ⇒ user wants to close the sheet. Yield
+        // to vaul: pretend we never started so subsequent moves
+        // don't drag the card around.
+        activePointerId.current = null;
+        return;
+      }
+    }
+
     currentDx.current = dx;
     currentDy.current = dy;
     setDragX(dx);

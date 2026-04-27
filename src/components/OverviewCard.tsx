@@ -374,6 +374,18 @@ export const OverviewCard = ({
         {/* Year View */}
         {calendarView === "year" && (
           <div className="space-y-3 animate-fade-in">
+            {/* Header with "back to month" — the year view's only
+                way out used to be tapping a specific day, which
+                wasn't obvious. Now there's an explicit affordance. */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-medium">{getYear(today)}</h3>
+              <button
+                onClick={() => setCalendarView("month")}
+                className="h-6 px-2 text-[10px] rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition-colors"
+              >
+                {t("overview.month")}
+              </button>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               {yearData.map(({ monthDate, label, days }) => (
                 <div key={label + getYear(monthDate)} className="space-y-1">
