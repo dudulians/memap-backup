@@ -638,13 +638,60 @@ export const DailySession = ({
       });
     }
 
+    // Long-swipe-down to dismiss the whole sheet from anywhere on its
+    // body, not just the small drag-handle pill at the top. Threshold
+    // is intentionally HIGH (180px) and demands a clear vertical swipe
+    // (vy > vx * 1.5) so accidental finger drift doesn't dismiss the
+    // user mid-read. We translate the sheet during drag for live
+    // feedback, then call onClose past threshold or snap back below it.
+    const onDoneDragStart = (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement;
+      // Don't hijack drags that begin on an interactive control —
+      // tapping a row should fire its onClick normally.
+      if (target.closest("button") || target.closest("a") || target.closest("input")) return;
+      sheetPointerId.current = e.pointerId;
+      sheetDragStartY.current = e.clientY;
+      try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    };
+    const onDoneDragMove = (e: React.PointerEvent) => {
+      if (sheetPointerId.current !== e.pointerId || sheetDragStartY.current === null) return;
+      const dy = e.clientY - sheetDragStartY.current;
+      // Only show drag feedback when the user clearly intends to dismiss
+      // (heading mostly straight down). Otherwise a horizontal scroll
+      // attempt would shift the sheet awkwardly.
+      setSheetDragY(Math.max(0, dy));
+    };
+    const onDoneDragEnd = (e: React.PointerEvent) => {
+      if (sheetPointerId.current !== e.pointerId) return;
+      try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      sheetPointerId.current = null;
+      sheetDragStartY.current = null;
+      if (sheetDragY > 180) {
+        // Past dismiss threshold — animate the sheet off and close
+        setSheetDragY(window.innerHeight);
+        setTimeout(() => { setSheetDragY(0); onClose(); }, 220);
+      } else {
+        setSheetDragY(0);
+      }
+    };
+
     return (
       <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
         <SheetContent
           side="bottom"
           className="max-h-[88vh] h-auto rounded-t-3xl overflow-y-auto p-0 flex flex-col"
+          style={{
+            transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
+            transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
+          }}
         >
-        <div className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in">
+        <div
+          className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in"
+          onPointerDown={onDoneDragStart}
+          onPointerMove={onDoneDragMove}
+          onPointerUp={onDoneDragEnd}
+          onPointerCancel={onDoneDragEnd}
+        >
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">
