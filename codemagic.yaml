@@ -63,6 +63,10 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
+          # `xcode-project use-profiles` looks for .xcodeproj in the
+          # current directory — our Capacitor project lives at
+          # ios/App/App.xcodeproj, so cd in before running it.
+          cd $CM_BUILD_DIR/ios/App
           xcode-project use-profiles
 
       - name: Increment build number
