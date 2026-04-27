@@ -13,6 +13,7 @@ import { uuid } from "@/lib/uuid";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerAdvice } from "@/lib/trackerLocalize";
+import { haptics } from "@/lib/haptics";
 
 interface TrackerDetailsProps {
   tracker: Tracker;
@@ -317,7 +318,7 @@ export const TrackerDetails = ({
           {onArchive && (
             <Button
               variant="outline"
-              onClick={onArchive}
+              onClick={() => { haptics.warning(); onArchive(); }}
               className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5"
             >
               <Archive className="h-4 w-4" />
@@ -329,7 +330,7 @@ export const TrackerDetails = ({
           {onDelete && (
             <Button
               variant="outline"
-              onClick={onDelete}
+              onClick={() => { haptics.warning(); onDelete(); }}
               className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
             >
               <Trash2 className="h-4 w-4" />

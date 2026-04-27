@@ -14,6 +14,7 @@ import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
 import { playSwipeSound, triggerHaptic as runHaptic } from "@/lib/feedback";
+import { haptics } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
@@ -241,6 +242,11 @@ export const DailySession = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | "down" | null>(null);
   const [completed, setCompleted] = useState(false);
+  // Fire one success haptic when the round transitions to "done", no
+  // matter which path triggered it (last answer, last skip, disable-recs).
+  useEffect(() => {
+    if (completed) haptics.success();
+  }, [completed]);
   // Sheet-style drag-down-to-dismiss: track Y translation of the whole
   // session when the user grabs the drag-handle pill at the top.
   const [sheetDragY, setSheetDragY] = useState(0);

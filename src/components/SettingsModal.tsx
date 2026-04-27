@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { haptics } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -79,6 +80,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [currentPol, setCurrentPol] = useState<"male" | "female" | "neutral">(() => getPol() ?? "neutral");
 
   const handlePolChange = (next: "male" | "female" | "neutral") => {
+    if (next !== currentPol) haptics.tap();
     setCurrentPol(next);
     // Persist into the existing interview blob so subsequent runs of
     // polishRu / generators see the new gender. We merge to avoid

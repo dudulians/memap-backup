@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { haptics } from "@/lib/haptics";
 
 interface CalendarAnswerEditorProps {
   open: boolean;
@@ -61,6 +62,7 @@ export const CalendarAnswerEditor = ({
     try {
       await onSave(tracker.id, date, value);
       setSelectedValue(value);
+      haptics.success();
     } finally {
       setSaving(false);
     }
@@ -72,6 +74,7 @@ export const CalendarAnswerEditor = ({
     try {
       const note = await addNote({ date, text: newNoteText.trim(), linkedPatternId: tracker.id });
       setNotes(prev => [...prev, note]);
+      haptics.success();
       setNewNoteText("");
       setShowNoteInput(false);
       window.dispatchEvent(new CustomEvent("memap-notes-changed"));
