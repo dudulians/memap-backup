@@ -600,7 +600,7 @@ export const PatternsTab = () => {
         </TabsContent>
 
         {/* --- TRENDS: dual-series chart over time --------------------- */}
-        <TabsContent value="trends" className="mt-4 animate-fade-in">
+        <TabsContent value="trends" className="mt-4 animate-fade-in" data-no-tabswipe>
           <TrendChart trackers={trackers} entries={entries} />
         </TabsContent>
 
