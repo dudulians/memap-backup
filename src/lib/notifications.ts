@@ -2,12 +2,54 @@ import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
+import i18n from "@/lib/i18n";
+import { getTrackers, getEntries } from "@/lib/storage";
 
 const NOTIFICATION_ENABLED_KEY = "memap_notification_enabled";
 const NOTIFICATION_TIME_KEY = "memap_notification_time";
 const THRESHOLD_ALERTS_KEY = "memap_threshold_alerts";
 const NOTIFIED_CYCLES_KEY = "memap_notified_cycles";
-const DAILY_NOTIFICATION_ID = 1;
+// Legacy id used by the old single repeating notification. Kept around
+// only so we can cancel it on first run of the new scheduler — once
+// every install has migrated this can go.
+const LEGACY_DAILY_NOTIFICATION_ID = 1;
+
+// Window of days we pre-schedule. Each day gets its own non-repeating
+// notification with a date-based id, so we can cancel any single day
+// (e.g. to skip "today" once it's already filled). 7 days is plenty —
+// the app re-runs the scheduler on every cold start, so the queue gets
+// topped up whenever the user actually opens it.
+const DAYS_AHEAD = 7;
+
+// Encode a date as a 32-bit-safe integer id: YYYYMMDD.
+const dateToNotificationId = (date: Date): number =>
+  date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate();
+
+const localISODate = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+// Today is "filled" when every active (non-archived) tracker has an
+// entry for today's date. If there are no active trackers, treat as
+// filled (nothing to remind about).
+const isTodayFilled = async (): Promise<boolean> => {
+  try {
+    const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
+    const active = trackers.filter((t) => !t.archived);
+    if (active.length === 0) return true;
+    const todayIso = localISODate(new Date());
+    const answered = new Set(
+      entries.filter((e) => e.date === todayIso).map((e) => e.trackerId),
+    );
+    return active.every((t) => answered.has(t.id));
+  } catch {
+    // best-effort — never block scheduling on storage errors
+    return false;
+  }
+};
 
 export interface NotificationSettings {
   enabled: boolean;
@@ -82,50 +124,93 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   return r.granted;
 };
 
+// Cancel ALL daily notifications we may have scheduled. Iterates a
+// window of date-based ids around today, plus the legacy single-id
+// notification, so the keychain is left clean before re-scheduling.
 export const cancelNotification = async (): Promise<void> => {
+  if (Capacitor.getPlatform() === "web") return;
   try {
-    await LocalNotifications.cancel({
-      notifications: [{ id: DAILY_NOTIFICATION_ID }],
-    });
+    const ids: { id: number }[] = [{ id: LEGACY_DAILY_NOTIFICATION_ID }];
+    const today = new Date();
+    // ±60 days is more than enough — covers anything we ever scheduled
+    // ahead, plus any stragglers from past windows that didn't fire.
+    for (let offset = -60; offset <= 60; offset++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + offset);
+      ids.push({ id: dateToNotificationId(d) });
+    }
+    await LocalNotifications.cancel({ notifications: ids });
   } catch (error) {
     console.error("Notification cancel error", error);
   }
 };
 
+// Re-builds the daily notification queue from scratch. Call this:
+//   - on cold app start
+//   - after the user finishes a session (so today gets cancelled)
+//   - after settings change (time / enabled flag)
+//   - after the UI language changes
+// It cancels everything, then schedules the next DAYS_AHEAD days,
+// skipping today if today is already fully filled.
 export const scheduleNotification = async (
-  settings: NotificationSettings
+  settings: NotificationSettings,
 ): Promise<void> => {
-  if (!settings.enabled) {
-    await cancelNotification();
-    return;
-  }
+  // Kill old schedule no matter what — keeps state consistent.
+  await cancelNotification();
+
+  if (!settings.enabled) return;
 
   const granted = await requestNotificationPermission();
   if (!granted) return;
 
-  const [hour, minute] = settings.time.split(":").map(Number);
-
-  await cancelNotification();
-
   if (Capacitor.getPlatform() === "web") {
-    console.log("Web mode: notification permission granted");
+    // Web: no per-day scheduling. The setting is just remembered for
+    // when the user installs the native app.
     return;
   }
 
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: DAILY_NOTIFICATION_ID,
-        title: "MeMap",
-        body: "Time for your daily check-in",
-        schedule: {
-          on: { hour, minute },
-          repeats: true,
-          allowWhileIdle: true,
-        },
-      },
-    ],
-  });
+  const [hour, minute] = settings.time.split(":").map(Number);
+  const now = new Date();
+  const todayFilled = await isTodayFilled();
+
+  // Pull the lock-screen text in the user's CURRENT language at
+  // schedule time. iOS stores the literal string with the
+  // notification, so a later language switch needs another reschedule
+  // to update — that's why callers re-run this on memap-language-changed.
+  const title = i18n.t("notifications.dailyTitle");
+  const body = i18n.t("notifications.dailyBody");
+
+  type ScheduledNotification = {
+    id: number;
+    title: string;
+    body: string;
+    schedule: { at: Date; allowWhileIdle: boolean };
+  };
+  const notifications: ScheduledNotification[] = [];
+
+  for (let offset = 0; offset < DAYS_AHEAD; offset++) {
+    const fireAt = new Date(now);
+    fireAt.setDate(now.getDate() + offset);
+    fireAt.setHours(hour, minute, 0, 0);
+
+    // Skip past times (today's slot when it's already past, or any
+    // earlier day in the window).
+    if (fireAt <= now) continue;
+    // Skip today if user already filled everything for today — no
+    // point reminding them to do something they've done.
+    if (offset === 0 && todayFilled) continue;
+
+    notifications.push({
+      id: dateToNotificationId(fireAt),
+      title,
+      body,
+      schedule: { at: fireAt, allowWhileIdle: true },
+    });
+  }
+
+  if (notifications.length > 0) {
+    await LocalNotifications.schedule({ notifications });
+  }
 };
 
 const getNotifiedCycles = (): Record<string, string> => {
@@ -142,8 +227,11 @@ const saveNotifiedCycles = (data: Record<string, string>) => {
 
 const fireThresholdNotification = async (tracker: Tracker) => {
   const emoji = getTrackerEmoji(tracker.title);
-  const title = `${emoji} Action signal reached`;
-  const body = `"${tracker.title}" hit ${tracker.threshold} significant days. Time to act.`;
+  const title = i18n.t("notifications.thresholdTitle", { emoji });
+  const body = i18n.t("notifications.thresholdBody", {
+    title: tracker.title,
+    threshold: tracker.threshold,
+  });
 
   if (Capacitor.getPlatform() === "web") {
     if ("Notification" in window && Notification.permission === "granted") {

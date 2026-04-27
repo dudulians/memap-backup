@@ -217,6 +217,14 @@ const en = {
     resetEverything: "Reset Everything",
   },
 
+  notifications: {
+    // Lock-screen / system notification copy. Localized at schedule time.
+    dailyTitle: "MeMap",
+    dailyBody: "Time for today's check-in",
+    thresholdTitle: "{{emoji}} Action signal reached",
+    thresholdBody: "\"{{title}}\" hit {{threshold}} significant days. Time to act.",
+  },
+
   permissions: {
     insecureOriginTitle: "Notifications need the installed app",
     insecureOriginDesc: "Web browsers block notifications on plain HTTP. Use the MeMap app, or open on HTTPS / localhost.",

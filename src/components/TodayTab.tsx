@@ -253,6 +253,14 @@ export const TodayTab = () => {
         }
       }
     }
+
+    // Refresh the notification queue. If the user just answered the
+    // last unfilled card for today, today's daily notification gets
+    // cancelled — we don't want to ping them about something they've
+    // already done. New schedule still covers the next 7 days as usual.
+    if (isViewingToday) {
+      scheduleNotification(getNotificationSettings()).catch(() => {});
+    }
   };
 
   const triggerConfetti = () => {

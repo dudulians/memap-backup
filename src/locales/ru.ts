@@ -220,6 +220,15 @@ const ru: Translation = {
     resetEverything: "Сбросить всё",
   },
 
+  notifications: {
+    // Локализуется в момент планирования. Apple/Android показывают
+    // эти тексты на экране блокировки.
+    dailyTitle: "MeMap",
+    dailyBody: "Время для сегодняшней сессии",
+    thresholdTitle: "{{emoji}} Сигнал к действию",
+    thresholdBody: "Карточка «{{title}}» дошла до {{threshold}} значимых дней. Пора что-то с этим делать.",
+  },
+
   permissions: {
     insecureOriginTitle: "Нужно установленное приложение",
     insecureOriginDesc: "Браузеры блокируют уведомления на HTTP. Используй приложение MeMap или открой по HTTPS / localhost.",

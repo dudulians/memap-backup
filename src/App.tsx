@@ -14,16 +14,30 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useEffect(() => {
-    // Initialize notifications on app load
-    const notificationSettings = getNotificationSettings();
-    if (notificationSettings.enabled) {
-      scheduleNotification(notificationSettings);
-    }
+    // Initialize notifications on app load. Scheduler is idempotent —
+    // it cancels any prior queue and rebuilds based on current state,
+    // so re-running it on every cold start (and on language change)
+    // is safe.
+    const refreshSchedule = () => {
+      const notificationSettings = getNotificationSettings();
+      scheduleNotification(notificationSettings).catch(() => {});
+    };
+    refreshSchedule();
+
+    // Re-schedule when the UI language changes — iOS stores the
+    // localized title/body literally with each pending notification,
+    // so without rescheduling a user who switches RU→EN would still
+    // see Russian text on their lock screen for the next 7 days.
+    window.addEventListener("memap-language-changed", refreshSchedule);
 
     // Attach AudioContext unlock handlers so the first swipe-sound after
     // a cold app launch actually plays. Mobile browsers & Capacitor
     // WebView block audio until a user gesture.
     primeAudio();
+
+    return () => {
+      window.removeEventListener("memap-language-changed", refreshSchedule);
+    };
   }, []);
 
   return (
