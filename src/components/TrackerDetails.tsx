@@ -180,65 +180,23 @@ export const TrackerDetails = ({
         </div>
       )}
 
-      {/* Title card with manage actions inline on the right. Edit /
-          Archive / Delete sit at the very top so the user never has
-          to scroll to find them. The QUESTION isn't duplicated here;
-          it shows once inside the answer card below. */}
+      {/* Title card. Actions live at the bottom of the view now —
+          since the rest is compact (no calendar) the user reaches the
+          manage row without scrolling on a normal screen. */}
       <Card className="card-premium">
         <CardHeader className="pb-3">
-          <div className="flex items-start gap-3">
+          <CardTitle className="text-xl flex items-center gap-2">
             <div
               className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
               style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.22)` }}
             >
               <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
             </div>
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-xl truncate">
-                {localizeTrackerTitle(tracker.title)}
-              </CardTitle>
-              <p className="text-xs font-medium mt-0.5" style={{ color: `hsl(var(--${categoryColor}))` }}>
-                {t(`categories.${tracker.category}` as const)}
-              </p>
-            </div>
-            {/* Action icons on the right — visible without scrolling.
-                Slightly bigger than before (40×40 hit area) so they're
-                comfortable to tap. */}
-            {(onEdit || onArchive || onDelete) && (
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {onEdit && (
-                  <button
-                    onClick={onEdit}
-                    aria-label={t("trackerDetails.actionEdit")}
-                    title={t("trackerDetails.actionEdit")}
-                    className="h-9 w-9 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                  >
-                    <SettingsIcon className="h-4 w-4" />
-                  </button>
-                )}
-                {onArchive && (
-                  <button
-                    onClick={onArchive}
-                    aria-label={t("trackerDetails.actionArchive")}
-                    title={t("trackerDetails.actionArchive")}
-                    className="h-9 w-9 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                  >
-                    <Archive className="h-4 w-4" />
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    onClick={onDelete}
-                    aria-label={t("trackerDetails.actionDelete")}
-                    title={t("trackerDetails.actionDelete")}
-                    className="h-9 w-9 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+            {localizeTrackerTitle(tracker.title)}
+          </CardTitle>
+          <p className="text-xs font-medium" style={{ color: `hsl(var(--${categoryColor}))` }}>
+            {t(`categories.${tracker.category}` as const)}
+          </p>
         </CardHeader>
       </Card>
 
@@ -340,8 +298,45 @@ export const TrackerDetails = ({
         </Card>
       )}
 
-      {/* (Manage row moved up into the title card so it's reachable
-          without scrolling.) */}
+      {/* Manage row at the bottom — Edit / Archive / Delete as
+          full-width labelled buttons. Compact layout above keeps it
+          reachable without scrolling on a typical screen. */}
+      {(onEdit || onArchive || onDelete) && (
+        <div className="grid grid-cols-3 gap-2">
+          {onEdit && (
+            <Button
+              variant="outline"
+              onClick={onEdit}
+              className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              <span className="text-[11px] font-medium">{t("trackerDetails.actionEdit")}</span>
+            </Button>
+          )}
+          {onArchive && (
+            <Button
+              variant="outline"
+              onClick={onArchive}
+              className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5"
+            >
+              <Archive className="h-4 w-4" />
+              <span className="text-[11px] font-medium">
+                {tracker.archived ? t("trackerDetails.actionUnarchive") : t("trackerDetails.actionArchive")}
+              </span>
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="outline"
+              onClick={onDelete}
+              className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="text-[11px] font-medium">{t("trackerDetails.actionDelete")}</span>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* When the threshold has been reached, surface a stronger
           "reflection suggested" callout below the tabs as well — even
