@@ -1,0 +1,84 @@
+# Codemagic CI/CD configuration for MeMap (Capacitor + Vite + React).
+#
+# This builds the iOS app on a managed Apple Silicon Mac in the cloud
+# and (once the App Store Connect integration is connected in the
+# Codemagic UI) uploads the build to TestFlight.
+#
+# First-time setup checklist (do these once in the Codemagic UI):
+#   1. Personal Account → Integrations → App Store Connect → "Add"
+#      Paste an API Key from appstoreconnect.apple.com → Users and
+#      Access → Integrations → App Store Connect API → Generate.
+#   2. Personal Account → Integrations → Developer Portal → connect
+#      the same API key (lets Codemagic create signing certificates
+#      automatically without needing a Mac).
+#   3. App settings → environment → integrations → enable
+#      "App Store Connect" with the integration alias `codemagic`
+#      (matches `auth: integration` in this file).
+
+workflows:
+  ios-testflight:
+    name: MeMap iOS — TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    integrations:
+      app_store_connect: codemagic
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.uliana.memap
+      vars:
+        XCODE_WORKSPACE: "App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "com.uliana.memap"
+      node: 20.11.0
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci
+
+      - name: Build the web bundle
+        script: |
+          npm run build
+
+      - name: Capacitor sync iOS
+        script: |
+          npx cap sync ios
+
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Increment build number
+        script: |
+          cd $CM_BUILD_DIR/ios/App
+          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" || echo "0")
+          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+
+      - name: Build ipa
+        script: |
+          cd $CM_BUILD_DIR/ios/App
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - "Internal Testing"
