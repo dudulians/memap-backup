@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import type { EmblaOptionsType } from "embla-carousel";
 import { useTranslation } from "react-i18next";
@@ -72,12 +72,15 @@ export const PatternsTab = () => {
   // Embla carousel for horizontal swiping between sections. Drag is
   // skipped over zones marked data-no-tabswipe (the calendar's own
   // tracker swipe area) so the inner gestures don't fight the outer
-  // page swipe.
+  // page swipe. startIndex makes the FIRST render show the section
+  // we restored from localStorage — without it we'd start on slide 0
+  // and then animate to the right one, which looks janky.
   const emblaOptions: EmblaOptionsType = {
     axis: "x",
     align: "start",
     containScroll: "trimSnaps",
     skipSnaps: false,
+    startIndex: Math.max(0, SECTIONS.indexOf(section)),
     watchDrag: (_emblaApi, evt) => {
       const target = evt.target as HTMLElement | null;
       if (target?.closest("[data-no-tabswipe]")) return false;
@@ -86,9 +89,17 @@ export const PatternsTab = () => {
   };
   const [emblaRef, emblaApi] = useEmblaCarousel(emblaOptions);
 
+  // Guard against feedback loops: when embla fires `select` (because
+  // the user finished a drag), our handler updates section state.
+  // That state change then triggers the section→carousel effect,
+  // which would call scrollTo and could fight the in-flight gesture.
+  // Flag-based guard keeps the two effects from chasing each other.
+  const fromCarouselSelect = useRef(false);
+
   // section → carousel
   useEffect(() => {
     if (!emblaApi) return;
+    if (fromCarouselSelect.current) return;
     const idx = SECTIONS.indexOf(section);
     if (idx >= 0 && emblaApi.selectedScrollSnap() !== idx) {
       emblaApi.scrollTo(idx);
@@ -100,9 +111,14 @@ export const PatternsTab = () => {
   useEffect(() => {
     if (!emblaApi) return;
     const onSelect = () => {
+      fromCarouselSelect.current = true;
       const idx = emblaApi.selectedScrollSnap();
       const next = SECTIONS[idx];
       if (next && next !== section) handleSectionChange(next);
+      // Clear the flag on next tick so subsequent state changes
+      // (e.g. user tapping a different tab) trigger a fresh
+      // scrollTo.
+      setTimeout(() => { fromCarouselSelect.current = false; }, 50);
     };
     emblaApi.on("select", onSelect);
     return () => {
@@ -543,7 +559,7 @@ export const PatternsTab = () => {
           </div>
 
           {/* --- TRENDS: dual-series chart over time ------------------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in" data-no-tabswipe>
+          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
             <TrendChart trackers={trackers} entries={entries} />
           </div>
 

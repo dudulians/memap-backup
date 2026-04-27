@@ -455,7 +455,42 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           </h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto" data-vaul-no-drag>
+        {/* The body used to opt out of vaul's drag with
+            data-vaul-no-drag — that fix was for one giant scrolling
+            list. With drill-down each screen is short and rarely
+            scrolls, so we let vaul handle drag-to-dismiss as
+            originally designed. We also wire up an iOS-native swipe-
+            from-left-edge to navigate back from a sub-screen to
+            main — saves the user from reaching for the small Back
+            button in the header. */}
+        <div
+          className="flex-1 overflow-y-auto"
+          onPointerDown={(e) => {
+            // Swipe-back only matters on a sub-screen.
+            if (screen === "main") return;
+            // Must start near the left edge — same as iOS native back.
+            if (e.clientX > 32) return;
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const onMove = (mv: PointerEvent) => {
+              const dx = mv.clientX - startX;
+              const dy = Math.abs(mv.clientY - startY);
+              // Horizontal-dominant swipe past 60px → go back.
+              if (dx > 60 && dx > dy * 1.5) {
+                setScreen("main");
+                cleanup();
+              }
+            };
+            const cleanup = () => {
+              window.removeEventListener("pointermove", onMove);
+              window.removeEventListener("pointerup", cleanup);
+              window.removeEventListener("pointercancel", cleanup);
+            };
+            window.addEventListener("pointermove", onMove);
+            window.addEventListener("pointerup", cleanup);
+            window.addEventListener("pointercancel", cleanup);
+          }}
+        >
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
             {/* === MAIN SCREEN: streak + category list === */}
             {screen === "main" && (
