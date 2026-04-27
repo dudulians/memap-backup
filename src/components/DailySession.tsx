@@ -194,44 +194,15 @@ export const DailySession = ({
       })
       .filter(q => q.existingAnswer === undefined);
 
-    // Step 2: Add new suggested questions if enabled and not yet shown today.
-    // Only inject suggestions when the user is answering for *today* —
-    // "try this new pattern" doesn't make sense when back-filling a past date.
-    let newQuestions: SessionQuestion[] = [];
-    const isTodaySession = selectedDate === todayLocal();
-    if (isTodaySession && settings.includeSuggestedQuestions && settings.lastRecommendationDate !== todayLocal()) {
-      const allTemplates = TEMPLATE_GROUPS.flatMap(group => group.templates);
-      const existingTitles = new Set(trackers.map(t => t.title.toLowerCase().trim()));
-
-      const availableTemplates = allTemplates.filter(
-        t => !existingTitles.has(t.title.toLowerCase().trim())
-      );
-
-      // Shuffle and take at most 1 per day
-      const shuffled = availableTemplates.sort(() => Math.random() - 0.5);
-      const selectedTemplates = shuffled.slice(0, 1);
-
-      newQuestions = selectedTemplates.map(template => ({
-        tracker: {
-          id: `new-${template.id}`,
-          title: template.title,
-          questionText: template.questionText,
-          category: template.category,
-          subcategory: template.subcategory,
-          periodDays: template.periodDays,
-          threshold: template.threshold,
-          problemWhen: template.problemWhen,
-          adviceAboveThreshold: template.adviceAboveThreshold,
-          answerType: "boolean" as const,
-          createdAt: new Date().toISOString(),
-        },
-        isNew: true,
-        templateId: template.id,
-      }));
-    }
-
-    return [...unansweredQuestions, ...newQuestions];
-  }, [trackers, entries, selectedDate, settings.includeSuggestedQuestions]);
+    // Auto-injected "new suggestion" cards have been removed. The user
+    // gets new ideas only via:
+    //   a) the "Idea of the day" carousel on the Cards screen (with an
+    //      explicit "+ Add to my map" button), and
+    //   b) the Shuffle button (🎲) which opens an explicit play round.
+    // Daily session now contains only the user's own trackers — no
+    // surprise cards appear without the user asking for them.
+    return unansweredQuestions;
+  }, [trackers, entries, selectedDate]);
 
   // Deck rebuilds when selectedDate changes — that lets the date-strip in
   // the header navigate to other days without unmounting the session.

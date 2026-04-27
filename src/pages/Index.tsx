@@ -152,29 +152,10 @@ const Index = () => {
     // the daily session as the home screen. This is the new product
     // direction — the session is the core flow, the lists/patterns are
     // secondary surfaces. We dispatch an event after a tiny delay so
-    // TodayTab is mounted and listening.
-    (async () => {
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const [trackers, entries] = await Promise.all([
-          getTrackers(),
-          getEntries(),
-        ]);
-        const active = trackers.filter((tr) => !tr.archived);
-        if (active.length === 0) return;
-        const answeredIds = new Set(
-          entries.filter((e) => e.date === today).map((e) => e.trackerId)
-        );
-        const hasUnanswered = active.some((tr) => !answeredIds.has(tr.id));
-        if (!hasUnanswered) return;
-        // Defer to next tick so TodayTab's mount-time event listener is up.
-        setTimeout(() => {
-          window.dispatchEvent(new Event("memap-open-session"));
-        }, 0);
-      } catch {
-        // best-effort — never block app start
-      }
-    })();
+    // Cold-launch auto-open of the daily session was removed: it
+    // surprised users by jumping into a swipe deck the moment they
+    // opened the app. The big ▶ Play button at the bottom of the
+    // Cards screen is enough — users tap it when they're ready.
   }, []);
 
   // Listen for tab-switch events dispatched by deep components (e.g. the
@@ -277,7 +258,7 @@ const Index = () => {
     <div className="h-screen overflow-hidden flex flex-col relative">
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 py-2.5">
+      <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 pb-2.5 pt-safe-plus-2">
         <h1 className="text-lg font-serif font-medium text-center tracking-tight text-foreground">
           <span className="italic">Me</span>Map
         </h1>

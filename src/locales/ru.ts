@@ -108,9 +108,15 @@ const ru: Translation = {
 
     stackReveal: {
       title: "Твои карточки готовы",
-      subtitle: "Сегодня начнём с этих 5",
+      subtitle: "Нажми × у любой что не подходит — добавим только те что оставишь.",
       cta: "Поехали",
+      ctaWithCount_one: "Добавить {{count}} карточку",
+      ctaWithCount_few: "Добавить {{count}} карточки",
+      ctaWithCount_many: "Добавить {{count}} карточек",
+      ctaSkip: "Пропустить — начать с чистого листа",
       preparing: "Готовим твои карточки…",
+      removeCard: "Удалить эту карточку",
+      allRemoved: "Все карточки убраны. Можешь начать с чистого листа и добавлять свои из кнопки + на экране карточек.",
     },
 
     defaultStarters: {
@@ -242,10 +248,10 @@ const ru: Translation = {
     addNew: "Новая карточка",
     streakDaysOne: "день подряд",
     streakDaysMany: "дн. подряд",
-    streakStartHint: "Начни сегодняшнюю сессию, чтобы стрик пошёл",
+    streakStartHint: "Начни сегодняшнюю сессию, чтобы пошёл ритм",
     answeredToday: "Сегодня отвечено",
     notAnsweredToday: "Ещё не отвечено сегодня",
-    notifBannerTitle: "Не теряй стрик",
+    notifBannerTitle: "Не теряй ритм",
     notifBannerBody: "Лёгкое напоминание раз в день — чтобы привычка закрепилась.",
     notifBannerEnable: "Включить",
     notifBannerEnabled: "Напоминания включены. Время можно поменять в Настройках.",

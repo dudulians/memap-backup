@@ -21,7 +21,7 @@ interface TrackerSettingsModalProps {
 const trackerSettingsSchema = z.object({
   questionText: z.string().trim().max(200, "Question must be less than 200 characters"),
   answerType: z.enum(["boolean", "scale", "count", "note"]),
-  periodDays: z.number().min(7).max(365),
+  periodDays: z.number().min(1).max(365),
   threshold: z.number().min(1),
   problemWhen: z.enum(["yes", "no"]),
   category: z.enum(["Emotions", "Body", "Connections", "Voice", "Health", "Curious", "Fun", "Social"]),

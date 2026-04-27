@@ -70,13 +70,19 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, hideDragHandle, ...props }, ref) => {
     const isBottom = side === "bottom";
-    const [dragY, setDragY] = React.useState(0);
-    const dragStart = React.useRef<number | null>(null);
-    const activePointer = React.useRef<number | null>(null);
+    // We deliberately do NOT keep dragY in React state. State updates
+    // on every pointermove cause re-renders at finger-speed, and React
+    // reconciliation on iOS WebView is just slow enough to drop frames
+    // — that's the "shake/jitter" users see. Instead we mutate the DOM
+    // directly via ref during drag, and only flip a `releasing` flag
+    // (which IS state) once when the user lifts their finger.
+    const dragYRef = React.useRef(0);
+    const rafRef = React.useRef<number | null>(null);
     const closeBtnRef = React.useRef<HTMLButtonElement | null>(null);
-    // Local ref to the SheetPrimitive.Content node so we can check
-    // its scrollTop (the consumers usually set overflow-y-auto on it
-    // via className). We merge into the forwarded `ref` below.
+    const releaseTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Local ref to the SheetPrimitive.Content node so we can:
+    //   – check its scrollTop (overflow-y-auto comes from consumers)
+    //   – mutate its inline transform directly during drag
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const setRefs = React.useCallback(
       (node: HTMLDivElement | null) => {
@@ -86,6 +92,8 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       },
       [ref],
     );
+    const dragStart = React.useRef<number | null>(null);
+    const activePointer = React.useRef<number | null>(null);
     // iOS-style tap/drag disambiguation refs
     const isDraggingRef = React.useRef(false);
     const wasDraggingRef = React.useRef(false);
@@ -94,8 +102,37 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     const DRAG_START_PX = 10;
     const DISMISS_PX = 180;
 
-    // Drag handle (small pill at the top) — direct grab+drag, no
-    // tap-vs-drag disambiguation needed since the handle isn't a button.
+    // Apply the live drag transform directly to the content element.
+    // translate3d forces a GPU-composited layer on iOS so the move is
+    // smooth instead of repainting layout each frame.
+    const applyTransform = (dy: number) => {
+      const el = contentRef.current;
+      if (!el) return;
+      if (dy > 0) {
+        el.style.transform = `translate3d(0, ${dy}px, 0)`;
+        el.style.transition = "none";
+      } else {
+        el.style.transform = "";
+        el.style.transition = "";
+      }
+    };
+
+    // Animate back to 0 (or off-screen for dismiss) using a CSS
+    // transition. We can't just set transform="" — that would jump.
+    // We need the transition + a target value.
+    const animateToTarget = (targetY: number) => {
+      const el = contentRef.current;
+      if (!el) return;
+      el.style.transition = "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)";
+      el.style.transform = `translate3d(0, ${targetY}px, 0)`;
+      if (releaseTimerRef.current) clearTimeout(releaseTimerRef.current);
+      releaseTimerRef.current = setTimeout(() => {
+        el.style.transition = "";
+        if (targetY === 0) el.style.transform = "";
+      }, 300);
+    };
+
+    // Drag handle (small pill at the top) — direct grab+drag.
     const onHandlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
       activePointer.current = e.pointerId;
       try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
@@ -111,10 +148,6 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       activePointer.current = e.pointerId;
       dragStart.current = e.clientY;
       isDraggingRef.current = false;
-      // Only allow drag-to-dismiss when the content is scrolled to the
-      // top — otherwise downward swipes should scroll, not dismiss.
-      // The SheetPrimitive.Content node carries overflow-y-auto from
-      // consumers; check its scrollTop directly.
       const el = contentRef.current;
       startedAtScrollTop.current = !el || el.scrollTop <= 0;
     };
@@ -122,35 +155,49 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
       if (activePointer.current !== e.pointerId || dragStart.current === null) return;
       const dy = e.clientY - dragStart.current;
-      // If we never crossed the start threshold and aren't already
-      // dragging, ignore — keeps native scroll responsive.
       if (!isDraggingRef.current && (dy <= DRAG_START_PX || !startedAtScrollTop.current)) return;
       if (!isDraggingRef.current) {
         isDraggingRef.current = true;
         try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
       }
-      setDragY(Math.max(0, dy));
+      const next = Math.max(0, dy);
+      dragYRef.current = next;
+      // Coalesce updates to one per animation frame to avoid stacking
+      // up re-flows when pointermove fires faster than 60Hz on iOS.
+      if (rafRef.current === null) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          applyTransform(dragYRef.current);
+        });
+      }
     };
 
     const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
       if (activePointer.current !== e.pointerId) return;
       const wasDrag = isDraggingRef.current;
+      const finalDy = dragYRef.current;
       try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
       activePointer.current = null;
       dragStart.current = null;
       isDraggingRef.current = false;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      dragYRef.current = 0;
 
       if (wasDrag) {
         wasDraggingRef.current = true;
         setTimeout(() => { wasDraggingRef.current = false; }, 50);
-        if (dragY > DISMISS_PX) {
-          setDragY(0);
-          closeBtnRef.current?.click();
+        if (finalDy > DISMISS_PX) {
+          // Slide the sheet down off-screen, then trigger Radix close.
+          const el = contentRef.current;
+          const distance = el ? el.getBoundingClientRect().height : 800;
+          animateToTarget(distance);
+          setTimeout(() => closeBtnRef.current?.click(), 200);
         } else {
-          setDragY(0);
+          animateToTarget(0);
         }
-      } else {
-        setDragY(0);
       }
     };
 
@@ -171,11 +218,11 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
         <SheetPrimitive.Content
           ref={setRefs}
           className={cn(sheetVariants({ side }), isBottom && !hideDragHandle && "pt-8", className)}
-          style={
-            isBottom && dragY > 0
-              ? { transform: `translateY(${dragY}px)`, transition: "none" }
-              : undefined
-          }
+          // Live transform is mutated directly via the ref in
+          // applyTransform/animateToTarget — no React re-renders during
+          // drag. willChange hints the browser to keep this on its
+          // own GPU layer so movement is smooth on iOS.
+          style={isBottom ? { willChange: "transform" } : undefined}
           {...props}
         >
           {isBottom && !hideDragHandle && (

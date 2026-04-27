@@ -106,9 +106,14 @@ const en = {
 
     stackReveal: {
       title: "Your cards are ready",
-      subtitle: "We'll start with these 5 today",
+      subtitle: "Tap × to remove anything that doesn't fit. You'll start with what's left.",
       cta: "Let's go",
+      ctaWithCount_one: "Add 1 card",
+      ctaWithCount_other: "Add {{count}} cards",
+      ctaSkip: "Skip — start blank",
       preparing: "Preparing your cards…",
+      removeCard: "Remove this card",
+      allRemoved: "No cards selected. You can start blank and add your own from the + button on the cards screen.",
     },
 
     defaultStarters: {

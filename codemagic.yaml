@@ -111,6 +111,13 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - "Internal Testing"
+        # We just upload the build to App Store Connect. After upload,
+        # internal testers (= members of the App Store Connect team)
+        # can install it from the TestFlight app on their phone
+        # IMMEDIATELY — no Apple review, no beta-group needed.
+        #
+        # If/when we want to invite external testers (friends, family),
+        # we'll set submit_to_testflight: true and add a beta_groups:
+        # entry — but that requires filling Beta App Review info
+        # (feedback email, contact details) in App Store Connect first.
+        submit_to_testflight: false

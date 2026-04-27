@@ -4,6 +4,25 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS safe-area utilities — without these, the app's sticky header is
+   hidden under the iPhone notch/Dynamic Island and the bottom nav is
+   covered by the home-indicator bar. The viewport meta in index.html
+   must include `viewport-fit=cover` for env(safe-area-inset-*) to
+   resolve to non-zero on iOS. */
+@layer utilities {
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pl-safe { padding-left: env(safe-area-inset-left); }
+  .pr-safe { padding-right: env(safe-area-inset-right); }
+
+  /* Combine with an existing px/py value: `pt-safe-plus-2` etc.
+     Used on the header below to keep its existing 0.625rem (py-2.5)
+     above the notch. */
+  .pt-safe-plus-2 {
+    padding-top: calc(env(safe-area-inset-top) + 0.625rem);
+  }
+}
+
 /* Premium Design System for MeMap — "Botanica" palette
    Warm cream canvas · sage · terracotta · night-sky · ochre
    All colors MUST be HSL.

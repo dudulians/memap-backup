@@ -884,20 +884,61 @@ const StackRevealScreen = ({
     [t],
   );
 
-  const previewRows: Array<{
+  const initialPreview: Array<{
     title: string;
     questionText: string;
     category: Tracker["category"];
   }> = pack.length > 0 ? pack : fallbackPreview;
+
+  // Track which preview rows the user has removed via the × button.
+  // Default: all kept. The seeded list at the end is filtered against
+  // this so users can only get cards they actually said yes to.
+  const [removedIndexes, setRemovedIndexes] = useState<Set<number>>(new Set());
+  const previewRows = initialPreview.filter((_, i) => !removedIndexes.has(i));
+
+  const removeRow = (index: number) => {
+    setRemovedIndexes((prev) => {
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  };
 
   const handleGo = async () => {
     if (creating) return;
     setCreating(true);
     try {
       if (pack.length > 0) {
-        await seedGeneratedTrackers(pack, t);
+        // Personalised pack: filter by kept indexes so we seed only
+        // what the user didn't remove. If everything was removed we
+        // still finish the flow with zero cards — they can add via "+".
+        const keptPack = pack.filter((_, i) => !removedIndexes.has(i));
+        if (keptPack.length > 0) {
+          await seedGeneratedTrackers(keptPack, t);
+        }
       } else {
-        await seedDefaultTrackers(t);
+        // Fallback (no interview signal): if all kept, use the default
+        // path. Otherwise convert the kept default rows into the same
+        // GeneratedStarter shape and reuse the generated seeder.
+        const allKept = removedIndexes.size === 0;
+        if (allKept) {
+          await seedDefaultTrackers(t);
+        } else {
+          const keptStarters: GeneratedStarter[] = DEFAULT_STARTERS
+            .filter((_, i) => !removedIndexes.has(i))
+            .map((meta) => ({
+              title: t(`onboarding.defaultStarters.${meta.titleKey}`),
+              questionText: t(`onboarding.defaultStarters.${meta.questionKey}`),
+              category: meta.category,
+              periodDays: 30,
+              threshold: 10,
+              problemWhen: meta.problemWhen,
+              adviceAboveThreshold: "",
+            }));
+          if (keptStarters.length > 0) {
+            await seedGeneratedTrackers(keptStarters, t);
+          }
+        }
       }
     } finally {
       setCreating(false);
@@ -919,11 +960,9 @@ const StackRevealScreen = ({
       </p>
 
       <div className="w-full max-w-[360px] space-y-2 mb-5">
-        {previewRows.map((row, i) => {
+        {initialPreview.map((row, i) => {
+          if (removedIndexes.has(i)) return null;
           const Icon = getTrackerIcon(row.title, row.category);
-          // Use inline style + CSS var (same pattern as SwipeableTrackerCard)
-          // because Tailwind's JIT can't resolve dynamic class names like
-          // `bg-${colorVar}/15` reliably for every category at build time.
           const colorVar = getCategoryColor(row.category);
           return (
             <div
@@ -947,10 +986,27 @@ const StackRevealScreen = ({
                   {row.questionText}
                 </div>
               </div>
+              {/* Remove this card before any of them get added. The
+                  user gets full control over the starter pack — if a
+                  suggestion doesn't fit, just × it. */}
+              <button
+                type="button"
+                onClick={() => removeRow(i)}
+                aria-label={t("onboarding.stackReveal.removeCard")}
+                className="shrink-0 -mt-1 -mr-1 h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
+                data-onb-interactive
+              >
+                <X className="h-4 w-4" strokeWidth={2} />
+              </button>
             </div>
           );
         })}
       </div>
+      {previewRows.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center mb-3 max-w-[300px]">
+          {t("onboarding.stackReveal.allRemoved")}
+        </p>
+      )}
 
       <Button
         size="lg"
@@ -959,7 +1015,14 @@ const StackRevealScreen = ({
         data-onb-interactive
         className="rounded-full px-8 shadow-lg shadow-primary/20 disabled:shadow-none"
       >
-        {creating ? t("onboarding.stackReveal.preparing") : t("onboarding.stackReveal.cta")}
+        {creating
+          ? t("onboarding.stackReveal.preparing")
+          : previewRows.length === 0
+            ? t("onboarding.stackReveal.ctaSkip")
+            : t("onboarding.stackReveal.ctaWithCount", {
+                count: previewRows.length,
+                defaultValue: t("onboarding.stackReveal.cta"),
+              })}
         {!creating && <ArrowRight className="h-4 w-4 ml-1.5" />}
       </Button>
 
