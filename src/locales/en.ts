@@ -37,6 +37,14 @@ const en = {
     settingsLabel: "Language",
   },
 
+  gender: {
+    settingsLabel: "Gender",
+    subtitle: "So cards read correctly (he/she forms in Russian)",
+    male: "Male",
+    female: "Female",
+    neutral: "Don't specify",
+  },
+
   onboarding: {
     skipAll: "Skip all",
     skipThis: "Skip this",

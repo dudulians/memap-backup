@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SUPPORTED_LANGUAGES, SupportedLanguage, setLanguage, getLanguage } from "@/lib/i18n";
-import { Languages } from "lucide-react";
+import { Languages, User } from "lucide-react";
+import { POL_CHANGED_EVENT, getPol } from "@/lib/genderPolish";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { getNotificationSettings, saveNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
@@ -74,6 +75,28 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [ideasDismissed, setIdeasDismissed] = useState(() => localStorage.getItem("memap_ideas_dismissed") === "true");
   const [theme, setThemeState] = useState<AppTheme>(() => getTheme());
   const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => getLanguage());
+  const [currentPol, setCurrentPol] = useState<"male" | "female" | "neutral">(() => getPol() ?? "neutral");
+
+  const handlePolChange = (next: "male" | "female" | "neutral") => {
+    setCurrentPol(next);
+    // Persist into the existing interview blob so subsequent runs of
+    // polishRu / generators see the new gender. We merge to avoid
+    // wiping focus / context / goal answers the user may have given.
+    try {
+      const raw = localStorage.getItem("memap_interview");
+      const prev = raw ? JSON.parse(raw) : {};
+      localStorage.setItem(
+        "memap_interview",
+        JSON.stringify({ ...prev, pol: next })
+      );
+    } catch {
+      // ignore storage failures
+    }
+    window.dispatchEvent(new Event(POL_CHANGED_EVENT));
+    // Force i18next to re-render any subscribed component with the new
+    // pol applied via the polishRu post-processor.
+    window.dispatchEvent(new Event("memap-language-changed"));
+  };
   const { t } = useTranslation();
   const { toast } = useToast();
 
@@ -440,6 +463,43 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                           {lng.native !== lng.name && (
                             <div className="text-[10px] text-muted-foreground mt-0.5">{lng.name}</div>
                           )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Gender — affects gendered Russian past-tense forms in
+                tracker copy. Only really meaningful in RU; on EN it's
+                still here so the user can opt back into "neutral"
+                bracketed text if they prefer. */}
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h3 className="font-medium text-sm">{t("gender.settingsLabel")}</h3>
+                    <p className="text-xs text-muted-foreground">{t("gender.subtitle")}</p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["male", "female", "neutral"] as const).map((p) => {
+                      const isActive = currentPol === p;
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => handlePolChange(p)}
+                          className={`rounded-xl border p-2.5 text-center transition-all text-sm ${
+                            isActive
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30 font-medium"
+                              : "border-border/50 hover:border-border bg-muted/20"
+                          }`}
+                        >
+                          {t(`gender.${p}`)}
                         </button>
                       );
                     })}

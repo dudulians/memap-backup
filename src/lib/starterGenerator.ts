@@ -343,9 +343,48 @@ export const hasMeaningfulInterviewSignal = (
   return false;
 };
 
-// Pick the top N scored templates with a per-category cap so the user
-// always sees variety. Cap = 2 per category. Tiebreak is stable (insertion
-// order from normalizeAll, i.e. LIFE_STREAMS before TEMPLATE_GROUPS).
+// Topic words that should not appear in two picked templates at once.
+// We extract the first matching topic from each title and use it as a
+// secondary diversity key on top of category + subcategory caps.
+// Without this, focus="stress" was producing two anxiety cards
+// ("Anxious today?" + "Anxiety days") because they sit in different
+// subcategories. Topic-key collision blocks the second one.
+const TITLE_TOPIC_KEYWORDS: Array<[string, string[]]> = [
+  ["anxiety",   ["anxiety", "anxious", "тревог"]],
+  ["sleep",     ["sleep", "slept", "сон", "спал"]],
+  ["mood",      ["mood", "low", "blue", "sad", "happy", "настроени"]],
+  ["energy",    ["energy", "exhaust", "fatigue", "энерги", "истощ", "сил"]],
+  ["stress",    ["stress", "tense", "стресс"]],
+  ["headache",  ["headache", "migraine", "голова", "мигрен"]],
+  ["partner",   ["partner", "argue", "argument", "партнёр", "ссор"]],
+  ["family",    ["family", "kid", "child", "семь", "ребён", "дет"]],
+  ["alcohol",   ["alcohol", "drink", "drank", "алког"]],
+  ["screen",    ["scroll", "phone", "social", "doomscroll", "лент", "телефон", "соцсет"]],
+  ["work",      ["work", "burnout", "overtime", "deadline", "работ", "выгоран", "переработ", "дедлайн"]],
+  ["movement",  ["move", "moved", "exercise", "walk", "движ", "ходил", "трен"]],
+  ["loneliness",["lonely", "alone", "одинок"]],
+  ["voice",     ["spoke", "said", "voice", "speak", "голос", "сказал", "говорил"]],
+  ["creative",  ["creat", "draw", "music", "write", "творч", "рисовал", "писал"]],
+  ["food",      ["ate", "eat", "meal", "ел", "обед", "завтрак"]],
+  ["water",     ["water", "hydrat", "вод"]],
+];
+
+const topicOf = (tpl: NormalizedTemplate): string | null => {
+  const hay = (tpl.title + " " + (tpl.titleRu ?? "") + " " + (tpl.subcategory ?? "")).toLowerCase();
+  for (const [topic, kws] of TITLE_TOPIC_KEYWORDS) {
+    if (kws.some((k) => hay.includes(k))) return topic;
+  }
+  return null;
+};
+
+// Pick the top N scored templates with diversity caps so the user
+// always sees variety:
+//   - Per-category cap (default 2) — at most 2 from same Tracker.category
+//   - Per-subcategory cap (1)      — at most 1 from same `subcategory`
+//   - Per-topic cap (1)            — at most 1 with the same topic key
+//                                    (anxiety, sleep, partner, etc.)
+// Tiebreak is stable (insertion order from normalizeAll, i.e.
+// LIFE_STREAMS before TEMPLATE_GROUPS).
 const pickTop = (
   scored: Array<{ tpl: NormalizedTemplate; score: number }>,
   count: number,
@@ -354,6 +393,8 @@ const pickTop = (
   const sorted = [...scored].sort((a, b) => b.score - a.score);
   const picked: NormalizedTemplate[] = [];
   const perCat: Map<Tracker["category"], number> = new Map();
+  const seenSubcategories = new Set<string>();
+  const seenTopics = new Set<string>();
   const seenTitles = new Set<string>();
 
   for (const item of sorted) {
@@ -361,15 +402,22 @@ const pickTop = (
     if (item.score <= 0) break; // ignore zero / negative scored ones in scored pass
     const used = perCat.get(item.tpl.category) ?? 0;
     if (used >= perCategoryCap) continue;
+    const sub = item.tpl.subcategory?.trim().toLowerCase();
+    if (sub && seenSubcategories.has(sub)) continue;
+    const topic = topicOf(item.tpl);
+    if (topic && seenTopics.has(topic)) continue;
     const titleKey = item.tpl.title.trim().toLowerCase();
     if (seenTitles.has(titleKey)) continue;
     picked.push(item.tpl);
     perCat.set(item.tpl.category, used + 1);
+    if (sub) seenSubcategories.add(sub);
+    if (topic) seenTopics.add(topic);
     seenTitles.add(titleKey);
   }
 
-  // Second pass: if cap held us back, relax it to fill the remaining
-  // slots — variety is preferred but never at the cost of returning <N.
+  // Second pass: if caps held us back, relax subcategory/topic
+  // restrictions (but keep title dedupe) to fill remaining slots.
+  // Variety preferred, but never at the cost of returning < N cards.
   if (picked.length < count) {
     for (const item of sorted) {
       if (picked.length >= count) break;

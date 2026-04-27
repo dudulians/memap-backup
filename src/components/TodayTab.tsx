@@ -4,7 +4,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -603,11 +603,24 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Header row: action buttons + streak. The bottom nav already
-          says "Карточки" so we don't repeat it as a heading — that was
-          chrome the user explicitly disliked. */}
+      {/* Header row: streak chip on the left, action buttons on the
+          right. The streak used to be tucked under the row (often
+          hidden behind the notif banner) — putting it inline both
+          fills the previously-empty left side and makes the user's
+          progress immediately visible without hunting. */}
       <div className="animate-fade-in space-y-3">
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-between gap-2">
+          {globalStreak.currentStreak > 0 ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-br from-orange-500/15 to-orange-600/5 border border-orange-500/20">
+              <Flame className="h-3.5 w-3.5 text-orange-500" strokeWidth={2} fill="currentColor" />
+              <span className="text-xs font-medium text-foreground">
+                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
+                <span className="text-muted-foreground ml-1">{globalStreak.currentStreak === 1 ? t("today.streakDaysOne") : t("today.streakDaysMany", { count: globalStreak.currentStreak })}</span>
+              </span>
+            </div>
+          ) : (
+            <div /> /* spacer so the action buttons stay right-aligned */
+          )}
           <div className="flex items-center gap-1.5">
             {/* Always-accessible Random Play — opens the session in play
                 mode straight away, no need to wait for the Done screen. */}
@@ -643,18 +656,6 @@ export const TodayTab = () => {
             </Button>
           </div>
         </div>
-
-        {globalStreak.currentStreak > 0 && (
-          <div className="flex items-center justify-center">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20">
-              <Flame className="h-3.5 w-3.5 text-primary" strokeWidth={2} fill="currentColor" />
-              <span className="text-xs font-medium text-foreground">
-                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
-                <span className="text-muted-foreground ml-1">{globalStreak.currentStreak === 1 ? t("today.streakDaysOne") : t("today.streakDaysMany", { count: globalStreak.currentStreak })}</span>
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Notif opt-in banner — shown only when reminders are off and
@@ -864,19 +865,57 @@ export const TodayTab = () => {
         onCreateAnyway={handleCreateAnyway}
       />
 
-      {/* Bottom Sheet for Tracker Details */}
+      {/* Bottom Sheet for Tracker Details. Actions live in the
+          header as compact icon buttons so the user doesn't have to
+          scroll to the bottom of the calendar to find Edit / Archive
+          / Delete. */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              {selectedTrackerForDetails && (() => {
-                const TIcon = getTrackerIcon(selectedTrackerForDetails.title, selectedTrackerForDetails.category);
-                return <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />;
-              })()}
-              <span>{selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}</span>
-            </SheetTitle>
+            <div className="flex items-center justify-between gap-3 pr-6">
+              <SheetTitle className="flex items-center gap-2 min-w-0">
+                {selectedTrackerForDetails && (() => {
+                  const TIcon = getTrackerIcon(selectedTrackerForDetails.title, selectedTrackerForDetails.category);
+                  return <TIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />;
+                })()}
+                <span className="truncate">{selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}</span>
+              </SheetTitle>
+              {/* Action icons: Edit / Archive / Delete. Tooltips via
+                  aria-label since we don't have a Tooltip wrapper here. */}
+              {selectedTrackerForDetails && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => setSettingsModalOpen(true)}
+                    aria-label={t("today.editTrackerSettings")}
+                    title={t("today.editTrackerSettings")}
+                    className="h-8 w-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                  >
+                    <SettingsIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handleArchiveTracker}
+                    aria-label={t("today.archiveTracker")}
+                    title={t("today.archiveTracker")}
+                    className="h-8 w-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                  >
+                    <Archive className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTrackerToDelete(selectedTrackerForDetails);
+                      setDeleteDialogOpen(true);
+                    }}
+                    aria-label={t("today.deleteTracker")}
+                    title={t("today.deleteTracker")}
+                    className="h-8 w-8 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </SheetHeader>
-          
+
           {selectedTrackerForDetails && (
             <div className="mt-4">
               <TrackerDetails
@@ -887,36 +926,6 @@ export const TodayTab = () => {
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
               />
-              
-              {/* Edit section at bottom */}
-              <div className="mt-6 pt-4 border-t space-y-3">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-3">{t("today.trackerSettings")}</p>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={() => setSettingsModalOpen(true)}
-                >
-                  <SettingsIcon className="mr-2 h-4 w-4" />
-                  {t("today.editTrackerSettings")}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleArchiveTracker}
-                >
-                  {t("today.archiveTracker")}
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setTrackerToDelete(selectedTrackerForDetails);
-                    setDeleteDialogOpen(true);
-                  }}
-                >
-                  {t("today.deleteTracker")}
-                </Button>
-              </div>
             </div>
           )}
         </SheetContent>

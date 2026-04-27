@@ -210,6 +210,14 @@ export const DailySession = ({
   const sheetPointerId = useRef<number | null>(null);
 
   const onSheetDragStart = (e: React.PointerEvent) => {
+    // Don't hijack pointer-down that lands on an interactive element —
+    // X close button, date-strip day buttons, etc. need their own taps
+    // to fire normally. The drag-down dismiss only fires from empty
+    // header space.
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest("[role='button']") || target.closest("a") || target.closest("input")) {
+      return;
+    }
     e.stopPropagation();
     sheetPointerId.current = e.pointerId;
     sheetDragStartY.current = e.clientY;
@@ -741,28 +749,20 @@ export const DailySession = ({
       onPointerUp={endPointer}
       onPointerCancel={endPointer}
     >
-      {/* Header — drag handle pill at the top makes the bottom-sheet
-          metaphor obvious, plus an explicit X. Tap or drag-down on the
-          pill dismisses; the X always works too. */}
+      {/* Header — drag-handle pill + counter row are wrapped in a
+          large invisible drag region. Anywhere on this region (except
+          the X button) accepts a swipe-down to dismiss. The X still
+          taps to close, the pill itself can also be tapped to close. */}
       <div
-        className="px-4 pt-2 pb-2 border-b flex-shrink-0 space-y-2"
-        onClick={(e) => {
-          // tap on empty header area is fine; only the explicit handle
-          // pill below is the visual close affordance.
-          e.stopPropagation();
-        }}
+        className="px-4 pt-2 pb-2 border-b flex-shrink-0 space-y-2 cursor-grab active:cursor-grabbing"
+        style={{ touchAction: "none" }}
+        onPointerDown={onSheetDragStart}
+        onPointerMove={onSheetDragMove}
+        onPointerUp={onSheetDragEnd}
+        onPointerCancel={onSheetDragEnd}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Wider tap/drag area around the pill so swipe-down is easier
-            to grab — the visible pill is still small but the touch
-            target is generous. */}
-        <div
-          className="block mx-auto w-32 h-6 -my-1 flex items-center justify-center cursor-grab active:cursor-grabbing"
-          style={{ touchAction: "none" }}
-          onPointerDown={onSheetDragStart}
-          onPointerMove={onSheetDragMove}
-          onPointerUp={onSheetDragEnd}
-          onPointerCancel={onSheetDragEnd}
-        >
+        <div className="flex items-center justify-center pt-0.5 pb-1">
           <button
             type="button"
             onClick={onClose}

@@ -39,6 +39,14 @@ const ru: Translation = {
     settingsLabel: "Язык",
   },
 
+  gender: {
+    settingsLabel: "Пол",
+    subtitle: "Чтобы карточки писались правильно (сделал/сделала)",
+    male: "Мужской",
+    female: "Женский",
+    neutral: "Не уточнять",
+  },
+
   onboarding: {
     skipAll: "Пропустить всё",
     skipThis: "Пропустить",
