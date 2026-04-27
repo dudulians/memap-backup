@@ -642,7 +642,10 @@ export const DailySession = ({
         onPointerUp={onSheetDragEnd}
         onPointerCancel={onSheetDragEnd}
       >
-        <div className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in">
+        <div
+          className="flex flex-col items-center px-5 pb-6 gap-6 animate-fade-in"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 2.5rem)" }}
+        >
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">
@@ -818,10 +821,15 @@ export const DailySession = ({
       {/* Header — drag-handle pill + counter row are wrapped in a
           large invisible drag region. Anywhere on this region (except
           the X button) accepts a swipe-down to dismiss. The X still
-          taps to close, the pill itself can also be tapped to close. */}
+          taps to close, the pill itself can also be tapped to close.
+          paddingTop combines iOS safe-area (under Dynamic Island /
+          notch) with the original 0.5rem visual breathing room. */}
       <div
-        className="px-4 pt-2 pb-2 border-b flex-shrink-0 space-y-2 cursor-grab active:cursor-grabbing"
-        style={{ touchAction: "none" }}
+        className="px-4 pb-2 border-b flex-shrink-0 space-y-2 cursor-grab active:cursor-grabbing"
+        style={{
+          touchAction: "none",
+          paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)",
+        }}
         onPointerDown={onSheetDragStart}
         onPointerMove={onSheetDragMove}
         onPointerUp={onSheetDragEnd}
