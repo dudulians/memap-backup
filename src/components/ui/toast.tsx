@@ -14,7 +14,12 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      // pt-safe pushes the toast viewport below the iPhone Dynamic
+      // Island / notch — without it, toasts on top of the screen are
+      // partly hidden behind the cutout. On desktop sm:top-auto kicks
+      // in and the viewport repositions to the bottom-right, where
+      // safe-area is irrelevant.
+      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 pt-safe sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
       className,
     )}
     {...props}
