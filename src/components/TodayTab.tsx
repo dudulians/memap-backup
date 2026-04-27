@@ -604,23 +604,35 @@ export const TodayTab = () => {
       )}
 
       {/* Header row: streak chip on the left, action buttons on the
-          right. The streak used to be tucked under the row (often
-          hidden behind the notif banner) — putting it inline both
-          fills the previously-empty left side and makes the user's
-          progress immediately visible without hunting. */}
+          right. The streak chip is ALWAYS rendered (even at 0) so the
+          left side never looks empty and the user always knows where
+          to find their streak. */}
       <div className="animate-fade-in space-y-3">
         <div className="flex items-center justify-between gap-2">
-          {globalStreak.currentStreak > 0 ? (
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-br from-orange-500/15 to-orange-600/5 border border-orange-500/20">
-              <Flame className="h-3.5 w-3.5 text-orange-500" strokeWidth={2} fill="currentColor" />
-              <span className="text-xs font-medium text-foreground">
-                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
-                <span className="text-muted-foreground ml-1">{globalStreak.currentStreak === 1 ? t("today.streakDaysOne") : t("today.streakDaysMany", { count: globalStreak.currentStreak })}</span>
+          <div
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
+              globalStreak.currentStreak > 0
+                ? "bg-gradient-to-br from-orange-500/15 to-orange-600/5 border-orange-500/20"
+                : "bg-muted/30 border-border/40"
+            }`}
+            title={globalStreak.currentStreak > 0
+              ? undefined
+              : t("today.streakStartHint")}
+          >
+            <Flame
+              className={`h-3.5 w-3.5 ${globalStreak.currentStreak > 0 ? "text-orange-500" : "text-muted-foreground"}`}
+              strokeWidth={2}
+              fill={globalStreak.currentStreak > 0 ? "currentColor" : "none"}
+            />
+            <span className="text-xs font-medium text-foreground">
+              <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
+              <span className="text-muted-foreground ml-1">
+                {globalStreak.currentStreak === 1
+                  ? t("today.streakDaysOne")
+                  : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
               </span>
-            </div>
-          ) : (
-            <div /> /* spacer so the action buttons stay right-aligned */
-          )}
+            </span>
+          </div>
           <div className="flex items-center gap-1.5">
             {/* Always-accessible Random Play — opens the session in play
                 mode straight away, no need to wait for the Done screen. */}

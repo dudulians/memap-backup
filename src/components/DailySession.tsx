@@ -9,6 +9,7 @@ import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
+import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
 import { playSwipeSound, triggerHaptic as runHaptic } from "@/lib/feedback";
@@ -112,13 +113,49 @@ export const DailySession = ({
     const existingTrackerIds = new Set(trackers.map(t => t.id));
 
     if (playMode) {
-      const allTemplates = TEMPLATE_GROUPS.flatMap((group) => group.templates);
-      const existingTitles = new Set(
-        trackers.map((t) => t.title.toLowerCase().trim())
-      );
-      const available = allTemplates.filter(
-        (tpl) => !existingTitles.has(tpl.title.toLowerCase().trim())
-      );
+      // Pull from BOTH catalogs so the random pool is ~95 templates
+      // wide instead of just the 18 in TEMPLATE_GROUPS. Without this,
+      // a second play round could only offer 8 unique cards (18 - 10
+      // already-played) and felt like reruns.
+      const fromGroups = TEMPLATE_GROUPS.flatMap((g) => g.templates).map((tpl) => ({
+        id: `tg-${tpl.id}`,
+        title: tpl.title,
+        questionText: tpl.questionText,
+        category: tpl.category,
+        subcategory: tpl.subcategory,
+        periodDays: tpl.periodDays,
+        threshold: tpl.threshold,
+        problemWhen: tpl.problemWhen,
+        adviceAboveThreshold: tpl.adviceAboveThreshold,
+      }));
+      const fromStreams = LIFE_STREAMS.flatMap((s) => s.templates).map((tpl) => ({
+        id: `ls-${tpl.id}`,
+        title: tpl.title,
+        questionText: tpl.questionText,
+        category: tpl.category,
+        subcategory: tpl.subcategory,
+        periodDays: tpl.periodDays,
+        threshold: tpl.threshold,
+        problemWhen: tpl.problemWhen,
+        adviceAboveThreshold: tpl.adviceAboveThreshold,
+      }));
+      const all = [...fromGroups, ...fromStreams];
+      // Existing-title set comparing both stored EN and what would be
+      // displayed RU — covers the case where one side of the catalog
+      // pair is stored and the other side appears in the candidate.
+      const norm = (s: string) => s.toLowerCase().trim();
+      const existingTitles = new Set<string>();
+      trackers.forEach((tr) => existingTitles.add(norm(tr.title)));
+      // Dedup the catalog pool itself (an id-collision in the source
+      // catalogs would otherwise let the same title slip through twice).
+      const seenInPool = new Set<string>();
+      const available = all.filter((tpl) => {
+        const key = norm(tpl.title);
+        if (existingTitles.has(key)) return false;
+        if (seenInPool.has(key)) return false;
+        seenInPool.add(key);
+        return true;
+      });
       const shuffled = [...available].sort(() => Math.random() - 0.5);
       const picked = shuffled.slice(0, 10);
       return picked.map((tpl) => ({
@@ -980,14 +1017,28 @@ export const DailySession = ({
             {t("common.yes")}
           </Button>
         </div>
-        <button
-          type="button"
-          onClick={handleSkip}
-          disabled={isAnimating}
-          className="block mx-auto mt-1.5 text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
-        >
-          {t("dailySession.skipQuestion")}
-        </button>
+        {/* Skip + Close inline at the bottom — both are tiny text
+            links so they don't compete with No/Yes for attention, but
+            they live near the user's thumb so dismissing the session
+            doesn't require reaching to the very top of the screen. */}
+        <div className="flex items-center justify-center gap-5 mt-2">
+          <button
+            type="button"
+            onClick={handleSkip}
+            disabled={isAnimating}
+            className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+          >
+            {t("dailySession.skipQuestion")}
+          </button>
+          <span className="text-muted-foreground/30 text-[11px]">·</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+          >
+            {t("common.close")}
+          </button>
+        </div>
       </div>
     </div>
   );

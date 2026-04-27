@@ -255,6 +255,17 @@
     @apply border-border;
   }
 
+  /* Prevent the document body from scrolling on mobile Safari — without
+     this, an elastic / rubber-band pull on a short page lifts the
+     entire view (header included) past the viewport top, making the
+     "sticky" app header look like it's leaving the screen. We let the
+     inner <main> handle scroll instead, and lock html+body to viewport. */
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply text-foreground;
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
