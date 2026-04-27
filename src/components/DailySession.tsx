@@ -646,18 +646,19 @@ export const DailySession = ({
           opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
         }}
       >
-        {/* Close affordance — drag handle pill + X button, same as the
-            in-session header so the dismiss gesture is consistent.
-            Tap closes; drag down past 100px also closes. */}
-        <div className="px-4 pt-2 pb-1 flex-shrink-0">
-          <div
-            className="block mx-auto w-32 h-6 -my-1 flex items-center justify-center mb-1 cursor-grab active:cursor-grabbing"
-            style={{ touchAction: "none" }}
-            onPointerDown={onSheetDragStart}
-            onPointerMove={onSheetDragMove}
-            onPointerUp={onSheetDragEnd}
-            onPointerCancel={onSheetDragEnd}
-          >
+        {/* Close affordances at the top — drag handle pill, X button on
+            the right (more prominent than left-corner). The whole header
+            band is a swipe-down drag region. */}
+        <div
+          className="px-4 pt-2 pb-2 border-b flex-shrink-0 cursor-grab active:cursor-grabbing"
+          style={{ touchAction: "none" }}
+          onPointerDown={onSheetDragStart}
+          onPointerMove={onSheetDragMove}
+          onPointerUp={onSheetDragEnd}
+          onPointerCancel={onSheetDragEnd}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-center pt-0.5 pb-1.5">
             <button
               type="button"
               onClick={onClose}
@@ -665,15 +666,17 @@ export const DailySession = ({
               className="w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
             />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            aria-label={t("common.close")}
-            className="rounded-full bg-muted/40 hover:bg-muted h-9 w-9"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label={t("common.close")}
+              className="rounded-full bg-muted/40 hover:bg-muted h-9 w-9"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         <div className="flex-1 flex flex-col items-center px-5 pt-4 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
@@ -757,6 +760,17 @@ export const DailySession = ({
               );
             })}
           </div>
+
+          {/* Explicit "close" at the bottom — mirrors the active-session
+              footer so the user always has a thumb-reachable way out
+              instead of the screen feeling like it floats outside the app. */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors mt-1"
+          >
+            {t("common.close")}
+          </button>
         </div>
       </div>
     );
