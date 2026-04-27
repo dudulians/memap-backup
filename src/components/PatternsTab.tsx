@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import type { EmblaOptionsType } from "embla-carousel";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -8,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
 import { Lightbulb, AlertTriangle, ChevronRight, CalendarDays, Target, LineChart, GitCompare } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
@@ -48,17 +50,66 @@ export const PatternsTab = () => {
 
   // Section tab: persisted across session reloads so the user lands back where
   // they were, not on the first tab every time.
-  const [section, setSection] = useState<string>(() => {
-    try { return localStorage.getItem("memap_patterns_section") ?? "overview"; } catch { return "overview"; }
+  const SECTIONS = ["overview", "signals", "trends", "links"] as const;
+  type Section = typeof SECTIONS[number];
+  const [section, setSection] = useState<Section>(() => {
+    try {
+      const stored = localStorage.getItem("memap_patterns_section") as Section | null;
+      if (stored && SECTIONS.includes(stored)) return stored;
+    } catch { /* ignore */ }
+    return "overview";
   });
   const handleSectionChange = (value: string) => {
-    setSection(value);
+    if (!SECTIONS.includes(value as Section)) return;
+    setSection(value as Section);
     try { localStorage.setItem("memap_patterns_section", value); } catch { /* ignore */ }
     // Tell the parent <main> scroller to jump back to the top — without
     // this, switching from a deep-scrolled Signals to Overview drops the
     // user mid-calendar instead of showing the new section's top.
     window.dispatchEvent(new Event("memap-scroll-main-top"));
   };
+
+  // Embla carousel for horizontal swiping between sections. Drag is
+  // skipped over zones marked data-no-tabswipe (the calendar's own
+  // tracker swipe area) so the inner gestures don't fight the outer
+  // page swipe.
+  const emblaOptions: EmblaOptionsType = {
+    axis: "x",
+    align: "start",
+    containScroll: "trimSnaps",
+    skipSnaps: false,
+    watchDrag: (_emblaApi, evt) => {
+      const target = evt.target as HTMLElement | null;
+      if (target?.closest("[data-no-tabswipe]")) return false;
+      return true;
+    },
+  };
+  const [emblaRef, emblaApi] = useEmblaCarousel(emblaOptions);
+
+  // section → carousel
+  useEffect(() => {
+    if (!emblaApi) return;
+    const idx = SECTIONS.indexOf(section);
+    if (idx >= 0 && emblaApi.selectedScrollSnap() !== idx) {
+      emblaApi.scrollTo(idx);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section, emblaApi]);
+
+  // carousel → section
+  useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => {
+      const idx = emblaApi.selectedScrollSnap();
+      const next = SECTIONS[idx];
+      if (next && next !== section) handleSectionChange(next);
+    };
+    emblaApi.on("select", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emblaApi, section]);
 
   useEffect(() => {
     loadData();
@@ -333,23 +384,35 @@ export const PatternsTab = () => {
           </TabsList>
         </div>
 
-        {/* --- OVERVIEW: calendar grid + weekly summary ---------------- */}
-        <TabsContent value="overview" className="space-y-6 mt-4 animate-fade-in">
-          <OverviewCard
-            trackers={trackers}
-            entries={entries}
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            onTrackerSelect={handleOpenTrackerDetails}
-            onDayEdit={handleDayEdit}
-            onBulkAnswer={handleBulkAnswer}
-          />
-          <WeeklySummary trackers={trackers} entries={entries} />
-        </TabsContent>
+      </Tabs>
 
-        {/* --- SIGNALS: the pattern/action cards, strong first --------- */}
-        <TabsContent value="signals" className="mt-4 animate-fade-in">
-          <div className="space-y-4">
+      {/* Horizontal swiper between the 4 sections — embla carousel.
+          The sticky Tabs strip above stays in place; slides scroll
+          horizontally underneath it. Each slide's content flows
+          vertically into the parent <main>'s scroll, so swipe-left/
+          right on the page changes section just like a native iOS
+          tab pager. Drag is suppressed over [data-no-tabswipe] zones
+          (currently the calendar's own tracker-swipe area) so inner
+          gestures don't fight the outer page swipe. */}
+      <div className="overflow-x-hidden mt-4" ref={emblaRef}>
+        <div className="flex">
+          {/* --- OVERVIEW: calendar grid + weekly summary -------------- */}
+          <div className="basis-full shrink-0 grow-0 min-w-0 space-y-6 animate-fade-in">
+            <OverviewCard
+              trackers={trackers}
+              entries={entries}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              onTrackerSelect={handleOpenTrackerDetails}
+              onDayEdit={handleDayEdit}
+              onBulkAnswer={handleBulkAnswer}
+            />
+            <WeeklySummary trackers={trackers} entries={entries} />
+          </div>
+
+          {/* --- SIGNALS: the pattern/action cards, strong first ------ */}
+          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
+            <div className="space-y-4">
         {sortedTrackers.map((tracker) => {
           const stats = getTrackerStats(tracker);
           const categoryColor = getCategoryColor(tracker.category);
@@ -476,19 +539,20 @@ export const PatternsTab = () => {
             </Card>
           );
         })}
+            </div>
           </div>
-        </TabsContent>
 
-        {/* --- TRENDS: dual-series chart over time --------------------- */}
-        <TabsContent value="trends" className="mt-4 animate-fade-in">
-          <TrendChart trackers={trackers} entries={entries} />
-        </TabsContent>
+          {/* --- TRENDS: dual-series chart over time ------------------- */}
+          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in" data-no-tabswipe>
+            <TrendChart trackers={trackers} entries={entries} />
+          </div>
 
-        {/* --- LINKS: dependency / correlation insights ---------------- */}
-        <TabsContent value="links" className="mt-4 animate-fade-in">
-          <CorrelationInsights trackers={trackers} entries={entries} />
-        </TabsContent>
-      </Tabs>
+          {/* --- LINKS: dependency / correlation insights ------------- */}
+          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
+            <CorrelationInsights trackers={trackers} entries={entries} />
+          </div>
+        </div>
+      </div>
 
       {/* Disclaimer (always shown, regardless of tab) */}
       <div className="pt-6 mt-8">
