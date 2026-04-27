@@ -24,16 +24,12 @@ workflows:
     integrations:
       app_store_connect: codemagic
 
-    # ios_signing tells Codemagic this workflow uses managed signing
-    # via the App Store Connect integration. The manual fetch script
-    # below additionally calls `--create` so the very first build can
-    # generate the certificate + provisioning profile from scratch
-    # (without it, auto-fetch fails on a fresh Apple Developer
-    # account that has no profile yet).
+    # No `ios_signing:` block: Codemagic's auto-fetch runs BEFORE
+    # custom scripts, and on a fresh Apple Developer account neither
+    # certificate nor profile exists yet — auto-fetch sees nothing to
+    # fetch and fails. Instead we create both explicitly in the "Set
+    # up code signing" script below, then patch the Xcode project.
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.uliana.memap
       vars:
         # Capacitor 8 uses Swift Package Manager (no CocoaPods), so it
         # creates App.xcodeproj — not App.xcworkspace. Point xcode-project
@@ -41,6 +37,10 @@ workflows:
         XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.uliana.memap"
+        # Apple Developer team — needed so xcodebuild can find the
+        # right signing identity in the keychain even if `use-profiles`
+        # didn't write the team into the .pbxproj.
+        APPLE_TEAM_ID: "X4QQRGJ6C4"
       node: 22.11.0
       xcode: latest
       cocoapods: default
@@ -60,16 +60,36 @@ workflows:
 
       - name: Set up code signing
         script: |
+          set -e
+          echo "==> Initialize keychain"
           keychain initialize
+
+          echo "==> List existing certificates (before)"
+          app-store-connect certificates list --type IOS_DISTRIBUTION || true
+
+          echo "==> Create iOS Distribution certificate if missing"
+          # --save downloads the .p12 to ~/Library/MobileDevice/Certificates
+          # and stores the private key alongside. If a cert already exists,
+          # this exits non-zero — we ignore that and just fetch existing.
+          app-store-connect certificates create \
+            --type IOS_DISTRIBUTION \
+            --save || \
+          app-store-connect certificates list \
+            --type IOS_DISTRIBUTION \
+            --save \
+            --certificate-key-passphrase "" || true
+
+          echo "==> Fetch (or create) provisioning profile"
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
+
+          echo "==> Add downloaded certs to keychain"
           keychain add-certificates
-          # `xcode-project use-profiles` looks for .xcodeproj in the
-          # current directory — our Capacitor project lives at
-          # ios/App/App.xcodeproj, so cd in before running it.
+
+          echo "==> Patch Xcode project to use the fetched profile"
           cd $CM_BUILD_DIR/ios/App
-          xcode-project use-profiles
+          xcode-project use-profiles --code-signing-setup-verbose-logging
 
       - name: Increment build number
         script: |
@@ -80,9 +100,14 @@ workflows:
       - name: Build ipa
         script: |
           cd $CM_BUILD_DIR/ios/App
+          # Belt-and-braces: pass DEVELOPMENT_TEAM via xcargs so xcodebuild
+          # has a team set even if `use-profiles` failed to patch the
+          # .pbxproj. The CODE_SIGN_STYLE=Manual + matched profile in
+          # keychain is what makes archive succeed.
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-xcargs "DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
 
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
