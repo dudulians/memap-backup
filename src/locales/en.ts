@@ -4,6 +4,7 @@
 const en = {
   common: {
     back: "Back",
+    off: "Off",
     skip: "Skip",
     next: "Next",
     done: "Done",

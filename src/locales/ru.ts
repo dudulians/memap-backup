@@ -6,6 +6,7 @@ import type { Translation } from "./en";
 const ru: Translation = {
   common: {
     back: "Назад",
+    off: "Выкл",
     skip: "Пропустить",
     next: "Далее",
     done: "Готово",

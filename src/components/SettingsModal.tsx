@@ -16,7 +16,8 @@ import { getNotificationSettings, saveNotificationSettings, requestNotificationP
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
@@ -78,6 +79,32 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [theme, setThemeState] = useState<AppTheme>(() => getTheme());
   const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => getLanguage());
   const [currentPol, setCurrentPol] = useState<"male" | "female" | "neutral">(() => getPol() ?? "neutral");
+
+  // Drill-down navigation state. Settings is now organised iOS-style:
+  // a short main page with category rows, each tap goes to its own
+  // sub-screen. Solves "I have to scroll forever to find a setting"
+  // and the "drag-down doesn't close because I'm scrolled" problem.
+  type SettingsScreen =
+    | "main"
+    | "language"
+    | "gender"
+    | "appearance"
+    | "notifications"
+    | "session"
+    | "trackers"
+    | "help"
+    | "data";
+  const [screen, setScreen] = useState<SettingsScreen>("main");
+  // Reset to main when the sheet closes — next time the user opens
+  // Settings they should land on the main list, not the deep view
+  // they last visited. Delay so the visible reset happens AFTER the
+  // sheet's close animation finishes (no jarring content swap).
+  useEffect(() => {
+    if (!open) {
+      const timer = setTimeout(() => setScreen("main"), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   const handlePolChange = (next: "male" | "female" | "neutral") => {
     if (next !== currentPol) haptics.tap();
@@ -401,37 +428,122 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         className="h-[80vh] p-0 flex flex-col"
         ariaTitle={t("settings.title")}
       >
-        <div className="px-5 pt-3 pb-3 border-b border-border/40 flex-shrink-0">
-          <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
+        <div className="px-5 pt-3 pb-3 border-b border-border/40 flex-shrink-0 flex items-center gap-2 min-h-[3rem]">
+          {screen !== "main" && (
+            <button
+              type="button"
+              onClick={() => setScreen("main")}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground -ml-1"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              <span>{t("common.back")}</span>
+            </button>
+          )}
+          <h2 className={cn(
+            "text-lg font-semibold",
+            screen !== "main" ? "absolute left-1/2 -translate-x-1/2" : ""
+          )}>
+            {screen === "main" && t("settings.title")}
+            {screen === "language" && t("language.settingsLabel")}
+            {screen === "gender" && t("gender.settingsLabel")}
+            {screen === "appearance" && t("settings.appearance")}
+            {screen === "notifications" && t("settings.dailyRemindersTitle")}
+            {screen === "session" && t("settings.dailySessionTitle")}
+            {screen === "trackers" && t("settings.trackersTitle")}
+            {screen === "help" && t("settings.helpTitle")}
+            {screen === "data" && t("settings.dataPrivacyTitle")}
+          </h2>
         </div>
 
         <div className="flex-1 overflow-y-auto" data-vaul-no-drag>
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
-            {/* Current Streak Display */}
-            <Card className="p-4 rounded-3xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
-              <div className="flex items-center gap-3">
-                <Flame className="h-8 w-8 text-orange-500" />
-                <div className="flex-1">
-                  <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{globalStreak.currentStreak}<span className="text-sm font-sans font-normal text-muted-foreground ml-1.5">{t("settings.streakDays")}</span></p>
-                  <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakCurrent")}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xl font-serif font-medium tabular-nums text-muted-foreground">{globalStreak.longestStreak}</p>
-                  <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakLongest")}</p>
-                </div>
-              </div>
-              {globalStreak.totalActiveDays > 0 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {globalStreak.totalActiveDays === 1
-                    ? t("settings.streakTotalOne")
-                    : t("settings.streakTotalMany", { count: globalStreak.totalActiveDays })}
-                </p>
-              )}
-            </Card>
+            {/* === MAIN SCREEN: streak + category list === */}
+            {screen === "main" && (
+              <>
+                {/* Current Streak Display — only on main */}
+                <Card className="p-4 rounded-3xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+                  <div className="flex items-center gap-3">
+                    <Flame className="h-8 w-8 text-orange-500" />
+                    <div className="flex-1">
+                      <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{globalStreak.currentStreak}<span className="text-sm font-sans font-normal text-muted-foreground ml-1.5">{t("settings.streakDays")}</span></p>
+                      <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakCurrent")}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-serif font-medium tabular-nums text-muted-foreground">{globalStreak.longestStreak}</p>
+                      <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakLongest")}</p>
+                    </div>
+                  </div>
+                  {globalStreak.totalActiveDays > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {globalStreak.totalActiveDays === 1
+                        ? t("settings.streakTotalOne")
+                        : t("settings.streakTotalMany", { count: globalStreak.totalActiveDays })}
+                    </p>
+                  )}
+                </Card>
 
-            <Separator />
+                {/* Category list — Apple iOS Settings style. Each row
+                    shows the current value on the right so the user
+                    doesn't have to drill in just to read state. */}
+                {(() => {
+                  const langLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.label ?? "";
+                  const polLabel = t(`gender.${currentPol}`);
+                  const themeLabel = theme === "aurora-dark"
+                    ? t("settings.themeAuroraDark")
+                    : theme === "aurora-light"
+                      ? t("settings.themeAuroraLight")
+                      : t("settings.themeClassic");
+                  const notifLabel = notificationSettings.enabled
+                    ? notificationSettings.time
+                    : t("common.off", { defaultValue: "Off" });
+                  const activeTrackerCount = trackers.filter((tr) => !tr.archived).length;
 
-            {/* Language */}
+                  type Row = {
+                    key: SettingsScreen;
+                    icon: typeof Languages;
+                    label: string;
+                    value?: string;
+                  };
+                  const rows: Row[] = [
+                    { key: "language", icon: Languages, label: t("language.settingsLabel"), value: langLabel },
+                    { key: "gender", icon: User, label: t("gender.settingsLabel"), value: polLabel },
+                    { key: "appearance", icon: Palette, label: t("settings.appearance"), value: themeLabel },
+                    { key: "notifications", icon: Bell, label: t("settings.dailyRemindersTitle"), value: notifLabel },
+                    { key: "session", icon: Volume2, label: t("settings.dailySessionTitle") },
+                    { key: "trackers", icon: ListChecks, label: t("settings.trackersTitle"), value: String(activeTrackerCount) },
+                    { key: "help", icon: HelpCircle, label: t("settings.helpTitle") },
+                    { key: "data", icon: Database, label: t("settings.dataPrivacyTitle") },
+                  ];
+                  return (
+                    <div className="rounded-2xl border border-border/40 overflow-hidden divide-y divide-border/40">
+                      {rows.map((row) => {
+                        const Icon = row.icon;
+                        return (
+                          <button
+                            key={row.key}
+                            type="button"
+                            onClick={() => setScreen(row.key)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
+                          >
+                            <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                            <span className="flex-1 text-sm font-medium">{row.label}</span>
+                            {row.value && (
+                              <span className="text-xs text-muted-foreground truncate max-w-[40%]">
+                                {row.value}
+                              </span>
+                            )}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+
+            {/* === LANGUAGE SUB-SCREEN === */}
+            {screen === "language" && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Languages className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -467,13 +579,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </div>
               </div>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Gender — affects gendered Russian past-tense forms in
-                tracker copy. Only really meaningful in RU; on EN it's
-                still here so the user can opt back into "neutral"
-                bracketed text if they prefer. */}
+            {/* === GENDER SUB-SCREEN === */}
+            {screen === "gender" && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <User className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -504,10 +613,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </div>
               </div>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Appearance */}
+            {/* === APPEARANCE SUB-SCREEN === */}
+            {screen === "appearance" && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Palette className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -572,10 +681,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </div>
               </div>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Daily Reminders */}
+            {/* === NOTIFICATIONS SUB-SCREEN === */}
+            {screen === "notifications" && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <Bell className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -632,10 +741,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </div>
               </div>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Daily Session Settings */}
+            {/* === SESSION SUB-SCREEN === */}
+            {screen === "session" && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <ListChecks className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -685,10 +794,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </div>
               </div>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Trackers Management */}
+            {/* === TRACKERS SUB-SCREEN === */}
+            {screen === "trackers" && (
             <div className="space-y-4">
               <h3 className="font-medium text-sm">{t("settings.trackersTitle")}</h3>
               <p className="text-xs text-muted-foreground">
@@ -728,10 +837,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 )}
               </div>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Help */}
+            {/* === HELP SUB-SCREEN === */}
+            {screen === "help" && (
             <div className="space-y-4">
               <h3 className="font-medium text-sm">{t("settings.helpTitle")}</h3>
               <Button
@@ -746,10 +855,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 {t("settings.showAppTour")}
               </Button>
             </div>
+            )}
 
-            <Separator />
-
-            {/* Data & Privacy */}
+            {/* === DATA & PRIVACY SUB-SCREEN === */}
+            {screen === "data" && (
             <div className="space-y-4">
               <h3 className="font-medium text-sm">{t("settings.dataPrivacyTitle")}</h3>
 
@@ -814,6 +923,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       </BottomSheet>
