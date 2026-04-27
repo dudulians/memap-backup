@@ -499,16 +499,14 @@ export const PatternsTab = () => {
         </p>
       </div>
 
-      {/* Bottom Sheet for Tracker Details */}
+      {/* Bottom Sheet for Tracker Details. Header is hidden visually
+          (sr-only) since TrackerDetails already renders its own
+          title + stats + actions inside the body. */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              {selectedTrackerForDetails && (() => {
-                const SheetIcon = getTrackerIcon(selectedTrackerForDetails.title, selectedTrackerForDetails.category);
-                return <SheetIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />;
-              })()}
-              {selectedTrackerForDetails?.title}
+          <SheetHeader className="sr-only">
+            <SheetTitle>
+              {selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}
             </SheetTitle>
           </SheetHeader>
           {selectedTrackerForDetails && (

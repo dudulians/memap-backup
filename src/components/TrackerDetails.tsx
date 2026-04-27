@@ -3,7 +3,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getEntries, saveEntries } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Lightbulb, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { ArrowLeft, Lightbulb, ChevronLeft, ChevronRight, Check, X, Settings as SettingsIcon, Archive, Trash2 } from "lucide-react";
 import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
 import { MonthlyCalendar } from "@/components/MonthlyCalendar";
 import { format } from "date-fns";
@@ -22,18 +22,27 @@ interface TrackerDetailsProps {
   onNavigateTracker?: (direction: "prev" | "next") => void;
   selectedDate?: string;
   onDateSelect?: (date: string) => void;
+  // Optional management actions surfaced as a prominent button row at
+  // the top of the details view. When omitted, the row is hidden —
+  // useful for read-only contexts.
+  onEdit?: () => void;
+  onArchive?: () => void;
+  onDelete?: () => void;
 }
 
 type TabType = "questions" | "calendar";
 
-export const TrackerDetails = ({ 
-  tracker, 
+export const TrackerDetails = ({
+  tracker,
   trackers,
   currentIndex,
-  onBack, 
+  onBack,
   onNavigateTracker,
   selectedDate,
-  onDateSelect
+  onDateSelect,
+  onEdit,
+  onArchive,
+  onDelete,
 }: TrackerDetailsProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -187,7 +196,9 @@ export const TrackerDetails = ({
         </div>
       )}
 
-      {/* Tracker header card */}
+      {/* Tracker header card — title, category, plus the question
+          (so the user remembers what they're tracking when reviewing
+          stats further down). */}
       <Card className="card-premium">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl flex items-center gap-2">
@@ -202,8 +213,136 @@ export const TrackerDetails = ({
           <p className="text-xs font-medium" style={{ color: `hsl(var(--${categoryColor}))` }}>
             {t(`categories.${tracker.category}` as const)}
           </p>
+          {tracker.questionText && (
+            <p className="text-sm text-muted-foreground mt-1.5 leading-snug">
+              {localizeTrackerQuestion(tracker.questionText)}
+            </p>
+          )}
         </CardHeader>
       </Card>
+
+      {/* Quick stats — shown ALWAYS at the top so the user sees their
+          progress on this tracker before diving into the calendar.
+          The same numbers used in PatternsTab Signals card. */}
+      {(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const rollingStart = new Date(today);
+        rollingStart.setDate(today.getDate() - tracker.periodDays);
+        const cycleStart = tracker.cycleStartDate
+          ? new Date(tracker.cycleStartDate + "T00:00:00")
+          : null;
+        const windowStart = cycleStart && cycleStart > rollingStart ? cycleStart : rollingStart;
+        const inWindow = entries.filter((e) => {
+          if (e.trackerId !== tracker.id) return false;
+          const d = new Date(e.date + "T00:00:00");
+          return d >= windowStart && d <= today;
+        });
+        const significantDays = inWindow.filter((e) =>
+          tracker.problemWhen === "yes" ? e.value : !e.value
+        ).length;
+        const trackedDays = inWindow.length;
+        const remaining = Math.max(0, tracker.threshold - significantDays);
+        const pct = Math.min(100, (significantDays / tracker.threshold) * 100);
+        return (
+          <Card className="card-premium">
+            <CardContent className="pt-4 pb-4 space-y-3">
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-muted-foreground">
+                  <span className="font-serif text-xl font-medium tabular-nums text-foreground">
+                    {significantDays}
+                  </span>
+                  <span className="mx-1 text-muted-foreground/60">/</span>
+                  <span className="tabular-nums">{tracker.threshold}</span>
+                  <span className="ml-1.5">{t("trackerDetails.statSignificantDays")}</span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {remaining > 0
+                    ? t("trackerDetails.statMoreToAction", { count: remaining })
+                    : t("trackerDetails.statActionReached")}
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${pct}%`,
+                    background: pct >= 80
+                      ? "hsl(var(--strong))"
+                      : pct >= 40
+                      ? "hsl(var(--emerging))"
+                      : `hsl(var(--${categoryColor}))`,
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                <span>{t("trackerDetails.statPeriod", { days: tracker.periodDays })}</span>
+                <span>{t("trackerDetails.statTrackedDays", { count: trackedDays })}</span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* Reflection text — always shown when the tracker has one, not
+          only after the threshold is crossed. The wording is the user's
+          (or the template's) intent for what to do when the pattern
+          shows up — useful as a constant reminder. */}
+      {tracker.adviceAboveThreshold && tracker.adviceAboveThreshold.trim() && (
+        <Card className="card-premium border-l-4 border-l-primary/60">
+          <CardContent className="pt-4 pb-4 flex items-start gap-3">
+            <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase tracking-wider text-primary font-semibold mb-1">
+                {t("trackerDetails.reflectionLabel")}
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">
+                {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Manage row — Edit / Archive / Delete as full-width labelled
+          buttons. Replaces the old tiny-icon trio in the sheet header
+          (still works for existing consumers that pass these callbacks). */}
+      {(onEdit || onArchive || onDelete) && (
+        <div className="grid grid-cols-3 gap-2">
+          {onEdit && (
+            <Button
+              variant="outline"
+              onClick={onEdit}
+              className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              <span className="text-[11px] font-medium">{t("trackerDetails.actionEdit")}</span>
+            </Button>
+          )}
+          {onArchive && (
+            <Button
+              variant="outline"
+              onClick={onArchive}
+              className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5"
+            >
+              <Archive className="h-4 w-4" />
+              <span className="text-[11px] font-medium">
+                {tracker.archived ? t("trackerDetails.actionUnarchive") : t("trackerDetails.actionArchive")}
+              </span>
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              variant="outline"
+              onClick={onDelete}
+              className="rounded-xl flex flex-col items-center gap-1 h-auto py-2.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="text-[11px] font-medium">{t("trackerDetails.actionDelete")}</span>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Tab Selector */}
       <div className="flex items-center bg-muted/50 rounded-full p-1">
@@ -278,13 +417,17 @@ export const TrackerDetails = ({
         )}
       </div>
 
+      {/* When the threshold has been reached, surface a stronger
+          "reflection suggested" callout below the tabs as well — even
+          though the same advice text is already up top, this version
+          is highlighted as urgent (action signal). */}
       {showWarning && (
-        <Card className="card-premium border-l-4 border-l-primary animate-fade-in">
+        <Card className="card-premium border-l-4 border-l-strong animate-fade-in">
           <CardHeader>
             <div className="flex items-start gap-3">
-              <Lightbulb className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+              <Lightbulb className="h-6 w-6 text-strong flex-shrink-0 mt-0.5" />
               <div>
-                <CardTitle className="text-lg text-primary mb-2">
+                <CardTitle className="text-lg text-strong mb-2">
                   {t("trackerDetails.reflectionSuggested")}
                 </CardTitle>
                 <p className="text-sm text-foreground">

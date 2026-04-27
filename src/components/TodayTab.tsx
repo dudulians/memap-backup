@@ -877,59 +877,20 @@ export const TodayTab = () => {
         onCreateAnyway={handleCreateAnyway}
       />
 
-      {/* Bottom Sheet for Tracker Details. Actions live in the
-          header as compact icon buttons so the user doesn't have to
-          scroll to the bottom of the calendar to find Edit / Archive
-          / Delete. */}
+      {/* Bottom Sheet for Tracker Details. Header is now minimal —
+          stats, advice and management actions live inside the body so
+          the user sees everything important without scrolling and
+          doesn't have to hit a tiny icon at the top. */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl overflow-y-auto">
-          <SheetHeader>
-            <div className="flex items-center justify-between gap-3 pr-6">
-              <SheetTitle className="flex items-center gap-2 min-w-0">
-                {selectedTrackerForDetails && (() => {
-                  const TIcon = getTrackerIcon(selectedTrackerForDetails.title, selectedTrackerForDetails.category);
-                  return <TIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />;
-                })()}
-                <span className="truncate">{selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}</span>
-              </SheetTitle>
-              {/* Action icons: Edit / Archive / Delete. Tooltips via
-                  aria-label since we don't have a Tooltip wrapper here. */}
-              {selectedTrackerForDetails && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => setSettingsModalOpen(true)}
-                    aria-label={t("today.editTrackerSettings")}
-                    title={t("today.editTrackerSettings")}
-                    className="h-8 w-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                  >
-                    <SettingsIcon className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={handleArchiveTracker}
-                    aria-label={t("today.archiveTracker")}
-                    title={t("today.archiveTracker")}
-                    className="h-8 w-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-                  >
-                    <Archive className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTrackerToDelete(selectedTrackerForDetails);
-                      setDeleteDialogOpen(true);
-                    }}
-                    aria-label={t("today.deleteTracker")}
-                    title={t("today.deleteTracker")}
-                    className="h-8 w-8 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </div>
+          <SheetHeader className="sr-only">
+            <SheetTitle>
+              {selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}
+            </SheetTitle>
           </SheetHeader>
 
           {selectedTrackerForDetails && (
-            <div className="mt-4">
+            <div className="mt-2">
               <TrackerDetails
                 tracker={selectedTrackerForDetails}
                 trackers={trackers}
@@ -937,6 +898,12 @@ export const TodayTab = () => {
                 onNavigateTracker={handleNavigateTracker}
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
+                onEdit={() => setSettingsModalOpen(true)}
+                onArchive={handleArchiveTracker}
+                onDelete={() => {
+                  setTrackerToDelete(selectedTrackerForDetails);
+                  setDeleteDialogOpen(true);
+                }}
               />
             </div>
           )}
