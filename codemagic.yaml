@@ -89,19 +89,8 @@ workflows:
           # query with both type values to be safe.
           for FILTER_TYPE in DISTRIBUTION IOS_DISTRIBUTION; do
             echo "    listing certs of type $FILTER_TYPE"
-            RAW=$(app-store-connect certificates list \
-              --type "$FILTER_TYPE" \
-              --json 2>/dev/null || echo "[]")
-            IDS=$(echo "$RAW" | python3 -c "
-import json, sys
-try:
-  data = json.loads(sys.stdin.read() or '[]')
-  if isinstance(data, dict):
-    data = data.get('data', data.get('certificates', []))
-  print(' '.join(c.get('id', c.get('certificateId', '')) for c in data if c))
-except Exception as e:
-  pass
-" 2>/dev/null)
+            RAW=$(app-store-connect certificates list --type "$FILTER_TYPE" --json 2>/dev/null || echo "[]")
+            IDS=$(echo "$RAW" | python3 -c "import json,sys; d=json.loads(sys.stdin.read() or '[]'); items = d if isinstance(d, list) else d.get('data', []); print(' '.join(c.get('id','') for c in items if c))" 2>/dev/null || echo "")
             if [ -n "$IDS" ]; then
               for cert_id in $IDS; do
                 echo "    revoke $cert_id"
