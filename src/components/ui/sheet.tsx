@@ -97,7 +97,18 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
     // iOS-style tap/drag disambiguation refs
     const isDraggingRef = React.useRef(false);
     const wasDraggingRef = React.useRef(false);
-    const startedAtScrollTop = React.useRef(false);
+    // The Y at which the content reached scrollTop=0 during the
+    // current gesture. Re-set to null whenever we observe scroll
+    // movement above zero. Drag-to-dismiss kicks in once this is
+    // populated AND the finger has travelled DRAG_START_PX downward
+    // from it. That replicates iOS's "scroll first, dismiss when you
+    // hit the top" behaviour.
+    const topAnchorY = React.useRef<number | null>(null);
+    // scrollTop at the moment the pointer landed. If it never changes
+    // during the gesture we know the user isn't scrolling — typically
+    // a desktop mouse drag, where the browser doesn't auto-scroll on
+    // pointer-drag — and we still want them to be able to dismiss.
+    const startScrollTop = React.useRef(0);
 
     const DRAG_START_PX = 10;
     const DISMISS_PX = 180;
@@ -149,17 +160,61 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       dragStart.current = e.clientY;
       isDraggingRef.current = false;
       const el = contentRef.current;
-      startedAtScrollTop.current = !el || el.scrollTop <= 0;
+      const atTop = !el || el.scrollTop <= 0;
+      topAnchorY.current = atTop ? e.clientY : null;
+      startScrollTop.current = el?.scrollTop ?? 0;
     };
 
     const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
       if (activePointer.current !== e.pointerId || dragStart.current === null) return;
-      const dy = e.clientY - dragStart.current;
-      if (!isDraggingRef.current && (dy <= DRAG_START_PX || !startedAtScrollTop.current)) return;
+      const el = contentRef.current;
+      const currentScrollTop = el?.scrollTop ?? 0;
+      const atTop = currentScrollTop <= 0;
+
       if (!isDraggingRef.current) {
-        isDraggingRef.current = true;
-        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+        const dyFromStart = e.clientY - dragStart.current;
+        // Path A — the iOS-style "scroll first, then dismiss". Native
+        // scroll brings the content up to scrollTop=0; once that
+        // happens we plant an anchor and require an extra
+        // DRAG_START_PX downward movement before claiming drag.
+        if (atTop) {
+          if (topAnchorY.current === null) {
+            topAnchorY.current = e.clientY;
+            return;
+          }
+          if (e.clientY - topAnchorY.current > DRAG_START_PX) {
+            isDraggingRef.current = true;
+            dragStart.current = topAnchorY.current;
+            try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+          } else {
+            return;
+          }
+        }
+        // Path B — desktop mouse-drag. The cursor doesn't scroll the
+        // sheet by default, so scrollTop sits unchanged at startScrollTop
+        // while the user pulls down with a deliberate drag. Allow the
+        // dismiss after a generous 50px so accidental nudges don't
+        // close the sheet, but we don't strand the user on a sheet
+        // they scrolled into.
+        else if (
+          currentScrollTop === startScrollTop.current &&
+          dyFromStart > 50
+        ) {
+          isDraggingRef.current = true;
+          // dragStart stays at original pointer-down Y so the visible
+          // travel matches the user's finger from the start of the
+          // intentional drag.
+          try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+        }
+        // Path C — content actively scrolling. Reset the top-anchor
+        // so we re-arm only after scroll settles back at zero.
+        else {
+          topAnchorY.current = null;
+          return;
+        }
       }
+
+      const dy = e.clientY - dragStart.current;
       const next = Math.max(0, dy);
       dragYRef.current = next;
       // Coalesce updates to one per animation frame to avoid stacking
@@ -180,6 +235,7 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       activePointer.current = null;
       dragStart.current = null;
       isDraggingRef.current = false;
+      topAnchorY.current = null;
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;

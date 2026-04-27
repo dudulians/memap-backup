@@ -15,7 +15,7 @@ import { OverviewCard } from "./OverviewCard";
 import { WeeklySummary } from "./WeeklySummary";
 import { TrendChart } from "./TrendChart";
 import { CorrelationInsights } from "./CorrelationInsights";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerDetails } from "./TrackerDetails";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
@@ -502,25 +502,23 @@ export const PatternsTab = () => {
       {/* Bottom Sheet for Tracker Details. Header is hidden visually
           (sr-only) since TrackerDetails already renders its own
           title + stats + actions inside the body. */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl overflow-y-auto">
-          <SheetHeader className="sr-only">
-            <SheetTitle>
-              {selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}
-            </SheetTitle>
-          </SheetHeader>
-          {selectedTrackerForDetails && (
-            <TrackerDetails
-              tracker={selectedTrackerForDetails}
-              trackers={trackers}
-              currentIndex={selectedTrackerIndex}
-              onNavigateTracker={handleNavigateTracker}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      <BottomSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        className="h-[80vh] overflow-y-auto"
+        ariaTitle={selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : "Tracker details"}
+      >
+        {selectedTrackerForDetails && (
+          <TrackerDetails
+            tracker={selectedTrackerForDetails}
+            trackers={trackers}
+            currentIndex={selectedTrackerIndex}
+            onNavigateTracker={handleNavigateTracker}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
+        )}
+      </BottomSheet>
 
       {/* Calendar Answer Editor */}
       {editingTracker && (

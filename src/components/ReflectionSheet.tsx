@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
@@ -158,19 +158,23 @@ export const ReflectionSheet = ({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => { if (!o) { setConfirming(false); onClose(); } }}>
-      <SheetContent side="bottom" className="h-[80vh] overflow-y-auto rounded-t-3xl">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="flex items-center gap-2 text-base">
-            {(() => {
-              const RIcon = getTrackerIcon(tracker.title, tracker.category);
-              return <RIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />;
-            })()}
-            {localizeTrackerTitle(tracker.title)}
-          </SheetTitle>
-        </SheetHeader>
+    <BottomSheet
+      open={open}
+      onOpenChange={(o) => { if (!o) { setConfirming(false); onClose(); } }}
+      className="h-[80vh] overflow-y-auto"
+      ariaTitle={localizeTrackerTitle(tracker.title)}
+    >
+      <div className="px-6 pt-3 pb-4">
+        <h2 className="flex items-center gap-2 text-base font-semibold">
+          {(() => {
+            const RIcon = getTrackerIcon(tracker.title, tracker.category);
+            return <RIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />;
+          })()}
+          {localizeTrackerTitle(tracker.title)}
+        </h2>
+      </div>
 
-        <div className="space-y-5 pb-8">
+      <div className="px-6 space-y-5 pb-8">
 
           {/* Observation window block */}
           <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/30">
@@ -383,7 +387,6 @@ export const ReflectionSheet = ({
             </p>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+    </BottomSheet>
   );
 };

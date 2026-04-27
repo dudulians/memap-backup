@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { X, ChevronRight, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
@@ -220,52 +220,10 @@ export const DailySession = ({
   useEffect(() => {
     if (completed) haptics.success();
   }, [completed]);
-  // Sheet-style drag-down-to-dismiss: track Y translation of the whole
-  // session when the user grabs the drag-handle pill at the top.
-  const [sheetDragY, setSheetDragY] = useState(0);
-  const sheetDragStartY = useRef<number | null>(null);
-  const sheetPointerId = useRef<number | null>(null);
-  // iOS-style tap/drag disambiguation refs for the Done sheet — used
-  // by onDoneDragStart/Move/End/ClickCapture below. Must live at the
-  // component top level (hooks rule), not inside the `if (completed)`
-  // branch where they're consumed.
-  const isDraggingRef = useRef(false);
-  const wasDraggingRef = useRef(false);
-
-  const onSheetDragStart = (e: React.PointerEvent) => {
-    // Don't hijack pointer-down that lands on an interactive element —
-    // X close button, date-strip day buttons, etc. need their own taps
-    // to fire normally. The drag-down dismiss only fires from empty
-    // header space.
-    const target = e.target as HTMLElement;
-    if (target.closest("button") || target.closest("[role='button']") || target.closest("a") || target.closest("input")) {
-      return;
-    }
-    e.stopPropagation();
-    sheetPointerId.current = e.pointerId;
-    sheetDragStartY.current = e.clientY;
-    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
-  };
-  const onSheetDragMove = (e: React.PointerEvent) => {
-    if (sheetPointerId.current !== e.pointerId || sheetDragStartY.current === null) return;
-    e.stopPropagation();
-    const dy = e.clientY - sheetDragStartY.current;
-    setSheetDragY(Math.max(0, dy));
-  };
-  const onSheetDragEnd = (e: React.PointerEvent) => {
-    if (sheetPointerId.current !== e.pointerId) return;
-    e.stopPropagation();
-    try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-    sheetPointerId.current = null;
-    sheetDragStartY.current = null;
-    if (sheetDragY > 100) {
-      // Past the dismiss threshold — fade and close
-      setSheetDragY(window.innerHeight);
-      setTimeout(() => { setSheetDragY(0); onClose(); }, 220);
-    } else {
-      setSheetDragY(0);
-    }
-  };
+  // The custom sheet-drag state used to live here — it's gone now
+  // because the whole session is wrapped in our vaul-based
+  // BottomSheet which handles drag-to-dismiss itself, including the
+  // tricky scroll-vs-drag coordination on iOS.
 
   // Re-pull deck whenever the selected date changes via the date-strip.
   // Clearing answeredCount here would lie about progress within a single
@@ -621,31 +579,18 @@ export const DailySession = ({
     }
 
     return (
-      // Render the Done screen as a fullscreen panel matching the deck
-      // mode below — NOT as a Radix Sheet. If we wrap the Done state in
-      // <Sheet>, then any action that flips `completed` back to false
-      // (e.g. tapping "Fill yesterday" which calls onDateChange and
-      // resets completed) unmounts the Sheet, which fires Radix's
-      // onOpenChange(false), which calls our onClose, which kills the
-      // entire session. On iOS WebView the unmount semantics are
-      // strict and this fires reliably; on web it sometimes slips by.
-      // Either way: don't depend on Sheet for the Done state.
-      <div
-        className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto"
-        style={{
-          transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
-          transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
-          opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
-        }}
-        onPointerDown={onSheetDragStart}
-        onPointerMove={onSheetDragMove}
-        onPointerUp={onSheetDragEnd}
-        onPointerCancel={onSheetDragEnd}
+      // Done state — wrapped in BottomSheet so it shares the same
+      // visual + drag-to-dismiss behaviour as every other sheet in
+      // the app. BottomSheet provides the pill, the X, the dim
+      // backdrop, and (via vaul) the iOS-correct scroll-aware drag
+      // dismissal. We just supply the body content.
+      <BottomSheet
+        open
+        onOpenChange={(o) => { if (!o) onClose(); }}
+        className="h-[90vh] flex flex-col p-0"
+        ariaTitle="Session complete"
       >
-        <div
-          className="flex flex-col items-center px-5 pb-6 gap-6 animate-fade-in"
-          style={{ paddingTop: "calc(env(safe-area-inset-top) + 2.5rem)" }}
-        >
+        <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">
@@ -790,7 +735,7 @@ export const DailySession = ({
             {t("common.close")}
           </button>
         </div>
-      </div>
+      </BottomSheet>
     );
   }
 
@@ -805,66 +750,42 @@ export const DailySession = ({
   const noColorClass = yesIsSignificant ? "balanced" : "strong";
 
   return (
-    <div
-      className="fixed inset-0 bg-background z-50 flex flex-col"
-      style={{
-        touchAction: "none",
-        transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
-        transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
-        opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={endPointer}
-      onPointerCancel={endPointer}
+    // Deck mode wrapped in BottomSheet (vaul). vaul provides the
+    // pill, X close, dim backdrop, and drag-to-dismiss with proper
+    // scroll coordination. We supply only the body content: counter
+    // row + date strip + card area + action buttons.
+    <BottomSheet
+      open
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      className="h-[90vh] flex flex-col p-0"
+      ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
-      {/* Header — drag-handle pill + counter row are wrapped in a
-          large invisible drag region. Anywhere on this region (except
-          the X button) accepts a swipe-down to dismiss. The X still
-          taps to close, the pill itself can also be tapped to close.
-          paddingTop combines iOS safe-area (under Dynamic Island /
-          notch) with the original 0.5rem visual breathing room. */}
       <div
-        className="px-4 pb-2 border-b flex-shrink-0 space-y-2 cursor-grab active:cursor-grabbing"
-        style={{
-          touchAction: "none",
-          paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)",
-        }}
-        onPointerDown={onSheetDragStart}
-        onPointerMove={onSheetDragMove}
-        onPointerUp={onSheetDragEnd}
-        onPointerCancel={onSheetDragEnd}
-        onClick={(e) => e.stopPropagation()}
+        className="flex-1 flex flex-col overflow-hidden"
+        style={{ touchAction: "none" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        // Tells vaul to NOT treat this region's pointer events as
+        // drawer-drag — we have our own card-swipe handlers and they
+        // need full control of the gesture.
+        data-vaul-no-drag
       >
-        <div className="flex items-center justify-center pt-0.5 pb-1">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t("common.close")}
-            className="w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
-          />
-        </div>
+      <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label={t("common.close")}
-          className="rounded-full bg-muted/40 hover:bg-muted h-9 w-9"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-        <div className="text-center">
-          <p className="text-sm font-medium">
-            {t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
-          </p>
-          {selectedDate !== todayLocal() && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              {t("dailySession.fillingInFor", { date: format(new Date(selectedDate + "T00:00:00"), "MMM d", { locale: dateLocale }) })}
+          <div className="w-9" />
+          <div className="text-center">
+            <p className="text-sm font-medium">
+              {t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
             </p>
-          )}
-        </div>
-        <div className="w-9" />
+            {selectedDate !== todayLocal() && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {t("dailySession.fillingInFor", { date: format(new Date(selectedDate + "T00:00:00"), "MMM d", { locale: dateLocale }) })}
+              </p>
+            )}
+          </div>
+          <div className="w-9" />
         </div>
 
         {/* Date strip — last 7 days. Tap any to answer for that date.
@@ -1045,6 +966,7 @@ export const DailySession = ({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </BottomSheet>
   );
 };

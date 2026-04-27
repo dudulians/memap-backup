@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes, addNote } from "@/lib/notes";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { Check, X, FileText, Plus, StickyNote } from "lucide-react";
 import { format } from "date-fns";
@@ -100,15 +100,19 @@ export const CalendarAnswerEditor = ({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl overflow-y-auto">
-        <SheetHeader className="pb-2">
-          <SheetTitle className="text-base font-semibold">
-            {format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
-          </SheetTitle>
-        </SheetHeader>
+    <BottomSheet
+      open={open}
+      onOpenChange={(isOpen) => !isOpen && onClose()}
+      className="h-auto max-h-[80vh] overflow-y-auto"
+      ariaTitle={format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
+    >
+      <div className="px-6 pt-3 pb-2">
+        <h2 className="text-base font-semibold">
+          {format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
+        </h2>
+      </div>
 
-        <div className="space-y-4 pb-8">
+      <div className="px-6 space-y-4 pb-8">
           {/* Pattern info */}
           <p className="text-sm text-muted-foreground flex items-center gap-1.5">
             {(() => {
@@ -271,7 +275,6 @@ export const CalendarAnswerEditor = ({
             )}
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+    </BottomSheet>
   );
 };

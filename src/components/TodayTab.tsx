@@ -5,7 +5,7 @@ import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storag
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
   AlertDialog,
@@ -920,34 +920,31 @@ export const TodayTab = () => {
           stats, advice and management actions live inside the body so
           the user sees everything important without scrolling and
           doesn't have to hit a tiny icon at the top. */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl overflow-y-auto">
-          <SheetHeader className="sr-only">
-            <SheetTitle>
-              {selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : ""}
-            </SheetTitle>
-          </SheetHeader>
-
-          {selectedTrackerForDetails && (
-            <div className="mt-2">
-              <TrackerDetails
-                tracker={selectedTrackerForDetails}
-                trackers={trackers}
-                currentIndex={selectedTrackerIndex}
-                onNavigateTracker={handleNavigateTracker}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                onEdit={() => setSettingsModalOpen(true)}
-                onArchive={handleArchiveTracker}
-                onDelete={() => {
-                  setTrackerToDelete(selectedTrackerForDetails);
-                  setDeleteDialogOpen(true);
-                }}
-              />
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <BottomSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        className="h-[80vh] overflow-y-auto"
+        ariaTitle={selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : "Tracker details"}
+      >
+        {selectedTrackerForDetails && (
+          <div className="mt-2">
+            <TrackerDetails
+              tracker={selectedTrackerForDetails}
+              trackers={trackers}
+              currentIndex={selectedTrackerIndex}
+              onNavigateTracker={handleNavigateTracker}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              onEdit={() => setSettingsModalOpen(true)}
+              onArchive={handleArchiveTracker}
+              onDelete={() => {
+                setTrackerToDelete(selectedTrackerForDetails);
+                setDeleteDialogOpen(true);
+              }}
+            />
+          </div>
+        )}
+      </BottomSheet>
 
       {/* Tracker Settings Modal */}
       {selectedTrackerForDetails && (

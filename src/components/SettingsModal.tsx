@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { SUPPORTED_LANGUAGES, SupportedLanguage, setLanguage, getLanguage } from "@/lib/i18n";
 import { Languages, User } from "lucide-react";
 import { POL_CHANGED_EVENT, getPol } from "@/lib/genderPolish";
@@ -387,20 +387,19 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
   return (
     <>
-      {/* Settings is now a bottom sheet, just like Done / TrackerDetails /
-          ReflectionSheet. Drag-down anywhere on the body dismisses
-          (handled by the shared SheetContent primitive), the underlying
-          app peeks from the top, and the user doesn't lose context. */}
-      <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent
-          side="bottom"
-          className="h-[80vh] rounded-t-3xl overflow-y-auto p-0 flex flex-col"
-        >
-          <SheetHeader className="px-5 pt-6 pb-3 border-b border-border/40">
-            <SheetTitle className="text-lg font-semibold">
-              {t("settings.title")}
-            </SheetTitle>
-          </SheetHeader>
+      {/* Settings as a vaul-based bottom sheet — drag-from-anywhere
+          coordinates correctly with internal scroll (the long settings
+          list scrolls; pulling down from scrollTop=0 dismisses), the
+          underlying app peeks from the top, no lost context. */}
+      <BottomSheet
+        open={open}
+        onOpenChange={(v) => { if (!v) onClose(); }}
+        className="h-[80vh] p-0 flex flex-col"
+        ariaTitle={t("settings.title")}
+      >
+        <div className="px-5 pt-3 pb-3 border-b border-border/40 flex-shrink-0">
+          <h2 className="text-lg font-semibold">{t("settings.title")}</h2>
+        </div>
 
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
@@ -813,8 +812,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             </div>
           </div>
         </div>
-        </SheetContent>
-      </Sheet>
+      </BottomSheet>
 
       <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <AlertDialogContent>

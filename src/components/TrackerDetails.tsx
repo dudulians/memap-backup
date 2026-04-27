@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getEntries, saveEntries } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Lightbulb, ChevronLeft, ChevronRight, Check, X, Settings as SettingsIcon, Archive, Trash2 } from "lucide-react";
 import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
 import { MonthlyCalendar } from "@/components/MonthlyCalendar";
@@ -283,14 +283,38 @@ export const TrackerDetails = ({
         );
       })()}
 
-      {/* Reflection text — always shown when the tracker has one. */}
+      {/* Reflection text — single block, title and accent shift when
+          the tracker has hit its threshold. Below threshold reads as
+          "If this becomes frequent..."; above threshold becomes the
+          stronger "Time to reflect" with the urgent strong-colour
+          accent. We deliberately don't render two separate cards
+          (used to be a duplicate at the bottom) — same advice text
+          twice on one screen looked broken. */}
       {tracker.adviceAboveThreshold && tracker.adviceAboveThreshold.trim() && (
-        <Card className="card-premium border-l-4 border-l-primary/60">
+        <Card
+          className={cn(
+            "card-premium border-l-4",
+            showWarning ? "border-l-strong" : "border-l-primary/60",
+          )}
+        >
           <CardContent className="pt-4 pb-4 flex items-start gap-3">
-            <Lightbulb className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+            <Lightbulb
+              className={cn(
+                "h-5 w-5 flex-shrink-0 mt-0.5",
+                showWarning ? "text-strong" : "text-primary",
+              )}
+              strokeWidth={1.75}
+            />
             <div className="min-w-0 flex-1">
-              <p className="text-xs uppercase tracking-wider text-primary font-semibold mb-1">
-                {t("trackerDetails.reflectionLabel")}
+              <p
+                className={cn(
+                  "text-xs uppercase tracking-wider font-semibold mb-1",
+                  showWarning ? "text-strong" : "text-primary",
+                )}
+              >
+                {showWarning
+                  ? t("trackerDetails.reflectionSuggested")
+                  : t("trackerDetails.reflectionLabel")}
               </p>
               <p className="text-sm text-foreground leading-relaxed">
                 {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
@@ -340,27 +364,11 @@ export const TrackerDetails = ({
         </div>
       )}
 
-      {/* When the threshold has been reached, surface a stronger
-          "reflection suggested" callout below the tabs as well — even
-          though the same advice text is already up top, this version
-          is highlighted as urgent (action signal). */}
-      {showWarning && (
-        <Card className="card-premium border-l-4 border-l-strong animate-fade-in">
-          <CardHeader>
-            <div className="flex items-start gap-3">
-              <Lightbulb className="h-6 w-6 text-strong flex-shrink-0 mt-0.5" />
-              <div>
-                <CardTitle className="text-lg text-strong mb-2">
-                  {t("trackerDetails.reflectionSuggested")}
-                </CardTitle>
-                <p className="text-sm text-foreground">
-                  {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-      )}
+      {/* The threshold-reached callout used to live here as a second
+          reflection block. Removed — the single block above already
+          changes its title to "Time to reflect" and accent colour to
+          strong when showWarning is true, so this duplicate just
+          repeated the same advice text twice on one screen. */}
     </div>
   );
 };

@@ -266,9 +266,9 @@ const Index = () => {
           data-coachmark="settings-button"
           onClick={() => setSettingsModalOpen(true)}
           aria-label={t("common.settings")}
-          className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+          className="absolute right-2 bottom-1.5 h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >
-          <Settings className="h-4 w-4" strokeWidth={1.75} />
+          <Settings className="h-5 w-5" strokeWidth={1.75} />
         </button>
       </header>
 
