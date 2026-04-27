@@ -638,40 +638,76 @@ export const DailySession = ({
       });
     }
 
-    // Long-swipe-down to dismiss the whole sheet from anywhere on its
-    // body, not just the small drag-handle pill at the top. Threshold
-    // is intentionally HIGH (180px) and demands a clear vertical swipe
-    // (vy > vx * 1.5) so accidental finger drift doesn't dismiss the
-    // user mid-read. We translate the sheet during drag for live
-    // feedback, then call onClose past threshold or snap back below it.
+    // iOS-style sheet dismiss: drag starts from anywhere on the sheet
+    // body — including action rows. Differentiator from "tap" is total
+    // movement: if the finger barely moved, it's a tap (button fires
+    // normally); if it moved past a small drag-start threshold (10px
+    // vertical), we take over as a drag. Past 180px → dismiss.
+    //
+    // Why a two-stage threshold:
+    //   – 10px (DRAG_START): below this, ignore — let button taps work.
+    //   – 180px (DISMISS):   below this, snap back; above, close.
+    //
+    // We also need to swallow the click event that would normally fire
+    // on the row the user pressed on — if the drag took over, the
+    // implicit pointerup → click should not bubble. `wasDragging` flag
+    // is read by an onClickCapture handler at the wrapper.
+    const DRAG_START_PX = 10;
+    const DISMISS_PX = 180;
+    const isDraggingRef = useRef(false);
+    const wasDraggingRef = useRef(false);
+
     const onDoneDragStart = (e: React.PointerEvent) => {
-      const target = e.target as HTMLElement;
-      // Don't hijack drags that begin on an interactive control —
-      // tapping a row should fire its onClick normally.
-      if (target.closest("button") || target.closest("a") || target.closest("input")) return;
       sheetPointerId.current = e.pointerId;
       sheetDragStartY.current = e.clientY;
-      try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      isDraggingRef.current = false;
     };
     const onDoneDragMove = (e: React.PointerEvent) => {
       if (sheetPointerId.current !== e.pointerId || sheetDragStartY.current === null) return;
       const dy = e.clientY - sheetDragStartY.current;
-      // Only show drag feedback when the user clearly intends to dismiss
-      // (heading mostly straight down). Otherwise a horizontal scroll
-      // attempt would shift the sheet awkwardly.
+      if (dy <= DRAG_START_PX && !isDraggingRef.current) return;
+      if (!isDraggingRef.current) {
+        // crossed the start threshold — take over as a drag
+        isDraggingRef.current = true;
+        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      }
       setSheetDragY(Math.max(0, dy));
     };
     const onDoneDragEnd = (e: React.PointerEvent) => {
       if (sheetPointerId.current !== e.pointerId) return;
-      try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      const wasDrag = isDraggingRef.current;
+      if (wasDrag) {
+        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      }
       sheetPointerId.current = null;
       sheetDragStartY.current = null;
-      if (sheetDragY > 180) {
-        // Past dismiss threshold — animate the sheet off and close
-        setSheetDragY(window.innerHeight);
-        setTimeout(() => { setSheetDragY(0); onClose(); }, 220);
+      isDraggingRef.current = false;
+
+      if (wasDrag) {
+        // Suppress the click event that would otherwise fire on the
+        // row under the finger when the user "tapped and dragged".
+        wasDraggingRef.current = true;
+        // Clear the flag in the next tick — by then click will have
+        // either fired (and been swallowed) or never reached us.
+        setTimeout(() => { wasDraggingRef.current = false; }, 50);
+
+        if (sheetDragY > DISMISS_PX) {
+          setSheetDragY(window.innerHeight);
+          setTimeout(() => { setSheetDragY(0); onClose(); }, 220);
+        } else {
+          setSheetDragY(0);
+        }
       } else {
         setSheetDragY(0);
+      }
+    };
+    // Capture-phase click handler runs BEFORE the row's onClick. If
+    // we just finished a drag, swallow the click so the action menu
+    // doesn't fire spuriously.
+    const onDoneClickCapture = (e: React.MouseEvent) => {
+      if (wasDraggingRef.current) {
+        e.preventDefault();
+        e.stopPropagation();
       }
     };
 
@@ -691,6 +727,7 @@ export const DailySession = ({
           onPointerMove={onDoneDragMove}
           onPointerUp={onDoneDragEnd}
           onPointerCancel={onDoneDragEnd}
+          onClickCapture={onDoneClickCapture}
         >
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
