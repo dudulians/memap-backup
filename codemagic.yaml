@@ -79,20 +79,38 @@ workflows:
           # Apple limits us to 2 active distribution certificates per
           # team. We generate an ephemeral private key for each build,
           # so any cert created on a previous build is useless to us
-          # (its key is gone). Revoke them before creating a fresh one
-          # — otherwise the API returns 409 ("You already have a
+          # (its key is gone). Revoke them all before creating a fresh
+          # one — otherwise the API returns 409 ("You already have a
           # current Distribution certificate") and the build dies.
-          EXISTING_IDS=$(app-store-connect certificates list \
-            --type IOS_DISTRIBUTION \
-            --json 2>/dev/null \
-            | python3 -c "import json,sys; data=json.load(sys.stdin); print(' '.join(c['id'] for c in data))" \
-            || echo "")
-          if [ -n "$EXISTING_IDS" ]; then
-            for cert_id in $EXISTING_IDS; do
-              echo "    revoke $cert_id"
-              app-store-connect certificates revoke "$cert_id" || true
-            done
-          fi
+          #
+          # Codemagic-cli-tools stores App Store Connect distribution
+          # certs under the broader DISTRIBUTION type (see fetch-signing
+          # -files internal filter "DISTRIBUTION,IOS_DISTRIBUTION"). We
+          # query with both type values to be safe.
+          for FILTER_TYPE in DISTRIBUTION IOS_DISTRIBUTION; do
+            echo "    listing certs of type $FILTER_TYPE"
+            RAW=$(app-store-connect certificates list \
+              --type "$FILTER_TYPE" \
+              --json 2>/dev/null || echo "[]")
+            IDS=$(echo "$RAW" | python3 -c "
+import json, sys
+try:
+  data = json.loads(sys.stdin.read() or '[]')
+  if isinstance(data, dict):
+    data = data.get('data', data.get('certificates', []))
+  print(' '.join(c.get('id', c.get('certificateId', '')) for c in data if c))
+except Exception as e:
+  pass
+" 2>/dev/null)
+            if [ -n "$IDS" ]; then
+              for cert_id in $IDS; do
+                echo "    revoke $cert_id"
+                app-store-connect certificates revoke "$cert_id" || true
+              done
+            else
+              echo "    none found for $FILTER_TYPE"
+            fi
+          done
 
           echo "==> Generate private key for the new distribution cert"
           openssl genrsa -out /tmp/cert_private_key.pem 2048
