@@ -352,30 +352,13 @@ export const OverviewCard = ({
             </div>
           </div>
 
-          {/* Pattern navigation arrows */}
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePrevTracker}
-              className="h-7 w-7 rounded-full"
-              aria-label={t("overview.prevPattern")}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs text-muted-foreground tabular-nums min-w-[3ch] text-center">
-              {activeTrackerIndex + 1}/{trackers.length}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextTracker}
-              className="h-7 w-7 rounded-full"
-              aria-label={t("overview.nextPattern")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Tracker switcher used to be small chevron arrows + count
+              here. Removed — they were tiny tap targets, sat right at
+              the page edge (causing accidental embla section swipes
+              when fingers brushed past), and were redundant with the
+              chip strip below which is the actual best-practice
+              tracker selector (same pattern as Apple Music category
+              tabs / Spotify horizontal tabs). */}
         </div>
 
         {/* Pattern chips — moved tight to the top so the calendar is

@@ -106,6 +106,49 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     }
   }, [open]);
 
+  // iOS-native swipe-back: pointer that lands within 36px of the
+  // left edge and travels >60px right (with horizontal-dominant
+  // motion) navigates back to the main settings list. We attach
+  // listeners on the document during capture phase so vaul's own
+  // pointer handling on the drawer can't swallow our event first.
+  // Vertical-dominant swipes still flow through to vaul for
+  // drag-to-dismiss.
+  useEffect(() => {
+    if (!open || screen === "main") return;
+    let startX: number | null = null;
+    let startY: number | null = null;
+    let active = false;
+    const onDown = (e: PointerEvent) => {
+      if (e.clientX > 36) return;
+      startX = e.clientX;
+      startY = e.clientY;
+      active = true;
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!active || startX === null || startY === null) return;
+      const dx = e.clientX - startX;
+      const dy = Math.abs(e.clientY - startY);
+      if (dx > 60 && dx > dy * 1.5) {
+        setScreen("main");
+        active = false;
+      } else if (dy > 30 && dy > Math.abs(dx)) {
+        // Vertical-dominant — let vaul handle drag-to-dismiss.
+        active = false;
+      }
+    };
+    const reset = () => { active = false; startX = null; startY = null; };
+    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("pointermove", onMove, true);
+    document.addEventListener("pointerup", reset, true);
+    document.addEventListener("pointercancel", reset, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("pointermove", onMove, true);
+      document.removeEventListener("pointerup", reset, true);
+      document.removeEventListener("pointercancel", reset, true);
+    };
+  }, [open, screen]);
+
   const handlePolChange = (next: "male" | "female" | "neutral") => {
     if (next !== currentPol) haptics.tap();
     setCurrentPol(next);
@@ -455,67 +498,18 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           </h2>
         </div>
 
-        {/* The body used to opt out of vaul's drag with
-            data-vaul-no-drag — that fix was for one giant scrolling
-            list. With drill-down each screen is short and rarely
-            scrolls, so we let vaul handle drag-to-dismiss as
-            originally designed. We also wire up an iOS-native swipe-
-            from-left-edge to navigate back from a sub-screen to
-            main — saves the user from reaching for the small Back
-            button in the header. */}
-        <div
-          className="flex-1 overflow-y-auto"
-          onPointerDown={(e) => {
-            // Swipe-back only matters on a sub-screen.
-            if (screen === "main") return;
-            // Must start near the left edge — same as iOS native back.
-            if (e.clientX > 32) return;
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const onMove = (mv: PointerEvent) => {
-              const dx = mv.clientX - startX;
-              const dy = Math.abs(mv.clientY - startY);
-              // Horizontal-dominant swipe past 60px → go back.
-              if (dx > 60 && dx > dy * 1.5) {
-                setScreen("main");
-                cleanup();
-              }
-            };
-            const cleanup = () => {
-              window.removeEventListener("pointermove", onMove);
-              window.removeEventListener("pointerup", cleanup);
-              window.removeEventListener("pointercancel", cleanup);
-            };
-            window.addEventListener("pointermove", onMove);
-            window.addEventListener("pointerup", cleanup);
-            window.addEventListener("pointercancel", cleanup);
-          }}
-        >
+        {/* Body — vaul handles drag-to-dismiss (vertical) directly;
+            edge swipe-back is handled by a document-level listener
+            above so it works even if vaul captures pointer events
+            on the drawer first. */}
+        <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
-            {/* === MAIN SCREEN: streak + category list === */}
+            {/* === MAIN SCREEN: category list === */}
             {screen === "main" && (
               <>
-                {/* Current Streak Display — only on main */}
-                <Card className="p-4 rounded-3xl bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
-                  <div className="flex items-center gap-3">
-                    <Flame className="h-8 w-8 text-orange-500" />
-                    <div className="flex-1">
-                      <p className="text-3xl font-serif font-medium tabular-nums tracking-tight">{globalStreak.currentStreak}<span className="text-sm font-sans font-normal text-muted-foreground ml-1.5">{t("settings.streakDays")}</span></p>
-                      <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakCurrent")}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xl font-serif font-medium tabular-nums text-muted-foreground">{globalStreak.longestStreak}</p>
-                      <p className="text-xs text-muted-foreground tracking-wide uppercase">{t("settings.streakLongest")}</p>
-                    </div>
-                  </div>
-                  {globalStreak.totalActiveDays > 0 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {globalStreak.totalActiveDays === 1
-                        ? t("settings.streakTotalOne")
-                        : t("settings.streakTotalMany", { count: globalStreak.totalActiveDays })}
-                    </p>
-                  )}
-                </Card>
+                {/* Streak card removed — it's already prominent on the
+                    Cards screen header, no reason to duplicate it inside
+                    Settings. Settings is now purely a navigation list. */}
 
                 {/* Category list — Apple iOS Settings style. Each row
                     shows the current value on the right so the user
@@ -839,7 +833,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 {t("settings.trackersDesc")}
               </p>
               
-              <div className="space-y-2 max-h-48 overflow-y-auto">
+              <div className="space-y-2">
                 {trackers.map(tracker => (
                   <div
                     key={tracker.id}
