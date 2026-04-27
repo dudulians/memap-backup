@@ -969,10 +969,10 @@ export const DailySession = ({
             onClick={() => handleAnswer(true)}
             disabled={isAnimating}
             className={cn(
-              "rounded-full h-10",
+              "rounded-full border-2 h-10",
               yesColorClass === "strong"
-                ? "bg-strong hover:bg-strong/90 text-strong-foreground"
-                : "bg-balanced hover:bg-balanced/90 text-balanced-foreground"
+                ? "bg-transparent border-strong/50 hover:bg-strong/10 text-strong"
+                : "bg-transparent border-balanced/60 hover:bg-balanced/10 text-balanced"
             )}
           >
             {t("common.yes")}
