@@ -6,7 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Edit2, Trash2, Calendar, Tag, X, ArrowLeft, Search } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Plus, Edit2, Trash2, Calendar, Tag, X, ArrowLeft, Search, CalendarDays } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Note, getNotes, addNote, updateNote, deleteNote } from "@/lib/notes";
 import { Tracker } from "@/types/tracker";
 import { getTrackers } from "@/lib/storage";
@@ -188,12 +191,36 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
               <div className="space-y-2">
                 <Label className="text-xs">{t("notesTab.date")}</Label>
-                <Input
-                  type="date"
-                  value={newNote.date}
-                  onChange={(e) => setNewNote({ ...newNote, date: e.target.value })}
-                  max={today}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal rounded-md",
+                        !newNote.date && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {newNote.date
+                        ? format(parseISO(newNote.date), "PPP", { locale: dateLocale })
+                        : t("notesTab.date")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      locale={dateLocale}
+                      selected={newNote.date ? parseISO(newNote.date) : undefined}
+                      onSelect={(d) => {
+                        if (d) {
+                          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                          setNewNote({ ...newNote, date: iso });
+                        }
+                      }}
+                      disabled={(d) => d > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
@@ -251,12 +278,36 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
               <div className="space-y-2">
                 <Label className="text-xs">{t("notesTab.date")}</Label>
-                <Input
-                  type="date"
-                  value={editingNote.date}
-                  onChange={(e) => setEditingNote({ ...editingNote, date: e.target.value })}
-                  max={today}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal rounded-md",
+                        !editingNote.date && "text-muted-foreground",
+                      )}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {editingNote.date
+                        ? format(parseISO(editingNote.date), "PPP", { locale: dateLocale })
+                        : t("notesTab.date")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarPicker
+                      mode="single"
+                      locale={dateLocale}
+                      selected={editingNote.date ? parseISO(editingNote.date) : undefined}
+                      onSelect={(d) => {
+                        if (d) {
+                          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                          setEditingNote({ ...editingNote, date: iso });
+                        }
+                      }}
+                      disabled={(d) => d > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
