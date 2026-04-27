@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SUPPORTED_LANGUAGES, SupportedLanguage, setLanguage, getLanguage } from "@/lib/i18n";
 import { Languages, User } from "lucide-react";
 import { POL_CHANGED_EVENT, getPol } from "@/lib/genderPolish";
@@ -378,35 +379,26 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     window.location.reload();
   };
 
-  // Lock body scroll while the settings page is open so the background
-  // doesn't scroll under it. Settings takes over the whole viewport.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
-
-  if (!open) {
-    return null;
-  }
+  // Body scroll lock used to be needed when Settings was a fullscreen
+  // overlay. The Sheet primitive (Radix Dialog under the hood) now
+  // handles modal scroll-lock + focus management automatically.
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex flex-col bg-background animate-fade-in">
-        {/* Sticky page header with back arrow */}
-        <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-background/95 backdrop-blur-md">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="rounded-full h-9 w-9 -ml-1"
-            aria-label={t("common.back")}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-lg font-semibold">{t("settings.title")}</h1>
-        </div>
+      {/* Settings is now a bottom sheet, just like Done / TrackerDetails /
+          ReflectionSheet. Drag-down anywhere on the body dismisses
+          (handled by the shared SheetContent primitive), the underlying
+          app peeks from the top, and the user doesn't lose context. */}
+      <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+        <SheetContent
+          side="bottom"
+          className="h-[80vh] rounded-t-3xl overflow-y-auto p-0 flex flex-col"
+        >
+          <SheetHeader className="px-5 pt-6 pb-3 border-b border-border/40">
+            <SheetTitle className="text-lg font-semibold">
+              {t("settings.title")}
+            </SheetTitle>
+          </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-md px-5 py-5 space-y-6">
@@ -819,7 +811,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             </div>
           </div>
         </div>
-      </div>
+        </SheetContent>
+      </Sheet>
 
       <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <AlertDialogContent>
