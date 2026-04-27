@@ -106,46 +106,51 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     }
   }, [open]);
 
-  // iOS-native swipe-back: pointer that lands within 36px of the
-  // left edge and travels >60px right (with horizontal-dominant
-  // motion) navigates back to the main settings list. We attach
-  // listeners on the document during capture phase so vaul's own
-  // pointer handling on the drawer can't swallow our event first.
-  // Vertical-dominant swipes still flow through to vaul for
-  // drag-to-dismiss.
+  // iOS-native swipe-back: a touch that lands within 50px of the
+  // left edge and travels >50px right (with horizontal-dominant
+  // motion) navigates back to the main settings list.
+  //
+  // We use TOUCH events (not pointer events) attached to window with
+  // capture: true. Touch events on iOS WebView fire reliably even
+  // when vaul has set up pointer-event listeners — they're a
+  // separate event system. Pointer events get swallowed by vaul's
+  // drawer first and our listener never sees them.
   useEffect(() => {
     if (!open || screen === "main") return;
     let startX: number | null = null;
     let startY: number | null = null;
     let active = false;
-    const onDown = (e: PointerEvent) => {
-      if (e.clientX > 36) return;
-      startX = e.clientX;
-      startY = e.clientY;
+    const onStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      if (t.clientX > 50) return;
+      startX = t.clientX;
+      startY = t.clientY;
       active = true;
     };
-    const onMove = (e: PointerEvent) => {
+    const onMove = (e: TouchEvent) => {
       if (!active || startX === null || startY === null) return;
-      const dx = e.clientX - startX;
-      const dy = Math.abs(e.clientY - startY);
-      if (dx > 60 && dx > dy * 1.5) {
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = Math.abs(t.clientY - startY);
+      if (dx > 50 && dx > dy * 1.3) {
         setScreen("main");
         active = false;
       } else if (dy > 30 && dy > Math.abs(dx)) {
-        // Vertical-dominant — let vaul handle drag-to-dismiss.
-        active = false;
+        active = false; // vertical → let vaul handle drag-to-close
       }
     };
     const reset = () => { active = false; startX = null; startY = null; };
-    document.addEventListener("pointerdown", onDown, true);
-    document.addEventListener("pointermove", onMove, true);
-    document.addEventListener("pointerup", reset, true);
-    document.addEventListener("pointercancel", reset, true);
+    window.addEventListener("touchstart", onStart, { capture: true, passive: true });
+    window.addEventListener("touchmove", onMove, { capture: true, passive: true });
+    window.addEventListener("touchend", reset, { capture: true });
+    window.addEventListener("touchcancel", reset, { capture: true });
     return () => {
-      document.removeEventListener("pointerdown", onDown, true);
-      document.removeEventListener("pointermove", onMove, true);
-      document.removeEventListener("pointerup", reset, true);
-      document.removeEventListener("pointercancel", reset, true);
+      window.removeEventListener("touchstart", onStart, { capture: true });
+      window.removeEventListener("touchmove", onMove, { capture: true });
+      window.removeEventListener("touchend", reset, { capture: true });
+      window.removeEventListener("touchcancel", reset, { capture: true });
     };
   }, [open, screen]);
 
@@ -476,7 +481,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             <button
               type="button"
               onClick={() => setScreen("main")}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground -ml-1"
+              className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 -ml-1 px-2 py-1 -my-1 rounded-md min-h-[40px] active:bg-primary/10 transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
               <span>{t("common.back")}</span>

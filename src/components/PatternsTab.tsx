@@ -14,7 +14,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
-import { WeeklySummary } from "./WeeklySummary";
 import { TrendChart } from "./TrendChart";
 import { CorrelationInsights } from "./CorrelationInsights";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -412,8 +411,8 @@ export const PatternsTab = () => {
           gestures don't fight the outer page swipe. */}
       <div className="overflow-x-hidden mt-4" ref={emblaRef}>
         <div className="flex">
-          {/* --- OVERVIEW: calendar grid + weekly summary -------------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 space-y-6 animate-fade-in">
+          {/* --- OVERVIEW: calendar focus, no extra clutter ----------- */}
+          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
             <OverviewCard
               trackers={trackers}
               entries={entries}
@@ -423,7 +422,6 @@ export const PatternsTab = () => {
               onDayEdit={handleDayEdit}
               onBulkAnswer={handleBulkAnswer}
             />
-            <WeeklySummary trackers={trackers} entries={entries} />
           </div>
 
           {/* --- SIGNALS: the pattern/action cards, strong first ------ */}

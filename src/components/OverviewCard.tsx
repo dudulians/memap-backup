@@ -332,40 +332,12 @@ export const OverviewCard = ({
   return (
     <Card className="card-premium overflow-hidden animate-fade-in">
       <CardContent className="p-3">
-        {/* Header with title, view toggle and pattern navigation arrows */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">{t("overview.heading")}</h2>
-            <div className="flex items-center bg-muted/50 rounded-full p-0.5">
-              <button
-                onClick={() => setCalendarView("month")}
-                className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-medium transition-all",
-                  calendarView === "month" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                )}
-              >{t("overview.month")}</button>
-              <button
-                onClick={() => setCalendarView("year")}
-                className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-medium transition-all",
-                  calendarView === "year" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                )}
-              >{t("overview.year")}</button>
-            </div>
-          </div>
-
-          {/* Just the count — no chevron arrows. Tapping the chips
-              strip below is the real way to switch tracker. The arrows
-              were tiny + sat at the page edge, causing accidental embla
-              section swipes when fingers brushed past. */}
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {activeTrackerIndex + 1}/{trackers.length}
-          </span>
-        </div>
-
-        {/* Pattern chips — moved tight to the top so the calendar is
-            visible above the fold. The previously-redundant
-            "Календарь для:" label is dropped — the active chip already
-            highlights the chosen tracker. */}
-        <div className="mb-2">
+        {/* Tracker selector — the chip strip is now the entire top
+            surface of the Overview. Bigger touch targets (px-3 py-2,
+            h-9) than before, more obvious as a navigator. The
+            previous heading row, count, and Month/Year toggle all
+            removed — they were noise above the actual content. */}
+        <div className="mb-3" data-no-tabswipe>
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-card to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-card to-transparent z-10 pointer-events-none" />
@@ -373,8 +345,8 @@ export const OverviewCard = ({
             <div
               ref={chipsContainerRef}
               data-coachmark="overview-chips"
-              className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide scroll-smooth"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex gap-2 overflow-x-auto py-1 px-1 scrollbar-hide scroll-smooth"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               {trackers.map((tracker, index) => {
                 const isActive = index === activeTrackerIndex;
@@ -384,36 +356,19 @@ export const OverviewCard = ({
                     key={tracker.id}
                     onClick={() => setActiveTrackerIndex(index)}
                     className={cn(
-                      "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs whitespace-nowrap transition-all duration-200 flex-shrink-0",
+                      "flex items-center gap-2 px-3 py-2 rounded-full text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0 min-h-[36px]",
                       isActive
-                        ? "bg-foreground text-background font-semibold shadow-md scale-105"
-                        : "bg-muted/40 text-muted-foreground hover:bg-muted/70 font-medium"
+                        ? "bg-foreground text-background font-semibold shadow-md"
+                        : "bg-muted/40 text-muted-foreground hover:bg-muted/70 font-medium",
                     )}
                   >
-                    <Icon className="h-3.5 w-3.5" strokeWidth={isActive ? 2.25 : 1.75} />
+                    <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
                     <span>{localizeTrackerTitle(tracker.title)}</span>
                   </button>
                 );
               })}
             </div>
           </div>
-        </div>
-
-        {/* Compact stats row — single line, replaces the two big tiles
-            so the calendar comes up immediately. */}
-        <div
-          className="flex items-center justify-between gap-3 px-1 mb-3 text-xs"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <span className="text-muted-foreground">
-            <span className="font-serif text-base font-medium tabular-nums text-foreground mr-1">{monthStats.trackedDays}</span>
-            {t("overview.daysTracked").toLowerCase()}
-          </span>
-          <span className="text-muted-foreground">
-            <span className="font-serif text-base font-medium tabular-nums text-strong mr-1">{monthStats.significantDays}</span>
-            {t("overview.significantDaysStat").toLowerCase()}
-          </span>
         </div>
 
         {/* Year View */}
@@ -467,7 +422,10 @@ export const OverviewCard = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Month navigation with multi-select toggle */}
+          {/* Month navigation with multi-select toggle. Year/Month
+              toggle moved here too — it's a calendar-view detail, not
+              a top-level concern, so it lives in the calendar's own
+              header where it's contextual. */}
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
@@ -484,6 +442,12 @@ export const OverviewCard = ({
                   return s.charAt(0).toUpperCase() + s.slice(1);
                 })()}
               </h3>
+              <button
+                onClick={() => setCalendarView(calendarView === "month" ? "year" : "month")}
+                className="h-6 px-2 text-[10px] rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition-colors"
+              >
+                {calendarView === "month" ? t("overview.year") : t("overview.month")}
+              </button>
               {onBulkAnswer && (
                 <Button
                   variant={multiSelectMode ? "default" : "outline"}

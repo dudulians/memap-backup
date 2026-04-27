@@ -837,16 +837,18 @@ export const DailySession = ({
     >
       <div
         className="flex-1 flex flex-col overflow-hidden"
-        style={{ touchAction: "none" }}
+        // touchAction left at the default ("auto") so vaul can
+        // observe native touch events for its drag detection. With
+        // touch-action:none we disabled all native touch which made
+        // vaul's drag-down feel sluggish — it was driving the move
+        // via JS pointer events alone instead of the GPU-accelerated
+        // touch path. Card swipes still work via our pointer
+        // handlers; vaul's direction-lock keeps left/right card
+        // gestures from being claimed as drag-to-dismiss.
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
-        // No data-vaul-no-drag here. vaul's direction-lock only
-        // claims drag on vertical-dominant motion; card swipes are
-        // horizontal (yes/no) so they still fire normally. Card
-        // skip-down gesture is lost — but the explicit Skip text
-        // button at the bottom still works for that.
       >
       <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">
