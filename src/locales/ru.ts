@@ -364,7 +364,7 @@ const ru: Translation = {
     fillingInFor: "Заполняешь за:",
     swipeHint: "← Свайп влево — Нет · Свайп вправо — Да →",
     reflectionSuggested: "Время подумать",
-    reflectionLabel: "Когда это наблюдение проявится",
+    reflectionLabel: "Если станет часто",
     currentAnswer: "Текущий ответ",
     prevPattern: "Предыдущее наблюдение",
     nextPattern: "Следующее наблюдение",

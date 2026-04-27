@@ -362,7 +362,7 @@ const en = {
     fillingInFor: "You are filling in for:",
     swipeHint: "← Swipe left for No · Swipe right for Yes →",
     reflectionSuggested: "Reflection Suggested",
-    reflectionLabel: "When this pattern shows up",
+    reflectionLabel: "If this becomes frequent",
     currentAnswer: "Current answer",
     prevPattern: "Previous pattern",
     nextPattern: "Next pattern",
