@@ -622,11 +622,16 @@ export const DailySession = ({
     }
 
     return (
-      <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
-        <SheetContent
-          side="bottom"
-          className="max-h-[80vh] h-auto rounded-t-3xl overflow-y-auto p-0 flex flex-col"
-        >
+      // Render the Done screen as a fullscreen panel matching the deck
+      // mode below — NOT as a Radix Sheet. If we wrap the Done state in
+      // <Sheet>, then any action that flips `completed` back to false
+      // (e.g. tapping "Fill yesterday" which calls onDateChange and
+      // resets completed) unmounts the Sheet, which fires Radix's
+      // onOpenChange(false), which calls our onClose, which kills the
+      // entire session. On iOS WebView the unmount semantics are
+      // strict and this fires reliably; on web it sometimes slips by.
+      // Either way: don't depend on Sheet for the Done state.
+      <div className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto">
         <div className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
@@ -721,8 +726,7 @@ export const DailySession = ({
             {t("common.close")}
           </button>
         </div>
-        </SheetContent>
-      </Sheet>
+      </div>
     );
   }
 
