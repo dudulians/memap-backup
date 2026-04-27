@@ -452,6 +452,8 @@ const ru: Translation = {
     rowYesterdaySubtitle: "Догнать пропущенные карточки",
     rowPastDatesTitle: "Заполнить прошлые дни",
     rowPastDatesSubtitle: "Выбери любой день и догони пропуски",
+    legendFilled: "Заполнено",
+    legendPartial: "Частично",
     rowRandomTitle: "Сыграть случайный раунд",
     rowRandomSubtitle: "10 случайных вопросов, для интереса",
     rowNoteTitle: "Написать заметку",

@@ -448,6 +448,8 @@ const en = {
     rowYesterdaySubtitle: "Catch up on missed cards",
     rowPastDatesTitle: "Fill in past days",
     rowPastDatesSubtitle: "Pick any day to back-fill",
+    legendFilled: "All filled",
+    legendPartial: "Partial",
     rowRandomTitle: "Try a play round",
     rowRandomSubtitle: "10 random questions, just for fun",
     rowNoteTitle: "Write a note",

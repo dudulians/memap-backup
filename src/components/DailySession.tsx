@@ -475,6 +475,35 @@ export const DailySession = ({
     // a stack of mismatched-style buttons. The "play random" row invites
     // the user to keep going if they want.
 
+    // Map of recent dates → fill status, used by the Past Dates
+    // calendar below so the user sees at a glance which days are
+    // already done. Computing here (inside the Done branch render)
+    // is fine — the rows are built each time too, and the loop is
+    // bounded to 90 days so it's microseconds.
+    const fillStatusByDate = new Map<string, "full" | "partial" | "empty">();
+    const activeTrackers = trackers.filter((tr) => !tr.archived);
+    if (activeTrackers.length > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      for (let offset = 1; offset <= 90; offset++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - offset);
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const answeredCount = activeTrackers.filter((tr) =>
+          entries.some((e) => e.trackerId === tr.id && e.date === iso),
+        ).length;
+        if (answeredCount === activeTrackers.length) {
+          fillStatusByDate.set(iso, "full");
+        } else if (answeredCount > 0) {
+          fillStatusByDate.set(iso, "partial");
+        } else {
+          fillStatusByDate.set(iso, "empty");
+        }
+      }
+    }
+    const dateToIso = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
     type ActionRow = {
       key: string;
       icon: typeof BarChart3;
@@ -698,7 +727,7 @@ export const DailySession = ({
                         locale={dateLocale}
                         onSelect={(d) => {
                           if (d) {
-                            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                            const iso = dateToIso(d);
                             onDateChange(iso);
                           }
                         }}
@@ -706,11 +735,35 @@ export const DailySession = ({
                         // back-filling, today is what the regular
                         // session is already for.
                         disabled={(d) => {
-                          const t = new Date();
-                          t.setHours(0, 0, 0, 0);
-                          return d >= t;
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return d >= today;
+                        }}
+                        // Visual fill status — green dot under fully
+                        // answered days, amber under partial, none for
+                        // empty days. Saves the user from tap-to-find.
+                        modifiers={{
+                          fullyFilled: (d) => fillStatusByDate.get(dateToIso(d)) === "full",
+                          partiallyFilled: (d) => fillStatusByDate.get(dateToIso(d)) === "partial",
+                        }}
+                        modifiersClassNames={{
+                          fullyFilled:
+                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-emerald-500",
+                          partiallyFilled:
+                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-amber-400",
                         }}
                       />
+                      {/* Tiny legend so the dots are self-explanatory. */}
+                      <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-[10px] text-muted-foreground border-t">
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          {t("dailySession.legendFilled")}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          {t("dailySession.legendPartial")}
+                        </span>
+                      </div>
                     </PopoverContent>
                   </Popover>
                 );
