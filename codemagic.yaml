@@ -33,7 +33,10 @@ workflows:
     # API on demand.
     environment:
       vars:
-        XCODE_WORKSPACE: "App.xcworkspace"
+        # Capacitor 8 uses Swift Package Manager (no CocoaPods), so it
+        # creates App.xcodeproj — not App.xcworkspace. Point xcode-project
+        # at the project file directly.
+        XCODE_PROJECT: "App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.uliana.memap"
       node: 22.11.0
@@ -72,7 +75,7 @@ workflows:
         script: |
           cd $CM_BUILD_DIR/ios/App
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
