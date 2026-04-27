@@ -96,11 +96,20 @@ workflows:
           cd $CM_BUILD_DIR/ios/App
           xcode-project use-profiles --code-signing-setup-verbose-logging
 
-      - name: Increment build number
+      - name: Set build number
         script: |
+          # Apple rejects an upload if its CFBundleVersion was used by a
+          # prior upload. The previous approach (latest TestFlight build
+          # + 1) silently fell through to "1" when the API call returned
+          # empty, and TestFlight already had build 1 → 409 Conflict.
+          #
+          # Use a Unix-timestamp-derived integer instead: always strictly
+          # increasing, never collides with anything Apple has seen.
+          # `agvtool` writes this into Info.plist's CFBundleVersion.
           cd $CM_BUILD_DIR/ios/App
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" || echo "0")
-          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+          BUILD_NUMBER=$(date +%s)
+          echo "==> Setting build number to $BUILD_NUMBER"
+          agvtool new-version -all "$BUILD_NUMBER"
 
       - name: Build ipa
         script: |
