@@ -60,4 +60,10 @@
          this the daily reminder silently disappears the first time
          the user restarts their phone. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- @capacitor/haptics declares this in its own manifest and the
+         Gradle merger should pull it in, but we restate it here as
+         insurance — without VIBRATE the system silently ignores all
+         Haptics.impact / .notification calls on every Android version. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 </manifest>
