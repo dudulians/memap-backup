@@ -24,10 +24,14 @@ workflows:
     integrations:
       app_store_connect: codemagic
 
+    # NOTE: deliberately NO `ios_signing:` block here. With it,
+    # Codemagic auto-fetches a provisioning profile BEFORE the build
+    # scripts run — and on a fresh Apple Developer account no profile
+    # exists yet, so auto-fetch fails immediately. Instead we let the
+    # "Set up code signing" script below do the work with `--create`,
+    # which creates certificate + profile via the App Store Connect
+    # API on demand.
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.uliana.memap
       vars:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
