@@ -25,16 +25,16 @@ const LEGACY_TEMPLATE_GROUP_PAIRS: Array<[string, string]> = [
   ["Feeling close to partner", "Близость с партнёром"],
   ["Family quality time", "Качественное время с семьёй"],
   ["Do I want to go to work?", "Хочу ли я идти на работу?"],
-  ["Burned out after work", "Выгорал после работы"],
+  ["Burned out after work", "Выгорал(а) после работы"],
   ["Overtime days", "Дни переработок"],
   ["Migraine days", "Дни мигрени"],
   ["Poor sleep nights", "Плохие ночи сна"],
-  ["Moved my body", "Двигался"],
+  ["Moved my body", "Двигался(ась)"],
   ["Alcohol days", "Дни с алкоголем"],
-  ["After-midnight bedtime", "Ложился после полуночи"],
+  ["After-midnight bedtime", "Ложился(ась) после полуночи"],
   ["Doomscrolling evenings", "Вечера залипания в ленте"],
   ["Dog accidents at home", "Собака нашкодила дома"],
-  ["Met someone new", "Познакомился с кем-то"],
+  ["Met someone new", "Познакомился(ась) с кем-то"],
   ["Creative days", "Творческие дни"],
 ];
 
@@ -61,23 +61,23 @@ const LEGACY_GROUP_DESC_PAIRS: Array<[string, string]> = [
 
 const LEGACY_TEMPLATE_GROUP_QUESTION_PAIRS: Array<[string, string]> = [
   ["Was your mood very low for most of the day?", "Настроение было очень низким большую часть дня?"],
-  ["Did you feel exhausted and without energy for most of the day?", "Ты чувствовал себя истощённым и без сил большую часть дня?"],
-  ["Did you feel anxious or on edge most of the day?", "Ты чувствовал тревогу или напряжение большую часть дня?"],
+  ["Did you feel exhausted and without energy for most of the day?", "Ты чувствовал(а) себя истощённым и без сил большую часть дня?"],
+  ["Did you feel anxious or on edge most of the day?", "Ты чувствовал(а) тревогу или напряжение большую часть дня?"],
   ["Did you have a serious argument with your partner today?", "У тебя сегодня была серьёзная ссора с партнёром?"],
-  ["Did you feel emotionally close to your partner today?", "Ты чувствовал сегодня эмоциональную близость с партнёром?"],
-  ["Did you spend any real quality time with your family today?", "Ты провёл сегодня настоящее качественное время с семьёй?"],
-  ["Did you genuinely want to go to work today?", "Ты сегодня искренне хотел идти на работу?"],
-  ["Did you feel completely burned out after work today?", "Ты чувствовал полное выгорание после работы?"],
-  ["Did you work significantly longer than planned today?", "Ты сегодня работал заметно дольше, чем планировал?"],
+  ["Did you feel emotionally close to your partner today?", "Ты чувствовал(а) сегодня эмоциональную близость с партнёром?"],
+  ["Did you spend any real quality time with your family today?", "Ты провёл(а) сегодня настоящее качественное время с семьёй?"],
+  ["Did you genuinely want to go to work today?", "Ты сегодня искренне хотел(а) идти на работу?"],
+  ["Did you feel completely burned out after work today?", "Ты чувствовал(а) полное выгорание после работы?"],
+  ["Did you work significantly longer than planned today?", "Ты сегодня работал(а) заметно дольше, чем планировал(а)?"],
   ["Did you have a migraine today?", "У тебя сегодня была мигрень?"],
-  ["Did you sleep poorly or less than 6 hours last night?", "Ты спал плохо или меньше 6 часов этой ночью?"],
-  ["Did you intentionally move your body today (walk, exercise, stretch)?", "Ты сегодня намеренно двигался (ходил, тренировался, тянулся)?"],
-  ["Did you drink alcohol today?", "Ты сегодня пил алкоголь?"],
-  ["Did you go to bed after midnight today?", "Ты сегодня лёг после полуночи?"],
-  ["Did you spend a lot of time doomscrolling or stuck in social media tonight?", "Ты сегодня много времени залипал в соцсетях?"],
+  ["Did you sleep poorly or less than 6 hours last night?", "Ты спал(а) плохо или меньше 6 часов этой ночью?"],
+  ["Did you intentionally move your body today (walk, exercise, stretch)?", "Ты сегодня намеренно двигался(ась) (ходил(а), тренировался(ась), тянулся(ась))?"],
+  ["Did you drink alcohol today?", "Ты сегодня пил(а) алкоголь?"],
+  ["Did you go to bed after midnight today?", "Ты сегодня ложился(ась) после полуночи?"],
+  ["Did you spend a lot of time doomscrolling or stuck in social media tonight?", "Ты сегодня много времени залипал(а) в соцсетях?"],
   ["Did your dog pee or poop at home today?", "Собака сегодня написала или накакала дома?"],
-  ["Did you meet a new person today that you actually spoke with?", "Ты сегодня познакомился с кем-то новым и реально поговорил?"],
-  ["Did you do anything creative today (writing, drawing, music, ideas)?", "Ты сегодня сделал что-то творческое (писал, рисовал, музыка, идеи)?"],
+  ["Did you meet a new person today that you actually spoke with?", "Ты сегодня познакомился(ась) с кем-то новым и реально поговорил(а)?"],
+  ["Did you do anything creative today (writing, drawing, music, ideas)?", "Ты сегодня сделал(а) что-то творческое (писал(а), рисовал(а), музыка, идеи)?"],
 ];
 
 // Onboarding starters — the English/Russian pairs pulled from
@@ -114,7 +114,7 @@ const ONBOARDING_STARTER_QUESTION_PAIRS: Array<[string, string]> = [
   ["Did something make me smile today?", "Заставило ли меня что-то улыбнуться сегодня?"],
   ["Was my space comfortable today?", "Было ли моё пространство комфортным сегодня?"],
   // Hero example questions (in case any user stored them as tracker question text)
-  ["Did I argue with my partner today?", "Я сегодня ссорился с партнёром?"],
+  ["Did I argue with my partner today?", "Я сегодня ссорился(ась) с партнёром?"],
 ];
 
 // Reflection-text translations for the 18 legacy TEMPLATE_GROUPS templates.

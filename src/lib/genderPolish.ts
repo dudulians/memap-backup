@@ -97,9 +97,49 @@ export const polishRu = (text: string, pol?: Pol | null): string => {
   return text.replace(BRACKET_PATTERN, (_match, base: string, suffix: string) => {
     if (pol === "male") return base;
     // pol === "female"
+
+    // Reflexive past tense (-ся): male "ссорился" → female "ссорилась".
+    // Source brackets these as "ссорился(ась)" — we strip the "ся" tail
+    // and append the bracketed suffix ("ась" → "ссорилась").
+    // Also handles "двигался(ась)" → "двигалась", "ложился(ась)" →
+    // "ложилась", etc.
+    if (/[сС][яЯ]$/.test(base) && /^[аяоеи]сь$/i.test(suffix)) {
+      return base.slice(0, -2) + suffix;
+    }
+
+    // Irregular -шёл / -шла: male "пришёл" → female "пришла" (drop ёл
+    // entirely, append "шла"). Bracketed as "пришёл(а)" in source.
+    // Same for "ушёл", "нашёл", "вошёл" etc.
+    if (/[шШ][ёЁ][лЛ]$/.test(base)) {
+      const replaced = base.replace(/[шШ][ёЁ][лЛ]$/, (m) => {
+        // Preserve case of the leading "ш"
+        return (m[0] === "Ш" ? "Ш" : "ш") + "ла";
+      });
+      return replaced;
+    }
+
+    // ё→е alternation in past-tense -сти / -чь verbs (regular case),
+    // e.g. "Провёл" + "(а)" → "Провела" (not "Провёла").
+    // Heuristic: base ends in "ёл" (and not "шёл" — handled above).
+    // Replace ё→е before appending the female suffix.
+    if (/[ёЁ]л$/.test(base)) {
+      const fixed = base.replace(/ё(?=л$)/, "е").replace(/Ё(?=л$)/, "Е");
+      return fixed + suffix;
+    }
+
     // Multi-letter suffix starting with a vowel ⇒ likely a full
-    // adjective ending replacing a male tail. Strip trailing -й / -и
-    // from the base before appending.
+    // adjective ending replacing a male tail. Strip the masculine
+    // -ий / -ой / -ый pair (2 chars) before appending the female
+    // ending. E.g. "уставший(ая)" → "уставш" + "ая" = "уставшая".
+    if (
+      suffix.length >= 2 &&
+      /^[аяоеиыэёюАЯОЕИЫЭЁЮ]/.test(suffix) &&
+      /[иыоё][йЙ]$/i.test(base)
+    ) {
+      return base.slice(0, -2) + suffix;
+    }
+    // Older single-letter rule kept for backwards compat: base ending
+    // in just "й" / "и" with a multi-letter vowel suffix.
     if (
       suffix.length >= 2 &&
       /^[аяоеиыэёюАЯОЕИЫЭЁЮ]/.test(suffix) &&
@@ -107,16 +147,7 @@ export const polishRu = (text: string, pol?: Pol | null): string => {
     ) {
       return base.slice(0, -1) + suffix;
     }
-    // ё→е alternation in past-tense -сти / -чь verbs, e.g.
-    //   "Провёл" + "(а)"  →  "Провела"  (not "Провёла")
-    //   "нашёл"  + "(а)"  →  "нашла"    (different stem — left as-is here,
-    //                                    those forms aren't in our copy)
-    // Heuristic: base ends in "ёл" (case preserved). Replace ё→е before
-    // appending the female suffix. Covers "Провёл" / "провёл" forms.
-    if (/[ёЁ]л$/.test(base)) {
-      const fixed = base.replace(/ё(?=л$)/, "е").replace(/Ё(?=л$)/, "Е");
-      return fixed + suffix;
-    }
+
     // Default — past-tense verb pattern. Concatenation works for
     // every "(а)" / "(ла)" / "(ло)" form we've seen.
     return base + suffix;
