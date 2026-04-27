@@ -460,13 +460,44 @@ export const TodayTab = () => {
 
   const handleArchiveTracker = async () => {
     if (!selectedTrackerForDetails) return;
+    const archivedId = selectedTrackerForDetails.id;
+    const archivedTitle = localizeTrackerTitle(selectedTrackerForDetails.title);
     const updatedTrackers = trackers.map(t =>
-      t.id === selectedTrackerForDetails.id ? { ...t, archived: true } : t
+      t.id === archivedId ? { ...t, archived: true } : t
     );
     await saveTrackers(updatedTrackers);
     setTrackers(updatedTrackers.filter(t => !t.archived));
     setSheetOpen(false);
     setSelectedTrackerForDetails(null);
+
+    // Toast with undo. Archive feels destructive ("my card disappeared!")
+    // and the storage location (Settings → Trackers, eye toggle) isn't
+    // discoverable on its own. The toast does double duty: tells the
+    // user where it lives now, and gives a one-tap undo so an
+    // accidental archive doesn't require hunting through Settings.
+    toast({
+      title: t("today.archivedToastTitle", { title: archivedTitle }),
+      description: t("today.archivedToastDesc"),
+      action: (
+        <ToastAction
+          altText={t("today.archivedToastUndo")}
+          onClick={async () => {
+            // Restore the same tracker from the most recent saved
+            // copy. We re-read from storage rather than relying on
+            // closures so the undo works even if other edits happened
+            // in the meantime.
+            const fresh = await getTrackers();
+            const restored = fresh.map((tr) =>
+              tr.id === archivedId ? { ...tr, archived: false } : tr,
+            );
+            await saveTrackers(restored);
+            setTrackers(restored.filter((tr) => !tr.archived));
+          }}
+        >
+          {t("today.archivedToastUndo")}
+        </ToastAction>
+      ),
+    });
   };
 
   const handleDeleteTracker = async () => {

@@ -280,6 +280,9 @@ const ru: Translation = {
     hideIdeas: "Скрыть идеи",
     ideasHidden: "Идеи скрыты",
     ideasHiddenDesc: "Можно включить обратно в Настройках.",
+    archivedToastTitle: "Архивировано: {{title}}",
+    archivedToastDesc: "Архив живёт в Настройках → Карточки. Тап на иконку глаза вернёт обратно.",
+    archivedToastUndo: "Вернуть",
     restore: "Вернуть",
 
     trackerAdded: "Трекер добавлен",

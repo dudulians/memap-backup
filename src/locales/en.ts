@@ -276,6 +276,9 @@ const en = {
     hideIdeas: "Hide ideas",
     ideasHidden: "Ideas hidden",
     ideasHiddenDesc: "You can restore them in Settings.",
+    archivedToastTitle: "Archived: {{title}}",
+    archivedToastDesc: "Archived cards live in Settings → Trackers. Tap the eye icon to bring them back.",
+    archivedToastUndo: "Undo",
     restore: "Restore",
 
     trackerAdded: "Tracker added",
