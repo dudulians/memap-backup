@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -58,108 +58,6 @@ export const PatternsTab = () => {
     // this, switching from a deep-scrolled Signals to Overview drops the
     // user mid-calendar instead of showing the new section's top.
     window.dispatchEvent(new Event("memap-scroll-main-top"));
-  };
-
-  // -------- Horizontal swipe between sections (overview ↔ signals ↔ trends ↔ links) --------
-  // iOS-style direction lock: track first 10px of finger movement. If the
-  // user moves vertically, we lock to scroll and never trigger a tab
-  // switch. If horizontally, we follow the finger with a subtle translate
-  // and commit the switch on release past 60px. Touch zones with their
-  // own horizontal gesture (the calendar's tracker swipe, the chip strip)
-  // are excluded via [data-no-tabswipe].
-  const SECTIONS = ["overview", "signals", "trends", "links"] as const;
-  const DRAG_DECIDE_PX = 10;
-  const DRAG_COMMIT_PX = 60;
-  const DRAG_RUBBER_CAP = 100;
-
-  const [dragX, setDragX] = useState(0);
-  const [isReleasing, setIsReleasing] = useState(false);
-  const dragRef = useRef({
-    pointerId: -1 as number,
-    startX: 0,
-    startY: 0,
-    decided: false,    // direction lock decided
-    active: false,     // claimed as a horizontal drag
-    blocked: false,    // pointer started in a no-swipe zone or vertical lock
-    moved: false,      // any movement happened (used to suppress click)
-  });
-
-  const onContentPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    const target = e.target as HTMLElement | null;
-    const blocked = !!target?.closest("[data-no-tabswipe]");
-    dragRef.current = {
-      pointerId: e.pointerId,
-      startX: e.clientX,
-      startY: e.clientY,
-      decided: false,
-      active: false,
-      blocked,
-      moved: false,
-    };
-    if (isReleasing) setIsReleasing(false);
-  };
-
-  const onContentPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const s = dragRef.current;
-    if (s.pointerId !== e.pointerId) return;
-    if (s.blocked) return;
-    const dx = e.clientX - s.startX;
-    const dy = e.clientY - s.startY;
-    if (!s.decided) {
-      // Wait until the finger has moved enough in either axis to decide.
-      if (Math.abs(dx) < DRAG_DECIDE_PX && Math.abs(dy) < DRAG_DECIDE_PX) return;
-      // Vertical-dominant ⇒ user is scrolling. Block this gesture for the
-      // rest of its life.
-      if (Math.abs(dy) >= Math.abs(dx)) {
-        s.blocked = true;
-        return;
-      }
-      s.decided = true;
-      s.active = true;
-    }
-    s.moved = true;
-    // Rubber-band beyond DRAG_RUBBER_CAP so the user can feel the edge.
-    const sign = Math.sign(dx);
-    const abs = Math.abs(dx);
-    const eased = abs <= DRAG_RUBBER_CAP
-      ? abs
-      : DRAG_RUBBER_CAP + (abs - DRAG_RUBBER_CAP) * 0.35;
-    setDragX(sign * eased);
-  };
-
-  const onContentPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    const s = dragRef.current;
-    if (s.pointerId !== e.pointerId) return;
-    const dx = e.clientX - s.startX;
-    const wasActive = s.active;
-    s.pointerId = -1;
-    s.active = false;
-    s.decided = false;
-    // Snap back with transition.
-    setIsReleasing(true);
-    setDragX(0);
-    window.setTimeout(() => setIsReleasing(false), 220);
-    if (!wasActive) return;
-    if (Math.abs(dx) < DRAG_COMMIT_PX) return;
-    const idx = SECTIONS.indexOf(section as typeof SECTIONS[number]);
-    if (idx === -1) return;
-    if (dx < 0 && idx < SECTIONS.length - 1) {
-      handleSectionChange(SECTIONS[idx + 1]);
-    } else if (dx > 0 && idx > 0) {
-      handleSectionChange(SECTIONS[idx - 1]);
-    }
-  };
-
-  // Suppress synthetic clicks fired at the end of a drag so users don't
-  // accidentally trigger a button (e.g. a tracker card) when they
-  // intended a tab swipe.
-  const onContentClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (dragRef.current.moved) {
-      e.preventDefault();
-      e.stopPropagation();
-      dragRef.current.moved = false;
-    }
   };
 
   useEffect(() => {
@@ -435,24 +333,6 @@ export const PatternsTab = () => {
           </TabsList>
         </div>
 
-        {/* Drag detector for horizontal section swipe. touch-action:
-            pan-y lets the browser keep doing native vertical scroll
-            while we hijack horizontal motion. Calendar swipe zones are
-            tagged [data-no-tabswipe] so this layer ignores them. */}
-        <div
-          onPointerDown={onContentPointerDown}
-          onPointerMove={onContentPointerMove}
-          onPointerUp={onContentPointerEnd}
-          onPointerCancel={onContentPointerEnd}
-          onClickCapture={onContentClickCapture}
-          style={{
-            touchAction: "pan-y",
-            transform: dragX !== 0 ? `translateX(${dragX}px)` : undefined,
-            transition: isReleasing ? "transform 200ms ease-out" : undefined,
-            willChange: "transform",
-          }}
-        >
-
         {/* --- OVERVIEW: calendar grid + weekly summary ---------------- */}
         <TabsContent value="overview" className="space-y-6 mt-4 animate-fade-in">
           <OverviewCard
@@ -608,8 +488,6 @@ export const PatternsTab = () => {
         <TabsContent value="links" className="mt-4 animate-fade-in">
           <CorrelationInsights trackers={trackers} entries={entries} />
         </TabsContent>
-
-        </div>
       </Tabs>
 
       {/* Disclaimer (always shown, regardless of tab) */}

@@ -373,7 +373,7 @@ export const OverviewCard = ({
             visible above the fold. The previously-redundant
             "Календарь для:" label is dropped — the active chip already
             highlights the chosen tracker. */}
-        <div className="mb-2" data-no-tabswipe>
+        <div className="mb-2">
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-card to-transparent z-10 pointer-events-none" />
             <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-card to-transparent z-10 pointer-events-none" />
@@ -413,7 +413,6 @@ export const OverviewCard = ({
           className="flex items-center justify-between gap-3 px-1 mb-3 text-xs"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          data-no-tabswipe
         >
           <span className="text-muted-foreground">
             <span className="font-serif text-base font-medium tabular-nums text-foreground mr-1">{monthStats.trackedDays}</span>
@@ -475,7 +474,6 @@ export const OverviewCard = ({
           className="space-y-2"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          data-no-tabswipe
         >
           {/* Month navigation with multi-select toggle */}
           <div className="flex items-center justify-between">
