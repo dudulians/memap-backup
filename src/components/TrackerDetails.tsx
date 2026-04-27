@@ -30,7 +30,9 @@ interface TrackerDetailsProps {
   onDelete?: () => void;
 }
 
-type TabType = "questions" | "calendar";
+// Tabs were removed when Question + Calendar were merged into one
+// scrollable layout — kept the type alias commented out for context.
+// type TabType = "questions" | "calendar";
 
 export const TrackerDetails = ({
   tracker,
@@ -48,8 +50,6 @@ export const TrackerDetails = ({
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabType>("questions");
-  const tabSwipeStartX = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const effectiveSelectedDate = selectedDate || new Date().toISOString().split("T")[0];
@@ -107,22 +107,6 @@ export const TrackerDetails = ({
       const updatedEntries = [...entries, newEntry];
       setEntries(updatedEntries);
       await saveEntries(updatedEntries);
-    }
-  };
-
-  // Swipe handlers for tab switching
-  const handleTabSwipeStart = (e: React.TouchEvent) => {
-    tabSwipeStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTabSwipeEnd = (e: React.TouchEvent) => {
-    const diff = e.changedTouches[0].clientX - tabSwipeStartX.current;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0 && activeTab === "calendar") {
-        setActiveTab("questions");
-      } else if (diff < 0 && activeTab === "questions") {
-        setActiveTab("calendar");
-      }
     }
   };
 
@@ -196,9 +180,8 @@ export const TrackerDetails = ({
         </div>
       )}
 
-      {/* Tracker header card — title, category, plus the question
-          (so the user remembers what they're tracking when reviewing
-          stats further down). */}
+      {/* Compact title row — title + category. The QUESTION isn't
+          duplicated here; it shows once inside the answer card below. */}
       <Card className="card-premium">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl flex items-center gap-2">
@@ -213,17 +196,39 @@ export const TrackerDetails = ({
           <p className="text-xs font-medium" style={{ color: `hsl(var(--${categoryColor}))` }}>
             {t(`categories.${tracker.category}` as const)}
           </p>
-          {tracker.questionText && (
-            <p className="text-sm text-muted-foreground mt-1.5 leading-snug">
-              {localizeTrackerQuestion(tracker.questionText)}
-            </p>
-          )}
         </CardHeader>
       </Card>
 
-      {/* Quick stats — shown ALWAYS at the top so the user sees their
-          progress on this tracker before diving into the calendar.
-          The same numbers used in PatternsTab Signals card. */}
+      {/* Quick answer for the selected date. Shows the question once
+          and the Yes/No buttons inline so answering doesn't require
+          scrolling or tab-switching. */}
+      <div className="space-y-2">
+        <p className="text-xs text-center text-muted-foreground">
+          {t("trackerDetails.fillingInFor")} <span className="font-medium">{selectedDateDisplay}</span>
+        </p>
+        <QuestionSwipeCard
+          tracker={tracker}
+          currentAnswer={currentAnswer}
+          onAnswer={handleAnswer}
+        />
+      </div>
+
+      {/* Calendar — directly below the answer card, no tab switching
+          needed. Tap any day to see/edit history. */}
+      <Card className="card-premium">
+        <CardContent className="pt-4">
+          <MonthlyCalendar
+            trackerId={tracker.id}
+            entries={entries}
+            problemWhen={tracker.problemWhen}
+            selectedDate={effectiveSelectedDate}
+            onDateSelect={onDateSelect}
+            onBulkAnswer={handleBulkAnswer}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Quick stats — significant-day progress + period summary. */}
       {(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -284,10 +289,7 @@ export const TrackerDetails = ({
         );
       })()}
 
-      {/* Reflection text — always shown when the tracker has one, not
-          only after the threshold is crossed. The wording is the user's
-          (or the template's) intent for what to do when the pattern
-          shows up — useful as a constant reminder. */}
+      {/* Reflection text — always shown when the tracker has one. */}
       {tracker.adviceAboveThreshold && tracker.adviceAboveThreshold.trim() && (
         <Card className="card-premium border-l-4 border-l-primary/60">
           <CardContent className="pt-4 pb-4 flex items-start gap-3">
@@ -304,9 +306,7 @@ export const TrackerDetails = ({
         </Card>
       )}
 
-      {/* Manage row — Edit / Archive / Delete as full-width labelled
-          buttons. Replaces the old tiny-icon trio in the sheet header
-          (still works for existing consumers that pass these callbacks). */}
+      {/* Manage row — Edit / Archive / Delete. */}
       {(onEdit || onArchive || onDelete) && (
         <div className="grid grid-cols-3 gap-2">
           {onEdit && (
@@ -343,79 +343,6 @@ export const TrackerDetails = ({
           )}
         </div>
       )}
-
-      {/* Tab Selector */}
-      <div className="flex items-center bg-muted/50 rounded-full p-1">
-        <button
-          onClick={() => setActiveTab("questions")}
-          className={cn(
-            "flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all",
-            activeTab === "questions"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("trackerDetails.questions")}
-        </button>
-        <button
-          onClick={() => setActiveTab("calendar")}
-          className={cn(
-            "flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all",
-            activeTab === "calendar"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("trackerDetails.calendar")}
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      <div
-        onTouchStart={handleTabSwipeStart}
-        onTouchEnd={handleTabSwipeEnd}
-      >
-        {activeTab === "questions" && (
-          <div className="space-y-4 animate-fade-in">
-            {/* Selected date indicator */}
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">
-                {t("trackerDetails.fillingInFor")} <span className="font-medium">{selectedDateDisplay}</span>
-              </p>
-            </div>
-
-            {/* Question Card with Swipe and Buttons */}
-            <QuestionSwipeCard
-              tracker={tracker}
-              currentAnswer={currentAnswer}
-              onAnswer={handleAnswer}
-            />
-
-            {/* Swipe hint */}
-            <p className="text-xs text-center text-muted-foreground">
-              {t("trackerDetails.swipeHint")}
-            </p>
-          </div>
-        )}
-
-        {activeTab === "calendar" && (
-          <div className="space-y-4 animate-fade-in">
-            {/* Calendar-only view */}
-            <Card className="card-premium">
-              <CardContent className="pt-4">
-                <MonthlyCalendar
-                  trackerId={tracker.id}
-                  entries={entries}
-                  problemWhen={tracker.problemWhen}
-                  selectedDate={effectiveSelectedDate}
-                  onDateSelect={onDateSelect}
-                  onBulkAnswer={handleBulkAnswer}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
 
       {/* When the threshold has been reached, surface a stronger
           "reflection suggested" callout below the tabs as well — even
