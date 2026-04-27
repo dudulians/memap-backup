@@ -57,6 +57,17 @@ workflows:
       - name: Capacitor sync iOS
         script: |
           npx cap sync ios
+          # Capacitor 8 on Windows generates Package.swift with backslash
+          # path separators (..\..\..\node_modules\...) which Swift PM
+          # on macOS cannot resolve — plugins silently fail to link and
+          # things like Haptics don't fire. Force-replace backslashes
+          # with forward slashes after every sync.
+          PKG="$CM_BUILD_DIR/ios/App/CapApp-SPM/Package.swift"
+          if [ -f "$PKG" ]; then
+            sed -i '' 's|\\\\|/|g' "$PKG"
+            echo "==> Patched Package.swift path separators:"
+            grep "node_modules" "$PKG" || true
+          fi
 
       - name: Set up code signing
         script: |
