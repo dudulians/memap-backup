@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { X, ChevronRight, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
@@ -638,47 +639,12 @@ export const DailySession = ({
     }
 
     return (
-      <div
-        className="fixed inset-0 bg-background z-50 flex flex-col overflow-y-auto"
-        style={{
-          transform: sheetDragY ? `translateY(${sheetDragY}px)` : undefined,
-          transition: sheetPointerId.current === null ? "transform 0.22s ease" : "none",
-          opacity: sheetDragY > 0 ? Math.max(0, 1 - sheetDragY / window.innerHeight) : 1,
-        }}
-      >
-        {/* Close affordances at the top — drag handle pill, X button on
-            the right (more prominent than left-corner). The whole header
-            band is a swipe-down drag region. */}
-        <div
-          className="px-4 pt-2 pb-2 border-b flex-shrink-0 cursor-grab active:cursor-grabbing"
-          style={{ touchAction: "none" }}
-          onPointerDown={onSheetDragStart}
-          onPointerMove={onSheetDragMove}
-          onPointerUp={onSheetDragEnd}
-          onPointerCancel={onSheetDragEnd}
-          onClick={(e) => e.stopPropagation()}
+      <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
+        <SheetContent
+          side="bottom"
+          className="max-h-[88vh] h-auto rounded-t-3xl overflow-y-auto p-0 flex flex-col"
         >
-          <div className="flex items-center justify-center pt-0.5 pb-1.5">
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("common.close")}
-              className="w-12 h-1.5 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/50 transition-colors"
-            />
-          </div>
-          <div className="flex items-center justify-end">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              aria-label={t("common.close")}
-              className="rounded-full bg-muted/40 hover:bg-muted h-9 w-9"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center px-5 pt-4 pb-6 gap-6 animate-fade-in">
+        <div className="flex flex-col items-center px-5 pt-10 pb-6 gap-6 animate-fade-in">
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">
@@ -772,7 +738,8 @@ export const DailySession = ({
             {t("common.close")}
           </button>
         </div>
-      </div>
+        </SheetContent>
+      </Sheet>
     );
   }
 
