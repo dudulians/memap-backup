@@ -870,7 +870,16 @@ export const DailySession = ({
       className="h-[80vh] flex flex-col p-0"
       ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Body wrapper is overflow-y-auto (not overflow-hidden) so vaul
+          has an explicit scrollable container to base its drag-vs-
+          scroll coordination on — this is the same setup Settings and
+          TrackerDetails use, where drag-to-close works smoothly out
+          of the box. The content here fits in 80vh without actually
+          scrolling, so the user never sees a scrollbar; vaul just
+          uses the container's scrollTop=0 as its "OK to drag" signal.
+          overflow-x-hidden keeps swiped cards from leaking sideways
+          past the sheet edge. */}
+      <div className="flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
       <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">
           <div className="w-9" />
