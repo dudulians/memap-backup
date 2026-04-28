@@ -2,13 +2,15 @@ import { useMemo } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { getCategoryColor } from "@/lib/categoryHelpers";
-import { Lightbulb, ArrowRight } from "lucide-react";
+import { Lightbulb, ArrowRight, LineChart as LineChartIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 
 interface CorrelationInsightsProps {
   trackers: Tracker[];
   entries: TrackerEntry[];
+  /** Tap a correlation card → jump to Trends tab pre-filtered on the pair. */
+  onSelectPair?: (ids: [string, string]) => void;
 }
 
 interface Correlation {
@@ -20,7 +22,7 @@ interface Correlation {
   sharedDays: number;
 }
 
-export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsProps) => {
+export const CorrelationInsights = ({ trackers, entries, onSelectPair }: CorrelationInsightsProps) => {
   const { t } = useTranslation();
   const correlations = useMemo(() => {
     const activeTrackers = trackers.filter((t) => !t.archived);
@@ -163,10 +165,37 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
             const strengthLabel =
               strength > 0.5 ? t("correlations.strong") : strength > 0.35 ? t("correlations.moderate") : t("correlations.mild");
 
+            const interactive = !!onSelectPair;
+            // Tap → tell parent to switch to Trends with this pair
+            // pre-selected. Whole card is tappable for a generous touch
+            // target (premium feel, no tiny "open" button).
+            const handleTap = () => {
+              if (onSelectPair) {
+                onSelectPair([c.trackerA.id, c.trackerB.id]);
+              }
+            };
             return (
               <div
                 key={idx}
-                className="p-3 rounded-2xl bg-muted/20 border border-border/50 space-y-2"
+                role={interactive ? "button" : undefined}
+                tabIndex={interactive ? 0 : undefined}
+                onClick={interactive ? handleTap : undefined}
+                onKeyDown={
+                  interactive
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleTap();
+                        }
+                      }
+                    : undefined
+                }
+                className={
+                  "p-3 rounded-2xl bg-muted/20 border border-border/50 space-y-2 transition-all" +
+                  (interactive
+                    ? " cursor-pointer hover:bg-muted/30 hover:border-border active:scale-[0.99]"
+                    : "")
+                }
               >
                 {/* Tracker pair visualization */}
                 <div className="flex items-center gap-2 text-sm">
@@ -205,9 +234,16 @@ export const CorrelationInsights = ({ trackers, entries }: CorrelationInsightsPr
                   >
                     {strengthLabel} {c.direction === "positive" ? "↑↑" : "↑↓"}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("correlations.sharedDays", { count: c.sharedDays })}
-                  </span>
+                  {interactive ? (
+                    <span className="flex items-center gap-1 text-[10px] text-primary font-medium">
+                      <LineChartIcon className="h-3 w-3" strokeWidth={2} />
+                      {t("correlations.viewInTrends")}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground">
+                      {t("correlations.sharedDays", { count: c.sharedDays })}
+                    </span>
+                  )}
                 </div>
               </div>
             );

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,13 @@ import {
 interface TrendChartProps {
   trackers: Tracker[];
   entries: TrackerEntry[];
+  /**
+   * When set, force-select these tracker IDs and pin range to 30d.
+   * Used by the Connections tab → tap-a-pair → jump-to-trends flow.
+   * Re-applies on every reference change so re-tapping the same pair
+   * works even after the user manually fiddled with filters.
+   */
+  prefilterIds?: string[];
 }
 
 type TimeRange = "7d" | "30d" | "90d" | "1y";
@@ -58,16 +65,20 @@ const bucketLabel = (range: TimeRange, date: Date): string => {
   return date.toLocaleDateString("en", { month: "short", day: "numeric" });
 };
 
-// Each tracker gets its own horizontal lane (0.9 at top → 0.1 at bottom)
-const laneY = (index: number, total: number): number => {
-  if (total === 1) return 0.5;
-  return 0.9 - (index / (total - 1)) * 0.8;
-};
-
-export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
+export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps) => {
   const { t } = useTranslation();
   const [range, setRange] = useState<TimeRange>("30d");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // External pre-filter (e.g. user tapped a correlation in Connections).
+  // Reset selection to those IDs and pin range to 30d — short enough to
+  // still see pattern shape, long enough that real co-occurrence shows.
+  useEffect(() => {
+    if (prefilterIds && prefilterIds.length > 0) {
+      setSelectedIds(new Set(prefilterIds));
+      setRange("30d");
+    }
+  }, [prefilterIds]);
 
   const days = RANGE_DAYS[range];
   const bucket = bucketSize(range);
@@ -110,77 +121,75 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
   const colorFor = (tracker: Tracker): string =>
     trackerColorMap.get(tracker.id) ?? PALETTE[0];
 
-  // Heavy compute: bucket/dot rebuild on every input change. Wrapping in
-  // useMemo means we only re-run when entries / range / filters / trackers
-  // actually change — not on every render (legend hover, tooltip move, etc.).
-  // Inside, we also build an O(1) lookup Map for entries instead of doing
-  // entries.find() per cell (was O(M·N): days × trackers × entries).
+  // Index entries by `${trackerId}:${YYYY-MM-DD}` for O(1) lookup. Used by
+  // both the aggregated chart (30d/90d/1y) and the strips view (7d).
+  const entryMap = useMemo(() => {
+    const map = new Map<string, TrackerEntry>();
+    for (const e of entries) {
+      map.set(`${e.trackerId}:${e.date}`, e);
+    }
+    return map;
+  }, [entries]);
+
+  // Aggregated chart data — each point = one bucket (week or month) with
+  // the count of significant days per tracker. Only used when range !=
+  // "7d" (the 7-day view uses a strips layout below, not recharts).
+  // Wrapped in useMemo so legend hovers / tooltip moves don't trigger
+  // rebuilds; only changes to inputs do.
   const chartData = useMemo(() => {
+    if (range === "7d") return [] as Record<string, any>[];
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Map of `${trackerId}:${YYYY-MM-DD}` → entry. Built once per memo.
-    const entryMap = new Map<string, TrackerEntry>();
-    for (const e of entries) {
-      entryMap.set(`${e.trackerId}:${e.date}`, e);
-    }
-
-    if (isAggregated) {
-      // Aggregated: each point = one bucket (week or month). Count of
-      // significant days per tracker in that bucket.
-      const bucketCount = Math.ceil(days / bucket);
-      const data: Record<string, any>[] = [];
-
-      for (let b = bucketCount - 1; b >= 0; b--) {
-        const bucketEnd = new Date(today);
-        bucketEnd.setDate(today.getDate() - b * bucket);
-        const bucketStart = new Date(bucketEnd);
-        bucketStart.setDate(bucketEnd.getDate() - bucket + 1);
-
-        const label = bucketLabel(range, bucketEnd);
-        const point: Record<string, any> = { date: label };
-
-        for (const tracker of activeTrackers) {
-          let count = 0;
-          for (let d = 0; d < bucket; d++) {
-            const day = new Date(bucketStart);
-            day.setDate(bucketStart.getDate() + d);
-            const dateStr = day.toISOString().split("T")[0];
-            const entry = entryMap.get(`${tracker.id}:${dateStr}`);
-            if (entry) {
-              const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
-              if (sig) count++;
-            }
-          }
-          point[tracker.id] = count;
-        }
-        data.push(point);
-      }
-      return data;
-    }
-
-    // Dot mode (7d): significant day → lane position, null otherwise.
+    const bucketCount = Math.ceil(days / bucket);
     const data: Record<string, any>[] = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("en", { weekday: "short", day: "numeric" });
+
+    for (let b = bucketCount - 1; b >= 0; b--) {
+      const bucketEnd = new Date(today);
+      bucketEnd.setDate(today.getDate() - b * bucket);
+      const bucketStart = new Date(bucketEnd);
+      bucketStart.setDate(bucketEnd.getDate() - bucket + 1);
+
+      const label = bucketLabel(range, bucketEnd);
       const point: Record<string, any> = { date: label };
 
-      visibleTrackers.forEach((tracker, idx) => {
-        const entry = entryMap.get(`${tracker.id}:${dateStr}`);
-        if (entry) {
-          const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
-          point[tracker.id] = sig ? laneY(idx, visibleTrackers.length) : null;
-        } else {
-          point[tracker.id] = null;
+      for (const tracker of activeTrackers) {
+        let count = 0;
+        for (let d = 0; d < bucket; d++) {
+          const day = new Date(bucketStart);
+          day.setDate(bucketStart.getDate() + d);
+          const dateStr = day.toISOString().split("T")[0];
+          const entry = entryMap.get(`${tracker.id}:${dateStr}`);
+          if (entry) {
+            const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
+            if (sig) count++;
+          }
         }
-      });
+        point[tracker.id] = count;
+      }
       data.push(point);
     }
     return data;
-  }, [isAggregated, days, bucket, range, entries, activeTrackers, visibleTrackers]);
+  }, [range, days, bucket, entryMap, activeTrackers]);
+
+  // 7-day strips: list of date stamps + short weekday labels for the row
+  // headers. Rebuilt only when range or entries change (entries-trigger
+  // keeps it fresh if the app sits open across midnight after a save).
+  const sevenDays = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (6 - i));
+      return {
+        dateStr: d.toISOString().split("T")[0],
+        // 2-letter weekday is short, readable, and identical visual
+        // weight regardless of locale.
+        shortLabel: d.toLocaleDateString("en", { weekday: "short" }).slice(0, 2),
+      };
+    });
+  }, [range, entries]);
 
   const toggleTracker = (id: string) => {
     setSelectedIds((prev) => {
@@ -190,20 +199,9 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
     });
   };
 
-  // Y axis for dot mode
-  const dotTicks = visibleTrackers.map((_, i) => laneY(i, visibleTrackers.length));
-  const dotTickFormatter = (v: number) => {
-    const idx = visibleTrackers.findIndex(
-      (_, i) => Math.abs(laneY(i, visibleTrackers.length) - v) < 0.02
-    );
-    return idx >= 0 ? localizeTrackerTitle(visibleTrackers[idx].title).slice(0, 2) : "";
-  };
-
-  // Y axis for aggregated mode
-  const yMax = bucket; // 7 for weekly, 30 for monthly
+  // Y axis ticks for aggregated mode (7 for weekly, 30 for monthly).
+  const yMax = bucket;
   const countTicks = [0, Math.round(yMax / 2), yMax];
-
-  const tooltipUnit = range === "1y" ? "days this month" : "days this week";
 
   return (
     <Card className="card-premium breathing-space animate-fade-in">
@@ -268,94 +266,157 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
           })}
         </div>
 
-        {/* Chart */}
-        <div className="h-[200px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.4} />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 10, fill: "#94a3b8" }}
-                tickLine={false}
-                axisLine={false}
-                interval={isAggregated ? "preserveStartEnd" : 0}
-              />
-              <YAxis
-                tick={{ fontSize: isAggregated ? 10 : 13 }}
-                tickLine={false}
-                axisLine={false}
-                domain={isAggregated ? [0, yMax] : [0, 1]}
-                ticks={isAggregated ? countTicks : dotTicks}
-                tickFormatter={
-                  isAggregated ? (v) => `${v}d` : dotTickFormatter
-                }
-                width={32}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "0.75rem",
-                  fontSize: "11px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                  maxHeight: "120px",
-                  overflowY: "auto",
-                  padding: "6px 10px",
-                }}
-                itemStyle={{ padding: "1px 0" }}
-                wrapperStyle={{ zIndex: 50, pointerEvents: "none" }}
-                formatter={(value: any, name: string) => {
-                  const tracker = activeTrackers.find((t) => t.id === name);
-                  if (!tracker || value === null) return [null, null];
-                  if (isAggregated && value === 0) return [null, null];
-                  const label = localizeTrackerTitle(tracker.title);
-                  return isAggregated
-                    ? [`${value}d`, label]
-                    : ["✓", label];
-                }}
-                filterNull
-              />
+        {/* Chart body — strips for 7d (much more readable than dots on
+            lanes), recharts LineChart for aggregated 30d/90d/1y. */}
+        {range === "7d" ? (
+          visibleTrackers.length === 0 ? (
+            <div className="py-10 text-center text-xs text-muted-foreground">
+              {t("trendChart.noTrackers")}
+            </div>
+          ) : (
+            <div className="space-y-1.5 py-1">
               {visibleTrackers.map((tracker) => {
                 const color = colorFor(tracker);
-                return isAggregated ? (
-                  <Line
-                    key={tracker.id}
-                    type="monotone"
-                    dataKey={tracker.id}
-                    stroke={color}
-                    strokeWidth={2}
-                    dot={{ r: 3, fill: color }}
-                    activeDot={{ r: 5, fill: color }}
-                    connectNulls
-                    name={tracker.id}
-                  />
-                ) : (
-                  <Line
-                    key={tracker.id}
-                    type="linear"
-                    dataKey={tracker.id}
-                    stroke="none"
-                    strokeWidth={0}
-                    dot={{ r: 5, fill: color, stroke: "#fff", strokeWidth: 1.5 }}
-                    activeDot={{ r: 7, fill: color, stroke: "#fff", strokeWidth: 2 }}
-                    connectNulls={false}
-                    name={tracker.id}
-                  />
+                const Icon = getTrackerIcon(tracker.title, tracker.category);
+                return (
+                  <div key={tracker.id} className="flex items-center gap-2">
+                    {/* Row label: tracker icon + title */}
+                    <div className="w-[70px] shrink-0 flex items-center gap-1.5">
+                      <Icon
+                        className="h-3.5 w-3.5 shrink-0"
+                        strokeWidth={1.75}
+                        style={{ color }}
+                      />
+                      <span className="text-[11px] truncate text-foreground/80">
+                        {localizeTrackerTitle(tracker.title)}
+                      </span>
+                    </div>
+                    {/* 7 day cells */}
+                    <div className="grid grid-cols-7 gap-1 flex-1">
+                      {sevenDays.map((day) => {
+                        const entry = entryMap.get(`${tracker.id}:${day.dateStr}`);
+                        // Three states:
+                        //   significant → solid colour (problem signal)
+                        //   recorded-no → light grey solid (recorded but
+                        //                 not the "problem" answer)
+                        //   missing    → dashed outline only (no entry)
+                        if (!entry) {
+                          return (
+                            <div
+                              key={day.dateStr}
+                              className="h-7 rounded-md border border-dashed border-border/50"
+                            />
+                          );
+                        }
+                        const sig =
+                          tracker.problemWhen === "yes" ? entry.value : !entry.value;
+                        if (sig) {
+                          return (
+                            <div
+                              key={day.dateStr}
+                              className="h-7 rounded-md"
+                              style={{ backgroundColor: color }}
+                            />
+                          );
+                        }
+                        return (
+                          <div
+                            key={day.dateStr}
+                            className="h-7 rounded-md bg-muted/50"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+              {/* Day labels row */}
+              <div className="flex items-center gap-2 pt-1.5">
+                <div className="w-[70px] shrink-0" />
+                <div className="grid grid-cols-7 gap-1 flex-1">
+                  {sevenDays.map((day) => (
+                    <div
+                      key={day.dateStr}
+                      className="text-[10px] text-center text-muted-foreground"
+                    >
+                      {day.shortLabel}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="h-[200px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{ top: 8, right: 8, left: -8, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.4} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: "#94a3b8" }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={[0, yMax]}
+                  ticks={countTicks}
+                  tickFormatter={(v) => `${v}d`}
+                  width={32}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "0.75rem",
+                    fontSize: "11px",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                    maxHeight: "120px",
+                    overflowY: "auto",
+                    padding: "6px 10px",
+                  }}
+                  itemStyle={{ padding: "1px 0" }}
+                  wrapperStyle={{ zIndex: 50, pointerEvents: "none" }}
+                  formatter={(value: any, name: string) => {
+                    const tracker = activeTrackers.find((t) => t.id === name);
+                    if (!tracker || value === null || value === 0) return [null, null];
+                    return [`${value}d`, localizeTrackerTitle(tracker.title)];
+                  }}
+                  filterNull
+                />
+                {visibleTrackers.map((tracker) => {
+                  const color = colorFor(tracker);
+                  return (
+                    <Line
+                      key={tracker.id}
+                      type="monotone"
+                      dataKey={tracker.id}
+                      stroke={color}
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: color }}
+                      activeDot={{ r: 5, fill: color }}
+                      connectNulls
+                      name={tracker.id}
+                    />
+                  );
+                })}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         <p className="text-[10px] text-center text-muted-foreground">
-          {isAggregated
-            ? range === "1y"
+          {range === "7d"
+            ? t("trendChart.footerStrips")
+            : range === "1y"
               ? t("trendChart.footerAggYear")
-              : t("trendChart.footerAggWeek")
-            : t("trendChart.footerDots")}
+              : t("trendChart.footerAggWeek")}
         </p>
       </div>
     </Card>

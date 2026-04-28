@@ -66,6 +66,17 @@ export const PatternsTab = () => {
     window.dispatchEvent(new Event("memap-scroll-main-top"));
   };
 
+  // When user taps a correlation card on the Connections tab, we hop to
+  // the Trends tab with the pair pre-selected. The array reference is
+  // fresh every tap (never reused) so TrendChart's useEffect-based
+  // pre-filter re-applies even when the same pair is tapped again after
+  // the user manually fiddled with the legend.
+  const [trendsPrefilter, setTrendsPrefilter] = useState<string[] | undefined>(undefined);
+  const handleSelectCorrelationPair = (ids: [string, string]) => {
+    setTrendsPrefilter([...ids]);
+    handleSectionChange("trends");
+  };
+
   // Embla swipe-between-sections was removed. With all four heavy
   // sections (Calendar, tracker list, chart, correlations) mounted
   // simultaneously, iOS WebView under Capacitor couldn't keep up
@@ -506,14 +517,22 @@ export const PatternsTab = () => {
         {/* --- TRENDS: dual-series chart over time ------------------- */}
         {section === "trends" && (
           <div className="animate-fade-in">
-            <TrendChart trackers={trackers} entries={entries} />
+            <TrendChart
+              trackers={trackers}
+              entries={entries}
+              prefilterIds={trendsPrefilter}
+            />
           </div>
         )}
 
         {/* --- LINKS: dependency / correlation insights ------------- */}
         {section === "links" && (
           <div className="animate-fade-in">
-            <CorrelationInsights trackers={trackers} entries={entries} />
+            <CorrelationInsights
+              trackers={trackers}
+              entries={entries}
+              onSelectPair={handleSelectCorrelationPair}
+            />
           </div>
         )}
       </div>

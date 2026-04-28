@@ -537,7 +537,8 @@ const en = {
     title: "Trend & Correlation",
     footerAggYear: "Days per month · lines rising together = correlation",
     footerAggWeek: "Days per week · lines rising together = correlation",
-    footerDots: "Each dot = significant day · tap chips to compare",
+    footerStrips: "Colour = significant · grey = recorded · dashed = missing",
+    noTrackers: "Pick trackers from the chips above",
     showAll: "All",
   },
 
@@ -553,6 +554,7 @@ const en = {
     posMild: "{{a}} and {{b}} show a mild positive link.",
     negStrong: "{{a}} and {{b}} tend to be opposites — a \"Yes\" on one often means \"No\" on the other.",
     negMild: "{{a}} and {{b}} show a mild inverse pattern.",
+    viewInTrends: "Open chart",
   },
 
   overview: {
