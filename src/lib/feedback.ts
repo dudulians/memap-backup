@@ -133,20 +133,33 @@ export const playSwipeSound = (kind: FeedbackKind) => {
 
 export const triggerHaptic = async (kind: "light" | "medium" | "heavy") => {
   // Prefer the native Capacitor plugin on iOS/Android — especially on iOS
-  // where `navigator.vibrate` is a no-op.
-  try {
-    if (Capacitor.isNativePlatform()) {
+  // where `navigator.vibrate` is a no-op. We log every step so that if
+  // haptics still don't fire on TestFlight we can connect Safari Web
+  // Inspector to the iPhone and see exactly where the call falls off.
+  const native = (() => {
+    try { return Capacitor.isNativePlatform(); } catch { return false; }
+  })();
+
+  if (native) {
+    try {
       const style =
         kind === "light" ? ImpactStyle.Light :
         kind === "medium" ? ImpactStyle.Medium :
         ImpactStyle.Heavy;
       await Haptics.impact({ style });
       return;
+    } catch (err) {
+      // Plugin call failed — most often this means the SPM package
+      // didn't link properly (Package.swift had backslash paths) or
+      // the plugin class isn't registered. Surfacing the error in the
+      // console so we can see it in Web Inspector.
+      console.warn("[haptics] Capacitor Haptics.impact failed", err);
     }
-  } catch {
-    // Plugin not available / failed — fall through to web API.
   }
 
+  // Web fallback. iOS Safari ignores navigator.vibrate, so this only
+  // helps Android and desktop dev. On iOS native this branch only runs
+  // when the Capacitor plugin call above threw.
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     const duration = kind === "light" ? 10 : kind === "medium" ? 25 : 40;
     try { navigator.vibrate(duration); } catch { /* ignore */ }
