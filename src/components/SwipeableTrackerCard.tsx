@@ -54,18 +54,25 @@ export const SwipeableTrackerCard = ({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
   const activePointerId = useRef<number | null>(null);
-  // Only call setPointerCapture AFTER movement crosses a threshold. If we
-  // capture on pointerdown, iOS Safari steals the synthesized click on nearby
-  // buttons for taps anywhere in this zone and neighboring siblings.
-  // Threshold lowered from 8 → 4 px because on iOS WebView, when the page
-  // had just dismissed a sheet (e.g. closing Play), the first ~6-8 px of
-  // a new horizontal swipe could be claimed by the OS for native scroll
-  // arbitration before our capture kicked in — and once that happened the
-  // pointer events stopped reaching us, so the swipe-right "stuck" mid-
-  // gesture. 4 px is still far enough that an intentional tap (jitter
-  // <2 px in practice) won't trip capture and steal its click.
+  // We now capture the pointer on pointerdown (immediately, after the
+  // button/handle early-return). The earlier deferred-capture approach
+  // was an attempt to avoid having iOS Safari swallow the synthesized
+  // click on nearby buttons during a tap — but in practice the user
+  // hit a different, asymmetric bug: swiping right from the middle/
+  // left of the card "got stuck" while swipe-left worked from anywhere.
+  // The pattern is consistent with iOS gesture arbitration partially
+  // engaging on rightward motion (it visually resembles the system
+  // edge-swipe-back, even though `allowsBackForwardNavigationGestures`
+  // is off) and silently consuming the first few pointer-move events
+  // before our capture could engage at the 4-8 px threshold.
+  // Capturing on pointerdown short-circuits that arbitration: as
+  // soon as the touch lands and is recognised as ours, the OS has
+  // no window to claim it. Buttons & the drag handle already exit
+  // early in handlePointerDown, so capture only happens for actual
+  // swipe-zone targets — clicks on those targets still flow as
+  // expected because endPointer releases capture before pointerup
+  // bubbles into a click.
   const hasCaptured = useRef(false);
-  const CAPTURE_THRESHOLD = 4;
 
   const Icon = getTrackerIcon(tracker.title, tracker.category);
   const categoryColor = getCategoryColor(tracker.category);
@@ -96,8 +103,12 @@ export const SwipeableTrackerCard = ({
     if (activePointerId.current !== null) return;
 
     activePointerId.current = e.pointerId;
-    // NOTE: do NOT setPointerCapture here — only after the user clearly swipes.
-    hasCaptured.current = false;
+    // Capture immediately so iOS gesture arbitration can't claim the
+    // pointer mid-swipe. Wrapped in try/catch because Safari can
+    // throw if capture is called on an element that's already been
+    // captured / detached during a fast re-render.
+    try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    hasCaptured.current = true;
     startX.current = e.clientX;
     currentDx.current = 0;
     setIsSwiping(true);
@@ -110,11 +121,6 @@ export const SwipeableTrackerCard = ({
     const dx = e.clientX - startX.current;
     currentDx.current = dx;
     if (Math.abs(dx) > 10) clearLongPress();
-    // Promote to captured pointer only once horizontal motion is unambiguous.
-    if (!hasCaptured.current && Math.abs(dx) > CAPTURE_THRESHOLD) {
-      try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
-      hasCaptured.current = true;
-    }
     setSwipeX(dx);
   };
 
