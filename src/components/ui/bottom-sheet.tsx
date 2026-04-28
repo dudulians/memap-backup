@@ -42,6 +42,16 @@ interface BottomSheetProps {
   /** Hide the drag handle pill. Rare — only if the body provides one. */
   hideHandle?: boolean;
   /**
+   * Apple-Music / iOS-modal "card on top of app" effect: vaul scales
+   * the background page slightly down so the sheet visibly sits on a
+   * darker, smaller version of the app underneath. Reads as a layered
+   * presentation rather than a generic bottom panel — use for sheets
+   * that take ~95vh and feel like a primary mode (Play). Default off
+   * because confetti & other fixed overlays in the body sometimes
+   * fight with the scale transform.
+   */
+  scaleBackground?: boolean;
+  /**
    * Accessibility label for the sheet — required by Radix/vaul. If
    * the body has its own visible heading, pass that as the title.
    */
@@ -55,15 +65,18 @@ export const BottomSheet = ({
   className,
   hideClose = false,
   hideHandle = false,
+  scaleBackground = false,
   ariaTitle,
 }: BottomSheetProps) => (
   <DrawerPrimitive.Root
     open={open}
     onOpenChange={onOpenChange}
-    // shouldScaleBackground=false: avoids vaul's default "shrink the
-    // page behind" effect, which fights with our existing fixed
-    // overlays (e.g. confetti during the Done screen).
-    shouldScaleBackground={false}
+    // Per-sheet opt-in. Off by default to avoid the scale transform
+    // fighting with confetti / fixed overlays during e.g. the Done
+    // screen — but Play (the primary mode) opts IN so the sheet sits
+    // visibly on top of a darkened, slightly-smaller app, like Apple
+    // Music's Now Playing.
+    shouldScaleBackground={scaleBackground}
   >
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />

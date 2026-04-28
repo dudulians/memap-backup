@@ -680,15 +680,17 @@ export const DailySession = ({
     }
 
     return (
-      // Done state — wrapped in BottomSheet so it shares the same
-      // visual + drag-to-dismiss behaviour as every other sheet in
-      // the app. BottomSheet provides the pill, the X, the dim
-      // backdrop, and (via vaul) the iOS-correct scroll-aware drag
-      // dismissal. We just supply the body content.
+      // Done state — wrapped in BottomSheet with Apple-Music-style
+      // presentation (scaleBackground + 95vh) so the sheet sits as a
+      // visible "card on top of the app" rather than a generic panel.
+      // The sliver of background still showing at the top + the
+      // shrunk-down app underneath give the user a clear "I'm in the
+      // app, on this screen" cue.
       <BottomSheet
         open
         onOpenChange={(o) => { if (!o) onClose(); }}
-        className="h-[80vh] flex flex-col p-0"
+        className="h-[95vh] flex flex-col p-0"
+        scaleBackground
         ariaTitle="Session complete"
       >
         <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 pb-6 gap-6 animate-fade-in">
@@ -883,14 +885,18 @@ export const DailySession = ({
   const noColorClass = yesIsSignificant ? "balanced" : "strong";
 
   return (
-    // Deck mode wrapped in BottomSheet (vaul). vaul provides the
-    // pill, X close, dim backdrop, and drag-to-dismiss with proper
-    // scroll coordination. We supply only the body content: counter
-    // row + date strip + card area + action buttons.
+    // Deck mode wrapped in BottomSheet with Apple-Music-style
+    // presentation. scaleBackground + 95vh height = "card layered on
+    // top of the app" feel, matches Apple Music / Yandex Music
+    // Now Playing. Drag-down from the header (above the card area)
+    // closes; the card area itself opts out of vaul's drag via
+    // data-vaul-no-drag below so horizontal yes/no swipes don't
+    // compete with vertical drag-to-close.
     <BottomSheet
       open
       onOpenChange={(o) => { if (!o) onClose(); }}
-      className="h-[80vh] flex flex-col p-0"
+      className="h-[95vh] flex flex-col p-0"
+      scaleBackground
       ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -960,12 +966,21 @@ export const DailySession = ({
           touch (header, buttons, anywhere) had to go through our
           direction-lock first; on iOS WebView that handshake cost
           enough latency to make vaul's drag-to-close feel sluggish
-          compared to Settings/TrackerDetails. Now the wrapper is
-          gesture-clean and vaul gets its events directly when the
-          user drags from header/sides; only when they grab the
-          actual card do our handlers run, which is the only place
-          where card yes/no swipes need to be tracked anyway. */}
+          compared to Settings/TrackerDetails.
+
+          data-vaul-no-drag: opts this region out of vaul's
+          drag-to-close. Apple Music does the same — drag-down to
+          dismiss only fires from the top of the sheet (album art /
+          handle), not from the controls. Here, drag-down comes from
+          the header (counter + date strip + progress bar above
+          this div). The card area below is fully owned by our
+          horizontal yes/no swipe handlers, so the user's natural
+          finger-arc on a swipe-right (which inevitably has some
+          downward component) stops being interpreted by vaul as
+          "she wants to close the sheet" and our handlers see it
+          cleanly. */}
       <div
+        data-vaul-no-drag
         className="flex-1 flex items-stretch justify-center p-3 overflow-hidden"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
