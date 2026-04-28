@@ -867,21 +867,7 @@ export const DailySession = ({
       className="h-[90vh] flex flex-col p-0"
       ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
-      <div
-        className="flex-1 flex flex-col overflow-hidden"
-        // touchAction left at the default ("auto") so vaul can
-        // observe native touch events for its drag detection. With
-        // touch-action:none we disabled all native touch which made
-        // vaul's drag-down feel sluggish — it was driving the move
-        // via JS pointer events alone instead of the GPU-accelerated
-        // touch path. Card swipes still work via our pointer
-        // handlers; vaul's direction-lock keeps left/right card
-        // gestures from being claimed as drag-to-dismiss.
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endPointer}
-        onPointerCancel={endPointer}
-      >
+      <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">
           <div className="w-9" />
@@ -943,10 +929,23 @@ export const DailySession = ({
         <Progress value={progress} className="h-1.5" />
       </div>
 
-      {/* Card area — take all available vertical space, near-edge-to-edge
-          width, Tinder/Hinge feel. Card itself fills the container so the
-          question is huge and the gesture surface is massive. */}
-      <div className="flex-1 flex items-stretch justify-center p-3 overflow-hidden">
+      {/* Card area — pointer handlers attached HERE only, not on the
+          whole deck wrapper. With handlers on the wrapper, every
+          touch (header, buttons, anywhere) had to go through our
+          direction-lock first; on iOS WebView that handshake cost
+          enough latency to make vaul's drag-to-close feel sluggish
+          compared to Settings/TrackerDetails. Now the wrapper is
+          gesture-clean and vaul gets its events directly when the
+          user drags from header/sides; only when they grab the
+          actual card do our handlers run, which is the only place
+          where card yes/no swipes need to be tracked anyway. */}
+      <div
+        className="flex-1 flex items-stretch justify-center p-3 overflow-hidden"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+      >
         <div
           className={cn(
             "w-full max-w-lg transition-transform duration-300 flex",
