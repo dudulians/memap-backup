@@ -101,10 +101,30 @@ export const PatternsTab = () => {
     if (fromCarouselSelect.current) return;
     const idx = SECTIONS.indexOf(section);
     if (idx >= 0 && emblaApi.selectedScrollSnap() !== idx) {
-      emblaApi.scrollTo(idx);
+      // jump = true: snap instantly without the smooth scroll
+      // animation. With animation, a re-render mid-transition can
+      // leave embla parked between two slides (visually showing both
+      // halves at once). Instant snap eliminates that whole class
+      // of bug — the user sees ONE slide, always.
+      emblaApi.scrollTo(idx, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section, emblaApi]);
+
+  // Defensive: on any window resize (e.g. iOS WebView orientation
+  // changes, keyboard appearing) re-init embla so it recomputes
+  // slide widths. Otherwise a sheet-keyboard flow can leave embla
+  // with stale measurements and the dreaded "two halves" overlap.
+  useEffect(() => {
+    if (!emblaApi) return;
+    const reInit = () => emblaApi.reInit();
+    window.addEventListener("resize", reInit);
+    window.addEventListener("orientationchange", reInit);
+    return () => {
+      window.removeEventListener("resize", reInit);
+      window.removeEventListener("orientationchange", reInit);
+    };
+  }, [emblaApi]);
 
   // carousel → section
   useEffect(() => {
@@ -412,7 +432,7 @@ export const PatternsTab = () => {
       <div className="overflow-x-hidden mt-4" ref={emblaRef}>
         <div className="flex">
           {/* --- OVERVIEW: calendar focus, no extra clutter ----------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
+          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
             <OverviewCard
               trackers={trackers}
               entries={entries}
@@ -425,7 +445,7 @@ export const PatternsTab = () => {
           </div>
 
           {/* --- SIGNALS: the pattern/action cards, strong first ------ */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
+          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
             <div className="space-y-4">
         {sortedTrackers.map((tracker) => {
           const stats = getTrackerStats(tracker);
@@ -557,12 +577,12 @@ export const PatternsTab = () => {
           </div>
 
           {/* --- TRENDS: dual-series chart over time ------------------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
+          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
             <TrendChart trackers={trackers} entries={entries} />
           </div>
 
           {/* --- LINKS: dependency / correlation insights ------------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 animate-fade-in">
+          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
             <CorrelationInsights trackers={trackers} entries={entries} />
           </div>
         </div>
