@@ -3,7 +3,6 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes } from "@/lib/notes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ChevronLeft, ChevronRight, Plus, CheckSquare, Square, FileText } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
@@ -41,7 +40,6 @@ export const OverviewCard = ({
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [activeTrackerIndex, setActiveTrackerIndex] = useState(0);
-  const [trackerPickerOpen, setTrackerPickerOpen] = useState(false);
   const [displayMonth, setDisplayMonth] = useState(() => new Date());
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
@@ -334,39 +332,47 @@ export const OverviewCard = ({
   return (
     <Card className="card-premium overflow-hidden animate-fade-in">
       <CardContent className="p-3">
-        {/* Tracker selector — Apple Health "metric picker" pattern.
-            One big tappable pill shows the active tracker; tap opens
-            a clean bottom sheet with the full list. No more thin
-            scrolling chip strip that made the calendar twitch.
-            data-no-tabswipe keeps embla's section drag from
-            triggering when the user taps this control. */}
-        <div className="mb-3" data-no-tabswipe>
+        {/* Tracker selector — inline arrows + name. Tap left/right
+            and the calendar below redraws with the new tracker's
+            day-colours immediately, without any overlay covering
+            the calendar. The user wanted to *see* the change, not
+            switch behind a popup. data-no-tabswipe keeps embla's
+            section drag from triggering when tapping the arrows. */}
+        <div className="mb-3 flex items-center gap-2" data-no-tabswipe>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handlePrevTracker}
+            className="h-9 w-9 rounded-full flex-shrink-0"
+            aria-label={t("overview.prevPattern")}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
           {(() => {
             const ActiveIcon = getTrackerIcon(activeTracker.title, activeTracker.category);
             return (
-              <button
-                onClick={() => setTrackerPickerOpen(true)}
-                data-coachmark="overview-chips"
-                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-muted/40 hover:bg-muted/60 active:bg-muted/70 transition-colors text-left"
-              >
+              <div className="flex-1 min-w-0 flex items-center justify-center gap-2">
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.18)` }}
                 >
                   <ActiveIcon className="h-4 w-4" strokeWidth={2} style={{ color: `hsl(var(--${categoryColor}))` }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                    {t("overview.trackerLabel", { defaultValue: "Карточка" })}
-                  </p>
-                  <p className="text-sm font-semibold truncate">
-                    {localizeTrackerTitle(activeTracker.title)}
-                  </p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0 rotate-90" />
-              </button>
+                <p className="text-sm font-semibold truncate">
+                  {localizeTrackerTitle(activeTracker.title)}
+                </p>
+              </div>
             );
           })()}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNextTracker}
+            className="h-9 w-9 rounded-full flex-shrink-0"
+            aria-label={t("overview.nextPattern")}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Year View */}
@@ -625,63 +631,6 @@ export const OverviewCard = ({
         )}
 
       </CardContent>
-
-      {/* Tracker picker — opens when the user taps the active-tracker
-          pill at the top of the card. Lists every tracker with icon,
-          colour, and current significant-day count, so picking is
-          informed not blind. Tap a row to switch and close. */}
-      <BottomSheet
-        open={trackerPickerOpen}
-        onOpenChange={setTrackerPickerOpen}
-        className="max-h-[70vh]"
-        ariaTitle={t("overview.pickTracker", { defaultValue: "Выбор карточки" })}
-      >
-        <div className="px-5 pt-3 pb-1 flex-shrink-0">
-          <h2 className="text-base font-semibold">
-            {t("overview.pickTracker", { defaultValue: "Выбор карточки" })}
-          </h2>
-        </div>
-        <div className="flex-1 overflow-y-auto px-3 pb-4">
-          <div className="space-y-1">
-            {trackers.map((tracker, index) => {
-              const isActive = index === activeTrackerIndex;
-              const Icon = getTrackerIcon(tracker.title, tracker.category);
-              const colorVar = getCategoryColor(tracker.category);
-              return (
-                <button
-                  key={tracker.id}
-                  onClick={() => {
-                    setActiveTrackerIndex(index);
-                    setTrackerPickerOpen(false);
-                  }}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-colors",
-                    isActive ? "bg-muted/60" : "hover:bg-muted/40 active:bg-muted/50",
-                  )}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `hsl(var(--${colorVar}) / 0.18)` }}
-                  >
-                    <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} style={{ color: `hsl(var(--${colorVar}))` }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm truncate", isActive ? "font-semibold" : "font-medium")}>
-                      {localizeTrackerTitle(tracker.title)}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wider">
-                      {t(`categories.${tracker.category}`)}
-                    </p>
-                  </div>
-                  {isActive && (
-                    <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </BottomSheet>
     </Card>
   );
 };
