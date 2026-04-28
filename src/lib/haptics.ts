@@ -81,3 +81,72 @@ export const haptics = {
   /** Error pulse — failed action that the user should notice. */
   error: () => safe(notify(NotificationType.Error, [40, 60, 40, 60, 40])),
 };
+
+// --- Diagnostic harness ----------------------------------------------
+// The user's TestFlight build silently fails on every haptic call —
+// no error, no vibration. To find out where it dies we need to surface
+// each call result individually instead of swallowing them. This
+// function tries every distinct iOS haptic API the plugin exposes and
+// returns a structured report that the Settings test button can
+// display inline.
+
+export interface HapticDiagnostic {
+  isNative: boolean;
+  results: Array<{
+    label: string;
+    ok: boolean;
+    error?: string;
+  }>;
+}
+
+const tryCall = async (label: string, fn: () => Promise<unknown>) => {
+  try {
+    await fn();
+    return { label, ok: true };
+  } catch (err) {
+    return {
+      label,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+};
+
+export const runHapticsDiagnostic = async (): Promise<HapticDiagnostic> => {
+  const isNative = (() => {
+    try {
+      return Capacitor.isNativePlatform();
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!isNative) {
+    return {
+      isNative: false,
+      results: [
+        { label: "platform", ok: false, error: "Capacitor.isNativePlatform() returned false" },
+      ],
+    };
+  }
+
+  // Spaced ~250 ms apart so a working device can produce 4 distinct
+  // tactile events the user can count individually.
+  const results: HapticDiagnostic["results"] = [];
+
+  results.push(await tryCall("impact:Light", () => Haptics.impact({ style: ImpactStyle.Light })));
+  await new Promise((r) => setTimeout(r, 250));
+
+  results.push(await tryCall("impact:Medium", () => Haptics.impact({ style: ImpactStyle.Medium })));
+  await new Promise((r) => setTimeout(r, 250));
+
+  results.push(await tryCall("notification:Success", () => Haptics.notification({ type: NotificationType.Success })));
+  await new Promise((r) => setTimeout(r, 250));
+
+  results.push(await tryCall("selectionChanged", () => Haptics.selectionChanged()));
+  await new Promise((r) => setTimeout(r, 250));
+
+  results.push(await tryCall("vibrate", () => Haptics.vibrate({ duration: 200 })));
+
+  return { isNative: true, results };
+};

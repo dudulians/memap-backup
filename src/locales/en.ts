@@ -183,6 +183,7 @@ const en = {
     sound: "Sound",
     haptics: "Vibration",
     hapticsTestButton: "Test vibration",
+    hapticsTestRunning: "Testing…",
     hapticsTestFired: "Test sent",
     hapticsTestDesc: "Three short pulses should fire. If you didn't feel them, let me know.",
     hapticsTestFailed: "Couldn't trigger vibration",

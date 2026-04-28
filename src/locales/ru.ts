@@ -186,6 +186,7 @@ const ru: Translation = {
     sound: "Звук",
     haptics: "Вибрация",
     hapticsTestButton: "Проверить вибрацию",
+    hapticsTestRunning: "Тестирую…",
     hapticsTestFired: "Тест отправлен",
     hapticsTestDesc: "Должно быть три коротких вибрации подряд. Если не почувствовала — пиши, разберёмся.",
     hapticsTestFailed: "Не удалось вызвать вибрацию",
