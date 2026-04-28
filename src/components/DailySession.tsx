@@ -621,13 +621,23 @@ export const DailySession = ({
           onClick: () => { /* opened via Popover */ },
         });
       }
-      // Note: the "Сыграть случайный раунд" row used to live here.
-      // Removed — the user explicitly asked us NOT to surface
-      // surprise-cards on the regular Done screen. Random play stays
-      // as an opt-in feature via the Shuffle (🎲) button on the
-      // Cards screen header. Equivalent path to add new things to
-      // the deck: the "Идеи дня" carousel on the Cards screen, with
-      // an explicit "+ Add to my map" button.
+      // "Сыграть случайный раунд" — restored after the user clarified
+      // she does want this on the regular Done screen. The earlier
+      // removal was based on a different request (don't auto-inject
+      // surprise cards INTO the user's normal session deck), which is
+      // still respected: the regular session deck is built only from
+      // the user's own active trackers — see buildDeck above. This row
+      // is just an explicit, opt-in entry to the random round, not an
+      // automatic injection.
+      if (onPlayRandom) {
+        rows.push({
+          key: "random-round",
+          icon: Shuffle,
+          title: t("dailySession.rowRandomRoundTitle"),
+          subtitle: t("dailySession.rowRandomRoundSubtitle"),
+          onClick: onPlayRandom,
+        });
+      }
       rows.push({
         key: "note",
         icon: Pencil,

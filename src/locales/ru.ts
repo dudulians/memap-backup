@@ -465,6 +465,8 @@ const ru: Translation = {
     rowReviewPlaySubtitle: "Что-то оставить, остальное — удалить",
     rowAnotherRoundTitle: "Сыграть ещё раунд",
     rowAnotherRoundSubtitle: "Ещё 10 случайных вопросов",
+    rowRandomRoundTitle: "Сыграть случайный раунд",
+    rowRandomRoundSubtitle: "10 случайных вопросов из библиотеки",
     playRoundOne: "Добавлена 1 карточка в случайный раунд",
     playRoundMany: "Добавлено карточек в случайный раунд: {{count}}",
   },

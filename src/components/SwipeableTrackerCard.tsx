@@ -57,8 +57,15 @@ export const SwipeableTrackerCard = ({
   // Only call setPointerCapture AFTER movement crosses a threshold. If we
   // capture on pointerdown, iOS Safari steals the synthesized click on nearby
   // buttons for taps anywhere in this zone and neighboring siblings.
+  // Threshold lowered from 8 → 4 px because on iOS WebView, when the page
+  // had just dismissed a sheet (e.g. closing Play), the first ~6-8 px of
+  // a new horizontal swipe could be claimed by the OS for native scroll
+  // arbitration before our capture kicked in — and once that happened the
+  // pointer events stopped reaching us, so the swipe-right "stuck" mid-
+  // gesture. 4 px is still far enough that an intentional tap (jitter
+  // <2 px in practice) won't trip capture and steal its click.
   const hasCaptured = useRef(false);
-  const CAPTURE_THRESHOLD = 8;
+  const CAPTURE_THRESHOLD = 4;
 
   const Icon = getTrackerIcon(tracker.title, tracker.category);
   const categoryColor = getCategoryColor(tracker.category);

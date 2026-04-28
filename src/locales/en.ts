@@ -461,6 +461,8 @@ const en = {
     rowReviewPlaySubtitle: "Keep what you like, drop the rest",
     rowAnotherRoundTitle: "Play another round",
     rowAnotherRoundSubtitle: "10 more random questions",
+    rowRandomRoundTitle: "Play a random round",
+    rowRandomRoundSubtitle: "10 random prompts from the library",
     playRoundOne: "1 card added to your play round",
     playRoundMany: "{{count}} cards added to your play round",
   },
