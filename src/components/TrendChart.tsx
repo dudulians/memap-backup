@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,15 +45,6 @@ const PALETTE = [
   "#fbbf24", // amber
 ];
 
-const hashId = (id: string): number => {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return h;
-};
-
-const trackerColor = (tracker: Tracker): string =>
-  PALETTE[hashId(tracker.id) % PALETTE.length];
-
 // 7d → dots per lane. 30d/90d → weekly bars. 1y → monthly bars.
 const bucketSize = (range: TimeRange) => {
   if (range === "7d") return 1;
@@ -82,63 +73,103 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
   const bucket = bucketSize(range);
   const isAggregated = range !== "7d";
 
-  const activeTrackers = trackers.filter((t) => !t.archived);
-  const visibleTrackers =
-    selectedIds.size === 0
-      ? activeTrackers
-      : activeTrackers.filter((t) => selectedIds.has(t.id));
+  // Memoize derived tracker arrays so downstream useMemos (color map,
+  // chart data) don't see a fresh reference on every render.
+  const activeTrackers = useMemo(
+    () => trackers.filter((t) => !t.archived),
+    [trackers]
+  );
+  const visibleTrackers = useMemo(
+    () =>
+      selectedIds.size === 0
+        ? activeTrackers
+        : activeTrackers.filter((t) => selectedIds.has(t.id)),
+    [activeTrackers, selectedIds]
+  );
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Sequential color assignment by stable order. Used to be a hash
+  // of tracker.id which gave random palette slots — with only 3
+  // trackers two could land on visually similar colours (e.g. slot
+  // 0 violet + slot 8 indigo). Now slot 0 → tracker 0, slot 1 →
+  // tracker 1, etc. With ≤12 trackers every line gets a unique,
+  // visually distinct colour.
+  const trackerColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const sorted = [...activeTrackers].sort((a, b) => {
+      const ai = a.sortIndex ?? Number.MAX_SAFE_INTEGER;
+      const bi = b.sortIndex ?? Number.MAX_SAFE_INTEGER;
+      if (ai !== bi) return ai - bi;
+      return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+    });
+    sorted.forEach((tr, i) => {
+      map.set(tr.id, PALETTE[i % PALETTE.length]);
+    });
+    return map;
+  }, [activeTrackers]);
 
-  // Build aggregated data: each point = one bucket (week or month)
-  const buildBucketedData = () => {
-    const bucketCount = Math.ceil(days / bucket);
-    const data: Record<string, any>[] = [];
+  const colorFor = (tracker: Tracker): string =>
+    trackerColorMap.get(tracker.id) ?? PALETTE[0];
 
-    for (let b = bucketCount - 1; b >= 0; b--) {
-      const bucketEnd = new Date(today);
-      bucketEnd.setDate(today.getDate() - b * bucket);
-      const bucketStart = new Date(bucketEnd);
-      bucketStart.setDate(bucketEnd.getDate() - bucket + 1);
+  // Heavy compute: bucket/dot rebuild on every input change. Wrapping in
+  // useMemo means we only re-run when entries / range / filters / trackers
+  // actually change — not on every render (legend hover, tooltip move, etc.).
+  // Inside, we also build an O(1) lookup Map for entries instead of doing
+  // entries.find() per cell (was O(M·N): days × trackers × entries).
+  const chartData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      const label = bucketLabel(range, bucketEnd);
-      const point: Record<string, any> = { date: label };
-
-      for (const tracker of activeTrackers) {
-        let count = 0;
-        for (let d = 0; d < bucket; d++) {
-          const day = new Date(bucketStart);
-          day.setDate(bucketStart.getDate() + d);
-          const dateStr = day.toISOString().split("T")[0];
-          const entry = entries.find(
-            (e) => e.trackerId === tracker.id && e.date === dateStr
-          );
-          if (entry) {
-            const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
-            if (sig) count++;
-          }
-        }
-        point[tracker.id] = count;
-      }
-      data.push(point);
+    // Map of `${trackerId}:${YYYY-MM-DD}` → entry. Built once per memo.
+    const entryMap = new Map<string, TrackerEntry>();
+    for (const e of entries) {
+      entryMap.set(`${e.trackerId}:${e.date}`, e);
     }
-    return data;
-  };
 
-  // Dot mode (7d): significant day → lane position, null otherwise
-  const buildDotData = () => {
+    if (isAggregated) {
+      // Aggregated: each point = one bucket (week or month). Count of
+      // significant days per tracker in that bucket.
+      const bucketCount = Math.ceil(days / bucket);
+      const data: Record<string, any>[] = [];
+
+      for (let b = bucketCount - 1; b >= 0; b--) {
+        const bucketEnd = new Date(today);
+        bucketEnd.setDate(today.getDate() - b * bucket);
+        const bucketStart = new Date(bucketEnd);
+        bucketStart.setDate(bucketEnd.getDate() - bucket + 1);
+
+        const label = bucketLabel(range, bucketEnd);
+        const point: Record<string, any> = { date: label };
+
+        for (const tracker of activeTrackers) {
+          let count = 0;
+          for (let d = 0; d < bucket; d++) {
+            const day = new Date(bucketStart);
+            day.setDate(bucketStart.getDate() + d);
+            const dateStr = day.toISOString().split("T")[0];
+            const entry = entryMap.get(`${tracker.id}:${dateStr}`);
+            if (entry) {
+              const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
+              if (sig) count++;
+            }
+          }
+          point[tracker.id] = count;
+        }
+        data.push(point);
+      }
+      return data;
+    }
+
+    // Dot mode (7d): significant day → lane position, null otherwise.
     const data: Record<string, any>[] = [];
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split("T")[0];
       const label = d.toLocaleDateString("en", { weekday: "short", day: "numeric" });
-      const dayEntries = entries.filter((e) => e.date === dateStr);
       const point: Record<string, any> = { date: label };
 
       visibleTrackers.forEach((tracker, idx) => {
-        const entry = dayEntries.find((e) => e.trackerId === tracker.id);
+        const entry = entryMap.get(`${tracker.id}:${dateStr}`);
         if (entry) {
           const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
           point[tracker.id] = sig ? laneY(idx, visibleTrackers.length) : null;
@@ -149,9 +180,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
       data.push(point);
     }
     return data;
-  };
-
-  const chartData = isAggregated ? buildBucketedData() : buildDotData();
+  }, [isAggregated, days, bucket, range, entries, activeTrackers, visibleTrackers]);
 
   const toggleTracker = (id: string) => {
     setSelectedIds((prev) => {
@@ -211,7 +240,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
           )}
           {activeTrackers.map((t) => {
             const isActive = selectedIds.size === 0 || selectedIds.has(t.id);
-            const color = trackerColor(t);
+            const color = colorFor(t);
             return (
               <button
                 key={t.id}
@@ -290,7 +319,7 @@ export const TrendChart = ({ trackers, entries }: TrendChartProps) => {
                 filterNull
               />
               {visibleTrackers.map((tracker) => {
-                const color = trackerColor(tracker);
+                const color = colorFor(tracker);
                 return isAggregated ? (
                   <Line
                     key={tracker.id}
