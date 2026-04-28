@@ -4,7 +4,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2, Check, ListChecks } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -97,6 +98,14 @@ export const TodayTab = () => {
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateTracker, setDuplicateTracker] = useState<Tracker | null>(null);
   const [pendingTracker, setPendingTracker] = useState<Tracker | null>(null);
+  // Multi-select mode for the regular tracker list. When on, tapping a
+  // card toggles its selection instead of opening its details, and a
+  // bottom action bar shows "Удалить (N)" / "Готово". Lets the user
+  // wipe several onboarding cards at once instead of opening each one.
+  // Play trackers stay outside this mode — they have their own
+  // ✓/× per-card buttons + "Удалить все игровые" action.
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedTrackerIds, setSelectedTrackerIds] = useState<Set<string>>(new Set());
   const [selectedTrackerForDetails, setSelectedTrackerForDetails] = useState<Tracker | null>(null);
   const [selectedTrackerIndex, setSelectedTrackerIndex] = useState<number>(0);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -531,6 +540,59 @@ export const TodayTab = () => {
     });
   };
 
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedTrackerIds(new Set());
+  };
+
+  const toggleTrackerSelection = (id: string) => {
+    setSelectedTrackerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedTrackerIds);
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    const previousTrackers = trackers;
+    const deleted = trackers.filter((t) => idSet.has(t.id));
+    const updatedTrackers = trackers.filter((t) => !idSet.has(t.id));
+    await saveTrackers(updatedTrackers);
+    setTrackers(updatedTrackers);
+    exitSelectionMode();
+
+    toast({
+      title:
+        ids.length === 1
+          ? t("today.trackerDeleted")
+          : t("today.bulkDeletedTitle", { count: ids.length }),
+      description: t("today.bulkDeletedDesc"),
+      action: (
+        <ToastAction
+          altText={t("today.undo")}
+          onClick={async () => {
+            const allTrackers = await getTrackers();
+            // Restore by union with what's currently saved (in case
+            // entries were edited in the meantime).
+            const stillThere = new Set(allTrackers.map((tr) => tr.id));
+            const restored = [
+              ...allTrackers,
+              ...deleted.filter((tr) => !stillThere.has(tr.id)),
+            ];
+            await saveTrackers(restored);
+            setTrackers(previousTrackers);
+          }}
+        >
+          {t("today.undo")}
+        </ToastAction>
+      ),
+    });
+  };
+
   const handleUpdateTracker = async (updatedTracker: Tracker) => {
     const updatedTrackers = trackers.map(t =>
       t.id === updatedTracker.id ? updatedTracker : t
@@ -814,11 +876,25 @@ export const TodayTab = () => {
           const TIcon = getTrackerIcon(tracker.title, tracker.category);
           const todayEntry = getSelectedDateEntry(tracker.id);
           const answered = todayEntry !== undefined;
+          // Selection mode only applies to regular cards. Play cards
+          // keep their own ✓/× row so the user can promote-or-delete
+          // them one at a time without losing that affordance.
+          const inSelectMode = selectionMode && !isPlay;
+          const isSelected = selectedTrackerIds.has(tracker.id);
           return (
             <Card
               key={tracker.id}
-              onClick={() => handleOpenTrackerDetails(tracker)}
-              className="card-premium cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+              onClick={() => {
+                if (inSelectMode) {
+                  toggleTrackerSelection(tracker.id);
+                } else {
+                  handleOpenTrackerDetails(tracker);
+                }
+              }}
+              className={cn(
+                "card-premium cursor-pointer hover:shadow-md transition-all active:scale-[0.99]",
+                inSelectMode && isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+              )}
             >
               <CardContent className="p-3.5 flex items-center gap-3">
                 <div className="h-11 w-11 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0">
@@ -832,7 +908,18 @@ export const TodayTab = () => {
                     </p>
                   )}
                 </div>
-                {isPlay ? (
+                {inSelectMode ? (
+                  <div
+                    className={cn(
+                      "w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                      isSelected
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/40",
+                    )}
+                  >
+                    {isSelected && <Check className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />}
+                  </div>
+                ) : isPlay ? (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => {
@@ -873,6 +960,61 @@ export const TodayTab = () => {
           <>
             {regularTrackers.length > 0 && (
               <div data-coachmark="cards-list" className="space-y-3 animate-fade-in">
+                {/* Selection-mode header. When OFF, show a small "Изменить"
+                    action so the user can enter bulk-edit mode. When ON,
+                    show selected count + Cancel + Delete (N).
+                    Hidden when there's only 1 regular tracker — bulk
+                    select is overkill for a single item. */}
+                {regularTrackers.length > 1 && (
+                  <div className="flex items-center justify-between -mb-1">
+                    {selectionMode ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedTrackerIds.size === 0
+                            ? t("today.selectionModeHint")
+                            : t("today.selectionCount", { count: selectedTrackerIds.size })}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={exitSelectionMode}
+                            className="text-xs rounded-full h-7 px-3"
+                          >
+                            {t("common.cancel")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleBulkDelete}
+                            disabled={selectedTrackerIds.size === 0}
+                            className="text-xs rounded-full h-7 px-3 text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            {selectedTrackerIds.size > 0
+                              ? t("today.bulkDeleteAction", { count: selectedTrackerIds.size })
+                              : t("today.bulkDeleteEmpty")}
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs uppercase tracking-wider text-muted-foreground/70 font-medium">
+                          {t("today.cardsSection")}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectionMode(true)}
+                          className="text-xs rounded-full h-7 px-3 text-muted-foreground hover:text-foreground"
+                        >
+                          <ListChecks className="h-3 w-3 mr-1" />
+                          {t("today.editCards")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="space-y-2">
                   {regularTrackers.map((tracker) => renderTrackerCard(tracker, false))}
                 </div>

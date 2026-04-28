@@ -451,13 +451,37 @@ const toGenerated = (tpl: NormalizedTemplate): GeneratedStarter => ({
 
 export const generateStarterPack = (
   answers: InterviewAnswers,
-  count: number = 5
+  count: number = 5,
+  /**
+   * Lowercase titles to skip. Used by the onboarding "regenerate" flow:
+   * the user removes cards she doesn't like and asks for new ones — we
+   * pass titles already shown so the next pick avoids them. Without this
+   * the same top-scored cards would just come back.
+   *
+   * Title is the dedupe key (rather than internal template id) because
+   * GeneratedStarter doesn't carry the id forward and the localised
+   * title is what the UI binds against anyway. Localised titles are
+   * unique within a locale.
+   */
+  excludeTitles: string[] = [],
 ): GeneratedStarter[] => {
   // No signal at all → return empty so callers fall back to universal 5.
   if (!hasMeaningfulInterviewSignal(answers)) return [];
 
   const all = normalizeAll();
-  const scored = all.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
+  const excludeSet = new Set(excludeTitles.map((t) => t.toLowerCase().trim()));
+  // Filter BEFORE scoring so candidates already shown can't influence
+  // the diversity caps (otherwise an already-shown sleep template would
+  // still consume the "1 sleep topic" slot in pickTop).
+  const candidates =
+    excludeSet.size === 0
+      ? all
+      : all.filter((tpl) => {
+          const ru = (tpl.titleRu ?? "").toLowerCase().trim();
+          const en = tpl.title.toLowerCase().trim();
+          return !excludeSet.has(ru) && !excludeSet.has(en);
+        });
+  const scored = candidates.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
   const picked = pickTop(scored, count, 2);
   return picked.map(toGenerated);
 };

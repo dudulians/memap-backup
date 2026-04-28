@@ -107,13 +107,14 @@ const en = {
 
     stackReveal: {
       title: "Your cards are ready",
-      subtitle: "Tap × to remove anything that doesn't fit. You'll start with what's left.",
+      subtitle: "Tap × to remove anything that doesn't fit. Suggest others, or just continue.",
       cta: "Let's go",
       ctaWithCount_one: "Add 1 card",
       ctaWithCount_other: "Add {{count}} cards",
       ctaSkip: "Skip — start blank",
       preparing: "Preparing your cards…",
       removeCard: "Remove this card",
+      regenerate: "Suggest others",
       allRemoved: "No cards selected. You can start blank and add your own from the + button on the cards screen.",
     },
 
@@ -292,6 +293,17 @@ const en = {
     trackerAddedDesc: "\"{{title}}\" has been added to your map.",
     trackerDeleted: "Tracker deleted",
     trackerDeletedDesc: "\"{{title}}\" was removed.",
+    cardsSection: "Cards",
+    editCards: "Edit",
+    selectionModeHint: "Pick cards",
+    selectionCount_one: "{{count}} selected",
+    selectionCount_other: "{{count}} selected",
+    bulkDeleteAction_one: "Delete {{count}}",
+    bulkDeleteAction_other: "Delete {{count}}",
+    bulkDeleteEmpty: "Delete",
+    bulkDeletedTitle_one: "{{count}} card deleted",
+    bulkDeletedTitle_other: "{{count}} cards deleted",
+    bulkDeletedDesc: "You can undo this.",
     undo: "Undo",
     saveFailed: "Save failed",
 

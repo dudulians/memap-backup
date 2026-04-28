@@ -862,83 +862,83 @@ const StackRevealScreen = ({
   const { t } = useTranslation();
   const [creating, setCreating] = useState(false);
 
-  // Compute the pack once on mount based on the interview state we got
-  // handed. We deliberately do NOT recompute on every answers change —
-  // the user has already moved past the question screens by the time
-  // they reach this step, so a stable preview is correct.
-  const pack = useMemo<GeneratedStarter[]>(() => {
-    return generateStarterPack(answers, 5);
+  // Initial pack + whether we have a real (interview-driven) generator
+  // available. If the interview produced no signal, we fall through to
+  // the universal DEFAULT_STARTERS — those are fixed 5, so there's
+  // nothing to regenerate, and the regenerate button is hidden in that
+  // branch. Stable across the lifetime of this step (we don't want
+  // re-running interview answers to swap the pack mid-review).
+  const { initialPack, hasGenerator } = useMemo(() => {
+    const generated = generateStarterPack(answers, 5);
+    if (generated.length > 0) {
+      return { initialPack: generated, hasGenerator: true };
+    }
+    const fallback: GeneratedStarter[] = DEFAULT_STARTERS.map((meta) => ({
+      title: t(`onboarding.defaultStarters.${meta.titleKey}`),
+      questionText: t(`onboarding.defaultStarters.${meta.questionKey}`),
+      category: meta.category,
+      periodDays: 30,
+      threshold: 10,
+      problemWhen: meta.problemWhen,
+      adviceAboveThreshold: "",
+    }));
+    return { initialPack: fallback, hasGenerator: false };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fallback rows for the preview when there's no interview signal —
-  // mirrors what seedDefaultTrackers will actually create so the user
-  // sees the truthful 5 cards either way.
-  const fallbackPreview = useMemo(
-    () =>
-      DEFAULT_STARTERS.map((meta) => ({
-        title: t(`onboarding.defaultStarters.${meta.titleKey}`),
-        questionText: t(`onboarding.defaultStarters.${meta.questionKey}`),
-        category: meta.category,
-      })),
-    [t],
+  // The pack is mutable now — × removes a card, "Сгенерировать другие"
+  // refills empty slots with the next-best non-shown templates.
+  const [currentPack, setCurrentPack] = useState<GeneratedStarter[]>(initialPack);
+  // Titles ever shown (lowercase, trimmed). Passed to generateStarterPack
+  // as excludeTitles so the regenerate flow can't bring the same card back.
+  const [seenTitles, setSeenTitles] = useState<Set<string>>(
+    () => new Set(initialPack.map((s) => s.title.toLowerCase().trim())),
   );
+  // Cap regenerations so the user can't sit in onboarding forever. 3
+  // regenerations × up to 5 new cards each = ~15 distinct templates seen,
+  // which is more than enough to find ones that fit.
+  const [regenerationCount, setRegenerationCount] = useState(0);
+  // Set when the last regenerate call returned zero new cards (pool is
+  // exhausted given the current excludes + diversity caps). Hides the
+  // button so the user doesn't keep tapping a no-op.
+  const [generatorExhausted, setGeneratorExhausted] = useState(false);
+  const MAX_REGENERATIONS = 3;
 
-  const initialPreview: Array<{
-    title: string;
-    questionText: string;
-    category: Tracker["category"];
-  }> = pack.length > 0 ? pack : fallbackPreview;
+  const removeAt = (index: number) => {
+    setCurrentPack((prev) => prev.filter((_, i) => i !== index));
+  };
 
-  // Track which preview rows the user has removed via the × button.
-  // Default: all kept. The seeded list at the end is filtered against
-  // this so users can only get cards they actually said yes to.
-  const [removedIndexes, setRemovedIndexes] = useState<Set<number>>(new Set());
-  const previewRows = initialPreview.filter((_, i) => !removedIndexes.has(i));
-
-  const removeRow = (index: number) => {
-    setRemovedIndexes((prev) => {
+  const regeneratePack = () => {
+    if (!hasGenerator) return;
+    if (regenerationCount >= MAX_REGENERATIONS) return;
+    const needed = 5 - currentPack.length;
+    if (needed <= 0) return;
+    const newCards = generateStarterPack(answers, needed, Array.from(seenTitles));
+    if (newCards.length === 0) {
+      setGeneratorExhausted(true);
+      return;
+    }
+    setCurrentPack((prev) => [...prev, ...newCards]);
+    setSeenTitles((prev) => {
       const next = new Set(prev);
-      next.add(index);
+      newCards.forEach((c) => next.add(c.title.toLowerCase().trim()));
       return next;
     });
+    setRegenerationCount((c) => c + 1);
   };
+
+  const canRegenerate =
+    hasGenerator &&
+    !generatorExhausted &&
+    currentPack.length < 5 &&
+    regenerationCount < MAX_REGENERATIONS;
 
   const handleGo = async () => {
     if (creating) return;
     setCreating(true);
     try {
-      if (pack.length > 0) {
-        // Personalised pack: filter by kept indexes so we seed only
-        // what the user didn't remove. If everything was removed we
-        // still finish the flow with zero cards — they can add via "+".
-        const keptPack = pack.filter((_, i) => !removedIndexes.has(i));
-        if (keptPack.length > 0) {
-          await seedGeneratedTrackers(keptPack, t);
-        }
-      } else {
-        // Fallback (no interview signal): if all kept, use the default
-        // path. Otherwise convert the kept default rows into the same
-        // GeneratedStarter shape and reuse the generated seeder.
-        const allKept = removedIndexes.size === 0;
-        if (allKept) {
-          await seedDefaultTrackers(t);
-        } else {
-          const keptStarters: GeneratedStarter[] = DEFAULT_STARTERS
-            .filter((_, i) => !removedIndexes.has(i))
-            .map((meta) => ({
-              title: t(`onboarding.defaultStarters.${meta.titleKey}`),
-              questionText: t(`onboarding.defaultStarters.${meta.questionKey}`),
-              category: meta.category,
-              periodDays: 30,
-              threshold: 10,
-              problemWhen: meta.problemWhen,
-              adviceAboveThreshold: "",
-            }));
-          if (keptStarters.length > 0) {
-            await seedGeneratedTrackers(keptStarters, t);
-          }
-        }
+      if (currentPack.length > 0) {
+        await seedGeneratedTrackers(currentPack, t);
       }
     } finally {
       setCreating(false);
@@ -960,14 +960,13 @@ const StackRevealScreen = ({
       </p>
 
       <div className="w-full max-w-[360px] space-y-2 mb-5">
-        {initialPreview.map((row, i) => {
-          if (removedIndexes.has(i)) return null;
+        {currentPack.map((row, i) => {
           const Icon = getTrackerIcon(row.title, row.category);
           const colorVar = getCategoryColor(row.category);
           return (
             <div
-              key={`${row.title}-${i}`}
-              className="rounded-2xl bg-muted/30 p-3 flex items-start gap-3"
+              key={row.title}
+              className="rounded-2xl bg-muted/30 p-3 flex items-start gap-3 animate-fade-in"
             >
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
@@ -988,10 +987,11 @@ const StackRevealScreen = ({
               </div>
               {/* Remove this card before any of them get added. The
                   user gets full control over the starter pack — if a
-                  suggestion doesn't fit, just × it. */}
+                  suggestion doesn't fit, just × it. The regenerate
+                  button below offers a replacement. */}
               <button
                 type="button"
-                onClick={() => removeRow(i)}
+                onClick={() => removeAt(i)}
                 aria-label={t("onboarding.stackReveal.removeCard")}
                 className="shrink-0 -mt-1 -mr-1 h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-muted/60 transition-colors"
                 data-onb-interactive
@@ -1002,10 +1002,30 @@ const StackRevealScreen = ({
           );
         })}
       </div>
-      {previewRows.length === 0 && (
+      {currentPack.length === 0 && (
         <p className="text-xs text-muted-foreground text-center mb-3 max-w-[300px]">
           {t("onboarding.stackReveal.allRemoved")}
         </p>
+      )}
+
+      {/* Regenerate button — appears whenever we have empty slots and
+          there are still un-shown templates to suggest. Caps at 3
+          regenerations so onboarding stays bounded. Hidden when the
+          pool is exhausted or limit hit so the user isn't tempted to
+          tap a no-op. The fallback path (no interview signal) doesn't
+          have a generator to fall back on, so the button is hidden
+          there too. */}
+      {canRegenerate && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={regeneratePack}
+          data-onb-interactive
+          className="rounded-full mb-3 text-xs"
+        >
+          <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+          {t("onboarding.stackReveal.regenerate")}
+        </Button>
       )}
 
       <Button
@@ -1017,10 +1037,10 @@ const StackRevealScreen = ({
       >
         {creating
           ? t("onboarding.stackReveal.preparing")
-          : previewRows.length === 0
+          : currentPack.length === 0
             ? t("onboarding.stackReveal.ctaSkip")
             : t("onboarding.stackReveal.ctaWithCount", {
-                count: previewRows.length,
+                count: currentPack.length,
                 defaultValue: t("onboarding.stackReveal.cta"),
               })}
         {!creating && <ArrowRight className="h-4 w-4 ml-1.5" />}
