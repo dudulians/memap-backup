@@ -577,6 +577,8 @@ const en = {
     noteLegend: "Note",
     noteOne: "Note",
     noteMany: "{{count}} notes",
+    noteOnOtherTrackerOne: "Another tracker has a note on this date",
+    noteOnOtherTrackerMany: "{{count}} notes from other trackers on this date",
     openInNotes: "Open in Notes →",
     prevPattern: "Previous pattern",
     nextPattern: "Next pattern",

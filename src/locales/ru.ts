@@ -581,6 +581,8 @@ const ru: Translation = {
     noteLegend: "Заметка",
     noteOne: "Заметка",
     noteMany: "Заметок: {{count}}",
+    noteOnOtherTrackerOne: "На эту дату есть заметка у другого наблюдения",
+    noteOnOtherTrackerMany: "На эту дату {{count}} заметок у других наблюдений",
     openInNotes: "Открыть в Заметках →",
     prevPattern: "Предыдущее наблюдение",
     nextPattern: "Следующее наблюдение",

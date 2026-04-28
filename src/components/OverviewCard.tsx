@@ -73,6 +73,18 @@ export const OverviewCard = ({
     () => notesForActiveTracker.filter(n => n.date === selectedDate),
     [notesForActiveTracker, selectedDate]
   );
+
+  // Notes across ALL trackers for the selected date. We use this to
+  // reserve a fixed-height slot below the calendar whenever at least one
+  // note exists on this date — so paging through trackers (where some
+  // have a note and others don't) no longer makes the calendar jump up
+  // and down. If the active tracker has no note but another one does,
+  // we render a soft hint inside the reserved slot instead of an empty
+  // one.
+  const anyNotesForSelectedDate = useMemo(
+    () => notes.filter(n => n.date === selectedDate),
+    [notes, selectedDate]
+  );
   const swipeStartX = useRef(0);
   const chipsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -603,30 +615,59 @@ export const OverviewCard = ({
           </div>
         </div>}
 
-        {/* Note preview for selected date */}
-        {notesForSelectedDate.length > 0 && (
-          <div className="mt-4 space-y-2 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <FileText className="h-3 w-3" />
-                {notesForSelectedDate.length === 1 ? t("overview.noteOne") : t("overview.noteMany", { count: notesForSelectedDate.length })} · {format(new Date(selectedDate + "T00:00:00"), "d MMM", { locale: dateLocale })}
-              </p>
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                {t("overview.openInNotes")}
-              </button>
-            </div>
-            {notesForSelectedDate.slice(0, 2).map(note => (
+        {/* Notes slot for the selected date.
+            Shown whenever ANY tracker has a note on this date — not
+            just the active one. The slot has a min-height so that
+            paging trackers (some with notes, some without) doesn't
+            shift the calendar up and down. Three states inside:
+              1. Active tracker has notes  → render them as cards
+              2. Active tracker has none, but other tracker(s) do
+                 → soft hint that opens the Notes view for this date
+              3. No notes anywhere on this date → slot doesn't render
+                 at all (no jank to prevent then). */}
+        {anyNotesForSelectedDate.length > 0 && (
+          <div className="mt-4 min-h-[92px]">
+            {notesForSelectedDate.length > 0 ? (
               <div
-                key={note.id}
-                className="p-3 rounded-2xl bg-muted/40 border border-border/60 cursor-pointer hover:bg-muted/60 transition-colors"
-                onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
+                key={`notes-${activeTracker.id}`}
+                className="space-y-2 animate-fade-in"
               >
-                <p className="text-xs text-foreground/80 line-clamp-2">{note.text}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <FileText className="h-3 w-3" />
+                    {notesForSelectedDate.length === 1 ? t("overview.noteOne") : t("overview.noteMany", { count: notesForSelectedDate.length })} · {format(new Date(selectedDate + "T00:00:00"), "d MMM", { locale: dateLocale })}
+                  </p>
+                  <button
+                    onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    {t("overview.openInNotes")}
+                  </button>
+                </div>
+                {notesForSelectedDate.slice(0, 2).map(note => (
+                  <div
+                    key={note.id}
+                    className="p-3 rounded-2xl bg-muted/40 border border-border/60 cursor-pointer hover:bg-muted/60 transition-colors"
+                    onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
+                  >
+                    <p className="text-xs text-foreground/80 line-clamp-2">{note.text}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <button
+                key={`no-notes-${activeTracker.id}`}
+                onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
+                className="w-full p-3 rounded-2xl bg-muted/15 border border-dashed border-border/40 text-left transition-colors hover:bg-muted/30 animate-fade-in flex items-center gap-2"
+              >
+                <FileText className="h-3 w-3 text-muted-foreground/70 shrink-0" />
+                <p className="text-xs text-muted-foreground">
+                  {anyNotesForSelectedDate.length === 1
+                    ? t("overview.noteOnOtherTrackerOne")
+                    : t("overview.noteOnOtherTrackerMany", { count: anyNotesForSelectedDate.length })}
+                </p>
+              </button>
+            )}
           </div>
         )}
 
