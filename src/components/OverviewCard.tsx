@@ -85,7 +85,18 @@ export const OverviewCard = ({
     () => notes.filter(n => n.date === selectedDate),
     [notes, selectedDate]
   );
-  const swipeStartX = useRef(0);
+  // Tracker-swipe state. The handler is wired via a native non-passive
+  // touchmove listener (see effect below) so we can preventDefault and
+  // stop the page from scrolling vertically while the user pans
+  // horizontally. React's synthetic onTouch* handlers are passive by
+  // default — preventDefault inside them is a no-op — which is why the
+  // calendar used to jerk vertically during left/right swipes.
+  const swipeAreaRef = useRef<HTMLDivElement>(null);
+  const swipeStateRef = useRef<{ x: number; y: number; claim: "horizontal" | "vertical" | null }>({
+    x: 0,
+    y: 0,
+    claim: null,
+  });
   const chipsContainerRef = useRef<HTMLDivElement>(null);
 
   const activeTracker = trackers[activeTrackerIndex];
@@ -229,20 +240,71 @@ export const OverviewCard = ({
     setActiveTrackerIndex((prev) => (prev < trackers.length - 1 ? prev + 1 : 0));
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    swipeStartX.current = e.touches[0].clientX;
-  };
+  // Native touch listener for horizontal tracker-swipe with vertical-
+  // scroll lock. Only claims the gesture once horizontal motion clearly
+  // dominates vertical (1.5x), so accidental finger wobble while the
+  // user is really trying to scroll the page doesn't trigger a tracker
+  // switch — and once claimed, we preventDefault every touchmove so the
+  // page can't scroll vertically underneath us. That's what fixes the
+  // "calendar jerks down during swipe" perception.
+  useEffect(() => {
+    const node = swipeAreaRef.current;
+    if (!node || trackers.length < 2) return;
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const diff = e.changedTouches[0].clientX - swipeStartX.current;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        handlePrevTracker();
-      } else {
-        handleNextTracker();
+    const onStart = (e: TouchEvent) => {
+      swipeStateRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        claim: null,
+      };
+    };
+
+    const onMove = (e: TouchEvent) => {
+      const s = swipeStateRef.current;
+      const dx = e.touches[0].clientX - s.x;
+      const dy = e.touches[0].clientY - s.y;
+
+      if (s.claim === null) {
+        const ax = Math.abs(dx);
+        const ay = Math.abs(dy);
+        // Wait for clear motion before deciding direction.
+        if (ax < 8 && ay < 8) return;
+        s.claim = ax > ay * 1.5 ? "horizontal" : "vertical";
       }
-    }
-  };
+
+      if (s.claim === "horizontal") {
+        // Lock the page from scrolling vertically while we own this gesture.
+        e.preventDefault();
+      }
+    };
+
+    const onEnd = (e: TouchEvent) => {
+      const s = swipeStateRef.current;
+      if (s.claim === "horizontal") {
+        const dx = e.changedTouches[0].clientX - s.x;
+        if (Math.abs(dx) > 50) {
+          if (dx > 0) {
+            setActiveTrackerIndex((prev) => (prev > 0 ? prev - 1 : trackers.length - 1));
+          } else {
+            setActiveTrackerIndex((prev) => (prev < trackers.length - 1 ? prev + 1 : 0));
+          }
+        }
+      }
+      swipeStateRef.current = { x: 0, y: 0, claim: null };
+    };
+
+    node.addEventListener("touchstart", onStart, { passive: true });
+    node.addEventListener("touchmove", onMove, { passive: false });
+    node.addEventListener("touchend", onEnd, { passive: true });
+    node.addEventListener("touchcancel", onEnd, { passive: true });
+
+    return () => {
+      node.removeEventListener("touchstart", onStart);
+      node.removeEventListener("touchmove", onMove);
+      node.removeEventListener("touchend", onEnd);
+      node.removeEventListener("touchcancel", onEnd);
+    };
+  }, [trackers.length]);
 
   const handlePrevMonth = () => {
     setDisplayMonth((prev) => subMonths(prev, 1));
@@ -446,9 +508,8 @@ export const OverviewCard = ({
 
         {/* Mini Calendar */}
         {calendarView === "month" && <div
+          ref={swipeAreaRef}
           className="space-y-2"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
         >
           {/* Month navigation with multi-select toggle. Year/Month
               toggle moved here too — it's a calendar-view detail, not
@@ -616,17 +677,20 @@ export const OverviewCard = ({
         </div>}
 
         {/* Notes slot for the selected date.
-            Shown whenever ANY tracker has a note on this date — not
-            just the active one. The slot has a min-height so that
-            paging trackers (some with notes, some without) doesn't
-            shift the calendar up and down. Three states inside:
-              1. Active tracker has notes  → render them as cards
+            Reserved whenever ANY tracker has a note on this date so
+            paging trackers (some with notes, some without) can't shift
+            the calendar's position. The slot has a FIXED height — not
+            min-height — so that going from "1 short note" to "no note"
+            to "1 long note" all feel identical layout-wise. We cap the
+            preview to a single note + a count badge in the header; the
+            full list lives one tap away in the Notes view.
+              1. Active tracker has notes  → first note + count
               2. Active tracker has none, but other tracker(s) do
                  → soft hint that opens the Notes view for this date
               3. No notes anywhere on this date → slot doesn't render
                  at all (no jank to prevent then). */}
         {anyNotesForSelectedDate.length > 0 && (
-          <div className="mt-4 min-h-[92px]">
+          <div className="mt-4 h-[92px]">
             {notesForSelectedDate.length > 0 ? (
               <div
                 key={`notes-${activeTracker.id}`}
@@ -644,21 +708,22 @@ export const OverviewCard = ({
                     {t("overview.openInNotes")}
                   </button>
                 </div>
-                {notesForSelectedDate.slice(0, 2).map(note => (
-                  <div
-                    key={note.id}
-                    className="p-3 rounded-2xl bg-muted/40 border border-border/60 cursor-pointer hover:bg-muted/60 transition-colors"
-                    onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
-                  >
-                    <p className="text-xs text-foreground/80 line-clamp-2">{note.text}</p>
-                  </div>
-                ))}
+                {/* Preview only the first note — keeps slot height fixed
+                    regardless of total count. Header above shows the
+                    real count, "Open in Notes" reveals the rest. */}
+                <div
+                  key={notesForSelectedDate[0].id}
+                  className="p-3 rounded-2xl bg-muted/40 border border-border/60 cursor-pointer hover:bg-muted/60 transition-colors"
+                  onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
+                >
+                  <p className="text-xs text-foreground/80 line-clamp-2">{notesForSelectedDate[0].text}</p>
+                </div>
               </div>
             ) : (
               <button
                 key={`no-notes-${activeTracker.id}`}
                 onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date: selectedDate } }))}
-                className="w-full p-3 rounded-2xl bg-muted/15 border border-dashed border-border/40 text-left transition-colors hover:bg-muted/30 animate-fade-in flex items-center gap-2"
+                className="w-full h-full p-3 rounded-2xl bg-muted/15 border border-dashed border-border/40 text-left transition-colors hover:bg-muted/30 animate-fade-in flex items-center gap-2"
               >
                 <FileText className="h-3 w-3 text-muted-foreground/70 shrink-0" />
                 <p className="text-xs text-muted-foreground">
