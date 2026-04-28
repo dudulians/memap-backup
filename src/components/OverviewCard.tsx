@@ -506,10 +506,22 @@ export const OverviewCard = ({
           </div>
         )}
 
-        {/* Mini Calendar */}
+        {/* Mini Calendar.
+            touchAction: "pan-x" tells iOS this region is for
+            horizontal panning only — the browser won't try to scroll
+            the page vertically here, so the rubber-band / pull-to-
+            refresh feel during a swipe goes away. JS preventDefault
+            in the touchmove handler can't catch the first ~8 px of
+            motion (the time we use to decide if the gesture is
+            horizontal), and those few pixels were enough for iOS to
+            start the bounce. CSS-level lock has no decision delay.
+            Vertical scrolling still works fine — user just starts
+            the drag from the tracker header above, the notes slot
+            below, or the disclaimer at the bottom of the page. */}
         {calendarView === "month" && <div
           ref={swipeAreaRef}
           className="space-y-2"
+          style={{ touchAction: "pan-x" }}
         >
           {/* Month navigation with multi-select toggle. Year/Month
               toggle moved here too — it's a calendar-view detail, not
