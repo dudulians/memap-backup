@@ -283,14 +283,19 @@ export const DailySession = ({
   const totalQuestions = deck.length;
   const progress = totalQuestions > 0 ? ((currentIndex) / totalQuestions) * 100 : 100;
 
-  // Lock body scroll when session is active
+  // Lock body scroll while the session is open. We only set
+  // overflow:hidden — the older code also set body.touchAction="none",
+  // a leftover from when the session was a fullscreen overlay. With
+  // vaul now owning the sheet, that body-level touch-action lock
+  // poisoned iOS's gesture detection: every drag through the WebView
+  // started under "no native touch behaviour", so vaul's drag-to-
+  // close had to be reconstructed entirely from pointer events,
+  // which felt sluggish compared to Settings/Cards. Removing it
+  // lets iOS hand vertical pans to vaul natively.
   useEffect(() => {
     document.body.style.overflow = "hidden";
-    document.body.style.touchAction = "none";
-    
     return () => {
       document.body.style.overflow = "";
-      document.body.style.touchAction = "";
     };
   }, []);
 
@@ -936,9 +941,20 @@ export const DailySession = ({
           gesture-clean and vaul gets its events directly when the
           user drags from header/sides; only when they grab the
           actual card do our handlers run, which is the only place
-          where card yes/no swipes need to be tracked anyway. */}
+          where card yes/no swipes need to be tracked anyway.
+
+          touchAction: "pan-y" tells iOS this region is for vertical
+          panning (= drag-to-close, handled by vaul) at the OS level.
+          Native gesture path is fast — no JS round-trip. Horizontal
+          motion isn't a native browser action with pan-y, so our
+          pointer handlers still see it and run yes/no card swipes.
+          Without this hint, every vertical drag had to wait for our
+          10 px direction-lock to release the gesture, which is what
+          the user perceived as "doesn't close as smoothly as Cards
+          and Settings". */}
       <div
         className="flex-1 flex items-stretch justify-center p-3 overflow-hidden"
+        style={{ touchAction: "pan-y" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
