@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import useEmblaCarousel from "embla-carousel-react";
-import type { EmblaOptionsType } from "embla-carousel";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -68,83 +66,15 @@ export const PatternsTab = () => {
     window.dispatchEvent(new Event("memap-scroll-main-top"));
   };
 
-  // Embla carousel for horizontal swiping between sections. Drag is
-  // skipped over zones marked data-no-tabswipe (the calendar's own
-  // tracker swipe area) so the inner gestures don't fight the outer
-  // page swipe. startIndex makes the FIRST render show the section
-  // we restored from localStorage — without it we'd start on slide 0
-  // and then animate to the right one, which looks janky.
-  const emblaOptions: EmblaOptionsType = {
-    axis: "x",
-    align: "start",
-    containScroll: "trimSnaps",
-    skipSnaps: false,
-    startIndex: Math.max(0, SECTIONS.indexOf(section)),
-    watchDrag: (_emblaApi, evt) => {
-      const target = evt.target as HTMLElement | null;
-      if (target?.closest("[data-no-tabswipe]")) return false;
-      return true;
-    },
-  };
-  const [emblaRef, emblaApi] = useEmblaCarousel(emblaOptions);
-
-  // Guard against feedback loops: when embla fires `select` (because
-  // the user finished a drag), our handler updates section state.
-  // That state change then triggers the section→carousel effect,
-  // which would call scrollTo and could fight the in-flight gesture.
-  // Flag-based guard keeps the two effects from chasing each other.
-  const fromCarouselSelect = useRef(false);
-
-  // section → carousel
-  useEffect(() => {
-    if (!emblaApi) return;
-    if (fromCarouselSelect.current) return;
-    const idx = SECTIONS.indexOf(section);
-    if (idx >= 0 && emblaApi.selectedScrollSnap() !== idx) {
-      // jump = true: snap instantly without the smooth scroll
-      // animation. With animation, a re-render mid-transition can
-      // leave embla parked between two slides (visually showing both
-      // halves at once). Instant snap eliminates that whole class
-      // of bug — the user sees ONE slide, always.
-      emblaApi.scrollTo(idx, true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, emblaApi]);
-
-  // Defensive: on any window resize (e.g. iOS WebView orientation
-  // changes, keyboard appearing) re-init embla so it recomputes
-  // slide widths. Otherwise a sheet-keyboard flow can leave embla
-  // with stale measurements and the dreaded "two halves" overlap.
-  useEffect(() => {
-    if (!emblaApi) return;
-    const reInit = () => emblaApi.reInit();
-    window.addEventListener("resize", reInit);
-    window.addEventListener("orientationchange", reInit);
-    return () => {
-      window.removeEventListener("resize", reInit);
-      window.removeEventListener("orientationchange", reInit);
-    };
-  }, [emblaApi]);
-
-  // carousel → section
-  useEffect(() => {
-    if (!emblaApi) return;
-    const onSelect = () => {
-      fromCarouselSelect.current = true;
-      const idx = emblaApi.selectedScrollSnap();
-      const next = SECTIONS[idx];
-      if (next && next !== section) handleSectionChange(next);
-      // Clear the flag on next tick so subsequent state changes
-      // (e.g. user tapping a different tab) trigger a fresh
-      // scrollTo.
-      setTimeout(() => { fromCarouselSelect.current = false; }, 50);
-    };
-    emblaApi.on("select", onSelect);
-    return () => {
-      emblaApi.off("select", onSelect);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [emblaApi, section]);
+  // Embla swipe-between-sections was removed. With all four heavy
+  // sections (Calendar, tracker list, chart, correlations) mounted
+  // simultaneously, iOS WebView under Capacitor couldn't keep up
+  // with finger-driven translation — the swipe felt jerky no matter
+  // how many tweaks we tried. The sections are now back to
+  // tap-only navigation via Radix Tabs (only the active tab mounts),
+  // which is rock-solid: zero jank, instant section change.
+  // Re-attempt swipe later via lazy-mounted slides if the gesture
+  // turns out to matter that much.
 
   useEffect(() => {
     loadData();
@@ -418,21 +348,15 @@ export const PatternsTab = () => {
             </TabsTrigger>
           </TabsList>
         </div>
-
       </Tabs>
 
-      {/* Horizontal swiper between the 4 sections — embla carousel.
-          The sticky Tabs strip above stays in place; slides scroll
-          horizontally underneath it. Each slide's content flows
-          vertically into the parent <main>'s scroll, so swipe-left/
-          right on the page changes section just like a native iOS
-          tab pager. Drag is suppressed over [data-no-tabswipe] zones
-          (currently the calendar's own tracker-swipe area) so inner
-          gestures don't fight the outer page swipe. */}
-      <div className="overflow-x-hidden mt-4" ref={emblaRef}>
-        <div className="flex">
-          {/* --- OVERVIEW: calendar focus, no extra clutter ----------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
+      {/* Section content — only the active section mounts (no
+          carousel mounting all four at once). Tap a tab above to
+          switch. Each section gets its own animate-fade-in for a
+          subtle entrance without the carousel-mounting cost. */}
+      <div className="mt-4">
+        {section === "overview" && (
+          <div className="animate-fade-in">
             <OverviewCard
               trackers={trackers}
               entries={entries}
@@ -443,9 +367,11 @@ export const PatternsTab = () => {
               onBulkAnswer={handleBulkAnswer}
             />
           </div>
+        )}
 
-          {/* --- SIGNALS: the pattern/action cards, strong first ------ */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
+        {/* --- SIGNALS: the pattern/action cards, strong first ------ */}
+        {section === "signals" && (
+          <div className="animate-fade-in">
             <div className="space-y-4">
         {sortedTrackers.map((tracker) => {
           const stats = getTrackerStats(tracker);
@@ -575,17 +501,21 @@ export const PatternsTab = () => {
         })}
             </div>
           </div>
+        )}
 
-          {/* --- TRENDS: dual-series chart over time ------------------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
+        {/* --- TRENDS: dual-series chart over time ------------------- */}
+        {section === "trends" && (
+          <div className="animate-fade-in">
             <TrendChart trackers={trackers} entries={entries} />
           </div>
+        )}
 
-          {/* --- LINKS: dependency / correlation insights ------------- */}
-          <div className="basis-full shrink-0 grow-0 min-w-0 w-full animate-fade-in">
+        {/* --- LINKS: dependency / correlation insights ------------- */}
+        {section === "links" && (
+          <div className="animate-fade-in">
             <CorrelationInsights trackers={trackers} entries={entries} />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Disclaimer (always shown, regardless of tab) */}
