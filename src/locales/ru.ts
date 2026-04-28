@@ -182,6 +182,8 @@ const ru: Translation = {
     dailySessionDesc: "Настрой поток ежедневных вопросов",
     includeSuggested: "Включать предложенные вопросы",
     soundAndVibration: "Звук и вибрация",
+    sound: "Звук",
+    haptics: "Вибрация",
     showTrackerIdeas: "Показывать идеи трекеров",
 
     trackersTitle: "Трекеры",

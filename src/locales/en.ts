@@ -179,6 +179,8 @@ const en = {
     dailySessionDesc: "Customize your daily check-in flow",
     includeSuggested: "Include suggested questions",
     soundAndVibration: "Sound & vibration",
+    sound: "Sound",
+    haptics: "Vibration",
     showTrackerIdeas: "Show tracker ideas",
 
     trackersTitle: "Trackers",

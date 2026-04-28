@@ -16,7 +16,7 @@ import { getNotificationSettings, saveNotificationSettings, requestNotificationP
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,11 @@ interface SettingsModalProps {
 interface SessionSettings {
   includeSuggestedQuestions: boolean;
   soundEnabled: boolean;
+  // Vibration is its own toggle. Was previously bundled into
+  // soundEnabled, which meant turning off sounds also killed haptics
+  // on swipes — and the user reported wanting to keep vibration but
+  // mute sounds. Defaults to true on first launch.
+  hapticsEnabled: boolean;
 }
 
 const SESSION_SETTINGS_KEY = "memap_session_settings";
@@ -58,9 +63,29 @@ const SETTINGS_KEYS = [
 
 const getSessionSettings = (): SessionSettings => {
   const data = localStorage.getItem(SESSION_SETTINGS_KEY);
-  const fallback: SessionSettings = { includeSuggestedQuestions: true, soundEnabled: true };
+  const fallback: SessionSettings = {
+    includeSuggestedQuestions: true,
+    soundEnabled: true,
+    hapticsEnabled: true,
+  };
   if (!data) return fallback;
-  try { return JSON.parse(data); } catch { return fallback; }
+  try {
+    const parsed = JSON.parse(data) as Partial<SessionSettings>;
+    // Migration: users from the combined-toggle era don't have
+    // hapticsEnabled in storage. Default to soundEnabled value so
+    // their previous "off everything" preference is respected — they
+    // can flip just vibration back on themselves.
+    return {
+      includeSuggestedQuestions: parsed.includeSuggestedQuestions ?? true,
+      soundEnabled: parsed.soundEnabled ?? true,
+      hapticsEnabled:
+        typeof parsed.hapticsEnabled === "boolean"
+          ? parsed.hapticsEnabled
+          : parsed.soundEnabled !== false,
+    };
+  } catch {
+    return fallback;
+  }
 };
 
 const saveSessionSettings = (settings: SessionSettings) => {
@@ -765,13 +790,27 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <div className="flex items-center gap-2">
                       <Volume2 className="h-4 w-4 text-muted-foreground" />
                       <Label htmlFor="sound-toggle" className="text-sm">
-                        {t("settings.soundAndVibration")}
+                        {t("settings.sound")}
                       </Label>
                     </div>
                     <Switch
                       id="sound-toggle"
                       checked={sessionSettings.soundEnabled}
                       onCheckedChange={(v) => handleSessionSettingsChange("soundEnabled", v)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Vibrate className="h-4 w-4 text-muted-foreground" />
+                      <Label htmlFor="haptics-toggle" className="text-sm">
+                        {t("settings.haptics")}
+                      </Label>
+                    </div>
+                    <Switch
+                      id="haptics-toggle"
+                      checked={sessionSettings.hapticsEnabled}
+                      onCheckedChange={(v) => handleSessionSettingsChange("hapticsEnabled", v)}
                     />
                   </div>
 

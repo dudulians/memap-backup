@@ -20,13 +20,25 @@ interface SwipeableTrackerCardProps {
   compact?: boolean;
 }
 
-const SWIPE_THRESHOLD = 100;
+// 60 px is the smallest distance the user has to drag before the swipe
+// "commits". Was 100 — that worked fine on a 414 pt phone with Tinder-
+// style finger placement, but the user reported having to drag almost
+// half-way across the card AND arc her finger downward to register a
+// swipe-right. 60 px (~15 % of typical card width) reads as a deliberate
+// flick without requiring a full diagonal motion.
+const SWIPE_THRESHOLD = 60;
 
 const isHapticEnabled = (): boolean => {
   try {
     const raw = localStorage.getItem("memap_session_settings");
     if (!raw) return true;
     const parsed = JSON.parse(raw);
+    // Haptics are now their own setting. Fall back to soundEnabled
+    // for users who upgrade from the combined-toggle era so we don't
+    // silently flip vibration back on against their wishes.
+    if (typeof parsed?.hapticsEnabled === "boolean") {
+      return parsed.hapticsEnabled;
+    }
     return parsed?.soundEnabled !== false;
   } catch {
     return true;
@@ -188,7 +200,13 @@ export const SwipeableTrackerCard = ({
         className={cn(
           "card-premium animate-fade-in overflow-hidden select-none",
           isDragging && "shadow-2xl opacity-50",
-          "transition-transform duration-200"
+          // Only animate the snap-back AFTER release — during active
+          // drag the card follows the finger 1:1. With the transition
+          // always on, every pointermove triggered a 200 ms tween, so
+          // the card visibly trailed the finger and the user had to
+          // overshoot (or arc diagonally) to "convince" the gesture
+          // it had crossed the threshold.
+          !isSwiping && "transition-transform duration-200"
         )}
       >
         {/* Swipe-capture zone — everything here reacts to horizontal drag.

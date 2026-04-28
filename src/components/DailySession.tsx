@@ -61,9 +61,26 @@ interface SessionQuestion {
 // Session settings from localStorage
 const getSessionSettings = () => {
   const data = localStorage.getItem("memap_session_settings");
-  const fallback = { includeSuggestedQuestions: true, soundEnabled: true, lastRecommendationDate: null as string | null };
+  const fallback = {
+    includeSuggestedQuestions: true,
+    soundEnabled: true,
+    hapticsEnabled: true,
+    lastRecommendationDate: null as string | null,
+  };
   if (!data) return fallback;
-  try { return { ...fallback, ...JSON.parse(data) }; } catch { return fallback; }
+  try {
+    const parsed = JSON.parse(data);
+    // Migration: pre-split users have soundEnabled but no
+    // hapticsEnabled — fall back to the previous combined value so
+    // we don't surprise them by re-enabling vibration silently.
+    const merged = { ...fallback, ...parsed };
+    if (typeof parsed?.hapticsEnabled !== "boolean") {
+      merged.hapticsEnabled = parsed?.soundEnabled !== false;
+    }
+    return merged;
+  } catch {
+    return fallback;
+  }
 };
 
 const patchSessionSettings = (updates: Record<string, unknown>) => {
@@ -87,10 +104,11 @@ const playFeedbackSound = (type: "yes" | "no" | "skip") => {
 
 // Haptic feedback — uses native @capacitor/haptics on iOS/Android (required
 // on iOS since `navigator.vibrate` is a no-op there), falls back to the
-// Web Vibration API in browsers.
+// Web Vibration API in browsers. Gated on hapticsEnabled (its own toggle
+// in Settings now, separate from soundEnabled).
 const triggerHaptic = (type: "light" | "medium" | "heavy") => {
   const settings = getSessionSettings();
-  if (!settings.soundEnabled) return;
+  if (!settings.hapticsEnabled) return;
   runHaptic(type);
 };
 
