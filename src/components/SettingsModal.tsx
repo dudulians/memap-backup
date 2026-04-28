@@ -814,6 +814,43 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     />
                   </div>
 
+                  {/* Diagnostic button: tap to fire a medium-impact haptic
+                      directly. The user reported that vibration didn't
+                      fire at all in 1.2.0 even with Package.swift fix +
+                      HapticsPlugin in packageClassList. With this button,
+                      she can isolate the question: does the plugin work
+                      at all? Each tap fires Light → Medium → Heavy in
+                      sequence so we sample all three Taptic Engine
+                      strengths. Error is surfaced via toast so we know
+                      *immediately* if the call threw. */}
+                  {sessionSettings.hapticsEnabled && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-full text-xs"
+                      onClick={async () => {
+                        try {
+                          haptics.swipe();
+                          setTimeout(() => haptics.medium(), 200);
+                          setTimeout(() => haptics.success(), 500);
+                          toast({
+                            title: t("settings.hapticsTestFired"),
+                            description: t("settings.hapticsTestDesc"),
+                          });
+                        } catch (err) {
+                          toast({
+                            title: t("settings.hapticsTestFailed"),
+                            description: String(err),
+                          });
+                        }
+                      }}
+                    >
+                      <Vibrate className="h-3.5 w-3.5 mr-1.5" />
+                      {t("settings.hapticsTestButton")}
+                    </Button>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <Label htmlFor="ideas-toggle" className="text-sm">
                       {t("settings.showTrackerIdeas")}

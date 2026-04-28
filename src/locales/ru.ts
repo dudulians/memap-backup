@@ -184,6 +184,10 @@ const ru: Translation = {
     soundAndVibration: "Звук и вибрация",
     sound: "Звук",
     haptics: "Вибрация",
+    hapticsTestButton: "Проверить вибрацию",
+    hapticsTestFired: "Тест отправлен",
+    hapticsTestDesc: "Должно быть три коротких вибрации подряд. Если не почувствовала — пиши, разберёмся.",
+    hapticsTestFailed: "Не удалось вызвать вибрацию",
     showTrackerIdeas: "Показывать идеи трекеров",
 
     trackersTitle: "Трекеры",
