@@ -616,15 +616,13 @@ export const DailySession = ({
           onClick: () => { /* opened via Popover */ },
         });
       }
-      if (onPlayRandom) {
-        rows.push({
-          key: "random",
-          icon: Shuffle,
-          title: t("dailySession.rowRandomTitle"),
-          subtitle: t("dailySession.rowRandomSubtitle"),
-          onClick: onPlayRandom,
-        });
-      }
+      // Note: the "Сыграть случайный раунд" row used to live here.
+      // Removed — the user explicitly asked us NOT to surface
+      // surprise-cards on the regular Done screen. Random play stays
+      // as an opt-in feature via the Shuffle (🎲) button on the
+      // Cards screen header. Equivalent path to add new things to
+      // the deck: the "Идеи дня" carousel on the Cards screen, with
+      // an explicit "+ Add to my map" button.
       rows.push({
         key: "note",
         icon: Pencil,
@@ -662,7 +660,7 @@ export const DailySession = ({
       <BottomSheet
         open
         onOpenChange={(o) => { if (!o) onClose(); }}
-        className="h-[90vh] flex flex-col p-0"
+        className="h-[80vh] flex flex-col p-0"
         ariaTitle="Session complete"
       >
         <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 pb-6 gap-6 animate-fade-in">
@@ -864,7 +862,7 @@ export const DailySession = ({
     <BottomSheet
       open
       onOpenChange={(o) => { if (!o) onClose(); }}
-      className="h-[90vh] flex flex-col p-0"
+      className="h-[80vh] flex flex-col p-0"
       ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
       <div className="flex-1 flex flex-col overflow-hidden">
