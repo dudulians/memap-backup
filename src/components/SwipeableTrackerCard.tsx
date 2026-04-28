@@ -62,6 +62,10 @@ export const SwipeableTrackerCard = ({
   const [showDeleteBar, setShowDeleteBar] = useState(false);
   const startX = useRef(0);
   const currentDx = useRef(0);
+  // Pointer-down timestamp for flick-velocity detection. A short fast
+  // flick should commit a swipe even if it didn't reach the full 60 px
+  // distance threshold — that's what "feels responsive" means.
+  const touchStartTime = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
@@ -105,6 +109,7 @@ export const SwipeableTrackerCard = ({
     hasCaptured.current = false;
     startX.current = e.clientX;
     currentDx.current = 0;
+    touchStartTime.current = Date.now();
     setIsSwiping(true);
     setSwipeX(0);
     startLongPress();
@@ -131,15 +136,26 @@ export const SwipeableTrackerCard = ({
     hasCaptured.current = false;
     clearLongPress();
     const dx = currentDx.current;
+    const absX = Math.abs(dx);
+    const elapsed = Math.max(1, Date.now() - touchStartTime.current);
+    const velocityX = absX / elapsed; // px per ms
     activePointerId.current = null;
     setIsSwiping(false);
     setSwipeX(0);
     currentDx.current = 0;
 
-    if (dx > SWIPE_THRESHOLD) {
-      onAnswer(tracker.id, true);
-    } else if (dx < -SWIPE_THRESHOLD) {
-      onAnswer(tracker.id, false);
+    // Two ways to commit a swipe:
+    //   1. Distance — drag past SWIPE_THRESHOLD (60 px). Slow, deliberate.
+    //   2. Velocity — fast flick (>=0.5 px/ms) with at least 25 px of travel.
+    // Either path is forgiving so the user doesn't need a long, slow drag.
+    // The DailySession card uses the same pattern — keeps the gesture
+    // language consistent across the two card-swipe surfaces.
+    const distanceTrigger = absX >= SWIPE_THRESHOLD;
+    const velocityTrigger = velocityX >= 0.5 && absX >= 25;
+
+    if (distanceTrigger || velocityTrigger) {
+      if (dx > 0) onAnswer(tracker.id, true);
+      else onAnswer(tracker.id, false);
     }
   };
 
