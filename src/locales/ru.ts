@@ -300,6 +300,8 @@ const ru: Translation = {
     trackerDeletedDesc: "«{{title}}» удалён.",
     cardsSection: "Карточки",
     editCards: "Изменить",
+    swipeArchive: "В архив",
+    swipeDelete: "Удалить",
     selectionModeHint: "Выбери карточки",
     selectionCount_one: "Выбрана {{count}}",
     selectionCount_few: "Выбрано {{count}}",
@@ -404,6 +406,7 @@ const ru: Translation = {
     calendar: "Календарь",
     fillingInFor: "Заполняешь за:",
     swipeHint: "← Свайп влево — Нет · Свайп вправо — Да →",
+    clearAnswer: "Очистить ответ за этот день",
     reflectionSuggested: "Время подумать",
     reflectionLabel: "Если станет часто",
     currentAnswer: "Текущий ответ",
@@ -456,6 +459,7 @@ const ru: Translation = {
     swipeNo: "← Нет",
     swipeYes: "Да →",
     skipQuestion: "Пропустить этот вопрос",
+    previousQuestion: "Вернуться к предыдущему вопросу",
     completed: "Сессия завершена!",
     caughtUp: "Всё заполнено — сегодня отвечать нечего",
     caughtUpForDate: "Всё заполнено за {{date}}",
@@ -495,6 +499,7 @@ const ru: Translation = {
 
   calendarEditor: {
     tapOrSwipe: "Тапни кнопку или свайпни карточку вопроса",
+    clearAnswer: "Очистить ответ за этот день",
     notesForDay: "Заметки за этот день",
     noNotesYet: "Пока нет заметок на этот день",
     addNoteForDay: "Добавить заметку за этот день",

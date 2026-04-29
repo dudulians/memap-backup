@@ -296,6 +296,8 @@ const en = {
     trackerDeletedDesc: "\"{{title}}\" was removed.",
     cardsSection: "Cards",
     editCards: "Edit",
+    swipeArchive: "Archive",
+    swipeDelete: "Delete",
     selectionModeHint: "Pick cards",
     selectionCount_one: "{{count}} selected",
     selectionCount_other: "{{count}} selected",
@@ -397,6 +399,7 @@ const en = {
     calendar: "Calendar",
     fillingInFor: "You are filling in for:",
     swipeHint: "← Swipe left for No · Swipe right for Yes →",
+    clearAnswer: "Clear this day's answer",
     reflectionSuggested: "Reflection Suggested",
     reflectionLabel: "If this becomes frequent",
     currentAnswer: "Current answer",
@@ -449,6 +452,7 @@ const en = {
     swipeNo: "← No",
     swipeYes: "Yes →",
     skipQuestion: "Skip this question",
+    previousQuestion: "Go back to previous question",
     completed: "Session completed!",
     caughtUp: "All caught up — nothing to answer today",
     caughtUpForDate: "All filled for {{date}}",
@@ -488,6 +492,7 @@ const en = {
 
   calendarEditor: {
     tapOrSwipe: "Tap a button or swipe the question card",
+    clearAnswer: "Clear this day's answer",
     notesForDay: "Notes for this day",
     noNotesYet: "No notes for this day yet",
     addNoteForDay: "Add a note for this day",

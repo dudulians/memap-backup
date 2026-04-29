@@ -273,7 +273,7 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto max-w-2xl w-full mx-auto px-4 py-4 pb-32">
+      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4 pb-32">
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
         {activeTab === "patterns" && <PatternsTab key={`patterns-${refreshKey}`} />}
         {activeTab === "notes" && (

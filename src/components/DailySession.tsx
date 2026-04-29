@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { X, ChevronRight, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home, Undo2 } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -30,6 +30,14 @@ interface DailySessionProps {
   entries: TrackerEntry[];
   selectedDate: string;
   onAnswer: (trackerId: string, value: boolean) => Promise<void>;
+  /**
+   * Called by the in-session Undo button when the user wants the
+   * previous answer truly gone (not just overwritten). The parent
+   * removes the entry from storage. Optional — if not wired the
+   * Undo button still navigates back, just without clearing the
+   * saved answer.
+   */
+  onClearAnswer?: (trackerId: string, date: string) => Promise<void>;
   onClose: () => void;
   // Called when the user picks "today's overview" on the completion screen
   // (or when the deck is empty and the user closes). Lands them on Today.
@@ -117,6 +125,7 @@ export const DailySession = ({
   entries,
   selectedDate,
   onAnswer,
+  onClearAnswer,
   onClose,
   onComplete,
   onGoToPatterns,
@@ -281,6 +290,15 @@ export const DailySession = ({
   const currentDy = useRef(0);
   const isAnimatingRef = useRef(false);
 
+  // Stack of "which tracker did we just answer (or skip), and was the
+  // entry actually saved" — drives the Undo button. Only Yes/No swipes
+  // push a saved=true entry; Skip pushes saved=false because skip
+  // doesn't write anything. On Undo we pop the head, and if it was
+  // saved we ask the parent to delete the entry — that way "go back"
+  // really erases the action instead of just navigating to the card
+  // (which would leave the saved Yes/No silently in storage).
+  const answeredHistory = useRef<Array<{ trackerId: string; saved: boolean }>>([]);
+
   // Record the date the moment a suggestion card is first shown
   useEffect(() => {
     if (deck[currentIndex]?.isNew) {
@@ -324,6 +342,14 @@ export const DailySession = ({
     isAnimatingRef.current = true;
     setIsAnimating(true);
     setSwipeDirection(value ? "right" : "left");
+
+    // Record for Undo. saved=true because handleAnswer always writes
+    // (even on isNew suggestion cards — those create a new tracker
+    // first via getTrackers/saveTrackers, then save the answer).
+    answeredHistory.current.push({
+      trackerId: currentQuestion.tracker.id,
+      saved: true,
+    });
 
     // Play sound and haptic
     playFeedbackSound(value ? "yes" : "no");
@@ -383,7 +409,14 @@ export const DailySession = ({
     isAnimatingRef.current = true;
     setIsAnimating(true);
     setSwipeDirection("down");
-    
+
+    // Record for Undo. saved=false because skip doesn't write any
+    // entry — Undo just navigates back, no clearAnswer call needed.
+    answeredHistory.current.push({
+      trackerId: currentQuestion.tracker.id,
+      saved: false,
+    });
+
     // Play sound and haptic
     playFeedbackSound("skip");
     triggerHaptic("light");
@@ -421,11 +454,18 @@ export const DailySession = ({
   const touchStartTime = useRef<number>(0);
 
   // Unified pointer handlers (mouse + touch + pen)
-  // Direction lock: we only "claim" the pointer (via setPointerCapture)
-  // once we're sure the user is doing a horizontal card-swipe. If
-  // they're swiping vertically instead, we yield — that lets vaul
-  // pick up the gesture for drag-to-close, which is why the Play
-  // sheet now closes as smoothly as Settings/Cards.
+  // Direction-lock note: we used to YIELD on vertical-dominant motion
+  // so vaul could pick it up for drag-to-close. But the card area is
+  // now opted out of vaul (data-vaul-no-drag) — yielding would leave
+  // vertical motion unhandled. So now we always claim once motion
+  // crosses the threshold, and dispatch in endPointer based on the
+  // final dx/dy:
+  //   • horizontal-dominant       → Yes (right) / No (left)
+  //   • vertical-down-dominant    → Skip
+  //   • everything else           → snap back
+  // This also unlocked diagonal-up swipes for Yes/No, which the user
+  // pointed out used to fail (any motion with vertical component
+  // bigger than horizontal got yielded away).
   const hasClaimedSwipe = useRef(false);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -452,25 +492,16 @@ export const DailySession = ({
     const dx = e.clientX - touchStartX.current;
     const dy = e.clientY - touchStartY.current;
 
-    // Direction-lock once movement is meaningful.
+    // Claim once motion is meaningful. Both horizontal and vertical
+    // belong to us on this card area (vaul is opted out via
+    // data-vaul-no-drag); endPointer routes the gesture by direction.
     if (!hasClaimedSwipe.current) {
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
       // Not enough motion yet to decide.
       if (absDx < 10 && absDy < 10) return;
-      if (absDx > absDy) {
-        // Horizontal-dominant ⇒ this is a card yes/no swipe. Claim
-        // the pointer so finger excursions outside the card don't
-        // drop the gesture.
-        try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
-        hasClaimedSwipe.current = true;
-      } else {
-        // Vertical-dominant ⇒ user wants to close the sheet. Yield
-        // to vaul: pretend we never started so subsequent moves
-        // don't drag the card around.
-        activePointerId.current = null;
-        return;
-      }
+      try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* ignore */ }
+      hasClaimedSwipe.current = true;
     }
 
     currentDx.current = dx;
@@ -491,22 +522,32 @@ export const DailySession = ({
     const elapsed = Math.max(1, Date.now() - touchStartTime.current);
     const velocityX = absX / elapsed; // px per ms
 
-    // Two ways to register a horizontal swipe:
-    //   1) Distance — moved at least 50px and the swipe is mostly horizontal
-    //   2) Velocity — fast flick (>=0.5 px/ms) with at least 25px of travel
-    // Either path is forgiving so the user doesn't have to drag all the way
-    // across the card; a quick wrist-flick works too.
-    const distanceTrigger = absX >= 50 && absX >= absY * 0.7;
-    const velocityTrigger = velocityX >= 0.5 && absX >= 25 && absX >= absY * 0.5;
+    // Skip-down FIRST — when the gesture is clearly mostly-vertical
+    // and downward, route to skip regardless of horizontal jiggle.
+    // Sheet-dismiss via drag-down still works from the header above
+    // the card (vaul catches it there) and via the X button.
+    if (dy > 150 && absY > absX * 1.5) {
+      handleSkip();
+      return;
+    }
+
+    // Yes/No — two ways to fire:
+    //   1) Distance — at least 50 px horizontal, no ratio gate vs
+    //      vertical so diagonal flicks (up-right, down-left, …) all
+    //      count as long as horizontal is committed enough.
+    //   2) Velocity — a fast flick (>= 0.5 px/ms) with >= 25 px of
+    //      horizontal travel. Lets a wrist-flick fire even if the
+    //      total distance is short.
+    // Removing the absX/absY ratio fixed the user's "I can swipe
+    // sideways or sideways-down but not sideways-up" — natural
+    // finger arcs for a right-flick often go up-right at a steep
+    // angle (especially with thumb), which the old ratio gate
+    // (absX >= absY * 0.7) rejected.
+    const distanceTrigger = absX >= 50;
+    const velocityTrigger = velocityX >= 0.5 && absX >= 25;
 
     if (distanceTrigger || velocityTrigger) {
       if (dx > 0) handleAnswer(true); else handleAnswer(false);
-      return;
-    }
-    // Skip-down stays strict — only a clearly intentional, mostly-vertical
-    // downward drag of 150+ counts as skip. Diagonal Yes/No takes priority.
-    if (dy > 150 && absY > absX * 1.5) {
-      handleSkip();
       return;
     }
     setDragX(0);
@@ -902,7 +943,51 @@ export const DailySession = ({
       <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="w-9" />
+          {/* Smart undo. Pops the answered-history stack and:
+              - if the previous action was a saved Yes/No → asks the
+                parent to remove that entry (so the day reads as
+                un-answered, e.g. notifications fire later, calendar
+                dot disappears, threshold count decrements).
+              - if it was a Skip → just navigates back, nothing to
+                clear.
+              Hidden during the post-swipe animation to avoid mid-
+              flight state mixups. */}
+          {/* Fixed h-9 so the row's height stays the same whether
+              the Undo button is rendered or not — otherwise the slot
+              collapses to 0 height when hidden, the title row jumps
+              up/down between renders, and the date strip below
+              visibly trembles every time the user starts a swipe
+              (which sets isAnimating, hiding the button). */}
+          <div className="w-9 h-9 flex items-center justify-start">
+            {currentIndex > 0 && !isAnimating && (
+              <button
+                type="button"
+                onClick={() => {
+                  const last = answeredHistory.current.pop();
+                  if (last?.saved && onClearAnswer) {
+                    // Fire-and-forget like handleAnswer — never block
+                    // the UI on a save/delete round-trip.
+                    onClearAnswer(last.trackerId, selectedDate).catch((err) => {
+                      console.warn("[DailySession] onClearAnswer failed", err);
+                    });
+                    setAnsweredCount((c) => Math.max(0, c - 1));
+                  }
+                  setCurrentIndex((prev) => Math.max(0, prev - 1));
+                  setSwipeDirection(null);
+                  setIsAnimating(false);
+                  isAnimatingRef.current = false;
+                  setDragX(0);
+                  setDragY(0);
+                  currentDx.current = 0;
+                  currentDy.current = 0;
+                }}
+                aria-label={t("dailySession.previousQuestion")}
+                className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+              >
+                <Undo2 className="h-4 w-4" strokeWidth={2} />
+              </button>
+            )}
+          </div>
           <div className="text-center">
             <p className="text-sm font-medium">
               {t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
@@ -913,7 +998,7 @@ export const DailySession = ({
               </p>
             )}
           </div>
-          <div className="w-9" />
+          <div className="w-9 h-9" />
         </div>
 
         {/* Date strip — last 7 days. Tap any to answer for that date.
@@ -989,7 +1074,13 @@ export const DailySession = ({
       >
         <div
           className={cn(
-            "w-full max-w-lg transition-transform duration-300 flex",
+            "w-full max-w-lg flex",
+            // CSS transition only during the post-release phase (snap-
+            // back or fly-out). While the user is actively dragging,
+            // dragX/dragY change on every pointermove — chaining a
+            // 300 ms tween onto each step made the card visibly trail
+            // the finger and "shake" on slow, thoughtful drags.
+            (isAnimating || (dragX === 0 && dragY === 0)) && "transition-transform duration-300",
             swipeDirection === "right" && "translate-x-[120%] rotate-12",
             swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
             swipeDirection === "down" && "translate-y-[120%] opacity-50",

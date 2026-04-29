@@ -20,6 +20,13 @@ interface CalendarAnswerEditorProps {
   date: string;
   existingEntry?: TrackerEntry;
   onSave: (trackerId: string, date: string, value: boolean) => Promise<void>;
+  /**
+   * Optional. When provided, the editor shows a "Clear answer" button
+   * for days that already have an entry. Useful when the user tapped
+   * Yes/No accidentally and wants the day to count as un-answered
+   * again (so e.g. notifications still fire later in the day).
+   */
+  onClear?: (trackerId: string, date: string) => Promise<void>;
 }
 
 export const CalendarAnswerEditor = ({
@@ -29,6 +36,7 @@ export const CalendarAnswerEditor = ({
   date,
   existingEntry,
   onSave,
+  onClear,
 }: CalendarAnswerEditorProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -63,6 +71,19 @@ export const CalendarAnswerEditor = ({
       await onSave(tracker.id, date, value);
       setSelectedValue(value);
       haptics.success();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClear = async () => {
+    if (!onClear) return;
+    setSaving(true);
+    try {
+      await onClear(tracker.id, date);
+      setSelectedValue(null);
+      haptics.tap();
+      onClose();
     } finally {
       setSaving(false);
     }
@@ -198,6 +219,23 @@ export const CalendarAnswerEditor = ({
           <p className="text-xs text-center text-muted-foreground">
             {t("calendarEditor.tapOrSwipe")}
           </p>
+
+          {/* Clear-answer affordance — only visible when this day
+              already has an entry AND the parent wired up onClear.
+              Lets the user "un-answer" a day so it counts as
+              untracked again (handy when she ticked something off
+              by reflex and wants the notification to fire later, or
+              just wants the day to show as empty in the calendar). */}
+          {onClear && existingEntry && (
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={saving}
+              className="block mx-auto text-xs text-muted-foreground hover:text-destructive underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {t("calendarEditor.clearAnswer")}
+            </button>
+          )}
 
           {/* Divider */}
           <div className="border-t border-border/40" />

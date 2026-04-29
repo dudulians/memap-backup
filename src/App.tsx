@@ -32,6 +32,18 @@ const App = () => {
     // see Russian text on their lock screen for the next 7 days.
     window.addEventListener("memap-language-changed", refreshSchedule);
 
+    // Re-schedule whenever entries change — this is what makes today's
+    // reminder do the right thing in every code path:
+    //   • Answer the LAST unfilled tracker → today's notification gets
+    //     cancelled (isTodayFilled returns true → offset 0 is skipped).
+    //   • Clear an answer (Undo, calendar editor, TrackerDetails clear)
+    //     → today is no longer fully filled → today's notification is
+    //     re-scheduled so the user gets reminded later in the day.
+    // Centralising this here means any path that saves entries (Cards
+    // swipe, Play swipe, calendar edit, bulk multi-select, undo, …)
+    // refreshes the queue uniformly — no per-callsite plumbing.
+    window.addEventListener("memap-entries-changed", refreshSchedule);
+
     // Tap-on-notification deep-link. Whenever the user taps the
     // daily reminder on the lock screen / notification center, we
     // want them to land directly on the Cards tab AND have the
@@ -68,6 +80,7 @@ const App = () => {
 
     return () => {
       window.removeEventListener("memap-language-changed", refreshSchedule);
+      window.removeEventListener("memap-entries-changed", refreshSchedule);
       notifSubPromise?.then((sub) => sub?.remove()).catch(() => {});
     };
   }, []);

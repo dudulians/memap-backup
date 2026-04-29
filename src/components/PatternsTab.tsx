@@ -175,6 +175,18 @@ export const PatternsTab = () => {
     setAnswerEditorOpen(true);
   };
 
+  // Clear an answer for a specific tracker on a specific date.
+  // Used by the calendar editor's "Clear answer" button — turns an
+  // accidentally-marked day back into "untracked" so notifications
+  // and calendar dots reflect reality.
+  const handleClearAnswer = async (trackerId: string, date: string) => {
+    const updatedEntries = entries.filter(
+      (e) => !(e.trackerId === trackerId && e.date === date),
+    );
+    setEntries(updatedEntries);
+    await saveEntries(updatedEntries);
+  };
+
   // Save answer from calendar editor
   const handleSaveAnswer = async (trackerId: string, date: string, value: boolean) => {
     const existingEntry = entries.find(
@@ -580,6 +592,7 @@ export const PatternsTab = () => {
           date={editingDate}
           existingEntry={editingEntry}
           onSave={handleSaveAnswer}
+          onClear={handleClearAnswer}
         />
       )}
 

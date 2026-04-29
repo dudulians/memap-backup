@@ -123,6 +123,19 @@ export const TrackerDetails = ({
     }
   };
 
+  // "Un-answer" the selected date for this tracker — removes the
+  // entry entirely so the day reads as untracked again. Lets the
+  // user undo a reflex Yes/No without leaving a saved value behind
+  // (which would otherwise still suppress today's notification and
+  // colour the calendar dot).
+  const handleClearCurrent = async () => {
+    const existingEntry = getCurrentEntry();
+    if (!existingEntry) return;
+    const updatedEntries = entries.filter((e) => e.id !== existingEntry.id);
+    setEntries(updatedEntries);
+    await saveEntries(updatedEntries);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -226,6 +239,20 @@ export const TrackerDetails = ({
           currentAnswer={currentAnswer}
           onAnswer={handleAnswer}
         />
+        {/* Clear-answer link — only when there's an entry to clear.
+            Undoes a reflex tap so the day counts as un-answered
+            again (notifications fire later, calendar dot disappears). */}
+        {currentEntry && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={handleClearCurrent}
+              className="text-xs text-muted-foreground hover:text-destructive underline underline-offset-2 transition-colors"
+            >
+              {t("trackerDetails.clearAnswer")}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Calendar removed — it's available on Patterns → Overview, and

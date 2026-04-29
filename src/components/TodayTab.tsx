@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2, Check, ListChecks } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2, Check, ListChecks, EyeOff } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -135,6 +135,31 @@ export const TodayTab = () => {
     loadData();
   }, []);
 
+  // Auto-close any open swipe-reveal rows whenever a modal/sheet
+  // opens on top — otherwise an open card peeks out behind the
+  // dimmed backdrop and ruins the focus of the modal (the user's
+  // "things spill out of bounds" complaint when adding a tracker
+  // and seeing a swiped card behind the duplicate-detection
+  // dialog). Outside-click in the rows would catch most cases via
+  // the tap that triggered the modal, but this is belt-and-braces.
+  useEffect(() => {
+    if (
+      addTrackerModalOpen ||
+      sheetOpen ||
+      dailySessionOpen ||
+      deleteDialogOpen ||
+      duplicateDialogOpen
+    ) {
+      window.dispatchEvent(new Event("memap-close-swipe-rows"));
+    }
+  }, [
+    addTrackerModalOpen,
+    sheetOpen,
+    dailySessionOpen,
+    deleteDialogOpen,
+    duplicateDialogOpen,
+  ]);
+
   // Re-pull entries whenever another view (TrackerDetails, calendar, session)
   // persists a change. Keeps Today's Yes/No pills in sync after edits.
   useEffect(() => {
@@ -177,7 +202,15 @@ export const TodayTab = () => {
       getTrackers(),
       getEntries(),
     ]);
-    const sortedTrackers = [...trackersData].sort((a, b) => {
+    // Filter archived FIRST so the Cards screen never shows archived
+    // trackers — they live in Settings → Trackers (eye toggle) only.
+    // Without this, archiving via the swipe-reveal silently bounced
+    // back: archiveTrackerById set local state to the filtered list,
+    // but saveTrackers fired memap-trackers-changed, which triggered
+    // loadData (without the filter), re-pulling the archived tracker
+    // into state and putting the row right back on screen.
+    const visibleTrackers = trackersData.filter((t) => !t.archived);
+    const sortedTrackers = [...visibleTrackers].sort((a, b) => {
       if (a.sortIndex !== undefined && b.sortIndex !== undefined) {
         return a.sortIndex - b.sortIndex;
       }
@@ -229,6 +262,28 @@ export const TodayTab = () => {
     return Array.from(new Set(entries.map((e) => e.date)));
   }, [entries]);
 
+  // Remove an entry for (trackerId, date). Used by DailySession's
+  // smart Undo button — popping the saved Yes/No so the day reads
+  // as truly un-answered (notifications fire later, calendar dot
+  // disappears, threshold count decrements). Best-effort error
+  // handling: any storage failure surfaces as a toast but doesn't
+  // block the UI which has already optimistically updated.
+  const handleClearEntryForDate = async (trackerId: string, date: string) => {
+    const updatedEntries = entries.filter(
+      (e) => !(e.trackerId === trackerId && e.date === date),
+    );
+    setEntries(updatedEntries);
+    try {
+      await saveEntries(updatedEntries);
+    } catch (err: any) {
+      toast({
+        title: t("today.saveFailed"),
+        description: String(err?.message || err),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAnswer = async (trackerId: string, value: boolean) => {
     const existingEntry = getSelectedDateEntry(trackerId);
 
@@ -263,13 +318,12 @@ export const TodayTab = () => {
       }
     }
 
-    // Refresh the notification queue. If the user just answered the
-    // last unfilled card for today, today's daily notification gets
-    // cancelled — we don't want to ping them about something they've
-    // already done. New schedule still covers the next 7 days as usual.
-    if (isViewingToday) {
-      scheduleNotification(getNotificationSettings()).catch(() => {});
-    }
+    // Notification queue refresh used to live here, gated on
+    // isViewingToday. Now centralised in App.tsx via the
+    // memap-entries-changed listener (saveEntries dispatches that
+    // event), so EVERY entry write — Cards swipe, Play swipe,
+    // calendar edit, undo, multi-select bulk — refreshes the queue
+    // uniformly. One source of truth, no per-callsite plumbing.
   };
 
   const triggerConfetti = () => {
@@ -467,17 +521,18 @@ export const TodayTab = () => {
     }
   };
 
-  const handleArchiveTracker = async () => {
-    if (!selectedTrackerForDetails) return;
-    const archivedId = selectedTrackerForDetails.id;
-    const archivedTitle = localizeTrackerTitle(selectedTrackerForDetails.title);
-    const updatedTrackers = trackers.map(t =>
-      t.id === archivedId ? { ...t, archived: true } : t
+  // Internal — archive any tracker by id. Toast with undo. Used by
+  // both the existing TrackerDetails action and the new swipe-reveal
+  // archive action on the Cards list.
+  const archiveTrackerById = async (archivedId: string) => {
+    const target = trackers.find((t) => t.id === archivedId);
+    if (!target) return;
+    const archivedTitle = localizeTrackerTitle(target.title);
+    const updatedTrackers = trackers.map((t) =>
+      t.id === archivedId ? { ...t, archived: true } : t,
     );
     await saveTrackers(updatedTrackers);
-    setTrackers(updatedTrackers.filter(t => !t.archived));
-    setSheetOpen(false);
-    setSelectedTrackerForDetails(null);
+    setTrackers(updatedTrackers.filter((t) => !t.archived));
 
     // Toast with undo. Archive feels destructive ("my card disappeared!")
     // and the storage location (Settings → Trackers, eye toggle) isn't
@@ -507,6 +562,16 @@ export const TodayTab = () => {
         </ToastAction>
       ),
     });
+  };
+
+  // Archive flow used from TrackerDetails — closes the sheet, then
+  // delegates to the internal archive-by-id helper.
+  const handleArchiveTracker = async () => {
+    if (!selectedTrackerForDetails) return;
+    const id = selectedTrackerForDetails.id;
+    setSheetOpen(false);
+    setSelectedTrackerForDetails(null);
+    await archiveTrackerById(id);
   };
 
   const handleDeleteTracker = async () => {
@@ -672,6 +737,7 @@ export const TodayTab = () => {
           entries={entries}
           selectedDate={selectedDate}
           onAnswer={handleAnswer}
+          onClearAnswer={handleClearEntryForDate}
           onClose={() => {
             setDailySessionOpen(false);
             setPlayMode(false);
@@ -869,8 +935,12 @@ export const TodayTab = () => {
           live in their own section so users can prune/promote them
           without polluting their real tracking surface. */}
       {(() => {
-        const regularTrackers = trackers.filter((tr) => tr.source !== "play");
-        const playTrackers = trackers.filter((tr) => tr.source === "play");
+        // Belt-and-braces: also exclude archived here even though
+        // loadData should have already filtered them out. Defends
+        // against any future code path that puts an archived tracker
+        // into state without going through loadData.
+        const regularTrackers = trackers.filter((tr) => tr.source !== "play" && !tr.archived);
+        const playTrackers = trackers.filter((tr) => tr.source === "play" && !tr.archived);
 
         const renderTrackerCard = (tracker: Tracker, isPlay: boolean) => {
           const TIcon = getTrackerIcon(tracker.title, tracker.category);
@@ -1016,7 +1086,23 @@ export const TodayTab = () => {
                   </div>
                 )}
                 <div className="space-y-2">
-                  {regularTrackers.map((tracker) => renderTrackerCard(tracker, false))}
+                  {regularTrackers.map((tracker) => (
+                    <SwipeRevealRow
+                      key={tracker.id}
+                      onArchive={() => archiveTrackerById(tracker.id)}
+                      onDelete={() => {
+                        setTrackerToDelete(tracker);
+                        setDeleteDialogOpen(true);
+                      }}
+                      // Selection mode owns the tap target — disable
+                      // swipe-reveal so the user doesn't accidentally
+                      // open the action panel while trying to tick a
+                      // checkbox.
+                      disabled={selectionMode}
+                    >
+                      {renderTrackerCard(tracker, false)}
+                    </SwipeRevealRow>
+                  ))}
                 </div>
               </div>
             )}
@@ -1168,6 +1254,302 @@ const SortableSwipeCard = ({ tracker, selectedDateEntry, onAnswer, onOpenDetails
         dragHandleProps={listeners}
         isDragging={isDragging}
       />
+    </div>
+  );
+};
+
+// --- SwipeRevealRow -------------------------------------------------
+// Telegram-chat style row: swipe LEFT and two action buttons
+// (archive, delete) appear, growing from width 0 in step with the
+// finger. When the user isn't swiping, the buttons aren't there at
+// all (zero width) so there's no peek-through behind the card's
+// rounded corners. Outer wrapper is rounded + overflow-hidden so the
+// reveal panel inherits the card's silhouette.
+//
+// Behaviour:
+//   - As the user pulls left, both transform AND reveal-panel width
+//     update on every pointermove → the card and the buttons stretch
+//     together with the finger (no gap appears between them).
+//   - On release: < 50 % pulled → snap closed (both ease back to 0).
+//                 ≥ 50 % pulled → snap open at the full 144 px reveal.
+//   - Tap on card body (no movement) → if open, close; otherwise the
+//     inner card handles it (open details).
+//   - Selection mode disables the gesture entirely so taps select
+//     instead of swiping.
+
+interface SwipeRevealRowProps {
+  children: React.ReactNode;
+  onArchive: () => void;
+  onDelete: () => void;
+  /** Disable the gesture entirely (e.g. while in selection mode). */
+  disabled?: boolean;
+}
+
+const REVEAL_DISTANCE = 144; // 2 buttons × 72 px
+
+// Singleton-ish ID for the currently-open row. When a row opens it
+// dispatches a `memap-swipe-row-opened` event with its id; every other
+// row that's open at the time closes itself in response. Result: only
+// one row is open at a time, like Telegram. Stable per mount.
+let _swipeRowSeq = 0;
+
+const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeRevealRowProps) => {
+  const { t } = useTranslation();
+  const [offsetX, setOffsetX] = React.useState(0);
+  const [isOpen, setIsOpen] = React.useState(false);
+  // isDragging gates CSS transitions: while the finger drives the
+  // animation we want immediate 1:1 movement (no tween lag), and on
+  // release the transition kicks in for a smooth snap.
+  const [isDragging, setIsDragging] = React.useState(false);
+  const rowRef = React.useRef<HTMLDivElement>(null);
+  const startX = React.useRef(0);
+  // startY tracks the touch's vertical origin so we can decide
+  // direction on the first few pointermoves. If motion is vertical-
+  // dominant we yield to iOS native scroll (pan-y on the outer); only
+  // a clearly horizontal-dominant move captures the pointer for our
+  // reveal gesture. This is exactly how Telegram chat rows behave —
+  // smooth vertical list scrolling, with horizontal-only swipes
+  // claiming the gesture.
+  const startY = React.useRef(0);
+  const currentDx = React.useRef(0);
+  const activePointerId = React.useRef<number | null>(null);
+  const hasCaptured = React.useRef(false);
+  const startedFromOpen = React.useRef(false);
+  // Stable per-row id used to suppress self-trigger of the
+  // "another row opened" close event.
+  const rowId = React.useRef(++_swipeRowSeq);
+
+  const close = () => {
+    setOffsetX(0);
+    setIsOpen(false);
+  };
+
+  // Auto-close when context changes around the row:
+  //   • pointerdown anywhere outside the row (taps on a modal, on
+  //     another card, on the nav bar — anything off-row)
+  //   • the page scrolls (any scroll container, captured at root)
+  //   • another swipe-row opens (only one at a time, Telegram-style)
+  //   • a modal/dialog explicitly tells everyone to close (custom
+  //     `memap-close-swipe-rows` event — fired by AddTrackerModal et al.
+  //     so the open row doesn't peek behind the dimmed backdrop, which
+  //     was the user's "all spills out of bounds" complaint).
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const onOutsidePointer = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (rowRef.current && target && !rowRef.current.contains(target)) {
+        close();
+      }
+    };
+    const onScroll = () => close();
+    const onAnotherRowOpened = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { id?: number } | undefined;
+      if (detail?.id !== rowId.current) close();
+    };
+    const onCloseAll = () => close();
+
+    window.addEventListener("pointerdown", onOutsidePointer);
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    window.addEventListener("memap-swipe-row-opened", onAnotherRowOpened);
+    window.addEventListener("memap-close-swipe-rows", onCloseAll);
+
+    return () => {
+      window.removeEventListener("pointerdown", onOutsidePointer);
+      window.removeEventListener("scroll", onScroll, { capture: true } as EventListenerOptions);
+      window.removeEventListener("memap-swipe-row-opened", onAnotherRowOpened);
+      window.removeEventListener("memap-close-swipe-rows", onCloseAll);
+    };
+  }, [isOpen]);
+
+  // Announce when this row opens so its siblings close themselves.
+  React.useEffect(() => {
+    if (isOpen) {
+      window.dispatchEvent(
+        new CustomEvent("memap-swipe-row-opened", { detail: { id: rowId.current } }),
+      );
+    }
+  }, [isOpen]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (disabled) return;
+    const target = e.target as HTMLElement;
+    // If touch starts on an action button, let it handle its own click.
+    if (target.closest("[data-swipe-action]")) return;
+    if (activePointerId.current !== null) return;
+    activePointerId.current = e.pointerId;
+    // Do NOT capture yet — we want iOS to handle vertical pan
+    // natively (smooth, momentum-aware scroll of the cards list).
+    // We claim the pointer in pointermove only when motion is
+    // clearly horizontal-dominant; vertical-dominant motion yields
+    // to native scroll.
+    hasCaptured.current = false;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+    currentDx.current = 0;
+    startedFromOpen.current = isOpen;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerId.current !== e.pointerId) return;
+    const dx = e.clientX - startX.current;
+    const dy = e.clientY - startY.current;
+
+    // Direction-decision phase — wait for unambiguous motion, then
+    // either claim (horizontal) or yield (vertical).
+    if (!hasCaptured.current) {
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      if (absDx < 8 && absDy < 8) return; // not enough motion yet
+      if (absDx > absDy * 1.5) {
+        // Horizontal-dominant → claim the pointer; subsequent moves
+        // route to us regardless of where the finger ends up. Native
+        // scroll won't engage on this gesture anymore.
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        hasCaptured.current = true;
+        setIsDragging(true);
+      } else {
+        // Vertical or ambiguous → yield. iOS continues its native
+        // pan-y scroll uninterrupted. Mark the gesture as no-longer-
+        // ours so subsequent moves are ignored.
+        activePointerId.current = null;
+        return;
+      }
+    }
+
+    currentDx.current = dx;
+    // Compute current offset relative to the open/closed state.
+    const base = startedFromOpen.current ? -REVEAL_DISTANCE : 0;
+    // Hard-clamp slightly past the reveal so a strong pull just
+    // bounces against the wall instead of revealing more buttons.
+    const next = Math.min(0, Math.max(-REVEAL_DISTANCE - 24, base + dx));
+    setOffsetX(next);
+  };
+
+  const endPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerId.current !== e.pointerId) return;
+    if (hasCaptured.current) {
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    }
+    hasCaptured.current = false;
+    activePointerId.current = null;
+    setIsDragging(false);
+
+    // Decide settle state. Open if the user is clearly past 50 % of the
+    // reveal distance, OR if they were already open and didn't pull
+    // far enough rightward to close.
+    if (offsetX < -REVEAL_DISTANCE / 2) {
+      setOffsetX(-REVEAL_DISTANCE);
+      setIsOpen(true);
+    } else {
+      close();
+    }
+  };
+
+  // Reveal width follows the offset 1:1, capped at REVEAL_DISTANCE.
+  // Drives the expanding action panel below.
+  const revealWidth = Math.min(REVEAL_DISTANCE, Math.abs(offsetX));
+  const transitionStyle = isDragging ? "none" : "transform 220ms ease-out, width 220ms ease-out";
+
+  return (
+    <div
+      ref={rowRef}
+      // The OUTER wrapper carries the card's visual styling (via the
+      // card-premium class) and rounding. The inner card has its
+      // card-premium overridden to be transparent/borderless via the
+      // .swipe-reveal-row CSS rule, so when the panel reveals there's
+      // no visible seam between the card body and the action buttons
+      // — both sit inside one continuous rounded silhouette.
+      //
+      // touch-action: pan-y — exactly Telegram's chat-row behaviour:
+      // iOS keeps native vertical scroll (smooth list pan with
+      // momentum and bounce, the user's main complaint with our
+      // earlier touch-action:none version), while horizontal motion
+      // is ours. Together with the pointermove direction-decision
+      // (yield to vertical, claim on horizontal-dominant 1.5×) the
+      // row never fights native scroll: scrolling the cards list
+      // works as expected; deliberate horizontal pulls reveal the
+      // archive/delete actions.
+      className="swipe-reveal-row card-premium relative rounded-3xl overflow-hidden"
+      style={{ touchAction: "pan-y" }}
+    >
+      {/* Action panel — width grows with the swipe so when offsetX is 0
+          the panel literally has zero size and isn't rendered to any
+          pixels. The buttons inside have flex-shrink-0 so they don't
+          squeeze when the panel is partially open; they just get
+          clipped by the panel's overflow-hidden. */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-stretch overflow-hidden"
+        style={{
+          width: revealWidth,
+          transition: transitionStyle,
+        }}
+        // Action panel itself doesn't intercept touches so a finger
+        // dragged across it during a swipe stays with the row's
+        // gesture. Buttons inside still get their click on tap.
+      >
+        <button
+          type="button"
+          data-swipe-action
+          onClick={() => {
+            onArchive();
+            close();
+          }}
+          className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center bg-slate-500 text-white text-[10px] font-medium gap-0.5 active:bg-slate-600"
+          aria-label={t("today.swipeArchive")}
+        >
+          <EyeOff className="h-4 w-4" strokeWidth={2} />
+          {t("today.swipeArchive")}
+        </button>
+        <button
+          type="button"
+          data-swipe-action
+          onClick={() => {
+            onDelete();
+            close();
+          }}
+          className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-medium gap-0.5 active:bg-destructive/90"
+          aria-label={t("today.swipeDelete")}
+        >
+          <Trash2 className="h-4 w-4" strokeWidth={2} />
+          {t("today.swipeDelete")}
+        </button>
+      </div>
+
+      {/* Card body. transform animates with the same easing as the
+          panel width so the right edge of the card and the left edge
+          of the panel stay glued together (they're both functions of
+          offsetX). No gap is ever introduced. */}
+      <div
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onClick={() => {
+          // Tap on the row body (no movement) while the panel is open
+          // = close it. The inner card's own onClick (open details)
+          // still fires when closed because we only consume the click
+          // when isOpen is true.
+          if (isOpen && Math.abs(currentDx.current) < 5) {
+            close();
+          }
+        }}
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition: transitionStyle,
+        }}
+        className="relative"
+      >
+        {children}
+      </div>
     </div>
   );
 };

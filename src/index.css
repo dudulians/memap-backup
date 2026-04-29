@@ -23,6 +23,31 @@
   }
 }
 
+/* SwipeRevealRow override: when a card-premium row sits inside a
+   swipe-reveal wrapper, the OUTER wrapper carries the visual styling
+   (background, shadow, rounded corners) so the row reads as one
+   continuous shape that splits horizontally when the action panel
+   reveals. The inner card-premium is stripped of its own rim/shadow/
+   rounding so there's no visible seam between the card body and the
+   action buttons during a swipe.
+   The OUTER itself has `border: none` (compound selector beats the
+   plain `.card-premium` rule) so the absolutely-positioned action
+   panel can fill the row edge-to-edge. With the default 1 px border,
+   the panel sat inside the padding-edge and a faint white sliver
+   appeared above & below the slate Archive / red Delete buttons —
+   the user's "looks cheap, buttons smaller than the card" complaint. */
+.swipe-reveal-row .card-premium {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.swipe-reveal-row.card-premium {
+  border: none;
+}
+
 /* Premium Design System for MeMap — "Botanica" palette
    Warm cream canvas · sage · terracotta · night-sky · ochre
    All colors MUST be HSL.

@@ -73,7 +73,13 @@ export const DuplicateTrackerDialog = ({
           </div>
         </DialogHeader>
 
-        <Card className="card-premium mt-4">
+        {/* Padding inside the preview card so the icon + text don't
+            press against the rounded corners (24 px radius from
+            card-premium). Without it, the icon's top-left visibly
+            poked out beyond the card's curve and the right-edge text
+            ran flush against the rim — the user's "icon lies a bit
+            outside, text runs past the panel" complaint. */}
+        <Card className="card-premium mt-4 p-4">
           <div className="space-y-2">
             <div className="flex items-start gap-3">
               <div
@@ -83,16 +89,16 @@ export const DuplicateTrackerDialog = ({
                 <Icon className="h-5 w-5 text-foreground" strokeWidth={1.75} />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-base">{localizeTrackerTitle(existingTracker.title)}</h3>
+                <h3 className="font-medium text-base break-words">{localizeTrackerTitle(existingTracker.title)}</h3>
                 <p className="text-xs uppercase tracking-wider mt-1" style={{ color: `hsl(var(--${categoryColor}))` }}>
                   {t(`categories.${existingTracker.category}` as const)}
                 </p>
-                <p className="text-sm text-muted-foreground mt-2 font-playful">
+                <p className="text-sm text-muted-foreground mt-2 font-playful break-words">
                   {localizeTrackerQuestion(existingTracker.questionText)}
                 </p>
               </div>
             </div>
-            
+
             <div className="pt-3">
               <p className="text-xs text-muted-foreground">
                 {trackingDays === 1
