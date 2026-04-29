@@ -15,7 +15,7 @@ import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
-import { playSwipeSound, triggerHaptic as runHaptic } from "@/lib/feedback";
+import { playSwipeSound } from "@/lib/feedback";
 import { haptics } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
@@ -110,14 +110,24 @@ const playFeedbackSound = (type: "yes" | "no" | "skip") => {
   playSwipeSound(type);
 };
 
-// Haptic feedback — uses native @capacitor/haptics on iOS/Android (required
-// on iOS since `navigator.vibrate` is a no-op there), falls back to the
-// Web Vibration API in browsers. Gated on hapticsEnabled (its own toggle
-// in Settings now, separate from soundEnabled).
+// Haptic feedback — uses native @capacitor/haptics on iOS/Android. Goes
+// through lib/haptics.ts (the same module the Settings "Test vibration"
+// diagnostic uses) for consistency: if the test button feels haptics on
+// device, this path will too. Gated on hapticsEnabled (its own toggle
+// in Settings, separate from soundEnabled). The user's report — "test
+// works but no vibration when swiping" — was the trigger to unify these
+// paths so we never have two ways of asking iOS for a haptic.
 const triggerHaptic = (type: "light" | "medium" | "heavy") => {
   const settings = getSessionSettings();
   if (!settings.hapticsEnabled) return;
-  runHaptic(type);
+  // medium → heavy on commit so a Yes/No swipe lands with a noticeable
+  // thump (the previous "medium" felt too subtle competing with the
+  // visual fly-out animation + the audio cue).
+  if (type === "heavy" || type === "medium") {
+    haptics.medium();
+  } else {
+    haptics.swipe();
+  }
 };
 
 export const DailySession = ({

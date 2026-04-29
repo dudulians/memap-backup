@@ -7,6 +7,7 @@ import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { haptics } from "@/lib/haptics";
 
 interface SwipeableTrackerCardProps {
   tracker: Tracker;
@@ -91,8 +92,10 @@ export const SwipeableTrackerCard = ({
     longPressTimer.current = setTimeout(() => {
       didLongPress.current = true;
       if (onDelete) {
-        // Vibrate if available
-        if (isHapticEnabled() && navigator.vibrate) navigator.vibrate(30);
+        // Native Capacitor haptic via lib/haptics — navigator.vibrate
+        // alone is a no-op on iOS Safari, which is why long-press
+        // never buzzed on iPhone before.
+        if (isHapticEnabled()) haptics.medium();
         setShowDeleteBar(true);
       }
     }, 500);
@@ -154,6 +157,13 @@ export const SwipeableTrackerCard = ({
     const velocityTrigger = velocityX >= 0.5 && absX >= 25;
 
     if (distanceTrigger || velocityTrigger) {
+      // Native Capacitor haptic on commit. The Cards screen swipe used
+      // to be silent on iPhone — long-press tried navigator.vibrate
+      // (no-op on iOS) and the swipe itself never asked for a haptic
+      // at all. Routed through lib/haptics so it's the exact same call
+      // as the Settings diagnostic test, which the user confirmed
+      // works on her device.
+      if (isHapticEnabled()) haptics.medium();
       if (dx > 0) onAnswer(tracker.id, true);
       else onAnswer(tracker.id, false);
     }
@@ -174,6 +184,7 @@ export const SwipeableTrackerCard = ({
     e.stopPropagation();
     if (answerLatch.current) return;
     answerLatch.current = true;
+    if (isHapticEnabled()) haptics.tap();
     onAnswer(tracker.id, value);
     setTimeout(() => { answerLatch.current = false; }, 0);
   };
