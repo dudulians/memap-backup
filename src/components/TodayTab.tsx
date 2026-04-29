@@ -1411,34 +1411,18 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
     }
   }, [isOpen]);
 
-  // Native non-passive touchmove listener that actively kills any
-  // iOS-engaged pan-y scroll once we've claimed the gesture as
-  // horizontal. React's onPointerMove is passive — preventDefault
-  // there is a no-op. Without this hook iOS keeps panning the page
-  // for the first few px before our pointer-capture takes effect.
-  //
-  // CAUTION: only preventDefault on touches that involve OUR active
-  // pointer. Otherwise we kill native scroll for unrelated touches
-  // (multi-touch, taps on action buttons whose pointerdown returned
-  // early, etc.) and the row visibly hangs because pointer events
-  // get suppressed too. The user reported this as "swipe-reveal
-  // stopped working" after 1.4.3 — too aggressive cancellation.
-  React.useEffect(() => {
-    const node = rowRef.current;
-    if (!node || disabled) return;
-    const onTouchMove = (e: TouchEvent) => {
-      // Only block native behaviours when we're actively driving a
-      // claimed horizontal swipe. activePointerId guarantees the
-      // touch is the same one our pointermove handler is tracking.
-      if (hasCaptured.current && activePointerId.current !== null) {
-        e.preventDefault();
-      }
-    };
-    node.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => {
-      node.removeEventListener("touchmove", onTouchMove);
-    };
-  }, [disabled]);
+  // Removed the native touchmove preventDefault helper. It was
+  // intended to actively kill iOS pan-y scroll engaged in the first
+  // few pixels of a swipe, but on iOS Safari calling preventDefault
+  // on touchmove suppresses the synthesised click event for the
+  // following tap on the same element subtree. That's why the user
+  // reported "the buttons don't work and I can't tap to close" —
+  // even after activePointerId reset, the WebView treated the
+  // touch as already-consumed and swallowed the click on Archive /
+  // Delete.
+  // We rely on touch-action: pan-y + setPointerCapture on
+  // horizontal claim alone now. A tiny page-wiggle for the first
+  // 4 px is acceptable; broken buttons are not.
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
@@ -1543,10 +1527,10 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
     }
   };
 
-  // Reveal width follows the offset 1:1, capped at REVEAL_DISTANCE.
-  // Drives the expanding action panel below.
-  const revealWidth = Math.min(REVEAL_DISTANCE, Math.abs(offsetX));
-  const transitionStyle = isDragging ? "none" : "transform 220ms ease-out, width 220ms ease-out";
+  // Card-body transform timing. Buttons themselves are statically
+  // positioned at their final spots behind the card; the card slides
+  // left to uncover them, Telegram-style.
+  const transitionStyle = isDragging ? "none" : "transform 220ms ease-out";
 
   return (
     <div
@@ -1570,62 +1554,49 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
       className="swipe-reveal-row card-premium relative rounded-3xl overflow-hidden"
       style={{ touchAction: "pan-y" }}
     >
-      {/* Action panel — width grows with the swipe so when offsetX is 0
-          the panel literally has zero size and isn't rendered to any
-          pixels. The buttons inside have flex-shrink-0 so they don't
-          squeeze when the panel is partially open; they just get
-          clipped by the panel's overflow-hidden. */}
-      <div
-        className="absolute inset-y-0 right-0 flex items-stretch overflow-hidden"
-        style={{
-          width: revealWidth,
-          transition: transitionStyle,
+      {/* Telegram-style staggered reveal. Both buttons are absolutely
+          positioned at their FINAL resting spots behind the card body
+          (which sits on top, transformed leftward by the swipe). As
+          the card slides off, Delete (anchored to the right edge) is
+          uncovered first; Archive (one button-width further left)
+          emerges from behind it as the swipe continues — the "deck
+          of cards being dealt" feel the user described.
+          No more width-changing container; the buttons themselves
+          never move, the card just gets out of their way. */}
+      <button
+        type="button"
+        data-swipe-action
+        onClick={() => {
+          haptics.medium();
+          onArchive();
+          close();
         }}
-        // Action panel itself doesn't intercept touches so a finger
-        // dragged across it during a swipe stays with the row's
-        // gesture. Buttons inside still get their click on tap.
+        className="absolute inset-y-0 flex flex-col items-center justify-center bg-amber-200 text-amber-900 text-[10px] font-medium gap-0.5 active:bg-amber-300"
+        style={{ right: 72, width: 72 }}
+        aria-label={t("today.swipeArchive")}
       >
-        <button
-          type="button"
-          data-swipe-action
-          onClick={() => {
-            // Medium thump for archive — significant action, not
-            // destructive. Tap-tier feels too light for moving a
-            // tracker out of view.
-            haptics.medium();
-            onArchive();
-            close();
-          }}
-          className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center bg-slate-500 text-white text-[10px] font-medium gap-0.5 active:bg-slate-600"
-          aria-label={t("today.swipeArchive")}
-        >
-          <EyeOff className="h-4 w-4" strokeWidth={2} />
-          {t("today.swipeArchive")}
-        </button>
-        <button
-          type="button"
-          data-swipe-action
-          onClick={() => {
-            // Warning pattern for delete — two-pulse, says "are you
-            // sure?" tactically before the confirmation dialog
-            // visually says it. Matches iOS guidance: destructive
-            // actions deserve a warning haptic.
-            haptics.warning();
-            onDelete();
-            close();
-          }}
-          className="w-[72px] flex-shrink-0 flex flex-col items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-medium gap-0.5 active:bg-destructive/90"
-          aria-label={t("today.swipeDelete")}
-        >
-          <Trash2 className="h-4 w-4" strokeWidth={2} />
-          {t("today.swipeDelete")}
-        </button>
-      </div>
+        <EyeOff className="h-4 w-4" strokeWidth={2} />
+        {t("today.swipeArchive")}
+      </button>
+      <button
+        type="button"
+        data-swipe-action
+        onClick={() => {
+          haptics.warning();
+          onDelete();
+          close();
+        }}
+        className="absolute inset-y-0 flex flex-col items-center justify-center bg-rose-300 text-rose-900 text-[10px] font-medium gap-0.5 active:bg-rose-400"
+        style={{ right: 0, width: 72 }}
+        aria-label={t("today.swipeDelete")}
+      >
+        <Trash2 className="h-4 w-4" strokeWidth={2} />
+        {t("today.swipeDelete")}
+      </button>
 
-      {/* Card body. transform animates with the same easing as the
-          panel width so the right edge of the card and the left edge
-          of the panel stay glued together (they're both functions of
-          offsetX). No gap is ever introduced. */}
+      {/* Card body. Sits ON TOP of the action buttons (buttons are
+          rendered first → lower in the stacking order). Translates
+          leftward with offsetX, uncovering the buttons behind it. */}
       <div
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

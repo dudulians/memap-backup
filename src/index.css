@@ -37,9 +37,11 @@
    appeared above & below the slate Archive / red Delete buttons —
    the user's "looks cheap, buttons smaller than the card" complaint. */
 .swipe-reveal-row .card-premium {
-  background: transparent !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  /* Inner card-premium keeps its background so it OPAQUELY covers
+     the absolute-positioned action buttons sitting behind it when
+     the row is closed. Strips its own rounding / border / shadow
+     so the seam between card and revealed action buttons is a
+     clean vertical line — Telegram-style "deal a card" reveal. */
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
