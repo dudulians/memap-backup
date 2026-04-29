@@ -8,6 +8,7 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -72,6 +73,10 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
   const { t, i18n } = useTranslation();
   const [range, setRange] = useState<TimeRange>("30d");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Period offset in WINDOWS (not days). 0 = current window ending today;
+  // 1 = previous window of the same length; etc. Lets the user step
+  // back/forward through history with ← / → buttons.
+  const [offset, setOffset] = useState(0);
 
   // External pre-filter (e.g. user tapped a correlation in Connections).
   // Reset selection to those IDs and pin range to 30d — short enough to
@@ -80,8 +85,15 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
     if (prefilterIds && prefilterIds.length > 0) {
       setSelectedIds(new Set(prefilterIds));
       setRange("30d");
+      setOffset(0);
     }
   }, [prefilterIds]);
+
+  // Reset offset whenever the range size changes — the user just picked
+  // a new window length, so anchor it to "now" again.
+  useEffect(() => {
+    setOffset(0);
+  }, [range]);
 
   const days = RANGE_DAYS[range];
   const bucket = bucketSize(range);
@@ -134,6 +146,27 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
     return map;
   }, [entries]);
 
+  // Local-date string formatter — avoids the UTC drift of toISOString
+  // when computing date stamps in non-UTC timezones (e.g. UAE = UTC+4).
+  // The user saved her entries with local-date stamps elsewhere in the
+  // app, so the chart MUST use the same format or lookups miss.
+  const toLocalDateStr = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // Window end date — today minus (offset windows worth of days).
+  // offset=0 means the window ends today; offset=1 means it ends the day
+  // BEFORE the current window starts, etc.
+  const windowEnd = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - offset * days);
+    return d;
+  }, [offset, days]);
+
   // Aggregated chart data — each point = one bucket (week or month) with
   // the count of significant days per tracker. Only used when range !=
   // "7d" (the 7-day view uses a strips layout below, not recharts).
@@ -142,15 +175,12 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
   const chartData = useMemo(() => {
     if (range === "7d") return [] as Record<string, any>[];
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const bucketCount = Math.ceil(days / bucket);
     const data: Record<string, any>[] = [];
 
     for (let b = bucketCount - 1; b >= 0; b--) {
-      const bucketEnd = new Date(today);
-      bucketEnd.setDate(today.getDate() - b * bucket);
+      const bucketEnd = new Date(windowEnd);
+      bucketEnd.setDate(windowEnd.getDate() - b * bucket);
       const bucketStart = new Date(bucketEnd);
       bucketStart.setDate(bucketEnd.getDate() - bucket + 1);
 
@@ -162,7 +192,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
         for (let d = 0; d < bucket; d++) {
           const day = new Date(bucketStart);
           day.setDate(bucketStart.getDate() + d);
-          const dateStr = day.toISOString().split("T")[0];
+          const dateStr = toLocalDateStr(day);
           const entry = entryMap.get(`${tracker.id}:${dateStr}`);
           if (entry) {
             const sig = tracker.problemWhen === "yes" ? entry.value : !entry.value;
@@ -174,30 +204,19 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
       data.push(point);
     }
     return data;
-  }, [range, days, bucket, entryMap, activeTrackers]);
+  }, [range, days, bucket, entryMap, activeTrackers, windowEnd]);
 
   // 7-day strips: list of date stamps + labels for the row headers.
-  // Rebuilt only when range or entries change (entries-trigger keeps
-  // it fresh if the app sits open across midnight after a save).
-  // CRITICAL: dateStr is built from LOCAL date components, NOT
-  // toISOString(). The user is in UAE (UTC+4), so e.g. local
-  // midnight Wed = UTC 8 PM Tue → toISOString().split("T")[0] would
-  // return Tuesday. The rest of the app (TodayTab, MonthlyCalendar,
-  // entries on save) all use local-date strings, so the strip's
-  // UTC-based stamps used to miss today's entry entirely. Fixed by
-  // formatting from getFullYear/getMonth/getDate.
+  // Anchored at `windowEnd` (= today shifted by `offset` windows).
+  // Local-date strings (NOT toISOString) so they match how the rest
+  // of the app stores entries — see toLocalDateStr above.
   const dateLocale = i18n.language === "ru" ? ruLocale : undefined;
   const sevenDays = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (6 - i));
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
+      const d = new Date(windowEnd);
+      d.setDate(windowEnd.getDate() - (6 - i));
       return {
-        dateStr: `${yyyy}-${mm}-${dd}`,
+        dateStr: toLocalDateStr(d),
         // 2-letter weekday — short, identical visual weight across
         // locales. EN: "Mo Tu We Th Fr Sa Su"; RU: "пн вт ср чт пт сб вс".
         weekday: format(d, "EEEEEE", { locale: dateLocale }),
@@ -205,7 +224,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
         dayNumber: d.getDate(),
       };
     });
-  }, [range, entries, dateLocale]);
+  }, [range, entries, dateLocale, windowEnd]);
 
   const toggleTracker = (id: string) => {
     setSelectedIds((prev) => {
@@ -218,6 +237,25 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
   // Y axis ticks for aggregated mode (7 for weekly, 30 for monthly).
   const yMax = bucket;
   const countTicks = [0, Math.round(yMax / 2), yMax];
+
+  // Window-range label for the navigation row. Shows the actual dates
+  // covered ("23 апр – 29 апр" for 7d, "30 мар – 29 апр" for 30d, etc.)
+  // so the user knows exactly what period she's looking at when she
+  // shifts back/forward via the arrows.
+  const windowStart = useMemo(() => {
+    const d = new Date(windowEnd);
+    d.setDate(windowEnd.getDate() - days + 1);
+    return d;
+  }, [windowEnd, days]);
+  const dateRangeLabel = useMemo(() => {
+    // Same year? Hide the year (compact). Different year? Show both.
+    const sameYear = windowStart.getFullYear() === windowEnd.getFullYear();
+    const startFmt = sameYear ? "d MMM" : "d MMM yyyy";
+    const endFmt = sameYear ? "d MMM" : "d MMM yyyy";
+    const startStr = format(windowStart, startFmt, { locale: dateLocale });
+    const endStr = format(windowEnd, endFmt, { locale: dateLocale });
+    return `${startStr} – ${endStr}`;
+  }, [windowStart, windowEnd, dateLocale]);
 
   return (
     <Card className="card-premium breathing-space animate-fade-in">
@@ -240,6 +278,40 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
               </Button>
             ))}
           </div>
+        </div>
+
+        {/* Date-range navigation row — left arrow shifts back one
+            window, right arrow shifts forward (disabled at offset 0
+            since "future" doesn't exist). Centre label shows the
+            actual dates covered so the user knows exactly what
+            period she's looking at, not just "30 days back". */}
+        <div className="flex items-center justify-center gap-2 -mt-1">
+          <button
+            type="button"
+            onClick={() => setOffset((o) => o + 1)}
+            className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors"
+            aria-label={t("trendChart.shiftBack")}
+          >
+            <ChevronLeft className="h-4 w-4" strokeWidth={2} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setOffset(0)}
+            disabled={offset === 0}
+            className="text-xs text-foreground/80 tabular-nums px-2 py-1 rounded-md hover:bg-muted/50 disabled:opacity-100 disabled:cursor-default transition-colors min-w-[140px] text-center"
+            aria-label={t("trendChart.resetToToday")}
+          >
+            {dateRangeLabel}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOffset((o) => Math.max(0, o - 1))}
+            disabled={offset === 0}
+            className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-30 disabled:cursor-default"
+            aria-label={t("trendChart.shiftForward")}
+          >
+            <ChevronRight className="h-4 w-4" strokeWidth={2} />
+          </button>
         </div>
 
         {/* Tracker legend chips */}

@@ -483,5 +483,35 @@ export const generateStarterPack = (
         });
   const scored = candidates.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
   const picked = pickTop(scored, count, 2);
+
+  // Wider-pool fallback: if the interview-scored picks didn't fill the
+  // requested count (because the user has already removed all top-
+  // scored templates from her stress/sleep/etc. focus areas), fill the
+  // remaining slots from any remaining template — even with score 0 —
+  // so the user gets cards from OTHER themes to explore. Without this
+  // fallback, regenerate kept returning the same exhausted bucket and
+  // the user complained "база маленькая, предлагает то же самое".
+  // We give a small score nudge to score-0 candidates by category
+  // diversity (favour categories not yet in `picked`) so the user
+  // sees genuinely different themes, not just more of the same.
+  if (picked.length < count) {
+    const pickedTitles = new Set(picked.map((p) => p.title.trim().toLowerCase()));
+    const pickedCategories = new Set(picked.map((p) => p.category));
+    const leftover = candidates.filter(
+      (tpl) => !pickedTitles.has(tpl.title.trim().toLowerCase()),
+    );
+    // Prefer templates from categories not yet represented; tiebreak
+    // by stable insertion order so results are deterministic.
+    leftover.sort((a, b) => {
+      const aNew = pickedCategories.has(a.category) ? 1 : 0;
+      const bNew = pickedCategories.has(b.category) ? 1 : 0;
+      return aNew - bNew;
+    });
+    for (const tpl of leftover) {
+      if (picked.length >= count) break;
+      picked.push(tpl);
+    }
+  }
+
   return picked.map(toGenerated);
 };

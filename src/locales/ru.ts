@@ -582,6 +582,9 @@ const ru: Translation = {
     footerStrips: "Красный = значимый · зелёный = записан · серый = пропуск",
     noTrackers: "Выбери трекеры в чипах выше",
     showAll: "Все",
+    shiftBack: "Предыдущий период",
+    shiftForward: "Следующий период",
+    resetToToday: "К текущему периоду",
   },
 
   correlations: {

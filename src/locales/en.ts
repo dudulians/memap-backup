@@ -575,6 +575,9 @@ const en = {
     footerStrips: "Red = significant · green = recorded · grey = missing",
     noTrackers: "Pick trackers from the chips above",
     showAll: "All",
+    shiftBack: "Previous period",
+    shiftForward: "Next period",
+    resetToToday: "Back to current period",
   },
 
   correlations: {

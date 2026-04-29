@@ -438,7 +438,11 @@ export const AddTrackerModal = ({
           </Button>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4 relative">
+        {/* Extra top padding (pt-6) so the Шаблон/Свой tabs sit
+            comfortably below the sticky header. Was pt-4 — visually
+            felt tight, the header's border looked like it was clipping
+            the tab pills. */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-6 pb-4 relative">
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as "templates" | "custom")} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
