@@ -1,20 +1,26 @@
 /**
- * Wrapper around @capacitor/haptics with a graceful web fallback.
+ * Per-platform haptic dispatcher.
  *
- * Native (iOS/Android via Capacitor) → real Taptic Engine / vibrator.
- * Web (desktop browsers, the Vite dev server) → falls back to
- *   navigator.vibrate() when present, otherwise no-op. iOS Safari
- *   ignores navigator.vibrate completely, but iOS users will be on the
- *   native build anyway.
+ *   iOS native     → Core Haptics via our custom CoreHapticsPlugin
+ *                    (CHHapticEngine + CHHapticPattern). The user reported
+ *                    that @capacitor/haptics' UIImpactFeedbackGenerator
+ *                    path silently downgraded to the legacy crude
+ *                    AudioServicesPlaySystemSound buzzer on her device,
+ *                    so we route iOS through our own plugin where we
+ *                    control the engine directly. Same code path that
+ *                    games like Fishdom use for their premium feel.
+ *   Android native → @capacitor/haptics (UIImpactFeedbackGenerator-
+ *                    equivalent on Android via AndroidX). No Core
+ *                    Haptics on Android, but Android haptic quality
+ *                    varies wildly between OEMs anyway.
+ *   Web            → navigator.vibrate() if present. iOS Safari
+ *                    ignores it completely; that's expected — iOS
+ *                    users are on the native build.
  *
  * Use sparingly. Only fire on moments the user would recognise as a
  * "thing happened" — swipe committed, round done, delete confirmed,
  * gender toggle. Per-frame or per-tap haptics drain battery and the
  * user turns the feature off.
- *
- * NOTE: swipe haptics for the daily card are handled by feedback.ts
- * (`triggerHaptic`) which is wired into the gesture handler. This
- * module covers everything else.
  */
 
 import { Capacitor } from "@capacitor/core";
@@ -23,6 +29,23 @@ import {
   ImpactStyle,
   NotificationType,
 } from "@capacitor/haptics";
+import CoreHaptics from "./coreHaptics";
+
+const isIOS = (() => {
+  try {
+    return Capacitor.getPlatform() === "ios";
+  } catch {
+    return false;
+  }
+})();
+
+const isAndroid = (() => {
+  try {
+    return Capacitor.getPlatform() === "android";
+  } catch {
+    return false;
+  }
+})();
 
 const webVibrate = (ms: number | number[]) => {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
@@ -30,56 +53,55 @@ const webVibrate = (ms: number | number[]) => {
   }
 };
 
-const impact = async (style: ImpactStyle, webMs: number) => {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      await Haptics.impact({ style });
-      return;
-    }
-  } catch { /* fall through */ }
-  webVibrate(webMs);
-};
+const safe = (p: Promise<unknown>) => { p.catch(() => { /* swallow */ }); };
 
-const notify = async (type: NotificationType, webPattern: number[]) => {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      await Haptics.notification({ type });
-      return;
-    }
-  } catch { /* fall through */ }
-  webVibrate(webPattern);
-};
-
-const selection = async () => {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      await Haptics.selectionChanged();
-      return;
-    }
-  } catch { /* fall through */ }
-  webVibrate(5);
-};
-
-const safe = (p: Promise<void>) => { p.catch(() => { /* swallow */ }); };
+// Each public API picks the right backend:
+//   iOS → Core Haptics (custom plugin, premium quality)
+//   Android → @capacitor/haptics (UIImpactFeedbackGenerator analogue)
+//   Web → navigator.vibrate fallback
 
 export const haptics = {
-  /** Light tap — swipe crossing its commit threshold. */
-  swipe: () => safe(impact(ImpactStyle.Light, 10)),
+  /** Light swipe-commit pulse. */
+  swipe: () => {
+    if (isIOS) { safe(CoreHaptics.swipe()); return; }
+    if (isAndroid) { safe(Haptics.impact({ style: ImpactStyle.Light })); return; }
+    webVibrate(10);
+  },
 
-  /** Selection tick — toggles, segmented controls, picker changes. */
-  tap: () => safe(selection()),
+  /** Crisp selection tick — toggles, segmented controls, picker changes. */
+  tap: () => {
+    if (isIOS) { safe(CoreHaptics.tap()); return; }
+    if (isAndroid) { safe(Haptics.selectionChanged()); return; }
+    webVibrate(5);
+  },
 
-  /** Medium thud — long-press or "this is important" action. */
-  medium: () => safe(impact(ImpactStyle.Medium, 25)),
+  /** Medium thump — yes/no card swipe commit, long-press confirm. */
+  medium: () => {
+    if (isIOS) { safe(CoreHaptics.medium()); return; }
+    if (isAndroid) { safe(Haptics.impact({ style: ImpactStyle.Medium })); return; }
+    webVibrate(25);
+  },
 
   /** Double-pulse success — round done, entry saved, reflection logged. */
-  success: () => safe(notify(NotificationType.Success, [10, 60, 10])),
+  success: () => {
+    if (isIOS) { safe(CoreHaptics.success()); return; }
+    if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Success })); return; }
+    webVibrate([10, 60, 10]);
+  },
 
-  /** Warning pulse — delete / archive / "are you sure". */
-  warning: () => safe(notify(NotificationType.Warning, [20, 80, 20])),
+  /** Warning pattern — destructive action, "are you sure". */
+  warning: () => {
+    if (isIOS) { safe(CoreHaptics.warning()); return; }
+    if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Warning })); return; }
+    webVibrate([20, 80, 20]);
+  },
 
-  /** Error pulse — failed action that the user should notice. */
-  error: () => safe(notify(NotificationType.Error, [40, 60, 40, 60, 40])),
+  /** Error pattern — failed action that the user should notice. */
+  error: () => {
+    if (isIOS) { safe(CoreHaptics.error()); return; }
+    if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Error })); return; }
+    webVibrate([40, 60, 40, 60, 40]);
+  },
 };
 
 // --- Diagnostic harness ----------------------------------------------
@@ -130,23 +152,56 @@ export const runHapticsDiagnostic = async (): Promise<HapticDiagnostic> => {
     };
   }
 
-  // Spaced ~250 ms apart so a working device can produce 4 distinct
-  // tactile events the user can count individually.
+  // Tests BOTH haptic systems back-to-back so the user can feel the
+  // difference. Old @capacitor/haptics first (5 calls — the ones that
+  // felt like crude vibration on her device), then ~600 ms gap, then
+  // the new Core Haptics plugin (6 calls — should feel like proper
+  // Taptic Engine: precise, contextual, "Fishdom-grade").
   const results: HapticDiagnostic["results"] = [];
 
-  results.push(await tryCall("impact:Light", () => Haptics.impact({ style: ImpactStyle.Light })));
+  results.push(await tryCall("[old] impact:Light", () => Haptics.impact({ style: ImpactStyle.Light })));
   await new Promise((r) => setTimeout(r, 250));
 
-  results.push(await tryCall("impact:Medium", () => Haptics.impact({ style: ImpactStyle.Medium })));
+  results.push(await tryCall("[old] impact:Medium", () => Haptics.impact({ style: ImpactStyle.Medium })));
   await new Promise((r) => setTimeout(r, 250));
 
-  results.push(await tryCall("notification:Success", () => Haptics.notification({ type: NotificationType.Success })));
+  results.push(await tryCall("[old] notification:Success", () => Haptics.notification({ type: NotificationType.Success })));
   await new Promise((r) => setTimeout(r, 250));
 
-  results.push(await tryCall("selectionChanged", () => Haptics.selectionChanged()));
+  results.push(await tryCall("[old] selectionChanged", () => Haptics.selectionChanged()));
   await new Promise((r) => setTimeout(r, 250));
 
-  results.push(await tryCall("vibrate", () => Haptics.vibrate({ duration: 200 })));
+  results.push(await tryCall("[old] vibrate", () => Haptics.vibrate({ duration: 200 })));
+
+  // Pause so the user can mentally separate "old engine" from "new engine".
+  await new Promise((r) => setTimeout(r, 600));
+
+  // --- Core Haptics (new) ---------------------------------------------
+
+  const availability = await tryCall("[new] isAvailable", async () => {
+    const result = await CoreHaptics.isAvailable();
+    if (!result.available) throw new Error("Core Haptics not supported on this device");
+  });
+  results.push(availability);
+
+  if (availability.ok) {
+    results.push(await tryCall("[new] swipe", () => CoreHaptics.swipe()));
+    await new Promise((r) => setTimeout(r, 250));
+
+    results.push(await tryCall("[new] tap", () => CoreHaptics.tap()));
+    await new Promise((r) => setTimeout(r, 250));
+
+    results.push(await tryCall("[new] medium", () => CoreHaptics.medium()));
+    await new Promise((r) => setTimeout(r, 250));
+
+    results.push(await tryCall("[new] success", () => CoreHaptics.success()));
+    await new Promise((r) => setTimeout(r, 350));
+
+    results.push(await tryCall("[new] warning", () => CoreHaptics.warning()));
+    await new Promise((r) => setTimeout(r, 350));
+
+    results.push(await tryCall("[new] error", () => CoreHaptics.error()));
+  }
 
   return { isNative: true, results };
 };
