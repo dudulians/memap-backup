@@ -220,7 +220,11 @@ export const SwipeableTrackerCard = ({
         onContextMenu={(e) => {
           e.preventDefault();
           if (onDelete) {
-            if (isHapticEnabled() && navigator.vibrate) navigator.vibrate(30);
+            // Route through lib/haptics so the central hapticsEnabled
+            // gate respects the Settings toggle. The old direct
+            // navigator.vibrate call was a no-op on iOS Safari anyway
+            // and bypassed the gate everywhere else.
+            haptics.medium();
             setShowDeleteBar(true);
           }
         }}

@@ -55,14 +55,38 @@ const webVibrate = (ms: number | number[]) => {
 
 const safe = (p: Promise<unknown>) => { p.catch(() => { /* swallow */ }); };
 
-// Each public API picks the right backend:
-//   iOS → Core Haptics (custom plugin, premium quality)
-//   Android → @capacitor/haptics (UIImpactFeedbackGenerator analogue)
-//   Web → navigator.vibrate fallback
+// Central gate. Reads the user's hapticsEnabled setting from
+// localStorage on every call (cheap, sync). When she turns vibration
+// off in Settings, EVERY public haptic method below short-circuits to
+// a no-op — no need to add an `if (isHapticEnabled())` guard at every
+// call site. Migration: pre-split users without a hapticsEnabled key
+// fall back to soundEnabled so we don't surprise-enable vibration on
+// someone who'd previously turned the combined toggle off.
+const isHapticsEnabled = (): boolean => {
+  try {
+    const raw = localStorage.getItem("memap_session_settings");
+    if (!raw) return true;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.hapticsEnabled === "boolean") {
+      return parsed.hapticsEnabled;
+    }
+    return parsed?.soundEnabled !== false;
+  } catch {
+    return true;
+  }
+};
+
+// Each public API:
+//   1. Bails early if hapticsEnabled is off → universal mute.
+//   2. Picks the right backend:
+//        iOS → Core Haptics (custom plugin, premium quality)
+//        Android → @capacitor/haptics (UIImpactFeedbackGenerator analogue)
+//        Web → navigator.vibrate fallback
 
 export const haptics = {
   /** Light swipe-commit pulse. */
   swipe: () => {
+    if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.swipe()); return; }
     if (isAndroid) { safe(Haptics.impact({ style: ImpactStyle.Light })); return; }
     webVibrate(10);
@@ -70,6 +94,7 @@ export const haptics = {
 
   /** Crisp selection tick — toggles, segmented controls, picker changes. */
   tap: () => {
+    if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.tap()); return; }
     if (isAndroid) { safe(Haptics.selectionChanged()); return; }
     webVibrate(5);
@@ -77,6 +102,7 @@ export const haptics = {
 
   /** Medium thump — yes/no card swipe commit, long-press confirm. */
   medium: () => {
+    if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.medium()); return; }
     if (isAndroid) { safe(Haptics.impact({ style: ImpactStyle.Medium })); return; }
     webVibrate(25);
@@ -84,6 +110,7 @@ export const haptics = {
 
   /** Double-pulse success — round done, entry saved, reflection logged. */
   success: () => {
+    if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.success()); return; }
     if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Success })); return; }
     webVibrate([10, 60, 10]);
@@ -91,6 +118,7 @@ export const haptics = {
 
   /** Warning pattern — destructive action, "are you sure". */
   warning: () => {
+    if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.warning()); return; }
     if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Warning })); return; }
     webVibrate([20, 80, 20]);
@@ -98,6 +126,7 @@ export const haptics = {
 
   /** Error pattern — failed action that the user should notice. */
   error: () => {
+    if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.error()); return; }
     if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Error })); return; }
     webVibrate([40, 60, 40, 60, 40]);

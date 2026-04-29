@@ -1481,9 +1481,19 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
     // reveal distance, OR if they were already open and didn't pull
     // far enough rightward to close.
     if (offsetX < -REVEAL_DISTANCE / 2) {
+      // Snap-to-open haptic — the row "clicks" into the revealed
+      // state, giving the same tactile cue Telegram fires when its
+      // chat-row swipe locks open. Only fires on the transition
+      // from closed → open, not when the user pulled while already
+      // open (we'd be re-snapping to the same position).
+      if (!startedFromOpen.current) haptics.tap();
       setOffsetX(-REVEAL_DISTANCE);
       setIsOpen(true);
     } else {
+      // Closing back from an open state also gets a tiny tick so the
+      // user feels the row return home. Skip when starting from a
+      // closed / mid-drag-cancel state — no real transition there.
+      if (startedFromOpen.current) haptics.tap();
       close();
     }
   };
@@ -1534,6 +1544,10 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
           type="button"
           data-swipe-action
           onClick={() => {
+            // Medium thump for archive — significant action, not
+            // destructive. Tap-tier feels too light for moving a
+            // tracker out of view.
+            haptics.medium();
             onArchive();
             close();
           }}
@@ -1547,6 +1561,11 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
           type="button"
           data-swipe-action
           onClick={() => {
+            // Warning pattern for delete — two-pulse, says "are you
+            // sure?" tactically before the confirmation dialog
+            // visually says it. Matches iOS guidance: destructive
+            // actions deserve a warning haptic.
+            haptics.warning();
             onDelete();
             close();
           }}
