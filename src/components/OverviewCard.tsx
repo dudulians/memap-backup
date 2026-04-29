@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { ru as ruLocale } from "date-fns/locale";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { haptics } from "@/lib/haptics";
 
 type CalendarView = "month" | "year";
 
@@ -233,10 +234,12 @@ export const OverviewCard = ({
   }, [activeTrackerIndex]);
 
   const handlePrevTracker = () => {
+    haptics.tap();
     setActiveTrackerIndex((prev) => (prev > 0 ? prev - 1 : trackers.length - 1));
   };
 
   const handleNextTracker = () => {
+    haptics.tap();
     setActiveTrackerIndex((prev) => (prev < trackers.length - 1 ? prev + 1 : 0));
   };
 
@@ -283,6 +286,10 @@ export const OverviewCard = ({
       if (s.claim === "horizontal") {
         const dx = e.changedTouches[0].clientX - s.x;
         if (Math.abs(dx) > 50) {
+          // Page-turn haptic on swipe-driven tracker switch (different
+          // from the arrow-tap path which uses haptics.tap — swipe is
+          // a softer pulse better matching a sliding gesture).
+          haptics.swipe();
           if (dx > 0) {
             setActiveTrackerIndex((prev) => (prev > 0 ? prev - 1 : trackers.length - 1));
           } else {
@@ -307,22 +314,30 @@ export const OverviewCard = ({
   }, [trackers.length]);
 
   const handlePrevMonth = () => {
+    haptics.tap();
     setDisplayMonth((prev) => subMonths(prev, 1));
   };
 
   const handleNextMonth = () => {
     const nextMonth = addMonths(displayMonth, 1);
     if (startOfMonth(nextMonth) <= startOfMonth(today)) {
+      haptics.tap();
       setDisplayMonth(nextMonth);
     }
+    // No haptic when blocked at "next month would be in the future" —
+    // would feel like a glitch if the UI didn't actually change.
   };
 
   const canGoNextMonth = startOfMonth(addMonths(displayMonth, 1)) <= startOfMonth(today);
 
   const handleDayClick = (day: typeof calendarDays[0]) => {
     if (day.isFutureDate || !day.isCurrentMonth) return;
-    
+
     if (multiSelectMode) {
+      // Selection tick on every day toggle in multi-select. Light by
+      // design — user often taps several days in a row, anything
+      // stronger than a tap would feel buzzy.
+      haptics.tap();
       const newSelected = new Set(selectedDates);
       if (newSelected.has(day.dateStr)) {
         newSelected.delete(day.dateStr);
@@ -331,6 +346,8 @@ export const OverviewCard = ({
       }
       setSelectedDates(newSelected);
     } else {
+      // Single-day path opens the AnswerEditor sheet, which has its
+      // own haptics on Yes/No save — no haptic here would be doubled.
       onDateSelect(day.dateStr);
       if (onDayEdit && activeTracker) {
         const existingEntry = entryMap.get(day.dateStr);
@@ -341,12 +358,20 @@ export const OverviewCard = ({
 
   const handleBulkAction = (value: boolean | null) => {
     if (selectedDates.size > 0 && onBulkAnswer && activeTracker) {
+      // Bulk answer feedback varies with the action. "Apply Yes" is
+      // the satisfying-finish moment → success double-pulse. "Apply
+      // No" is meaningful but not celebratory → medium thump. Clear
+      // is just an undo → light tap.
+      if (value === true) haptics.success();
+      else if (value === false) haptics.medium();
+      else haptics.tap();
       onBulkAnswer(activeTracker.id, Array.from(selectedDates), value);
       setSelectedDates(new Set());
     }
   };
 
   const toggleMultiSelect = () => {
+    haptics.tap();
     setMultiSelectMode(!multiSelectMode);
     if (multiSelectMode) {
       setSelectedDates(new Set());
@@ -458,7 +483,7 @@ export const OverviewCard = ({
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-medium">{getYear(today)}</h3>
               <button
-                onClick={() => setCalendarView("month")}
+                onClick={() => { haptics.tap(); setCalendarView("month"); }}
                 className="h-6 px-2 text-[10px] rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition-colors"
               >
                 {t("overview.month")}
@@ -475,6 +500,7 @@ export const OverviewCard = ({
                         disabled={day.status === "outside" || day.status === "future"}
                         onClick={() => {
                           if (day.status === "outside" || day.status === "future") return;
+                          haptics.tap();
                           onDateSelect(day.dateStr);
                           setDisplayMonth(new Date(day.dateStr + "T00:00:00"));
                           setCalendarView("month");
@@ -544,7 +570,7 @@ export const OverviewCard = ({
                 })()}
               </h3>
               <button
-                onClick={() => setCalendarView(calendarView === "month" ? "year" : "month")}
+                onClick={() => { haptics.tap(); setCalendarView(calendarView === "month" ? "year" : "month"); }}
                 className="h-6 px-2 text-[10px] rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition-colors"
               >
                 {calendarView === "month" ? t("overview.year") : t("overview.month")}

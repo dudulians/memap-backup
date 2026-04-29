@@ -843,6 +843,7 @@ export const DailySession = ({
                         locale={dateLocale}
                         onSelect={(d) => {
                           if (d) {
+                            haptics.tap();
                             const iso = dateToIso(d);
                             onDateChange(iso);
                           }
@@ -1035,7 +1036,7 @@ export const DailySession = ({
                 return (
                   <button
                     key={iso}
-                    onClick={() => onDateChange(iso)}
+                    onClick={() => { haptics.tap(); onDateChange(iso); }}
                     className={cn(
                       "flex-1 flex flex-col items-center justify-center py-1 rounded-full transition-all",
                       isSelected
