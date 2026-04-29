@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { cn } from "@/lib/utils";
 import {
   LineChart,
   Line,
@@ -291,38 +292,39 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                         {localizeTrackerTitle(tracker.title)}
                       </span>
                     </div>
-                    {/* 7 day cells */}
+                    {/* 7 day cells. Cells use the SAME semantic palette
+                        as the calendar in Overview — strong (red) for
+                        a significant day, balanced (green) for a
+                        recorded-but-not-significant day, neutral grey
+                        for a missed day. The user's read: "is this day
+                        important or not?" matters more than which
+                        tracker it belongs to (the tracker name + icon
+                        are right next to the row already). */}
                     <div className="grid grid-cols-7 gap-1 flex-1">
                       {sevenDays.map((day) => {
                         const entry = entryMap.get(`${tracker.id}:${day.dateStr}`);
                         // Three states:
-                        //   significant → solid colour (problem signal)
-                        //   recorded-no → light grey solid (recorded but
-                        //                 not the "problem" answer)
-                        //   missing    → dashed outline only (no entry)
+                        //   missing      → solid muted grey (no entry)
+                        //   significant  → red (strong) — problem signal
+                        //   not-sig.     → green (balanced) — recorded
+                        //                  but not the "problem" answer
                         if (!entry) {
                           return (
                             <div
                               key={day.dateStr}
-                              className="h-7 rounded-md border border-dashed border-border/50"
+                              className="h-7 rounded-md bg-muted-foreground/15"
                             />
                           );
                         }
                         const sig =
                           tracker.problemWhen === "yes" ? entry.value : !entry.value;
-                        if (sig) {
-                          return (
-                            <div
-                              key={day.dateStr}
-                              className="h-7 rounded-md"
-                              style={{ backgroundColor: color }}
-                            />
-                          );
-                        }
                         return (
                           <div
                             key={day.dateStr}
-                            className="h-7 rounded-md bg-muted/50"
+                            className={cn(
+                              "h-7 rounded-md",
+                              sig ? "bg-strong/70" : "bg-balanced/70",
+                            )}
                           />
                         );
                       })}
@@ -383,6 +385,16 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                   }}
                   itemStyle={{ padding: "1px 0" }}
                   wrapperStyle={{ zIndex: 50, pointerEvents: "none" }}
+                  // Pin tooltip to the top of the chart (Y = 0). Without
+                  // this, recharts repositions the tooltip vertically to
+                  // hover near each data point — when the user pans
+                  // horizontally between dates of varying values the
+                  // tooltip visibly "jitters" up and down. X still
+                  // tracks the cursor naturally.
+                  position={{ y: 0 }}
+                  // Disable the tooltip's own slide animation. It made
+                  // the box feel laggy on iOS when moving fast.
+                  isAnimationActive={false}
                   formatter={(value: any, name: string) => {
                     const tracker = activeTrackers.find((t) => t.id === name);
                     if (!tracker || value === null || value === 0) return [null, null];

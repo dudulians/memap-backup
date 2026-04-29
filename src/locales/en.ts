@@ -569,7 +569,7 @@ const en = {
     title: "Trend & Correlation",
     footerAggYear: "Days per month · lines rising together = correlation",
     footerAggWeek: "Days per week · lines rising together = correlation",
-    footerStrips: "Colour = significant · grey = recorded · dashed = missing",
+    footerStrips: "Red = significant · green = recorded · grey = missing",
     noTrackers: "Pick trackers from the chips above",
     showAll: "All",
   },
