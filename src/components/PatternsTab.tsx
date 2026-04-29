@@ -329,6 +329,10 @@ export const PatternsTab = () => {
               underline. Eliminates the "pill in pill" geometry problem
               entirely (no curves to mismatch). Apple uses this style on
               iOS Settings, App Store category headers, etc. */}
+          {/* Tab order: Overview → Trends → Signals → Links.
+              Trends moved up to 2nd position per user request — for
+              her, the day-by-day visual story is more frequently
+              checked than the at-a-time signals snapshot. */}
           <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-transparent rounded-none gap-0">
             <TabsTrigger
               value="overview"
@@ -336,6 +340,14 @@ export const PatternsTab = () => {
             >
               <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
               <span className="text-[10px] font-medium">{t("patterns.tabOverview")}</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="trends"
+              data-coachmark="patterns-trends-tab"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
+            >
+              <LineChart className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
             </TabsTrigger>
             <TabsTrigger
               value="signals"
@@ -352,14 +364,6 @@ export const PatternsTab = () => {
                   {strongCount}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger
-              value="trends"
-              data-coachmark="patterns-trends-tab"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
-            >
-              <LineChart className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
             </TabsTrigger>
             <TabsTrigger
               value="links"

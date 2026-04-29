@@ -28,12 +28,27 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         head_row: "flex",
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+        // Cell-level bg-accent on selection REMOVED — it doubled-up
+        // with day_selected's own background, creating an extra
+        // turquoise outer rectangle around the inner pill on Aurora
+        // theme. Now only the day button itself paints, no wrapper.
+        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
         day: cn(buttonVariants({ variant: "ghost" }), "h-9 w-9 p-0 font-normal aria-selected:opacity-100"),
         day_range_end: "day-range-end",
+        // Selected day: was `bg-primary text-primary-foreground` —
+        // a full saturated turquoise fill in Aurora theme. Looked
+        // like a random bright square the user described as
+        // "выделяется странно квадратиком". Replaced with a soft
+        // tinted fill (primary/15 = 15 % opacity) + matching ring +
+        // primary text colour. Reads as "this date is selected"
+        // without screaming.
         day_selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
+          "bg-primary/15 text-primary font-semibold ring-1 ring-primary/30 hover:bg-primary/20 focus:bg-primary/20 rounded-md",
+        // "Today" used to be `bg-accent text-accent-foreground` which
+        // was the screaming turquoise. Now: just bolder text, nothing
+        // else — clearly readable as today without a fill competing
+        // with the selected-date soft tint.
+        day_today: "font-bold text-foreground",
         day_outside:
           "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
         day_disabled: "text-muted-foreground opacity-50",

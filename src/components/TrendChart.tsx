@@ -6,6 +6,8 @@ import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ru as ruLocale } from "date-fns/locale";
 import {
   LineChart,
   Line,
@@ -67,7 +69,7 @@ const bucketLabel = (range: TimeRange, date: Date): string => {
 };
 
 export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [range, setRange] = useState<TimeRange>("30d");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -174,23 +176,36 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
     return data;
   }, [range, days, bucket, entryMap, activeTrackers]);
 
-  // 7-day strips: list of date stamps + short weekday labels for the row
-  // headers. Rebuilt only when range or entries change (entries-trigger
-  // keeps it fresh if the app sits open across midnight after a save).
+  // 7-day strips: list of date stamps + labels for the row headers.
+  // Rebuilt only when range or entries change (entries-trigger keeps
+  // it fresh if the app sits open across midnight after a save).
+  // CRITICAL: dateStr is built from LOCAL date components, NOT
+  // toISOString(). The user is in UAE (UTC+4), so e.g. local
+  // midnight Wed = UTC 8 PM Tue → toISOString().split("T")[0] would
+  // return Tuesday. The rest of the app (TodayTab, MonthlyCalendar,
+  // entries on save) all use local-date strings, so the strip's
+  // UTC-based stamps used to miss today's entry entirely. Fixed by
+  // formatting from getFullYear/getMonth/getDate.
+  const dateLocale = i18n.language === "ru" ? ruLocale : undefined;
   const sevenDays = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
       d.setDate(today.getDate() - (6 - i));
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
       return {
-        dateStr: d.toISOString().split("T")[0],
-        // 2-letter weekday is short, readable, and identical visual
-        // weight regardless of locale.
-        shortLabel: d.toLocaleDateString("en", { weekday: "short" }).slice(0, 2),
+        dateStr: `${yyyy}-${mm}-${dd}`,
+        // 2-letter weekday — short, identical visual weight across
+        // locales. EN: "Mo Tu We Th Fr Sa Su"; RU: "пн вт ср чт пт сб вс".
+        weekday: format(d, "EEEEEE", { locale: dateLocale }),
+        // Day number for the explicit date label the user asked for.
+        dayNumber: d.getDate(),
       };
     });
-  }, [range, entries]);
+  }, [range, entries, dateLocale]);
 
   const toggleTracker = (id: string) => {
     setSelectedIds((prev) => {
@@ -332,16 +347,24 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                   </div>
                 );
               })}
-              {/* Day labels row */}
+              {/* Day labels row — date number on top (bold, primary
+                  info), weekday below (small, muted, supporting
+                  context). User asked for actual dates instead of
+                  just weekday letters; both are now visible. */}
               <div className="flex items-center gap-2 pt-1.5">
                 <div className="w-[70px] shrink-0" />
                 <div className="grid grid-cols-7 gap-1 flex-1">
                   {sevenDays.map((day) => (
                     <div
                       key={day.dateStr}
-                      className="text-[10px] text-center text-muted-foreground"
+                      className="flex flex-col items-center leading-tight"
                     >
-                      {day.shortLabel}
+                      <span className="text-[11px] font-semibold text-foreground/80 tabular-nums">
+                        {day.dayNumber}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground/80 lowercase">
+                        {day.weekday}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -349,7 +372,18 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
             </div>
           )
         ) : (
-          <div className="h-[200px] w-full">
+          // touch-action: pan-y — surgical fix. Allows native VERTICAL
+          // scroll (so the page still scrolls when the user has many
+          // trackers and needs to reach lower content), but blocks
+          // native horizontal pan/zoom. Result:
+          //   • Vertical swipe → page scrolls normally ✓
+          //   • Horizontal swipe → recharts gets raw pointer events
+          //     for tooltip tracking, no page wiggle ✓
+          // Earlier `touch-action: none` blocked everything — fixed
+          // the wiggle but broke vertical scroll, which is what the
+          // user just complained about ("теперь не могу проскроллить
+          // вниз"). pan-y is the right balance.
+          <div className="h-[200px] w-full" style={{ touchAction: "pan-y" }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
