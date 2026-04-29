@@ -77,6 +77,19 @@ export const BottomSheet = ({
     // visibly on top of a darkened, slightly-smaller app, like Apple
     // Music's Now Playing.
     shouldScaleBackground={scaleBackground}
+    // Lower close threshold (vaul default 0.25 = 25% of sheet height
+    // → ~210 px on a 92vh sheet, way too much pull). 0.1 = ~85 px is
+    // a comfortable "decisive but not accidental" pull. Combined with
+    // the bigger handle hit-area below, this is what the user
+    // expected when she said "I scroll down then it's hard to close".
+    closeThreshold={0.1}
+    // No scroll-lock cooldown after the body's scroll ends. Default
+    // 100 ms makes drag-to-close feel "stuck" if you just finished
+    // scrolling and immediately try to pull down — vaul ignores the
+    // first ~100 ms of pull, the user reads it as "the gesture isn't
+    // working / it's bouncing me back". 0 ms means scroll → pull
+    // transitions instantly to drag-close.
+    scrollLockTimeout={0}
   >
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
@@ -90,10 +103,19 @@ export const BottomSheet = ({
         )}
       >
         {!hideHandle && (
-          // vaul reads pointer events from the whole content, but a
-          // visible pill makes the affordance obvious. Stays
-          // tappable to close as a bonus.
-          <DrawerPrimitive.Handle className="mx-auto mt-2 mb-1 h-1.5 w-12 rounded-full bg-muted-foreground/30 flex-shrink-0" />
+          // Generous drag affordance — vaul reads pointer events from
+          // the whole content, but when the body has scrolled (e.g.
+          // long form in TrackerSettingsModal) drag-from-body is
+          // blocked by vaul's scroll-detection (iOS-native behaviour).
+          // A bigger, more obvious handle gives the user a reliable
+          // place to grab and drag down to close, regardless of how
+          // far the body is scrolled. The wrapper provides a tall
+          // hit area (`py-3` = 24 px touch target around the pill),
+          // the inner pill is wider/visible (h-1.5 w-14, deeper grey
+          // so it reads against the cream background).
+          <div className="flex-shrink-0 flex justify-center py-3 cursor-grab active:cursor-grabbing">
+            <DrawerPrimitive.Handle className="h-1.5 w-14 rounded-full bg-muted-foreground/40" />
+          </div>
         )}
         {/* Hidden title for screen readers / a11y. vaul (and Radix
             Dialog underneath) want a labelable element. */}

@@ -5,7 +5,7 @@ import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storag
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Archive, Trash2, Check, ListChecks, EyeOff } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -490,6 +490,38 @@ export const TodayTab = () => {
     });
   };
 
+  // Bulk-promote: drop the source="play" marker from every play-round
+  // tracker so they all join the regular cards in one tap. Mirror image
+  // of deleteAllPlayCards. Snapshot previous trackers so the toast can
+  // offer Undo.
+  const keepAllPlayCards = async () => {
+    const playIds = new Set(
+      trackers.filter((t) => t.source === "play").map((t) => t.id)
+    );
+    if (playIds.size === 0) return;
+    const previousTrackers = trackers;
+    const updatedTrackers = trackers.map((t) =>
+      playIds.has(t.id) ? { ...t, source: undefined } : t
+    );
+    setTrackers(updatedTrackers);
+    await saveTrackers(updatedTrackers);
+    toast({
+      title: t("today.playRoundKept"),
+      description: t("today.playRoundKeptDesc", { count: playIds.size }),
+      action: (
+        <ToastAction
+          altText={t("today.undo")}
+          onClick={async () => {
+            await saveTrackers(previousTrackers);
+            setTrackers(previousTrackers);
+          }}
+        >
+          {t("today.undo")}
+        </ToastAction>
+      ),
+    });
+  };
+
   const handleAddIdea = async (idea: any) => {
     const dup = await checkForDuplicate(idea.title, idea.category);
 
@@ -604,17 +636,14 @@ export const TodayTab = () => {
     await archiveTrackerById(id);
   };
 
-  const handleDeleteTracker = async () => {
-    if (!trackerToDelete) return;
-    const deleted = trackerToDelete;
+  // Core delete flow. Removes the tracker, persists, shows the
+  // undo toast. Used by both the confirm-dialog path (regular cards)
+  // and the no-confirm path (play-round cards — see deletePlayCard).
+  const performTrackerDelete = async (deleted: Tracker) => {
     const previousTrackers = trackers;
     const updatedTrackers = trackers.filter(t => t.id !== deleted.id);
     await saveTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
-    setDeleteDialogOpen(false);
-    setSheetOpen(false);
-    setSelectedTrackerForDetails(null);
-    setTrackerToDelete(null);
 
     toast({
       title: t("today.trackerDeleted"),
@@ -633,6 +662,25 @@ export const TodayTab = () => {
         </ToastAction>
       ),
     });
+  };
+
+  const handleDeleteTracker = async () => {
+    if (!trackerToDelete) return;
+    const deleted = trackerToDelete;
+    setDeleteDialogOpen(false);
+    setSheetOpen(false);
+    setSelectedTrackerForDetails(null);
+    setTrackerToDelete(null);
+    await performTrackerDelete(deleted);
+  };
+
+  // Play-card delete: skip the confirmation dialog entirely. Random-
+  // round cards are throwaway by design — the user's mental model is
+  // "swipe-discard"; an "Are you sure?" dialog after every X-tap was
+  // friction. The undo toast is the safety net (5s window to bring
+  // it back), which mirrors how the bulk "Clear all" works.
+  const deletePlayCard = async (tracker: Tracker) => {
+    await performTrackerDelete(tracker);
   };
 
   const exitSelectionMode = () => {
@@ -1034,8 +1082,9 @@ export const TodayTab = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setTrackerToDelete(tracker);
-                        setDeleteDialogOpen(true);
+                        // Direct delete — no confirmation dialog.
+                        // Throwaway play cards; undo toast is the safety net.
+                        deletePlayCard(tracker);
                       }}
                       aria-label={t("today.deletePlayCard")}
                       className="h-7 w-7 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center transition-colors"
@@ -1116,22 +1165,15 @@ export const TodayTab = () => {
                   </div>
                 )}
                 <div className="space-y-2">
+                  {/* Plain list — swipe-reveal removed. Per-card
+                      Archive / Delete actions now live inside
+                      TrackerDetails (opens on card tap). Bulk
+                      Archive / Delete are still available via the
+                      "Изменить" button above (selection mode). */}
                   {regularTrackers.map((tracker) => (
-                    <SwipeRevealRow
-                      key={tracker.id}
-                      onArchive={() => archiveTrackerById(tracker.id)}
-                      onDelete={() => {
-                        setTrackerToDelete(tracker);
-                        setDeleteDialogOpen(true);
-                      }}
-                      // Selection mode owns the tap target — disable
-                      // swipe-reveal so the user doesn't accidentally
-                      // open the action panel while trying to tick a
-                      // checkbox.
-                      disabled={selectionMode}
-                    >
+                    <div key={tracker.id}>
                       {renderTrackerCard(tracker, false)}
-                    </SwipeRevealRow>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1139,7 +1181,7 @@ export const TodayTab = () => {
 
             {playTrackers.length > 0 && (
               <div id="play-round-section" className="space-y-3 animate-fade-in scroll-mt-20">
-                <div className="flex items-center justify-between">
+                <div className="space-y-3">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                       🎲 {t("today.playRoundSection")}
@@ -1148,14 +1190,30 @@ export const TodayTab = () => {
                       {t("today.playRoundHint")}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteAllPlayCards()}
-                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full px-3 h-8"
-                  >
-                    {t("today.deleteAllPlay")}
-                  </Button>
+                  {/* Two bulk actions side-by-side — symmetric so the
+                      "Keep all" path feels just as available as the
+                      "Clear all" path. Pill buttons match the visual
+                      weight of the row above. */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => keepAllPlayCards()}
+                      className="flex-1 text-xs rounded-full h-8 bg-balanced/10 text-balanced hover:bg-balanced/20 hover:text-balanced"
+                    >
+                      <Check className="h-3.5 w-3.5 mr-1" />
+                      {t("today.keepAllPlay")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteAllPlayCards()}
+                      className="flex-1 text-xs rounded-full h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
+                      {t("today.deleteAllPlay")}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   {playTrackers.map((tracker) => renderTrackerCard(tracker, true))}
@@ -1298,339 +1356,3 @@ const SortableSwipeCard = ({ tracker, selectedDateEntry, onAnswer, onOpenDetails
   );
 };
 
-// --- SwipeRevealRow -------------------------------------------------
-// Telegram-chat style row: swipe LEFT and two action buttons
-// (archive, delete) appear, growing from width 0 in step with the
-// finger. When the user isn't swiping, the buttons aren't there at
-// all (zero width) so there's no peek-through behind the card's
-// rounded corners. Outer wrapper is rounded + overflow-hidden so the
-// reveal panel inherits the card's silhouette.
-//
-// Behaviour:
-//   - As the user pulls left, both transform AND reveal-panel width
-//     update on every pointermove → the card and the buttons stretch
-//     together with the finger (no gap appears between them).
-//   - On release: < 50 % pulled → snap closed (both ease back to 0).
-//                 ≥ 50 % pulled → snap open at the full 144 px reveal.
-//   - Tap on card body (no movement) → if open, close; otherwise the
-//     inner card handles it (open details).
-//   - Selection mode disables the gesture entirely so taps select
-//     instead of swiping.
-
-interface SwipeRevealRowProps {
-  children: React.ReactNode;
-  onArchive: () => void;
-  onDelete: () => void;
-  /** Disable the gesture entirely (e.g. while in selection mode). */
-  disabled?: boolean;
-}
-
-const REVEAL_DISTANCE = 144; // 2 buttons × 72 px
-
-// Singleton-ish ID for the currently-open row. When a row opens it
-// dispatches a `memap-swipe-row-opened` event with its id; every other
-// row that's open at the time closes itself in response. Result: only
-// one row is open at a time, like Telegram. Stable per mount.
-let _swipeRowSeq = 0;
-
-const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeRevealRowProps) => {
-  const { t } = useTranslation();
-  const [offsetX, setOffsetX] = React.useState(0);
-  const [isOpen, setIsOpen] = React.useState(false);
-  // isDragging gates CSS transitions: while the finger drives the
-  // animation we want immediate 1:1 movement (no tween lag), and on
-  // release the transition kicks in for a smooth snap.
-  const [isDragging, setIsDragging] = React.useState(false);
-  const rowRef = React.useRef<HTMLDivElement>(null);
-  const startX = React.useRef(0);
-  // startY tracks the touch's vertical origin so we can decide
-  // direction on the first few pointermoves. If motion is vertical-
-  // dominant we yield to iOS native scroll (pan-y on the outer); only
-  // a clearly horizontal-dominant move captures the pointer for our
-  // reveal gesture. This is exactly how Telegram chat rows behave —
-  // smooth vertical list scrolling, with horizontal-only swipes
-  // claiming the gesture.
-  const startY = React.useRef(0);
-  const currentDx = React.useRef(0);
-  const activePointerId = React.useRef<number | null>(null);
-  const hasCaptured = React.useRef(false);
-  const startedFromOpen = React.useRef(false);
-  // Stable per-row id used to suppress self-trigger of the
-  // "another row opened" close event.
-  const rowId = React.useRef(++_swipeRowSeq);
-
-  const close = () => {
-    setOffsetX(0);
-    setIsOpen(false);
-  };
-
-  // Auto-close when context changes around the row:
-  //   • pointerdown anywhere outside the row (taps on a modal, on
-  //     another card, on the nav bar — anything off-row)
-  //   • the page scrolls (any scroll container, captured at root)
-  //   • another swipe-row opens (only one at a time, Telegram-style)
-  //   • a modal/dialog explicitly tells everyone to close (custom
-  //     `memap-close-swipe-rows` event — fired by AddTrackerModal et al.
-  //     so the open row doesn't peek behind the dimmed backdrop, which
-  //     was the user's "all spills out of bounds" complaint).
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const onOutsidePointer = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      if (rowRef.current && target && !rowRef.current.contains(target)) {
-        close();
-      }
-    };
-    const onScroll = () => close();
-    const onAnotherRowOpened = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { id?: number } | undefined;
-      if (detail?.id !== rowId.current) close();
-    };
-    const onCloseAll = () => close();
-
-    window.addEventListener("pointerdown", onOutsidePointer);
-    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    window.addEventListener("memap-swipe-row-opened", onAnotherRowOpened);
-    window.addEventListener("memap-close-swipe-rows", onCloseAll);
-
-    return () => {
-      window.removeEventListener("pointerdown", onOutsidePointer);
-      window.removeEventListener("scroll", onScroll, { capture: true } as EventListenerOptions);
-      window.removeEventListener("memap-swipe-row-opened", onAnotherRowOpened);
-      window.removeEventListener("memap-close-swipe-rows", onCloseAll);
-    };
-  }, [isOpen]);
-
-  // Announce when this row opens so its siblings close themselves.
-  React.useEffect(() => {
-    if (isOpen) {
-      window.dispatchEvent(
-        new CustomEvent("memap-swipe-row-opened", { detail: { id: rowId.current } }),
-      );
-    }
-  }, [isOpen]);
-
-  // Removed the native touchmove preventDefault helper. It was
-  // intended to actively kill iOS pan-y scroll engaged in the first
-  // few pixels of a swipe, but on iOS Safari calling preventDefault
-  // on touchmove suppresses the synthesised click event for the
-  // following tap on the same element subtree. That's why the user
-  // reported "the buttons don't work and I can't tap to close" —
-  // even after activePointerId reset, the WebView treated the
-  // touch as already-consumed and swallowed the click on Archive /
-  // Delete.
-  // We rely on touch-action: pan-y + setPointerCapture on
-  // horizontal claim alone now. A tiny page-wiggle for the first
-  // 4 px is acceptable; broken buttons are not.
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (disabled) return;
-    const target = e.target as HTMLElement;
-    // If touch starts on an action button, let it handle its own click.
-    if (target.closest("[data-swipe-action]")) return;
-    if (activePointerId.current !== null) return;
-    activePointerId.current = e.pointerId;
-    // Do NOT capture yet — we want iOS to handle vertical pan
-    // natively (smooth, momentum-aware scroll of the cards list).
-    // We claim the pointer in pointermove only when motion is
-    // clearly horizontal-dominant; vertical-dominant motion yields
-    // to native scroll.
-    hasCaptured.current = false;
-    startX.current = e.clientX;
-    startY.current = e.clientY;
-    currentDx.current = 0;
-    startedFromOpen.current = isOpen;
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (activePointerId.current !== e.pointerId) return;
-    const dx = e.clientX - startX.current;
-    const dy = e.clientY - startY.current;
-
-    // Direction-decision phase — wait for unambiguous motion, then
-    // either claim (horizontal) or yield (vertical). Threshold and
-    // ratio tuned tight (4 px / 1.2×) on purpose: iOS engages native
-    // pan-y scroll around 8-10 px of vertical motion, so we have to
-    // commit a horizontal claim BEFORE that to stop the page from
-    // wiggling underneath the swipe (the user's "the whole screen
-    // shakes when I'm pulling the card" complaint). Stricter
-    // numbers wouldn't catch slight diagonal flicks, looser ones
-    // would steal vertical scrolls.
-    if (!hasCaptured.current) {
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-      if (absDx < 4 && absDy < 4) return; // not enough motion yet
-      if (absDx > absDy * 1.2) {
-        // Horizontal-dominant → claim the pointer; subsequent moves
-        // route to us regardless of where the finger ends up. Native
-        // scroll won't engage on this gesture anymore. The native
-        // touchmove listener (registered in the effect below) will
-        // also start preventDefault'ing on the underlying touch
-        // events to actively kill any nascent iOS scroll.
-        try {
-          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        } catch {
-          /* ignore */
-        }
-        hasCaptured.current = true;
-        setIsDragging(true);
-      } else {
-        // Vertical or ambiguous → yield. iOS continues its native
-        // pan-y scroll uninterrupted. Mark the gesture as no-longer-
-        // ours so subsequent moves are ignored.
-        activePointerId.current = null;
-        return;
-      }
-    }
-
-    currentDx.current = dx;
-    // Compute current offset relative to the open/closed state.
-    const base = startedFromOpen.current ? -REVEAL_DISTANCE : 0;
-    // Hard-clamp slightly past the reveal so a strong pull just
-    // bounces against the wall instead of revealing more buttons.
-    const next = Math.min(0, Math.max(-REVEAL_DISTANCE - 24, base + dx));
-    setOffsetX(next);
-  };
-
-  const endPointer = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (activePointerId.current !== e.pointerId) return;
-    if (hasCaptured.current) {
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
-    }
-    hasCaptured.current = false;
-    activePointerId.current = null;
-    setIsDragging(false);
-
-    // Decide settle state. Open if the user is clearly past 50 % of the
-    // reveal distance, OR if they were already open and didn't pull
-    // far enough rightward to close.
-    if (offsetX < -REVEAL_DISTANCE / 2) {
-      // Snap-to-open haptic — the row "clicks" into the revealed
-      // state, giving the same tactile cue Telegram fires when its
-      // chat-row swipe locks open. Only fires on the transition
-      // from closed → open, not when the user pulled while already
-      // open (we'd be re-snapping to the same position).
-      if (!startedFromOpen.current) haptics.tap();
-      setOffsetX(-REVEAL_DISTANCE);
-      setIsOpen(true);
-    } else {
-      // Closing back from an open state also gets a tiny tick so the
-      // user feels the row return home. Skip when starting from a
-      // closed / mid-drag-cancel state — no real transition there.
-      if (startedFromOpen.current) haptics.tap();
-      close();
-    }
-  };
-
-  // Card-body transform timing. Buttons themselves are statically
-  // positioned at their final spots behind the card; the card slides
-  // left to uncover them, Telegram-style.
-  const transitionStyle = isDragging ? "none" : "transform 220ms ease-out";
-
-  return (
-    <div
-      ref={rowRef}
-      // The OUTER wrapper carries the card's visual styling (via the
-      // card-premium class) and rounding. The inner card has its
-      // card-premium overridden to be transparent/borderless via the
-      // .swipe-reveal-row CSS rule, so when the panel reveals there's
-      // no visible seam between the card body and the action buttons
-      // — both sit inside one continuous rounded silhouette.
-      //
-      // touch-action: pan-y — exactly Telegram's chat-row behaviour:
-      // iOS keeps native vertical scroll (smooth list pan with
-      // momentum and bounce, the user's main complaint with our
-      // earlier touch-action:none version), while horizontal motion
-      // is ours. Together with the pointermove direction-decision
-      // (yield to vertical, claim on horizontal-dominant 1.5×) the
-      // row never fights native scroll: scrolling the cards list
-      // works as expected; deliberate horizontal pulls reveal the
-      // archive/delete actions.
-      className="swipe-reveal-row card-premium relative rounded-3xl overflow-hidden"
-      style={{ touchAction: "pan-y" }}
-    >
-      {/* Telegram-style staggered reveal. Both buttons are absolutely
-          positioned at their FINAL resting spots behind the card body
-          (which sits on top, transformed leftward by the swipe). As
-          the card slides off, Delete (anchored to the right edge) is
-          uncovered first; Archive (one button-width further left)
-          emerges from behind it as the swipe continues — the "deck
-          of cards being dealt" feel the user described.
-          No more width-changing container; the buttons themselves
-          never move, the card just gets out of their way. */}
-      <button
-        type="button"
-        data-swipe-action
-        onClick={() => {
-          haptics.medium();
-          onArchive();
-          close();
-        }}
-        className="absolute inset-y-0 flex flex-col items-center justify-center bg-amber-200 text-amber-900 text-[10px] font-medium gap-0.5 active:bg-amber-300"
-        style={{ right: 72, width: 72 }}
-        aria-label={t("today.swipeArchive")}
-      >
-        <EyeOff className="h-4 w-4" strokeWidth={2} />
-        {t("today.swipeArchive")}
-      </button>
-      <button
-        type="button"
-        data-swipe-action
-        onClick={() => {
-          haptics.warning();
-          onDelete();
-          close();
-        }}
-        className="absolute inset-y-0 flex flex-col items-center justify-center bg-rose-300 text-rose-900 text-[10px] font-medium gap-0.5 active:bg-rose-400"
-        style={{ right: 0, width: 72 }}
-        aria-label={t("today.swipeDelete")}
-      >
-        <Trash2 className="h-4 w-4" strokeWidth={2} />
-        {t("today.swipeDelete")}
-      </button>
-
-      {/* Card body. Sits ON TOP of the action buttons (buttons are
-          rendered first → lower in the stacking order). Translates
-          leftward with offsetX, uncovering the buttons behind it. */}
-      <div
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endPointer}
-        onPointerCancel={endPointer}
-        // CAPTURE-phase click handler. While the panel is open, ANY
-        // tap on the card body should JUST close the panel — not
-        // also open TrackerDetails (which the inner Card's onClick
-        // would do during the bubble phase). React fires capture-
-        // phase handlers parent-to-child before the target's own
-        // onClick, so stopping propagation here keeps the click
-        // from ever reaching the Card. Action buttons are checked
-        // out via data-swipe-action so their own onClick still
-        // fires on tap. The window-level outsideClick listener
-        // covers taps on anything OUTSIDE the row (nav bar, header,
-        // other cards, modal backdrop, etc.) — together they
-        // satisfy the user's "tap anywhere to close" expectation.
-        onClickCapture={(e) => {
-          if (!isOpen) return;
-          const target = e.target as HTMLElement;
-          if (target.closest("[data-swipe-action]")) return;
-          if (Math.abs(currentDx.current) >= 5) return; // mid-swipe, not a tap
-          e.stopPropagation();
-          e.preventDefault();
-          close();
-        }}
-        style={{
-          transform: `translateX(${offsetX}px)`,
-          transition: transitionStyle,
-        }}
-        className="relative"
-      >
-        {children}
-      </div>
-    </div>
-  );
-};

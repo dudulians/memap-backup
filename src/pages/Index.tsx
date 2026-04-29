@@ -272,8 +272,18 @@ const Index = () => {
         </button>
       </header>
 
-      {/* Main Content */}
-      <main ref={mainRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4 pb-32">
+      {/* Main Content
+          `pb` accounts for the floating nav bar at the bottom + the
+          Play button which protrudes above it (`-top-6`) + iOS home
+          indicator. Without enough padding, the last card on a long
+          list got tucked under the Play button. We use a generous
+          fixed value (10rem = 160px) plus the device's safe-area so
+          devices with a tall home indicator still clear the nav. */}
+      <main
+        ref={mainRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4"
+        style={{ paddingBottom: "calc(10rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
         {activeTab === "patterns" && <PatternsTab key={`patterns-${refreshKey}`} />}
         {activeTab === "notes" && (

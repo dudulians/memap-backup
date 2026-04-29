@@ -4,6 +4,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* iOS sticky-hover / tap-highlight kill — fixes the user's complaint
+   that buttons stay highlighted turquoise after a tap (Edit, Delete,
+   eye icon, etc.). The HOVER part is handled by Tailwind's
+   `hoverOnlyWhenSupported` future flag in tailwind.config.ts —
+   it wraps every `hover:` utility in `@media (hover: hover)` so
+   touchscreens skip hover styles entirely. Here we just kill iOS's
+   default tap-highlight rectangle and the sticky :focus that
+   follows a tap. Desktop keyboard-nav (focus-visible) still works. */
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (hover: none) {
+    /* Suppress persistent :focus after a tap on touch-only devices.
+       Keyboard users still get :focus-visible. */
+    button:focus:not(:focus-visible),
+    [role="button"]:focus:not(:focus-visible),
+    a:focus:not(:focus-visible) {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+}
+
 /* iOS safe-area utilities — without these, the app's sticky header is
    hidden under the iPhone notch/Dynamic Island and the bottom nav is
    covered by the home-indicator bar. The viewport meta in index.html
@@ -21,33 +46,6 @@
   .pt-safe-plus-2 {
     padding-top: calc(env(safe-area-inset-top) + 0.625rem);
   }
-}
-
-/* SwipeRevealRow override: when a card-premium row sits inside a
-   swipe-reveal wrapper, the OUTER wrapper carries the visual styling
-   (background, shadow, rounded corners) so the row reads as one
-   continuous shape that splits horizontally when the action panel
-   reveals. The inner card-premium is stripped of its own rim/shadow/
-   rounding so there's no visible seam between the card body and the
-   action buttons during a swipe.
-   The OUTER itself has `border: none` (compound selector beats the
-   plain `.card-premium` rule) so the absolutely-positioned action
-   panel can fill the row edge-to-edge. With the default 1 px border,
-   the panel sat inside the padding-edge and a faint white sliver
-   appeared above & below the slate Archive / red Delete buttons —
-   the user's "looks cheap, buttons smaller than the card" complaint. */
-.swipe-reveal-row .card-premium {
-  /* Inner card-premium keeps its background so it OPAQUELY covers
-     the absolute-positioned action buttons sitting behind it when
-     the row is closed. Strips its own rounding / border / shadow
-     so the seam between card and revealed action buttons is a
-     clean vertical line — Telegram-style "deal a card" reveal. */
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.swipe-reveal-row.card-premium {
-  border: none;
 }
 
 /* Premium Design System for MeMap — "Botanica" palette

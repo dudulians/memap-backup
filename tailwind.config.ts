@@ -4,6 +4,17 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // Wrap every Tailwind `hover:` utility in `@media (hover: hover)` so
+  // hover styles only apply on devices that actually support hover
+  // (= desktops with a mouse). On touchscreens, `hover:` rules are
+  // ignored entirely — fixes the iOS Safari "sticky hover" where a
+  // button stays highlighted bright turquoise after a tap because
+  // Safari preserves the :hover state until the user taps somewhere
+  // else. This is the official Tailwind-recommended fix; safe and
+  // fully backward-compatible (no visual change on desktop).
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     container: {
       center: true,
