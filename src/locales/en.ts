@@ -178,7 +178,8 @@ const en = {
 
     dailySessionTitle: "Daily Session",
     dailySessionDesc: "Customize your daily check-in flow",
-    includeSuggested: "Include suggested questions",
+    soundAndHaptics: "Sound & Vibration",
+    soundAndHapticsDesc: "Audio and tactile feedback on swipes and actions",
     soundAndVibration: "Sound & vibration",
     sound: "Sound",
     haptics: "Vibration",

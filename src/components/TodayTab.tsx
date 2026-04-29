@@ -1371,6 +1371,30 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
     }
   }, [isOpen]);
 
+  // Native non-passive touchmove listener that actively kills any
+  // iOS-engaged pan-y scroll once we've claimed the gesture as
+  // horizontal. React's onPointerMove is passive — preventDefault
+  // there is a no-op — so without this hook iOS would keep panning
+  // the page vertically for those first few px before our pointer-
+  // capture took effect, which the user perceived as the screen
+  // wiggling. Mirrors the same trick used in OverviewCard's calendar
+  // tracker-swipe.
+  React.useEffect(() => {
+    const node = rowRef.current;
+    if (!node || disabled) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (hasCaptured.current) {
+        // We own the gesture → stop iOS from continuing any scroll
+        // it may have started in the first 4 px before we claimed.
+        e.preventDefault();
+      }
+    };
+    node.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      node.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [disabled]);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (disabled) return;
     const target = e.target as HTMLElement;
@@ -1396,15 +1420,25 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
     const dy = e.clientY - startY.current;
 
     // Direction-decision phase — wait for unambiguous motion, then
-    // either claim (horizontal) or yield (vertical).
+    // either claim (horizontal) or yield (vertical). Threshold and
+    // ratio tuned tight (4 px / 1.2×) on purpose: iOS engages native
+    // pan-y scroll around 8-10 px of vertical motion, so we have to
+    // commit a horizontal claim BEFORE that to stop the page from
+    // wiggling underneath the swipe (the user's "the whole screen
+    // shakes when I'm pulling the card" complaint). Stricter
+    // numbers wouldn't catch slight diagonal flicks, looser ones
+    // would steal vertical scrolls.
     if (!hasCaptured.current) {
       const absDx = Math.abs(dx);
       const absDy = Math.abs(dy);
-      if (absDx < 8 && absDy < 8) return; // not enough motion yet
-      if (absDx > absDy * 1.5) {
+      if (absDx < 4 && absDy < 4) return; // not enough motion yet
+      if (absDx > absDy * 1.2) {
         // Horizontal-dominant → claim the pointer; subsequent moves
         // route to us regardless of where the finger ends up. Native
-        // scroll won't engage on this gesture anymore.
+        // scroll won't engage on this gesture anymore. The native
+        // touchmove listener (registered in the effect below) will
+        // also start preventDefault'ing on the underlying touch
+        // events to actively kill any nascent iOS scroll.
         try {
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         } catch {

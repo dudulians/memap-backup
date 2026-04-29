@@ -181,7 +181,8 @@ const ru: Translation = {
 
     dailySessionTitle: "Ежедневная сессия",
     dailySessionDesc: "Настрой поток ежедневных вопросов",
-    includeSuggested: "Включать предложенные вопросы",
+    soundAndHaptics: "Звук и вибрация",
+    soundAndHapticsDesc: "Звуки и тактильная отдача при свайпах и действиях",
     soundAndVibration: "Звук и вибрация",
     sound: "Звук",
     haptics: "Вибрация",

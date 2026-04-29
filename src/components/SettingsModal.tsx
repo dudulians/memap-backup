@@ -32,7 +32,6 @@ interface SettingsModalProps {
 }
 
 interface SessionSettings {
-  includeSuggestedQuestions: boolean;
   soundEnabled: boolean;
   // Vibration is its own toggle. Was previously bundled into
   // soundEnabled, which meant turning off sounds also killed haptics
@@ -64,7 +63,6 @@ const SETTINGS_KEYS = [
 const getSessionSettings = (): SessionSettings => {
   const data = localStorage.getItem(SESSION_SETTINGS_KEY);
   const fallback: SessionSettings = {
-    includeSuggestedQuestions: true,
     soundEnabled: true,
     hapticsEnabled: true,
   };
@@ -76,7 +74,6 @@ const getSessionSettings = (): SessionSettings => {
     // their previous "off everything" preference is respected — they
     // can flip just vibration back on themselves.
     return {
-      includeSuggestedQuestions: parsed.includeSuggestedQuestions ?? true,
       soundEnabled: parsed.soundEnabled ?? true,
       hapticsEnabled:
         typeof parsed.hapticsEnabled === "boolean"
@@ -120,7 +117,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     | "gender"
     | "appearance"
     | "notifications"
-    | "session"
+    | "soundHaptics"
     | "trackers"
     | "help"
     | "data";
@@ -188,10 +185,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     if (open) {
       loadData();
       // Re-sync from localStorage every time the modal opens, so changes
-      // made elsewhere (e.g. the onboarding tour's notification toggle)
-      // reflect here immediately.
+      // made elsewhere (e.g. the onboarding tour's notification toggle,
+      // the X-on-idea-card dismiss in TodayTab, etc.) reflect here
+      // immediately. Without this, the user's "I dismissed ideas with
+      // the X but Settings still shows the toggle ON" complaint —
+      // Settings was only re-reading on first mount.
       setNotificationSettings(getNotificationSettings());
       setSessionSettings(getSessionSettings());
+      setIdeasDismissed(localStorage.getItem("memap_ideas_dismissed") === "true");
     }
   }, [open]);
 
@@ -486,7 +487,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             {screen === "gender" && t("gender.settingsLabel")}
             {screen === "appearance" && t("settings.appearance")}
             {screen === "notifications" && t("settings.dailyRemindersTitle")}
-            {screen === "session" && t("settings.dailySessionTitle")}
+            {screen === "soundHaptics" && t("settings.soundAndHaptics")}
             {screen === "trackers" && t("settings.trackersTitle")}
             {screen === "help" && t("settings.helpTitle")}
             {screen === "data" && t("settings.dataPrivacyTitle")}
@@ -533,7 +534,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     { key: "gender", icon: User, label: t("gender.settingsLabel"), value: polLabel },
                     { key: "appearance", icon: Palette, label: t("settings.appearance"), value: themeLabel },
                     { key: "notifications", icon: Bell, label: t("settings.dailyRemindersTitle"), value: notifLabel },
-                    { key: "session", icon: Volume2, label: t("settings.dailySessionTitle") },
+                    { key: "soundHaptics", icon: Volume2, label: t("settings.soundAndHaptics") },
                     { key: "trackers", icon: ListChecks, label: t("settings.trackersTitle"), value: String(activeTrackerCount) },
                     { key: "help", icon: HelpCircle, label: t("settings.helpTitle") },
                     { key: "data", icon: Database, label: t("settings.dataPrivacyTitle") },
@@ -767,28 +768,26 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             </div>
             )}
 
-            {/* === SESSION SUB-SCREEN === */}
-            {screen === "session" && (
+            {/* === SOUND & HAPTICS SUB-SCREEN === */}
+            {/* Renamed from the old "session" sub-screen. The dead
+                "include suggested questions" toggle was dropped (the
+                auto-injection feature it controlled was removed long
+                ago — flipping the switch did nothing). The "show
+                tracker ideas" toggle moved into the Trackers sub-
+                screen where it belongs. What's left here is exactly
+                Sound + Vibration + the diagnostic, so the user can
+                find vibration in seconds instead of guessing under
+                "Daily session". */}
+            {screen === "soundHaptics" && (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
-                <ListChecks className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <Volume2 className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1 space-y-3">
                   <div>
-                    <h3 className="font-medium text-sm">{t("settings.dailySessionTitle")}</h3>
+                    <h3 className="font-medium text-sm">{t("settings.soundAndHaptics")}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {t("settings.dailySessionDesc")}
+                      {t("settings.soundAndHapticsDesc")}
                     </p>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="suggested-toggle" className="text-sm">
-                      {t("settings.includeSuggested")}
-                    </Label>
-                    <Switch
-                      id="suggested-toggle"
-                      checked={sessionSettings.includeSuggestedQuestions}
-                      onCheckedChange={(v) => handleSessionSettingsChange("includeSuggestedQuestions", v)}
-                    />
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -885,17 +884,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       )}
                     </div>
                   )}
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="ideas-toggle" className="text-sm">
-                      {t("settings.showTrackerIdeas")}
-                    </Label>
-                    <Switch
-                      id="ideas-toggle"
-                      checked={!ideasDismissed}
-                      onCheckedChange={handleToggleIdeas}
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -908,6 +896,20 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
               <p className="text-xs text-muted-foreground">
                 {t("settings.trackersDesc")}
               </p>
+              {/* "Show tracker ideas" lives here now. Was in the old
+                  Daily Session sub-screen alongside Sound/Vibration —
+                  thematically wrong. Tracker-discovery toggle belongs
+                  with tracker management. */}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="ideas-toggle" className="text-sm">
+                  {t("settings.showTrackerIdeas")}
+                </Label>
+                <Switch
+                  id="ideas-toggle"
+                  checked={!ideasDismissed}
+                  onCheckedChange={handleToggleIdeas}
+                />
+              </div>
               
               <div className="space-y-2">
                 {trackers.map(tracker => (

@@ -70,7 +70,6 @@ interface SessionQuestion {
 const getSessionSettings = () => {
   const data = localStorage.getItem("memap_session_settings");
   const fallback = {
-    includeSuggestedQuestions: true,
     soundEnabled: true,
     hapticsEnabled: true,
     lastRecommendationDate: null as string | null,
@@ -81,6 +80,9 @@ const getSessionSettings = () => {
     // Migration: pre-split users have soundEnabled but no
     // hapticsEnabled — fall back to the previous combined value so
     // we don't surprise them by re-enabling vibration silently.
+    // includeSuggestedQuestions is dropped here too — the auto-
+    // injection feature it controlled was removed long ago, so
+    // reading it from storage is just dead weight.
     const merged = { ...fallback, ...parsed };
     if (typeof parsed?.hapticsEnabled !== "boolean") {
       merged.hapticsEnabled = parsed?.soundEnabled !== false;
@@ -321,14 +323,6 @@ export const DailySession = ({
     }
   }, [currentIndex]);
 
-  const handleDisableRecommendations = () => {
-    patchSessionSettings({ includeSuggestedQuestions: false });
-    if (currentIndex < totalQuestions - 1) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      setCompleted(true);
-    }
-  };
 
   const currentQuestion = deck[currentIndex];
   const totalQuestions = deck.length;
@@ -1144,18 +1138,6 @@ export const DailySession = ({
                     {localizeTrackerQuestion(currentQuestion.tracker.questionText)}
                   </p>
                 </div>
-
-                {/* "Don't show these" link — tiny, only for new suggestions */}
-                {currentQuestion.isNew && (
-                  <div className="flex justify-center pb-2 flex-shrink-0">
-                    <button
-                      onClick={handleDisableRecommendations}
-                      className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                    >
-                      {t("dailySession.dontShowThese")}
-                    </button>
-                  </div>
-                )}
 
                 {/* Subtle swipe hints — minimalist, faded */}
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 pt-2 flex-shrink-0">
