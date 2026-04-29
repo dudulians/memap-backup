@@ -262,14 +262,18 @@ export const DailySession = ({
   // BottomSheet which handles drag-to-dismiss itself, including the
   // tricky scroll-vs-drag coordination on iOS.
 
-  // Re-pull deck whenever the selected date changes via the date-strip.
-  // Clearing answeredCount here would lie about progress within a single
-  // mount, so we keep it; only the cards for the new day are reloaded.
-  // BUT in playMode the deck must stay frozen for the duration of the
-  // round — otherwise every answer mutates `trackers`, which changes
-  // `buildDeck`, which would re-shuffle and re-include cards the user
-  // already skipped. Each new round gets a fresh deck via a parent
-  // `key` change, not via this effect.
+  // Build the deck on mount and on date change ONLY. Crucially we do
+  // NOT depend on entries / trackers / buildDeck here — if we did,
+  // every answered card would trigger a re-render of the parent
+  // (entries change), which would re-fire this effect, which would
+  // call buildDeck() (excluding the just-answered card), which would
+  // setDeck(shorter list) + setCurrentIndex(0). That raced against
+  // handleAnswer's setTimeout(setCurrentIndex+1), producing the
+  // counter bouncing 1/5 → 2/4 → 2/3 → 2/2 → 1/1 the user reported.
+  // The deck is frozen for the lifetime of one (date, mount) pair;
+  // it gets rebuilt only when the user navigates to another day via
+  // the date strip / past-dates picker. Each new playMode round gets
+  // a fresh deck via the parent's `key` change, not this effect.
   useEffect(() => {
     if (playMode) return;
     const newDeck = buildDeck();
@@ -289,7 +293,8 @@ export const DailySession = ({
       return trackers.some((t) => t.id === e.trackerId && !t.archived);
     });
     setCompleted(newDeck.length === 0 && hasEntriesForDate);
-  }, [selectedDate, buildDeck, playMode, entries, trackers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, playMode]);
   
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);

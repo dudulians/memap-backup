@@ -72,6 +72,22 @@ workflows:
             grep "node_modules" "$PKG" || echo "(no node_modules lines)"
           fi
 
+          # `cap sync ios` regenerates ios/App/App/capacitor.config.json,
+          # auto-populating packageClassList from npm packages only.
+          # That wipes our entry for the host-app CoreHapticsPlugin
+          # (lives in AppDelegate.swift, not in node_modules), so the
+          # custom Core Haptics plugin can't be discovered at runtime
+          # (the in-app diagnostic returned "CoreHaptics plugin is not
+          # implemented on ios"). Re-inject it after sync so iOS can
+          # find the class via NSClassFromString at startup.
+          IOS_CFG="$CM_BUILD_DIR/ios/App/App/capacitor.config.json"
+          if [ -f "$IOS_CFG" ]; then
+            echo "==> Injecting CoreHapticsPlugin into iOS packageClassList"
+            python3 -c "import json,sys; p='$IOS_CFG'; d=json.load(open(p)); l=d.setdefault('packageClassList', []); 'CoreHapticsPlugin' in l or l.append('CoreHapticsPlugin'); json.dump(d, open(p,'w'), indent=2)"
+            echo "==> packageClassList after patch:"
+            python3 -c "import json; print(json.load(open('$IOS_CFG')).get('packageClassList'))"
+          fi
+
       - name: Set up code signing
         script: |
           set -e
