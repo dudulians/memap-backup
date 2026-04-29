@@ -13,16 +13,28 @@ interface DuplicateTrackerDialogProps {
   open: boolean;
   onClose: () => void;
   existingTracker: Tracker | null;
+  /**
+   * When true, the existing tracker is archived (not currently in the
+   * user's active list). The dialog swaps its primary CTA from
+   * "Open existing" to "Restore from archive" so the user can
+   * un-archive the original instead of creating a second copy of
+   * something she previously decided to hide.
+   */
+  isArchived?: boolean;
   onOpenExisting: () => void;
   onCreateAnyway: () => void;
+  /** Required when isArchived; flips archived=false on the existing one. */
+  onRestoreFromArchive?: () => void;
 }
 
 export const DuplicateTrackerDialog = ({
   open,
   onClose,
   existingTracker,
+  isArchived = false,
   onOpenExisting,
   onCreateAnyway,
+  onRestoreFromArchive,
 }: DuplicateTrackerDialogProps) => {
   const { t } = useTranslation();
   const [trackingDays, setTrackingDays] = useState(0);
@@ -65,9 +77,11 @@ export const DuplicateTrackerDialog = ({
               <AlertCircle className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <DialogTitle className="text-lg">{t("duplicate.title")}</DialogTitle>
+              <DialogTitle className="text-lg">
+                {isArchived ? t("duplicate.archivedTitle") : t("duplicate.title")}
+              </DialogTitle>
               <DialogDescription className="mt-1.5">
-                {t("duplicate.desc")}
+                {isArchived ? t("duplicate.archivedDesc") : t("duplicate.desc")}
               </DialogDescription>
             </div>
           </div>
@@ -118,13 +132,13 @@ export const DuplicateTrackerDialog = ({
             {t("duplicate.createAnother")}
           </Button>
           <Button
-            onClick={onOpenExisting}
+            onClick={isArchived && onRestoreFromArchive ? onRestoreFromArchive : onOpenExisting}
             className="w-full sm:w-auto order-1 sm:order-2"
             style={{
               background: `linear-gradient(135deg, hsl(var(--${categoryColor})), hsl(var(--${categoryColor}-secondary)))`
             }}
           >
-            {t("duplicate.openExisting")}
+            {isArchived ? t("duplicate.restoreFromArchive") : t("duplicate.openExisting")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -743,7 +743,7 @@ export const DailySession = ({
         scaleBackground
         ariaTitle="Session complete"
       >
-        <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 pb-6 gap-6 animate-fade-in">
+        <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 gap-6 animate-fade-in" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
           {/* Hero moment — confetti emoji + the streak number as the
               centerpiece. Big serif numeral grabs attention. */}
           <div className="flex flex-col items-center text-center space-y-3">
@@ -966,12 +966,16 @@ export const DailySession = ({
               the Undo button is rendered or not — otherwise the slot
               collapses to 0 height when hidden, the title row jumps
               up/down between renders, and the date strip below
-              visibly trembles every time the user starts a swipe
-              (which sets isAnimating, hiding the button). */}
+              visibly trembles every time the user starts a swipe.
+              Visibility is gated only by currentIndex; isAnimating
+              just disables interaction (don't unmount on every swipe
+              animation — that flickered the button in/out as the
+              user reported). */}
           <div className="w-9 h-9 flex items-center justify-start">
-            {currentIndex > 0 && !isAnimating && (
+            {currentIndex > 0 && (
               <button
                 type="button"
+                disabled={isAnimating}
                 onClick={() => {
                   const last = answeredHistory.current.pop();
                   if (last?.saved && onClearAnswer) {
@@ -992,7 +996,7 @@ export const DailySession = ({
                   currentDy.current = 0;
                 }}
                 aria-label={t("dailySession.previousQuestion")}
-                className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
               >
                 <Undo2 className="h-4 w-4" strokeWidth={2} />
               </button>
@@ -1155,7 +1159,10 @@ export const DailySession = ({
           room. Skip is a tiny inline text link instead of a full-width
           button (it's already discoverable via swipe-down + the in-card
           hint). No/Yes get default-size pills. */}
-      <div className="px-4 pt-2 pb-3 flex-shrink-0 bg-background border-t">
+      <div
+        className="px-4 pt-2 flex-shrink-0 bg-background border-t"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+      >
         <div className="grid grid-cols-2 gap-3">
           <Button
             onClick={() => handleAnswer(false)}

@@ -298,6 +298,8 @@ const ru: Translation = {
     trackerAdded: "Трекер добавлен",
     trackerAddedDesc: "«{{title}}» добавлен в твою карту.",
     trackerDeleted: "Трекер удалён",
+    restoredFromArchive: "Достали из архива",
+    restoredFromArchiveDesc: "Трекер снова на твоей карте.",
     trackerDeletedDesc: "«{{title}}» удалён.",
     cardsSection: "Карточки",
     editCards: "Изменить",
@@ -395,10 +397,13 @@ const ru: Translation = {
   duplicate: {
     title: "Ты уже это отслеживаешь",
     desc: "Такой трекер уже на твоей карте. Можно продолжить с существующим или создать ещё один.",
+    archivedTitle: "Такая карточка в архиве",
+    archivedDesc: "Этот трекер у тебя уже был — он сейчас в архиве. Достать обратно или создать новую копию?",
     trackingForOne: "Ты следишь за этим уже 1 день",
     trackingForMany: "Ты следишь за этим уже {{count}} дн.",
     createAnother: "Всё равно создать ещё",
     openExisting: "Открыть существующий",
+    restoreFromArchive: "Достать из архива",
   },
 
   trackerDetails: {

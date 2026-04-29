@@ -294,6 +294,8 @@ const en = {
     trackerAdded: "Tracker added",
     trackerAddedDesc: "\"{{title}}\" has been added to your map.",
     trackerDeleted: "Tracker deleted",
+    restoredFromArchive: "Restored from archive",
+    restoredFromArchiveDesc: "The tracker is back on your map.",
     trackerDeletedDesc: "\"{{title}}\" was removed.",
     cardsSection: "Cards",
     editCards: "Edit",
@@ -388,10 +390,13 @@ const en = {
   duplicate: {
     title: "You're already tracking this",
     desc: "This tracker is already on your map. You can keep using the existing one or create a new copy.",
+    archivedTitle: "This card is in your archive",
+    archivedDesc: "You had this tracker before — it's currently in the archive. Restore it, or create a new copy?",
     trackingForOne: "You've been tracking this for 1 day",
     trackingForMany: "You've been tracking this for {{count}} days",
     createAnother: "Create another anyway",
     openExisting: "Open existing tracker",
+    restoreFromArchive: "Restore from archive",
   },
 
   trackerDetails: {

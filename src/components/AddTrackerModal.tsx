@@ -86,6 +86,7 @@ export const AddTrackerModal = ({
   const [searchOpen, setSearchOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateTracker, setDuplicateTracker] = useState<Tracker | null>(null);
+  const [duplicateIsArchived, setDuplicateIsArchived] = useState(false);
   const [pendingTracker, setPendingTracker] = useState<Tracker | null>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -131,18 +132,25 @@ export const AddTrackerModal = ({
 
   const dropdownTemplates = getAllTemplatesForDropdown();
 
-  // Check for duplicate trackers
-  const checkForDuplicate = async (title: string, category: Tracker["category"]): Promise<Tracker | null> => {
+  // Check for duplicate trackers (active OR archived). Returns
+  // tracker + isArchived so the dialog can offer "Restore from
+  // archive" instead of "Open existing" when the match is archived.
+  const checkForDuplicate = async (
+    title: string,
+    category: Tracker["category"],
+  ): Promise<{ tracker: Tracker; isArchived: boolean } | null> => {
     const trackers = await getTrackers();
     const normalizedTitle = title.trim().toLowerCase();
-    
-    const duplicate = trackers.find(
-      t => t.title.trim().toLowerCase() === normalizedTitle && 
-           t.category === category &&
-           !t.archived
+
+    const matches = trackers.filter(
+      (t) =>
+        t.title.trim().toLowerCase() === normalizedTitle &&
+        t.category === category,
     );
-    
-    return duplicate || null;
+    if (matches.length === 0) return null;
+    const active = matches.find((t) => !t.archived);
+    if (active) return { tracker: active, isArchived: false };
+    return { tracker: matches[0], isArchived: true };
   };
 
   const createTrackerDirectly = async (newTracker: Tracker) => {
@@ -172,9 +180,9 @@ export const AddTrackerModal = ({
 
     // Check for duplicates (match against the localized title since that's
     // what the user sees and what new trackers get stored as).
-    const duplicate = await checkForDuplicate(localizedTitle, template.category);
+    const dup = await checkForDuplicate(localizedTitle, template.category);
 
-    if (duplicate) {
+    if (dup) {
       // Store the pending tracker and show duplicate dialog
       const newTracker: Tracker = {
         title: localizedTitle,
@@ -191,7 +199,8 @@ export const AddTrackerModal = ({
       };
 
       setPendingTracker(newTracker);
-      setDuplicateTracker(duplicate);
+      setDuplicateTracker(dup.tracker);
+      setDuplicateIsArchived(dup.isArchived);
       setDuplicateDialogOpen(true);
       return;
     }
@@ -218,18 +227,19 @@ export const AddTrackerModal = ({
     e.preventDefault();
 
     // Check for duplicates
-    const duplicate = await checkForDuplicate(formData.title, formData.category);
-    
-    if (duplicate) {
+    const dup = await checkForDuplicate(formData.title, formData.category);
+
+    if (dup) {
       const newTracker: Tracker = {
         ...formData,
         id: uuid(),
         answerType: "boolean",
         createdAt: new Date().toISOString(),
       };
-      
+
       setPendingTracker(newTracker);
-      setDuplicateTracker(duplicate);
+      setDuplicateTracker(dup.tracker);
+      setDuplicateIsArchived(dup.isArchived);
       setDuplicateDialogOpen(true);
       return;
     }
@@ -369,8 +379,28 @@ export const AddTrackerModal = ({
         open={duplicateDialogOpen}
         onClose={() => setDuplicateDialogOpen(false)}
         existingTracker={duplicateTracker}
+        isArchived={duplicateIsArchived}
         onOpenExisting={handleOpenExisting}
         onCreateAnyway={handleCreateAnyway}
+        onRestoreFromArchive={async () => {
+          if (!duplicateTracker) return;
+          const all = await getTrackers();
+          const restored = all.map((t) =>
+            t.id === duplicateTracker.id ? { ...t, archived: false } : t,
+          );
+          await saveTrackers(restored);
+          setDuplicateDialogOpen(false);
+          setPendingTracker(null);
+          setDuplicateTracker(null);
+          setDuplicateIsArchived(false);
+          // Surface the restored tracker so caller can navigate.
+          if (onNavigateToTracker) onNavigateToTracker(duplicateTracker);
+          onClose();
+          toast({
+            title: t("today.restoredFromArchive"),
+            description: t("today.restoredFromArchiveDesc"),
+          });
+        }}
       />
     );
   }
@@ -823,8 +853,28 @@ export const AddTrackerModal = ({
         open={duplicateDialogOpen}
         onClose={() => setDuplicateDialogOpen(false)}
         existingTracker={duplicateTracker}
+        isArchived={duplicateIsArchived}
         onOpenExisting={handleOpenExisting}
         onCreateAnyway={handleCreateAnyway}
+        onRestoreFromArchive={async () => {
+          if (!duplicateTracker) return;
+          const all = await getTrackers();
+          const restored = all.map((t) =>
+            t.id === duplicateTracker.id ? { ...t, archived: false } : t,
+          );
+          await saveTrackers(restored);
+          setDuplicateDialogOpen(false);
+          setPendingTracker(null);
+          setDuplicateTracker(null);
+          setDuplicateIsArchived(false);
+          // Surface the restored tracker so caller can navigate.
+          if (onNavigateToTracker) onNavigateToTracker(duplicateTracker);
+          onClose();
+          toast({
+            title: t("today.restoredFromArchive"),
+            description: t("today.restoredFromArchiveDesc"),
+          });
+        }}
       />
     </>
   );

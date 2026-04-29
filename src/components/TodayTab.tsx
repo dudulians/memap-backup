@@ -97,6 +97,9 @@ export const TodayTab = () => {
   }, []);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateTracker, setDuplicateTracker] = useState<Tracker | null>(null);
+  // Tracks whether the duplicate found is archived — drives the
+  // dialog's CTA copy ("Restore from archive" vs. "Open existing").
+  const [duplicateIsArchived, setDuplicateIsArchived] = useState(false);
   const [pendingTracker, setPendingTracker] = useState<Tracker | null>(null);
   // Multi-select mode for the regular tracker list. When on, tapping a
   // card toggles its selection instead of opening its details, and a
@@ -335,14 +338,40 @@ export const TodayTab = () => {
     });
   };
 
-  const checkForDuplicate = (title: string, category: Tracker["category"]): Tracker | null => {
+  // Returns both active and archived matches. Active is preferred —
+  // if both an active and an archived copy somehow coexist (shouldn't
+  // happen, but safer to handle), the active one wins. The caller
+  // uses `isArchived` to drive different dialog copy & CTAs (restore
+  // from archive vs. open existing).
+  const checkForDuplicate = async (
+    title: string,
+    category: Tracker["category"],
+  ): Promise<{ tracker: Tracker; isArchived: boolean } | null> => {
     const normalizedTitle = title.trim().toLowerCase();
-    const duplicate = trackers.find(
-      t => t.title.trim().toLowerCase() === normalizedTitle && 
-           t.category === category &&
-           !t.archived
+    // Read fresh from storage so archived ones (which aren't in our
+    // local state — we filter them out in loadData) are still seen.
+    const all = await getTrackers();
+    const matches = all.filter(
+      (t) =>
+        t.title.trim().toLowerCase() === normalizedTitle &&
+        t.category === category,
     );
-    return duplicate || null;
+    if (matches.length === 0) return null;
+    const active = matches.find((t) => !t.archived);
+    if (active) return { tracker: active, isArchived: false };
+    return { tracker: matches[0], isArchived: true };
+  };
+
+  const restoreFromArchive = async (id: string) => {
+    const all = await getTrackers();
+    const restored = all.map((t) => (t.id === id ? { ...t, archived: false } : t));
+    await saveTrackers(restored);
+    setTrackers(restored.filter((t) => !t.archived));
+    haptics.success();
+    toast({
+      title: t("today.restoredFromArchive"),
+      description: t("today.restoredFromArchiveDesc"),
+    });
   };
 
   // Enable daily reminders inline from the Cards-screen banner. Asks
@@ -462,9 +491,9 @@ export const TodayTab = () => {
   };
 
   const handleAddIdea = async (idea: any) => {
-    const duplicate = checkForDuplicate(idea.title, idea.category);
-    
-    if (duplicate) {
+    const dup = await checkForDuplicate(idea.title, idea.category);
+
+    if (dup) {
       const newTracker: Tracker = {
         id: uuid(),
         title: idea.title,
@@ -477,9 +506,10 @@ export const TodayTab = () => {
         adviceAboveThreshold: idea.adviceAboveThreshold,
         createdAt: new Date().toISOString(),
       };
-      
+
       setPendingTracker(newTracker);
-      setDuplicateTracker(duplicate);
+      setDuplicateTracker(dup.tracker);
+      setDuplicateIsArchived(dup.isArchived);
       setDuplicateDialogOpen(true);
       return;
     }
@@ -1140,8 +1170,18 @@ export const TodayTab = () => {
         open={duplicateDialogOpen}
         onClose={() => setDuplicateDialogOpen(false)}
         existingTracker={duplicateTracker}
+        isArchived={duplicateIsArchived}
         onOpenExisting={handleOpenExisting}
         onCreateAnyway={handleCreateAnyway}
+        onRestoreFromArchive={async () => {
+          if (duplicateTracker) {
+            await restoreFromArchive(duplicateTracker.id);
+          }
+          setDuplicateDialogOpen(false);
+          setPendingTracker(null);
+          setDuplicateTracker(null);
+          setDuplicateIsArchived(false);
+        }}
       />
 
       {/* Bottom Sheet for Tracker Details. Header is now minimal —
@@ -1374,18 +1414,23 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
   // Native non-passive touchmove listener that actively kills any
   // iOS-engaged pan-y scroll once we've claimed the gesture as
   // horizontal. React's onPointerMove is passive — preventDefault
-  // there is a no-op — so without this hook iOS would keep panning
-  // the page vertically for those first few px before our pointer-
-  // capture took effect, which the user perceived as the screen
-  // wiggling. Mirrors the same trick used in OverviewCard's calendar
-  // tracker-swipe.
+  // there is a no-op. Without this hook iOS keeps panning the page
+  // for the first few px before our pointer-capture takes effect.
+  //
+  // CAUTION: only preventDefault on touches that involve OUR active
+  // pointer. Otherwise we kill native scroll for unrelated touches
+  // (multi-touch, taps on action buttons whose pointerdown returned
+  // early, etc.) and the row visibly hangs because pointer events
+  // get suppressed too. The user reported this as "swipe-reveal
+  // stopped working" after 1.4.3 — too aggressive cancellation.
   React.useEffect(() => {
     const node = rowRef.current;
     if (!node || disabled) return;
     const onTouchMove = (e: TouchEvent) => {
-      if (hasCaptured.current) {
-        // We own the gesture → stop iOS from continuing any scroll
-        // it may have started in the first 4 px before we claimed.
+      // Only block native behaviours when we're actively driving a
+      // claimed horizontal swipe. activePointerId guarantees the
+      // touch is the same one our pointermove handler is tracking.
+      if (hasCaptured.current && activePointerId.current !== null) {
         e.preventDefault();
       }
     };
@@ -1586,14 +1631,26 @@ const SwipeRevealRow = ({ children, onArchive, onDelete, disabled }: SwipeReveal
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
-        onClick={() => {
-          // Tap on the row body (no movement) while the panel is open
-          // = close it. The inner card's own onClick (open details)
-          // still fires when closed because we only consume the click
-          // when isOpen is true.
-          if (isOpen && Math.abs(currentDx.current) < 5) {
-            close();
-          }
+        // CAPTURE-phase click handler. While the panel is open, ANY
+        // tap on the card body should JUST close the panel — not
+        // also open TrackerDetails (which the inner Card's onClick
+        // would do during the bubble phase). React fires capture-
+        // phase handlers parent-to-child before the target's own
+        // onClick, so stopping propagation here keeps the click
+        // from ever reaching the Card. Action buttons are checked
+        // out via data-swipe-action so their own onClick still
+        // fires on tap. The window-level outsideClick listener
+        // covers taps on anything OUTSIDE the row (nav bar, header,
+        // other cards, modal backdrop, etc.) — together they
+        // satisfy the user's "tap anywhere to close" expectation.
+        onClickCapture={(e) => {
+          if (!isOpen) return;
+          const target = e.target as HTMLElement;
+          if (target.closest("[data-swipe-action]")) return;
+          if (Math.abs(currentDx.current) >= 5) return; // mid-swipe, not a tap
+          e.stopPropagation();
+          e.preventDefault();
+          close();
         }}
         style={{
           transform: `translateX(${offsetX}px)`,
