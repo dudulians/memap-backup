@@ -35,10 +35,14 @@ export interface CorrelationResult {
   /** Risk ratio: P(B=yes | A=yes) / P(B=yes | A=no). >1 means B is more
    *  likely when A is yes. Used for the "X times more likely" UI text. */
   riskRatio: number;
-  /** True if the pair appears in our curated RELATED_QUESTIONS graph
-   *  (or either side reverse-references the other). False means the
-   *  correlation is "unexpected" and the UI should hedge. */
-  isExpected: boolean;
+  /** Semantic verdict on the pair:
+   *  - "expected"   — pair is in our curated RELATED_QUESTIONS graph,
+   *                   correlation is the kind we'd actually predict.
+   *  - "unexpected" — both trackers are recognised templates but the
+   *                   pair is NOT in the graph — likely coincidence.
+   *  - "unknown"    — at least one tracker is genuinely custom and
+   *                   we can't make a judgment. UI hides the badge. */
+  semanticVerdict: "expected" | "unexpected" | "unknown";
   /** Raw 2x2 counts for the UI to display "9/12 days had X" framing. */
   counts: {
     bothYes: number; // A=yes, B=yes
@@ -192,18 +196,26 @@ const computePairLag = (
   };
 };
 
-/** Is (a, b) in the curated RELATED_QUESTIONS knowledge graph? Either
- *  direction counts. Trackers without recognised template ids (custom
- *  user-typed) are NOT marked expected — UI will hedge them. */
-const isPairExpected = (a: Tracker, b: Tracker): boolean => {
+/** Three-way verdict on the (a, b) pair semantics:
+ *  - "expected"   if both trackers map to template ids AND the pair
+ *                 (either direction) is in RELATED_QUESTIONS.
+ *  - "unexpected" if both trackers map to template ids BUT the pair
+ *                 is not in the graph — likely coincidence.
+ *  - "unknown"    if at least one tracker is genuinely custom (no
+ *                 template match even via keyword fallback). We
+ *                 honestly don't know — UI shouldn't hedge or boost. */
+const pairSemanticVerdict = (
+  a: Tracker,
+  b: Tracker,
+): "expected" | "unexpected" | "unknown" => {
   const idA = matchTemplateIdByTitle(a.title);
   const idB = matchTemplateIdByTitle(b.title);
-  if (!idA || !idB) return false;
+  if (!idA || !idB) return "unknown";
   const aRelated = RELATED_QUESTIONS[idA] ?? [];
-  if (aRelated.includes(idB)) return true;
+  if (aRelated.includes(idB)) return "expected";
   const bRelated = RELATED_QUESTIONS[idB] ?? [];
-  if (bRelated.includes(idA)) return true;
-  return false;
+  if (bRelated.includes(idA)) return "expected";
+  return "unexpected";
 };
 
 /**
@@ -260,18 +272,21 @@ export const computeCorrelations = (
         chiSquare: best.chiSquare,
         sharedDays: best.sharedDays,
         riskRatio: best.riskRatio,
-        isExpected: isPairExpected(a, b),
+        semanticVerdict: pairSemanticVerdict(a, b),
         counts: best.counts,
       });
     }
   }
 
-  // Sort by absolute strength, expected-pairs slightly preferred so
-  // they bubble above borderline-equal unexpected ones.
+  // Sort by absolute strength. Expected pairs get a small positive
+  // tiebreaker bump; unexpected pairs (template-matched but not in
+  // graph — i.e. likely coincidence) get a small NEGATIVE bump so
+  // they sink below other findings of similar strength. Unknown
+  // (custom-tracker) pairs are neutral — we have no info.
   out.sort((x, y) => {
-    const sx = Math.abs(x.phi) + (x.isExpected ? 0.02 : 0);
-    const sy = Math.abs(y.phi) + (y.isExpected ? 0.02 : 0);
-    return sy - sx;
+    const bumpX = x.semanticVerdict === "expected" ? 0.02 : x.semanticVerdict === "unexpected" ? -0.02 : 0;
+    const bumpY = y.semanticVerdict === "expected" ? 0.02 : y.semanticVerdict === "unexpected" ? -0.02 : 0;
+    return Math.abs(y.phi) + bumpY - (Math.abs(x.phi) + bumpX);
   });
   return out.slice(0, topN);
 };

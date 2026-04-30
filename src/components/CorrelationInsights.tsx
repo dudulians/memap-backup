@@ -189,7 +189,19 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                       {t(`correlations.${strengthLbl}`)}
                       {robust && " ✓"}
                     </span>
-                    {!c.isExpected && (
+                    {/* Semantic verdict — only shown when we have an
+                        actual judgment. For "unknown" pairs (at least
+                        one custom user-typed tracker) we show NO
+                        badge; we honestly don't know whether the
+                        pair is expected or coincidence, so we let
+                        the data speak for itself. */}
+                    {c.semanticVerdict === "expected" && (
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-primary/10 text-primary">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        {t("correlations.expected")}
+                      </span>
+                    )}
+                    {c.semanticVerdict === "unexpected" && (
                       <span
                         className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-amber-500/10"
                         style={{ color: "hsl(35 90% 45%)" }}
@@ -197,12 +209,6 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                       >
                         <AlertTriangle className="h-2.5 w-2.5" />
                         {t("correlations.unexpected")}
-                      </span>
-                    )}
-                    {c.isExpected && (
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-primary/10 text-primary">
-                        <Sparkles className="h-2.5 w-2.5" />
-                        {t("correlations.expected")}
                       </span>
                     )}
                     <span className="text-[10px] text-muted-foreground">
