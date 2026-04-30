@@ -444,7 +444,15 @@ export const AddTrackerModal = ({
             comfortably below the sticky header. Was pt-4 — visually
             felt tight, the header's border looked like it was clipping
             the tab pills. */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 pt-6 pb-4 relative">
+        {/* `overflow-x-hidden` is critical — without it, anything in the
+            scroll body that overflows horizontally (long titles in
+            cards, accordion triggers with not-quite-shrunk content,
+            etc.) lets the user pan the entire modal sideways and
+            half of the layout slides off-screen. The user reported
+            exactly this after the 1.6 accordion redesign. With
+            overflow-x-hidden any internal overflow gets quietly
+            clipped instead of dragging the whole modal sideways. */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 pt-6 pb-4 relative">
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as "templates" | "custom")} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -587,12 +595,12 @@ export const AddTrackerModal = ({
                         return (
                           <Card
                             key={template.id}
-                            className="hover:bg-accent/30 transition-colors"
+                            className="hover:bg-accent/30 transition-colors overflow-hidden"
                             style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: '3px' }}
                           >
                             <CardHeader className="pb-2">
                               <div className="flex items-start justify-between gap-2">
-                                <CardTitle className="text-base">{localizeTrackerTitle(template.title)}</CardTitle>
+                                <CardTitle className="text-base break-words flex-1 min-w-0">{localizeTrackerTitle(template.title)}</CardTitle>
                                 <Badge
                                   variant="secondary"
                                   className="text-xs flex-shrink-0"
@@ -607,7 +615,7 @@ export const AddTrackerModal = ({
                             </CardHeader>
                             <CardContent className="pb-3">
                               <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
+                                <p className="text-sm text-muted-foreground line-clamp-2 flex-1 min-w-0 break-words">
                                   {localizeTrackerQuestion(template.questionText)}
                                 </p>
                                 <Button
@@ -685,16 +693,16 @@ export const AddTrackerModal = ({
                               return (
                                 <Card
                                   key={template.id}
-                                  className="hover:bg-accent/30 transition-colors"
+                                  className="hover:bg-accent/30 transition-colors overflow-hidden"
                                   style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: "3px" }}
                                 >
                                   <CardContent className="p-3">
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm">
+                                        <p className="font-medium text-sm break-words">
                                           {localizeTrackerTitle(template.title)}
                                         </p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 break-words">
                                           {localizeTrackerQuestion(template.questionText)}
                                         </p>
                                       </div>
