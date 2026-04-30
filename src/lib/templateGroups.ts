@@ -18,6 +18,9 @@ export interface TemplateGroup {
   id: string;
   title: string;
   description: string;
+  /** When set, this group is hidden unless the user opts in to that
+   *  context (currently: "expat" — only shown if isExpat === true). */
+  gatedBy?: "expat";
   templates: Array<{
     id: string;
     title: string;
@@ -28,6 +31,9 @@ export interface TemplateGroup {
     threshold: number;
     problemWhen: ProblemWhen;
     adviceAboveThreshold: string;
+    /** Sensitive content (intimacy, libido, ex partners). Hidden by
+     *  default; user opts in via Settings → "Show sensitive topics". */
+    sensitive?: boolean;
   }>;
 }
 
@@ -38,6 +44,7 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = LIFE_STREAMS.map((stream) => ({
   id: stream.id,
   title: stream.title,
   description: stream.description,
+  gatedBy: stream.gatedBy,
   templates: stream.templates.map((t) => ({
     id: t.id,
     title: t.title,
@@ -48,5 +55,6 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = LIFE_STREAMS.map((stream) => ({
     threshold: t.threshold,
     problemWhen: t.problemWhen,
     adviceAboveThreshold: t.adviceAboveThreshold,
+    sensitive: t.sensitive,
   })),
 }));

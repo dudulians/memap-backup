@@ -56,6 +56,11 @@ interface InterviewAnswers {
   hasKids?: boolean;
   hasPets?: boolean;
   hasPartner?: boolean;
+  // "Are you currently living in a country where you weren't born?"
+  // Gates the entire `expat` cluster (Жизнь за границей) — without
+  // this filter, generic users would see "spoke local language" /
+  // "missed home country" templates as irrelevant noise.
+  isExpat?: boolean;
   // Goal is now multi-select — users may have several reasons at once.
   goal?: Goal[];
 }
@@ -721,8 +726,8 @@ const FocusScreen = ({
 // --- Screen 2: Context ----------------------------------------------
 
 interface ContextRow {
-  key: "kids" | "partner";
-  field: "hasKids" | "hasPartner";
+  key: "kids" | "partner" | "expat";
+  field: "hasKids" | "hasPartner" | "isExpat";
 }
 
 // Pets removed in 1.6 — the new template library has no pet-care
@@ -730,9 +735,16 @@ interface ContextRow {
 // pet-related template is "wanted-pet" in Big Decisions, which fits
 // people WITHOUT pets. So asking "got pets?" was at best useless and
 // at worst inverted the relevance. Removed to shorten the interview.
+//
+// Expat added in 1.7 — the expat cluster (20 templates about local
+// language, paperwork, homesickness) is HARD-gated by this answer.
+// Default = unset = hidden. Only people who flip it to Yes see those
+// templates anywhere in the app (generator, AddTrackerModal). This
+// is symmetric with how hasKids and hasPartner work as hard filters.
 const CONTEXT_ROWS: ContextRow[] = [
   { key: "kids", field: "hasKids" },
   { key: "partner", field: "hasPartner" },
+  { key: "expat", field: "isExpat" },
 ];
 
 const ContextScreen = ({

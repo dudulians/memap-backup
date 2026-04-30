@@ -88,6 +88,7 @@ const en = {
       kids: "Got kids?",
       pets: "Got pets?",
       partner: "Got a partner?",
+      expat: "Living outside your home country?",
       yes: "Yes",
       no: "No",
     },
@@ -203,6 +204,8 @@ const en = {
     trackersTitle: "Questions",
     trackersDesc: "Toggle questions on/off for daily sessions",
     noTrackersYet: "No questions yet",
+    showSensitive: "Sensitive topics",
+    showSensitiveDesc: "Intimacy, libido, exes — adds a few more questions to the library",
 
     helpTitle: "Help",
     showAppTour: "Show app tour",

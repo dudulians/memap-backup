@@ -102,18 +102,53 @@ export const AddTrackerModal = ({
   const [periodDaysRaw, setPeriodDaysRaw] = useState("30");
   const [thresholdRaw, setThresholdRaw] = useState("10");
 
+  // Read user's interview answers from localStorage. We use these to
+  // hide cluster groups the user opted out of (currently: the expat
+  // cluster — gated by isExpat === true). Re-read every render so a
+  // change in Settings flows through immediately.
+  const interviewAnswers: { isExpat?: boolean; showSensitive?: boolean } = (() => {
+    try {
+      const raw = localStorage.getItem("memap_interview");
+      const showSensitive = localStorage.getItem("memap_show_sensitive") === "true";
+      if (!raw) return { showSensitive };
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object"
+        ? { ...parsed, showSensitive }
+        : { showSensitive };
+    } catch {
+      return {};
+    }
+  })();
+
+  // Hard-gate clusters by interview answer. Expat cluster ("Жизнь за
+  // границей") is hidden unless the user explicitly opted in. Mirrors
+  // the same filter in starterGenerator so onboarding suggestions and
+  // the Add Tracker library stay in sync.
+  const visibleGroups = TEMPLATE_GROUPS.filter((group) => {
+    if (group.gatedBy === "expat" && interviewAnswers.isExpat !== true) return false;
+    return true;
+  });
+
+  // Sensitive templates (intimacy, libido, ex). Hidden by default to
+  // keep the catalog safe-for-work; user opts in via Settings →
+  // "Show sensitive topics".
+  const filterSensitive = <T extends { sensitive?: boolean }>(arr: T[]): T[] => {
+    if (interviewAnswers.showSensitive) return arr;
+    return arr.filter((t) => !t.sensitive);
+  };
+
   // Get all templates for autocomplete dropdown
   const getAllTemplatesForDropdown = () => {
-    let filteredGroups = TEMPLATE_GROUPS;
+    let filteredGroups = visibleGroups;
 
     // Filter by theme
     if (selectedTheme !== "all") {
-      filteredGroups = TEMPLATE_GROUPS.filter(group => group.id === selectedTheme);
+      filteredGroups = visibleGroups.filter(group => group.id === selectedTheme);
     }
 
     // Flatten to all templates with group info
-    const allTemplates = filteredGroups.flatMap(group => 
-      group.templates.map(template => ({ ...template, groupTitle: group.title }))
+    const allTemplates = filteredGroups.flatMap(group =>
+      filterSensitive(group.templates).map(template => ({ ...template, groupTitle: group.title }))
     );
 
     // If there's a search query, filter — match against both English (stored)
@@ -299,11 +334,11 @@ export const AddTrackerModal = ({
 
   // Filter templates based on theme and search
   const getFilteredTemplates = () => {
-    let filteredGroups = TEMPLATE_GROUPS;
+    let filteredGroups = visibleGroups;
 
     // Filter by theme
     if (selectedTheme !== "all") {
-      filteredGroups = TEMPLATE_GROUPS.filter(group => group.id === selectedTheme);
+      filteredGroups = visibleGroups.filter(group => group.id === selectedTheme);
     }
 
     // If there's a search query, return flat list of matching templates.
@@ -312,7 +347,7 @@ export const AddTrackerModal = ({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const allTemplates = filteredGroups.flatMap(group =>
-        group.templates.map(template => ({ ...template, groupTitle: group.title }))
+        filterSensitive(group.templates).map(template => ({ ...template, groupTitle: group.title }))
       );
 
       return allTemplates.filter(template =>
@@ -329,8 +364,8 @@ export const AddTrackerModal = ({
 
   const filteredTemplates = getFilteredTemplates();
   const filteredGroups = selectedTheme === "all"
-    ? TEMPLATE_GROUPS
-    : TEMPLATE_GROUPS.filter(group => group.id === selectedTheme);
+    ? visibleGroups
+    : visibleGroups.filter(group => group.id === selectedTheme);
 
   // Scroll + swipe-to-dismiss state
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -471,7 +506,7 @@ export const AddTrackerModal = ({
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50">
                   <SelectItem value="all">{t("addTracker.allThemes")}</SelectItem>
-                  {TEMPLATE_GROUPS.map(group => (
+                  {visibleGroups.map(group => (
                     <SelectItem key={group.id} value={group.id}>
                       {localizeGroupTitle(group.title)}
                     </SelectItem>
@@ -655,12 +690,13 @@ export const AddTrackerModal = ({
                 // visual identity consistent with rest of the app.
                 <Accordion
                   type="multiple"
-                  defaultValue={filteredGroups.length > 0 ? [filteredGroups[0].id] : []}
+                  defaultValue={[]}
                   className="space-y-2"
                 >
                   {filteredGroups.map((group) => {
                     const stream = LIFE_STREAMS.find((s) => s.id === group.id);
                     const icon = stream?.icon ?? "📁";
+                    const visibleTemplates = filterSensitive(group.templates);
                     return (
                       <AccordionItem
                         key={group.id}
@@ -682,13 +718,13 @@ export const AddTrackerModal = ({
                               variant="secondary"
                               className="text-[10px] flex-shrink-0 bg-muted/60 text-muted-foreground font-medium"
                             >
-                              {group.templates.length}
+                              {visibleTemplates.length}
                             </Badge>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="pt-0 pb-3">
                           <div className="space-y-2">
-                            {group.templates.map((template) => {
+                            {visibleTemplates.map((template) => {
                               const categoryColor = getCategoryColor(template.category);
                               return (
                                 <Card

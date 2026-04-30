@@ -32,6 +32,12 @@ export interface InterviewAnswers {
   hasKids?: boolean;
   hasPets?: boolean;
   hasPartner?: boolean;
+  /** "Are you currently living in a country where you weren't born?"
+   *  Gates the entire `expat` cluster (Жизнь за границей). When false
+   *  or undefined, expat templates are HARD-excluded from the
+   *  generator and AddTrackerModal so non-expats don't see noise
+   *  about local language / paperwork / homesickness. */
+  isExpat?: boolean;
   goal?: Goal[];
 }
 
@@ -72,6 +78,12 @@ interface NormalizedTemplate {
   periodDays: number;
   threshold: number;
   problemWhen: ProblemWhen;
+  /** Cluster the template was sourced from. Used as a hard gate
+   *  ("expat" cluster only shown if isExpat === true) and to apply
+   *  cluster-level filtering before scoring. */
+  streamId: string;
+  /** Sensitive (intimacy, libido, ex). Hidden unless user opts in. */
+  sensitive?: boolean;
 }
 
 const normalizeAll = (): NormalizedTemplate[] => {
@@ -91,6 +103,8 @@ const normalizeAll = (): NormalizedTemplate[] => {
         periodDays: tpl.periodDays,
         threshold: tpl.threshold,
         problemWhen: tpl.problemWhen,
+        streamId: stream.id,
+        sensitive: tpl.sensitive,
       });
     });
   });
@@ -326,6 +340,7 @@ export const hasMeaningfulInterviewSignal = (
   if (answers.hasKids !== undefined) return true;
   if (answers.hasPets !== undefined) return true;
   if (answers.hasPartner !== undefined) return true;
+  if (answers.isExpat !== undefined) return true;
   return false;
 };
 
@@ -481,6 +496,20 @@ export const generateStarterPack = (
   if (answers.hasKids === false) {
     candidates = candidates.filter((tpl) => !matchesAny(haystack(tpl), KIDS_KEYWORDS));
   }
+  // Expat cluster is hard-gated by isExpat. Non-expats simply don't
+  // see "spoke the local language" / "missed home country" / "dealt
+  // with paperwork" — those would be irrelevant noise. Default to
+  // hide (only opt-in via isExpat === true).
+  if (answers.isExpat !== true) {
+    candidates = candidates.filter((tpl) => tpl.streamId !== "expat");
+  }
+  // Sensitive templates (intimacy, libido, ex). Default-hide; we'd
+  // rather under-suggest than have a sex template show up in the
+  // first 5 cards a stranger sees. Settings → "Show sensitive
+  // topics" can opt the user in (writes a localStorage flag the
+  // generator picks up via a separate path; for now: always hide
+  // here, the broader catalog in AddTrackerModal exposes them).
+  candidates = candidates.filter((tpl) => !tpl.sensitive);
   const scored = candidates.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
   const picked = pickTop(scored, count, 2);
 

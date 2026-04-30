@@ -98,6 +98,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<BackupPayload | null>(null);
   const [ideasDismissed, setIdeasDismissed] = useState(() => localStorage.getItem("memap_ideas_dismissed") === "true");
+  // "Show sensitive topics" toggle. Off by default. When on, the
+  // intimacy / libido / ex-partner templates appear in the Add
+  // Tracker library (still hidden from random "Idea of the Day"
+  // suggestions because users browse those passively). Stored under
+  // its own key so backup/restore preserves the user's preference.
+  const [showSensitive, setShowSensitive] = useState(
+    () => localStorage.getItem("memap_show_sensitive") === "true",
+  );
   // Inline diagnostic result for the haptics test button. Stored here
   // (not in a toast) because the user needs to see it for several
   // seconds and possibly screenshot it back to me — toasts auto-dismiss.
@@ -178,6 +186,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const handleToggleIdeas = (show: boolean) => {
     localStorage.setItem("memap_ideas_dismissed", show ? "false" : "true");
     setIdeasDismissed(!show);
+    window.dispatchEvent(new CustomEvent("memap-settings-changed"));
+  };
+
+  const handleToggleSensitive = (show: boolean) => {
+    localStorage.setItem("memap_show_sensitive", show ? "true" : "false");
+    setShowSensitive(show);
     window.dispatchEvent(new CustomEvent("memap-settings-changed"));
   };
 
@@ -910,7 +924,30 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   onCheckedChange={handleToggleIdeas}
                 />
               </div>
-              
+
+              {/* Sensitive-topics toggle. Off by default for store
+                  rating safety — sex / libido / ex-partner templates
+                  exist in the library but stay hidden until the user
+                  flips this on. Symmetric with the isExpat gate but
+                  controlled here in Settings rather than the one-time
+                  onboarding flow (so the user can turn it on later
+                  without re-running the tour). */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <Label htmlFor="sensitive-toggle" className="text-sm block">
+                    {t("settings.showSensitive")}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t("settings.showSensitiveDesc")}
+                  </p>
+                </div>
+                <Switch
+                  id="sensitive-toggle"
+                  checked={showSensitive}
+                  onCheckedChange={handleToggleSensitive}
+                />
+              </div>
+
               <div className="space-y-2">
                 {trackers.map(tracker => (
                   <div

@@ -90,6 +90,7 @@ const ru: Translation = {
       kids: "Есть дети?",
       pets: "Есть питомцы?",
       partner: "Есть партнёр?",
+      expat: "Живёшь не в родной стране?",
       yes: "Да",
       no: "Нет",
     },
@@ -206,6 +207,8 @@ const ru: Translation = {
     trackersTitle: "Вопросы",
     trackersDesc: "Включай и выключай вопросы для ежедневных сессий",
     noTrackersYet: "Пока нет вопросов",
+    showSensitive: "Чувствительные темы",
+    showSensitiveDesc: "Близость, либидо, бывшие — добавит ещё несколько вопросов в библиотеку",
 
     helpTitle: "Помощь",
     showAppTour: "Посмотреть, как работает приложение",
