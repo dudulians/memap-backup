@@ -2,9 +2,14 @@ import { useMemo } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { getCategoryColor } from "@/lib/categoryHelpers";
-import { Lightbulb, ArrowRight, LineChart as LineChartIcon } from "lucide-react";
+import { Lightbulb, ArrowRight, LineChart as LineChartIcon, AlertTriangle, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import {
+  computeCorrelations,
+  phiStrengthLabel,
+  isHighlySignificant,
+} from "@/lib/correlations";
 
 interface CorrelationInsightsProps {
   trackers: Tracker[];
@@ -13,117 +18,14 @@ interface CorrelationInsightsProps {
   onSelectPair?: (ids: [string, string]) => void;
 }
 
-interface Correlation {
-  trackerA: Tracker;
-  trackerB: Tracker;
-  correlation: number;
-  direction: "positive" | "negative";
-  message: string;
-  sharedDays: number;
-}
-
 export const CorrelationInsights = ({ trackers, entries, onSelectPair }: CorrelationInsightsProps) => {
-  const { t } = useTranslation();
-  const correlations = useMemo(() => {
-    const activeTrackers = trackers.filter((t) => !t.archived);
-    if (activeTrackers.length < 2) return [];
+  const { t, i18n } = useTranslation();
+  const isRu = (i18n.language || "en").startsWith("ru");
 
-    // Build a map of date -> tracker answers
-    const dateMap = new Map<string, Map<string, boolean>>();
-    for (const entry of entries) {
-      if (!dateMap.has(entry.date)) {
-        dateMap.set(entry.date, new Map());
-      }
-      dateMap.get(entry.date)!.set(entry.trackerId, entry.value);
-    }
-
-    const results: Correlation[] = [];
-
-    // Check all pairs
-    for (let i = 0; i < activeTrackers.length; i++) {
-      for (let j = i + 1; j < activeTrackers.length; j++) {
-        const a = activeTrackers[i];
-        const b = activeTrackers[j];
-
-        // Find days where both were answered
-        let bothYes = 0;
-        let bothNo = 0;
-        let aYesBNo = 0;
-        let aNoBYes = 0;
-        let sharedDays = 0;
-
-        for (const [, trackerMap] of dateMap) {
-          const aVal = trackerMap.get(a.id);
-          const bVal = trackerMap.get(b.id);
-          if (aVal === undefined || bVal === undefined) continue;
-
-          sharedDays++;
-          if (aVal && bVal) bothYes++;
-          else if (!aVal && !bVal) bothNo++;
-          else if (aVal && !bVal) aYesBNo++;
-          else aNoBYes++;
-        }
-
-        // Need at least 7 shared days for meaningful correlation
-        if (sharedDays < 7) continue;
-
-        const agreement = (bothYes + bothNo) / sharedDays;
-        const disagreement = (aYesBNo + aNoBYes) / sharedDays;
-
-        // Simple phi coefficient approximation
-        const total = sharedDays;
-        const n11 = bothYes;
-        const n00 = bothNo;
-        const n10 = aYesBNo;
-        const n01 = aNoBYes;
-
-        const rowA = n11 + n10;
-        const rowB = n01 + n00;
-        const colA = n11 + n01;
-        const colB = n10 + n00;
-
-        const denom = Math.sqrt(rowA * rowB * colA * colB);
-        if (denom === 0) continue;
-
-        const phi = (n11 * n00 - n10 * n01) / denom;
-        const absPhi = Math.abs(phi);
-
-        // Only show correlations above threshold
-        if (absPhi < 0.25) continue;
-
-        const isPositive = phi > 0;
-
-        const aTitle = localizeTrackerTitle(a.title);
-        const bTitle = localizeTrackerTitle(b.title);
-        let message: string;
-        if (isPositive) {
-          if (absPhi > 0.5) {
-            message = t("correlations.posStrong", { a: aTitle, b: bTitle });
-          } else {
-            message = t("correlations.posMild", { a: aTitle, b: bTitle });
-          }
-        } else {
-          if (absPhi > 0.5) {
-            message = t("correlations.negStrong", { a: aTitle, b: bTitle });
-          } else {
-            message = t("correlations.negMild", { a: aTitle, b: bTitle });
-          }
-        }
-
-        results.push({
-          trackerA: a,
-          trackerB: b,
-          correlation: phi,
-          direction: isPositive ? "positive" : "negative",
-          message,
-          sharedDays,
-        });
-      }
-    }
-
-    // Sort by strength
-    return results.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)).slice(0, 5);
-  }, [trackers, entries, t]);
+  const correlations = useMemo(
+    () => computeCorrelations(trackers, entries, 5),
+    [trackers, entries],
+  );
 
   if (correlations.length === 0) {
     return (
@@ -161,19 +63,41 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
           {correlations.map((c, idx) => {
             const colorA = getCategoryColor(c.trackerA.category);
             const colorB = getCategoryColor(c.trackerB.category);
-            const strength = Math.abs(c.correlation);
-            const strengthLabel =
-              strength > 0.5 ? t("correlations.strong") : strength > 0.35 ? t("correlations.moderate") : t("correlations.mild");
+            const aTitle = localizeTrackerTitle(c.trackerA.title);
+            const bTitle = localizeTrackerTitle(c.trackerB.title);
+
+            const aYes = c.counts.bothYes + c.counts.aYesBNo;       // total days A=yes
+            const aNo = c.counts.aNoBYes + c.counts.bothNo;          // total days A=no
+            const bYesGivenAYes = c.counts.bothYes;                  // out of aYes
+            const bYesGivenANo = c.counts.aNoBYes;                   // out of aNo
+
+            const positive = c.phi > 0;
+            const strengthLbl = phiStrengthLabel(c.phi);
+            const robust = isHighlySignificant(c.chiSquare);
+
+            // Risk-ratio framing: when ratio > 1, B is more likely
+            // when A=yes; when < 1, less likely. Pick the bigger-than-1
+            // direction for cleaner phrasing ("X times more likely")
+            // regardless of which way phi happens to be signed.
+            const ratio = c.riskRatio;
+            const ratioForDisplay = ratio >= 1 ? ratio : 1 / ratio;
+            const ratioStr = ratioForDisplay >= 10
+              ? `${Math.round(ratioForDisplay)}`
+              : ratioForDisplay.toFixed(1);
+
+            // Lag → human label
+            const lagLabel =
+              c.lag === 0
+                ? t("correlations.lagSameDay")
+                : c.lag === 1
+                  ? t("correlations.lagAPredictsB")
+                  : t("correlations.lagBPredictsA");
 
             const interactive = !!onSelectPair;
-            // Tap → tell parent to switch to Trends with this pair
-            // pre-selected. Whole card is tappable for a generous touch
-            // target (premium feel, no tiny "open" button).
             const handleTap = () => {
-              if (onSelectPair) {
-                onSelectPair([c.trackerA.id, c.trackerB.id]);
-              }
+              if (onSelectPair) onSelectPair([c.trackerA.id, c.trackerB.id]);
             };
+
             return (
               <div
                 key={idx}
@@ -191,14 +115,14 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                     : undefined
                 }
                 className={
-                  "p-3 rounded-2xl bg-muted/20 border border-border/50 space-y-2 transition-all" +
+                  "p-3 rounded-2xl bg-muted/20 border border-border/50 space-y-2.5 transition-all" +
                   (interactive
                     ? " cursor-pointer hover:bg-muted/30 hover:border-border active:scale-[0.99]"
                     : "")
                 }
               >
-                {/* Tracker pair visualization */}
-                <div className="flex items-center gap-2 text-sm">
+                {/* Tracker pair + lag arrow */}
+                <div className="flex items-center gap-2 text-sm flex-wrap">
                   <span
                     className="px-2 py-0.5 rounded-full text-xs font-medium"
                     style={{
@@ -206,7 +130,7 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                       color: `hsl(var(--${colorA}))`,
                     }}
                   >
-                    {localizeTrackerTitle(c.trackerA.title)}
+                    {aTitle}
                   </span>
                   <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                   <span
@@ -216,32 +140,79 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                       color: `hsl(var(--${colorB}))`,
                     }}
                   >
-                    {localizeTrackerTitle(c.trackerB.title)}
+                    {bTitle}
                   </span>
+                  {c.lag !== 0 && (
+                    <span className="text-[10px] text-muted-foreground">
+                      · {lagLabel}
+                    </span>
+                  )}
                 </div>
 
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {c.message}
-                </p>
+                {/* Raw evidence — the heart of the new design. Show
+                    actual day counts so the user judges the pattern,
+                    not an abstract score. */}
+                <div className="text-xs leading-relaxed space-y-1 text-foreground/80 tabular-nums">
+                  <div>
+                    {t("correlations.factWith", {
+                      a: aTitle,
+                      bYes: bYesGivenAYes,
+                      total: aYes,
+                      bTitle: bTitle.toLowerCase(),
+                    })}
+                  </div>
+                  <div className="text-muted-foreground">
+                    {t("correlations.factWithout", {
+                      a: aTitle.toLowerCase(),
+                      bYes: bYesGivenANo,
+                      total: aNo,
+                      bTitle: bTitle.toLowerCase(),
+                    })}
+                  </div>
+                  <div className="font-medium pt-0.5" style={{ color: "hsl(var(--strong))" }}>
+                    {positive
+                      ? t("correlations.timesMore", { ratio: ratioStr })
+                      : t("correlations.timesLess", { ratio: ratioStr })}
+                  </div>
+                </div>
 
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                      c.direction === "positive"
-                        ? "bg-balanced/20 text-balanced"
-                        : "bg-strong/20 text-strong"
-                    }`}
-                  >
-                    {strengthLabel} {c.direction === "positive" ? "↑↑" : "↑↓"}
-                  </span>
-                  {interactive ? (
-                    <span className="flex items-center gap-1 text-[10px] text-primary font-medium">
-                      <LineChartIcon className="h-3 w-3" strokeWidth={2} />
-                      {t("correlations.viewInTrends")}
+                {/* Bottom row: strength + sample size + open Trends */}
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                        positive
+                          ? "bg-balanced/20 text-balanced"
+                          : "bg-strong/20 text-strong"
+                      }`}
+                    >
+                      {t(`correlations.${strengthLbl}`)}
+                      {robust && " ✓"}
                     </span>
-                  ) : (
+                    {!c.isExpected && (
+                      <span
+                        className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-amber-500/10"
+                        style={{ color: "hsl(35 90% 45%)" }}
+                        title={t("correlations.unexpectedHint")}
+                      >
+                        <AlertTriangle className="h-2.5 w-2.5" />
+                        {t("correlations.unexpected")}
+                      </span>
+                    )}
+                    {c.isExpected && (
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-primary/10 text-primary">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        {t("correlations.expected")}
+                      </span>
+                    )}
                     <span className="text-[10px] text-muted-foreground">
                       {t("correlations.sharedDays", { count: c.sharedDays })}
+                    </span>
+                  </div>
+                  {interactive && (
+                    <span className="flex items-center gap-1 text-[10px] text-primary font-medium shrink-0">
+                      <LineChartIcon className="h-3 w-3" strokeWidth={2} />
+                      {t("correlations.viewInTrends")}
                     </span>
                   )}
                 </div>
