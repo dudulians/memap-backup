@@ -11,8 +11,8 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Shuffle, Pencil, CalendarDays, 
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { getRelatedQuestions, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
 import { playSwipeSound } from "@/lib/feedback";
@@ -156,22 +156,51 @@ export const DailySession = ({
     const existingTrackerIds = new Set(trackers.map(t => t.id));
 
     if (playMode) {
-      // Pull from BOTH catalogs so the random pool is ~95 templates
-      // wide instead of just the 18 in TEMPLATE_GROUPS. Without this,
-      // a second play round could only offer 8 unique cards (18 - 10
-      // already-played) and felt like reruns.
-      const fromGroups = TEMPLATE_GROUPS.flatMap((g) => g.templates).map((tpl) => ({
-        id: `tg-${tpl.id}`,
-        title: tpl.title,
-        questionText: tpl.questionText,
-        category: tpl.category,
-        subcategory: tpl.subcategory,
-        periodDays: tpl.periodDays,
-        threshold: tpl.threshold,
-        problemWhen: tpl.problemWhen,
-        adviceAboveThreshold: tpl.adviceAboveThreshold,
-      }));
-      const fromStreams = LIFE_STREAMS.flatMap((s) => s.templates).map((tpl) => ({
+      // 1.6 SHIFT: not just "10 random questions" — the pool is now
+      // weighted toward templates RELATED to what the user already
+      // tracks. If the user has "headache" and "drank-alcohol" as
+      // active questions, the recommendation engine will surface
+      // "slept-enough", "coffee-late", "screen-time-long" etc. (things
+      // medically/psychologically tied to those). Falls back to fully-
+      // random when the user has no recognisable templates yet (all
+      // custom-typed or empty deck).
+
+      const allTemplates = LIFE_STREAMS.flatMap((s) => s.templates);
+
+      // Existing trackers — match BY TEMPLATE ID, not just by title.
+      // Title-only match used to miss the case where a stored tracker
+      // says "Поссорилась с партнёром" (RU) and a candidate is
+      // "Argued with partner" (EN) — they're the same template, just
+      // localized differently. matchTemplateIdByTitle resolves both
+      // sides through LIFE_STREAMS' bilingual fields.
+      const existingIds = new Set<string>();
+      trackers.forEach((tr) => {
+        const tplId = matchTemplateIdByTitle(tr.title);
+        if (tplId) existingIds.add(tplId);
+      });
+
+      // Recently-played: persisted in localStorage so repeated rounds
+      // don't immediately resurface the same templates the user just
+      // discarded. Capped at 30 ids (FIFO). User complaint: "I just
+      // deleted these and they came back next round" — fixed here.
+      const RECENT_KEY = "memap_recent_play_ids";
+      const RECENT_CAP = 30;
+      const readRecent = (): string[] => {
+        try {
+          const raw = localStorage.getItem(RECENT_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed.slice(0, RECENT_CAP) : [];
+        } catch {
+          return [];
+        }
+      };
+      const recentIds = new Set(readRecent());
+
+      const relatedTemplates = getRelatedQuestions(trackers.map((tr) => tr.title));
+      const relatedIdSet = new Set(relatedTemplates.map((t) => t.id));
+
+      const toPlayItem = (tpl: typeof allTemplates[number]) => ({
         id: `ls-${tpl.id}`,
         title: tpl.title,
         questionText: tpl.questionText,
@@ -181,26 +210,45 @@ export const DailySession = ({
         threshold: tpl.threshold,
         problemWhen: tpl.problemWhen,
         adviceAboveThreshold: tpl.adviceAboveThreshold,
-      }));
-      const all = [...fromGroups, ...fromStreams];
-      // Existing-title set comparing both stored EN and what would be
-      // displayed RU — covers the case where one side of the catalog
-      // pair is stored and the other side appears in the candidate.
-      const norm = (s: string) => s.toLowerCase().trim();
-      const existingTitles = new Set<string>();
-      trackers.forEach((tr) => existingTitles.add(norm(tr.title)));
-      // Dedup the catalog pool itself (an id-collision in the source
-      // catalogs would otherwise let the same title slip through twice).
-      const seenInPool = new Set<string>();
-      const available = all.filter((tpl) => {
-        const key = norm(tpl.title);
-        if (existingTitles.has(key)) return false;
-        if (seenInPool.has(key)) return false;
-        seenInPool.add(key);
-        return true;
       });
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      const picked = shuffled.slice(0, 10);
+
+      // Build pools — exclude existing-by-id AND recently-played.
+      // If the recent-played filter would empty everything (small
+      // library, user has played a lot), drop the recent filter as a
+      // graceful fallback so we never return zero items.
+      const baseEligible = allTemplates.filter((tpl) => !existingIds.has(tpl.id));
+      let withoutRecent = baseEligible.filter((tpl) => !recentIds.has(tpl.id));
+      if (withoutRecent.length < 10) {
+        // Library exhausted by recent — fall back to "ignore recent"
+        // for this round so the user doesn't get an empty deck.
+        withoutRecent = baseEligible;
+      }
+
+      const relatedPool = withoutRecent.filter((tpl) => relatedIdSet.has(tpl.id));
+      const otherPool = withoutRecent.filter((tpl) => !relatedIdSet.has(tpl.id));
+
+      const shuffle = <T,>(arr: T[]): T[] =>
+        [...arr].sort(() => Math.random() - 0.5);
+
+      // 70 % related (up to 7), filled with random from "other" pool.
+      // Caps gracefully when related pool is small (e.g. brand-new user).
+      const TARGET = 10;
+      const relatedTake = Math.min(7, relatedPool.length);
+      const fromRelated = shuffle(relatedPool).slice(0, relatedTake);
+      const fromOther = shuffle(otherPool).slice(0, TARGET - fromRelated.length);
+      const picked = shuffle([...fromRelated, ...fromOther]).map(toPlayItem);
+
+      // Persist this round's ids to the "recently played" tail so the
+      // next call to buildDeck excludes them. Strip the "ls-" prefix
+      // back to the raw template id.
+      try {
+        const justPlayedIds = picked.map((p) => p.id.replace(/^ls-/, ""));
+        const newRecent = [...justPlayedIds, ...readRecent()].slice(0, RECENT_CAP);
+        localStorage.setItem(RECENT_KEY, JSON.stringify(newRecent));
+      } catch {
+        // localStorage full or disabled — best-effort, no-op.
+      }
+
       return picked.map((tpl) => ({
         tracker: {
           id: `play-${tpl.id}`,

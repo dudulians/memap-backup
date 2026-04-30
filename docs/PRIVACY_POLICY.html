@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — MeMap</title>
+  <style>
+    :root {
+      --bg: #fbf8f2;
+      --fg: #2c2a26;
+      --muted: #6b6862;
+      --accent: #4ad6c8;
+      --card: #ffffff;
+      --border: rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    h2 {
+      margin: 32px 0 12px 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    h3 {
+      margin: 20px 0 8px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .lang-switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .lang-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--fg);
+      text-decoration: none;
+    }
+    .lang-btn.active {
+      background: var(--fg);
+      color: var(--bg);
+      border-color: var(--fg);
+    }
+    .updated {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .lede {
+      font-size: 17px;
+      font-weight: 500;
+      padding: 14px 18px;
+      background: rgba(74, 214, 200, 0.08);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      margin: 16px 0 24px;
+    }
+    ul {
+      padding-left: 22px;
+      margin: 8px 0 16px;
+    }
+    li { margin-bottom: 6px; }
+    a { color: #1d77b8; }
+    .lang-section { display: none; }
+    .lang-section.active { display: block; }
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 32px;
+    }
+    code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="lang-switch">
+      <a href="#" class="lang-btn active" data-lang="en" onclick="setLang('en'); return false;">English</a>
+      <a href="#" class="lang-btn" data-lang="ru" onclick="setLang('ru'); return false;">Русский</a>
+    </div>
+
+    <!-- ═══════════ ENGLISH ═══════════ -->
+    <div class="lang-section active" data-lang="en">
+      <div class="card">
+        <h1>Privacy Policy — MeMap</h1>
+        <p class="updated">Last updated: April 30, 2026</p>
+
+        <p class="lede">MeMap doesn't collect, store, or transmit any of your personal data. Everything stays on your device.</p>
+
+        <h2>What we don't do</h2>
+        <ul>
+          <li>We don't have user accounts.</li>
+          <li>We don't have a server that sees your data.</li>
+          <li>We don't use analytics tools (no Google Analytics, Firebase, Mixpanel, Sentry, etc.).</li>
+          <li>We don't show ads.</li>
+          <li>We don't sell, share, or transmit your data to third parties.</li>
+          <li>We don't track your behaviour.</li>
+          <li>We don't access your contacts, photos, microphone, or camera unless you explicitly grant a feature-specific permission (e.g. for notifications).</li>
+        </ul>
+
+        <h2>What MeMap stores</h2>
+        <p>All trackers, daily entries, notes, and settings you create are saved <strong>only on your device</strong>, in the local app storage that the operating system provides. This data:</p>
+        <ul>
+          <li>Never leaves your device unless YOU export it (using Settings → Export).</li>
+          <li>Is deleted when you uninstall the app or use Settings → Reset.</li>
+          <li>Is not accessible to us, the developer.</li>
+        </ul>
+
+        <h2>Permissions</h2>
+        <p>MeMap may ask for these device permissions:</p>
+        <ul>
+          <li><strong>Local notifications</strong> — to remind you about your daily check-in. You can turn this off any time in your phone's Settings → Notifications → MeMap.</li>
+          <li><strong>Storage</strong> — to read/write your tracker data on the device. Required for the app to work.</li>
+        </ul>
+        <p>We don't request: Location, Camera, Microphone, Contacts, Calendar, or Health data.</p>
+
+        <h2>Children</h2>
+        <p>MeMap is not directed at children under 13. We don't knowingly collect data from children — but since we don't collect data from anyone, this is moot.</p>
+
+        <h2>Future changes</h2>
+        <p>If we ever add a cloud-sync feature (it's on the roadmap, not yet built), we will:</p>
+        <ol>
+          <li>Make it strictly opt-in.</li>
+          <li>Keep the local-only mode available forever.</li>
+          <li>Update this policy and notify you in the app before any data leaves your device.</li>
+        </ol>
+
+        <h2>Contact</h2>
+        <p>If you have questions about this policy or your data, email: <a href="mailto:uliana.d.usatova@gmail.com">uliana.d.usatova@gmail.com</a></p>
+      </div>
+    </div>
+
+    <!-- ═══════════ РУССКИЙ ═══════════ -->
+    <div class="lang-section" data-lang="ru">
+      <div class="card">
+        <h1>Политика конфиденциальности — MeMap</h1>
+        <p class="updated">Последнее обновление: 30 апреля 2026</p>
+
+        <p class="lede">MeMap не собирает, не хранит и не передаёт никаких ваших персональных данных. Всё остаётся на вашем устройстве.</p>
+
+        <h2>Чего мы НЕ делаем</h2>
+        <ul>
+          <li>У нас нет пользовательских аккаунтов.</li>
+          <li>У нас нет сервера, который видит ваши данные.</li>
+          <li>Мы не используем аналитику (нет Google Analytics, Firebase, Mixpanel, Sentry и пр.).</li>
+          <li>Мы не показываем рекламу.</li>
+          <li>Мы не продаём, не передаём и не отправляем ваши данные третьим лицам.</li>
+          <li>Мы не отслеживаем ваше поведение.</li>
+          <li>Мы не запрашиваем доступ к контактам, фото, микрофону или камере, если только вы сами не дадите разрешение для конкретной функции (например, уведомлений).</li>
+        </ul>
+
+        <h2>Что MeMap хранит</h2>
+        <p>Все вопросы, ответы за день, заметки и настройки сохраняются <strong>только на вашем устройстве</strong>, в локальном хранилище приложения, которое предоставляет операционная система. Эти данные:</p>
+        <ul>
+          <li>Никогда не покидают ваше устройство, если ВЫ сами не экспортируете их (через Настройки → Экспорт).</li>
+          <li>Удаляются при удалении приложения или сбросе через Настройки → Очистить всё.</li>
+          <li>Недоступны нам, разработчикам.</li>
+        </ul>
+
+        <h2>Разрешения</h2>
+        <p>MeMap может запросить такие разрешения устройства:</p>
+        <ul>
+          <li><strong>Локальные уведомления</strong> — чтобы напоминать о ежедневной сессии. Можно отключить в любой момент в системных Настройках → Уведомления → MeMap.</li>
+          <li><strong>Хранилище</strong> — чтобы читать/записывать ваши данные на устройстве. Необходимо для работы приложения.</li>
+        </ul>
+        <p>Мы НЕ запрашиваем: Геолокацию, Камеру, Микрофон, Контакты, Календарь или данные о здоровье.</p>
+
+        <h2>Дети</h2>
+        <p>MeMap не предназначен для детей младше 13 лет. Мы не собираем данные о детях сознательно — впрочем, поскольку мы не собираем данные ни от кого, это и так очевидно.</p>
+
+        <h2>Будущие изменения</h2>
+        <p>Если мы когда-либо добавим облачную синхронизацию (она в планах, но пока не реализована), мы:</p>
+        <ol>
+          <li>Сделаем её строго опциональной.</li>
+          <li>Оставим локальный режим навсегда.</li>
+          <li>Обновим эту политику и предупредим вас в приложении до того, как какие-либо данные покинут ваше устройство.</li>
+        </ol>
+
+        <h2>Контакты</h2>
+        <p>Если у вас есть вопросы по этой политике или вашим данным, пишите: <a href="mailto:uliana.d.usatova@gmail.com">uliana.d.usatova@gmail.com</a></p>
+      </div>
+    </div>
+
+    <p class="footer-note">© 2026 MeMap — <a href="https://github.com/dudulians/memap-backup">github.com/dudulians/memap-backup</a></p>
+  </div>
+
+  <script>
+    // Language switcher — picks initial language from URL hash or browser
+    const initialLang = (location.hash === '#ru' || (navigator.language || '').toLowerCase().startsWith('ru')) ? 'ru' : 'en';
+    setLang(initialLang);
+
+    function setLang(lng) {
+      document.querySelectorAll('.lang-section').forEach(el => {
+        el.classList.toggle('active', el.dataset.lang === lng);
+      });
+      document.querySelectorAll('.lang-btn').forEach(el => {
+        el.classList.toggle('active', el.dataset.lang === lng);
+      });
+      document.documentElement.lang = lng;
+      history.replaceState(null, '', '#' + lng);
+    }
+  </script>
+</body>
+</html>

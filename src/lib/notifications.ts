@@ -4,6 +4,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
 import { getTrackers, getEntries } from "@/lib/storage";
+import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
 
 const NOTIFICATION_ENABLED_KEY = "memap_notification_enabled";
 const NOTIFICATION_TIME_KEY = "memap_notification_time";
@@ -228,10 +229,30 @@ const saveNotifiedCycles = (data: Record<string, string>) => {
 const fireThresholdNotification = async (tracker: Tracker) => {
   const emoji = getTrackerEmoji(tracker.title);
   const title = i18n.t("notifications.thresholdTitle", { emoji });
-  const body = i18n.t("notifications.thresholdBody", {
-    title: tracker.title,
-    threshold: tracker.threshold,
-  });
+
+  // Localise the tracker's title and action (adviceAboveThreshold) into
+  // the active language. Stored values may be in either language depending
+  // on when/where the tracker was created; the localize helpers map
+  // through the EN↔RU pair tables and pass through unchanged for custom
+  // user-typed text.
+  const localizedTitle = localizeTrackerTitle(tracker.title);
+  const rawAction = (tracker.adviceAboveThreshold ?? "").trim();
+  const action = rawAction ? localizeTrackerAdvice(rawAction) : "";
+
+  // If the tracker has a user-defined action ("Action when pattern hits"),
+  // surface it directly in the notification body — that's the whole point
+  // of asking the user to write one. Without an action, fall back to the
+  // generic "time to act" wording.
+  const body = action
+    ? i18n.t("notifications.thresholdBodyWithAction", {
+        title: localizedTitle,
+        threshold: tracker.threshold,
+        action,
+      })
+    : i18n.t("notifications.thresholdBody", {
+        title: localizedTitle,
+        threshold: tracker.threshold,
+      });
 
   if (Capacitor.getPlatform() === "web") {
     if ("Notification" in window && Notification.permission === "granted") {

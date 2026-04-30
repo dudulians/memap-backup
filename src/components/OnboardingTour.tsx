@@ -228,7 +228,15 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
 
   useEffect(() => {
     if (open) {
-      setStep(hasExplicitLanguage() ? 0 : -1);
+      // Step flow:
+      //   -1 = Language picker (only on first install)
+      //   -2 = Welcome / mission intro (always shown after language is set)
+      //    0 = About you (gender) — first counted interview step
+      //  1-4 = Focus / Context / Goal / Stack reveal
+      // Welcome step intentionally uses a negative number so the progress
+      // dots (gated on `step >= 0`) skip it — it's an intro, not a
+      // collected answer.
+      setStep(hasExplicitLanguage() ? -2 : -1);
       setAnswers(readInterview());
       document.body.style.overflow = "hidden";
     }
@@ -322,7 +330,8 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
 
       <div className="relative z-10 h-full w-full overflow-y-auto">
         <div className="min-h-full flex items-center justify-center px-5 py-8">
-          {step === -1 && <LanguagePickerScreen onNext={() => setStep(0)} />}
+          {step === -1 && <LanguagePickerScreen onNext={() => setStep(-2)} />}
+          {step === -2 && <WelcomeScreen onNext={() => setStep(0)} />}
           {step === 0 && (
             <AboutYouScreen
               answers={answers}
@@ -555,6 +564,49 @@ const LanguagePickerScreen = ({ onNext }: { onNext: () => void }) => {
   );
 };
 
+// --- Screen -2: Welcome / mission ------------------------------------
+// Sits between Language pick and About-you. NOT counted in progress dots
+// (those gate on step >= 0). Pure intro — names the product positioning
+// in 5 sentences so the user knows what they signed up for before
+// answering interview questions.
+
+const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="w-full max-w-md mx-auto flex flex-col items-center animate-fade-in">
+      <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+        <Brain className="h-6 w-6" strokeWidth={1.75} />
+      </div>
+
+      <h1 className="font-serif text-2xl font-medium text-center mb-3">
+        {t("onboarding.welcome.title")}
+      </h1>
+
+      <div className="space-y-3 max-w-[340px] mb-6 text-center">
+        <p className="text-sm text-foreground/80 leading-relaxed">
+          {t("onboarding.welcome.body1")}
+        </p>
+        <p className="text-base font-semibold text-foreground">
+          {t("onboarding.welcome.tagline")}
+        </p>
+        <p className="text-sm text-foreground/80 leading-relaxed">
+          {t("onboarding.welcome.body2")}
+        </p>
+      </div>
+
+      <Button
+        size="lg"
+        onClick={onNext}
+        data-onb-interactive
+        className="rounded-full px-8 shadow-lg shadow-primary/20"
+      >
+        {t("onboarding.welcome.cta")}
+        <ArrowRight className="h-4 w-4 ml-1.5" />
+      </Button>
+    </div>
+  );
+};
+
 // --- Screen 0: About You --------------------------------------------
 
 const POL_OPTIONS: Pol[] = ["male", "female", "neutral"];
@@ -581,7 +633,7 @@ const AboutYouScreen = ({
         {t("onboarding.aboutYou.subtitle")}
       </p>
 
-      <div className="flex flex-wrap justify-center gap-2 mb-5">
+      <div className="flex flex-wrap justify-center gap-2 mb-3">
         {POL_OPTIONS.map((p) => (
           <Chip
             key={p}
@@ -593,20 +645,10 @@ const AboutYouScreen = ({
         ))}
       </div>
 
-      <div className="text-xs uppercase tracking-wide text-muted-foreground text-center mb-2">
-        {t("onboarding.aboutYou.ageLabel")}
-      </div>
-      <div className="flex flex-wrap justify-center gap-2 mb-3">
-        {AGE_OPTIONS.map((a) => (
-          <Chip
-            key={a}
-            selected={answers.age === a}
-            onClick={() => onPatch({ age: a })}
-          >
-            {a}
-          </Chip>
-        ))}
-      </div>
+      {/* Age question removed in 1.6 — was a +1 weak nudge in scoring,
+          adding friction to onboarding for almost no tailoring value.
+          The pol (gender) question stays because Russian verb gender
+          actually depends on it (polishRu uses pol at display time). */}
 
       <NavRow onSkip={onSkipStep} onNext={onNext} />
     </div>
@@ -679,13 +721,17 @@ const FocusScreen = ({
 // --- Screen 2: Context ----------------------------------------------
 
 interface ContextRow {
-  key: "kids" | "pets" | "partner";
-  field: "hasKids" | "hasPets" | "hasPartner";
+  key: "kids" | "partner";
+  field: "hasKids" | "hasPartner";
 }
 
+// Pets removed in 1.6 — the new template library has no pet-care
+// templates (no "walked the dog", "fed the cat" etc), and the only
+// pet-related template is "wanted-pet" in Big Decisions, which fits
+// people WITHOUT pets. So asking "got pets?" was at best useless and
+// at worst inverted the relevance. Removed to shorten the interview.
 const CONTEXT_ROWS: ContextRow[] = [
   { key: "kids", field: "hasKids" },
-  { key: "pets", field: "hasPets" },
   { key: "partner", field: "hasPartner" },
 ];
 
@@ -1045,6 +1091,23 @@ const StackRevealScreen = ({
               })}
         {!creating && <ArrowRight className="h-4 w-4 ml-1.5" />}
       </Button>
+
+      {/* The most important card is the one YOU write. Templates are
+          starter ideas — but the real value is in tracking what you
+          personally keep noticing. We surface this prominently below
+          the starter pack so users don't think the templates ARE the
+          product. Examples are deliberately personal and specific
+          (not generic "track your habits" filler). */}
+      <div className="mt-6 mb-2 max-w-[360px] w-full px-4">
+        <div className="text-[11px] text-center text-muted-foreground/80 leading-relaxed">
+          <p className="font-medium text-foreground/70 mb-1.5">
+            {t("onboarding.stackReveal.customHint")}
+          </p>
+          <p className="italic">
+            {t("onboarding.stackReveal.customExamples")}
+          </p>
+        </div>
+      </div>
 
       <NavRow onBack={creating ? undefined : onBack} />
     </div>

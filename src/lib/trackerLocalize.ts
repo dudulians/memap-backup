@@ -38,6 +38,196 @@ const LEGACY_TEMPLATE_GROUP_PAIRS: Array<[string, string]> = [
   ["Creative days", "Творческие дни"],
 ];
 
+// Title pairs for the OLD LIFE_STREAMS templates that existed before the
+// 1.6 repositioning rewrite. These templates are no longer in
+// LIFE_STREAMS, but user-stored trackers still reference these strings,
+// so we need to keep the EN↔RU map alive for them. Without this list,
+// switching language leaves these trackers showing in their stored
+// language (the user's "Felt like starting new life sits in English
+// when I switch to Russian" complaint).
+const LEGACY_LIFESTREAMS_TITLE_PAIRS: Array<[string, string]> = [
+  // Emotions & Mind
+  ["Woke up rested", "Проснулся(ась) отдохнувшим"],
+  ["Anxious today?", "Тревожно сегодня?"],
+  ["Felt happy today", "Чувствовал(а) себя счастливым(ой)"],
+  ["Brain fog", "Туман в голове"],
+  ["Creative moment", "Творческий момент"],
+  ["Cried today", "Сегодня плакал(а)"],
+  ["Felt gratitude", "Чувствовал(а) благодарность"],
+  ["Anxious for no reason", "Тревога без причины"],
+  ["Felt inspired", "Чувствовал(а) вдохновение"],
+  ["Wanted to have a child", "Хотел(а) завести ребёнка"],
+  ["Felt emotionally empty", "Эмоциональная пустота"],
+  ["Wanted to be alone", "Хотел(а) побыть один"],
+  ["Laughed out loud", "Смеялся(ась) в голос"],
+  // Body & Sensations
+  ["Headache today", "Сегодня голова болела"],
+  ["Felt energized", "Чувствовал(а) энергию"],
+  ["Stomach bothered me", "Беспокоил живот"],
+  ["Body felt good", "Тело ощущалось хорошо"],
+  ["Physical pain", "Физическая боль"],
+  ["Painful cramps", "Болезненные спазмы"],
+  ["Stumbled or tripped", "Спотыкался(ась) или падал(а)"],
+  ["Felt dizzy", "Кружилась голова"],
+  ["Back hurt", "Болела спина"],
+  ["Tired after eating", "Уставал(а) после еды"],
+  // Connections & Love
+  ["Felt loved", "Чувствовал(а) себя любимым"],
+  ["Reached out to someone", "Связался(ась) с кем-то"],
+  ["Argued with partner", "Ссорился(ась) с партнёром"],
+  ["Felt lonely", "Чувствовал(а) одиночество"],
+  ["Quality time", "Качественное время"],
+  ["Got an affectionate gesture", "Получил(а) жест внимания"],
+  ["Anyone hug me", "Меня кто-то обнял"],
+  ["Called a friend", "Звонил(а) другу"],
+  ["Friend called me first", "Друг позвонил первым"],
+  ["Felt close to partner", "Чувствовал(а) близость с партнёром"],
+  ["Someone made me smile", "Кто-то заставил улыбнуться"],
+  ["Spent time with family", "Провёл(а) время с семьёй"],
+  // Voice & Behavior
+  ["Spoke my truth", "Говорил(а) свою правду"],
+  ["Interrupted others", "Перебивал(а) других"],
+  ["Apologized today", "Извинялся(ась) сегодня"],
+  ["Raised my voice", "Повышал(а) голос"],
+  ["Said no", "Сказал(а) нет"],
+  ["Swore today", "Ругался(ась) матом"],
+  ["Complimented someone", "Сделал(а) комплимент"],
+  ["Said sorry first", "Извинился(ась) первым"],
+  ["Stayed calm instead of reacting", "Оставался(ась) спокойным вместо реакции"],
+  ["Said no without guilt", "Сказал(а) нет без вины"],
+  // Health & Routine
+  ["Slept well", "Хорошо выспался(ась)"],
+  ["Drank enough water", "Пил(а) достаточно воды"],
+  ["High caffeine day", "День с большим кофеином"],
+  ["Ate mindfully", "Ел(а) осознанно"],
+  ["Medication helped", "Лекарство помогло"],
+  ["Felt side effects", "Чувствовал(а) побочные эффекты"],
+  ["Took pills on time", "Принимал(а) таблетки вовремя"],
+  // Curious & Random
+  ["Learned something new", "Узнал(а) что-то новое"],
+  ["Random kindness", "Случайная доброта"],
+  ["Noticed nature", "Замечал(а) природу"],
+  ["Lucky moments", "Удачные моменты"],
+  ["Changed my mind", "Поменял(а) мнение"],
+  ["Had a weird dream", "Видел(а) странный сон"],
+  ["Saw something beautiful", "Видел(а) что-то красивое"],
+  ["Found or lost something", "Нашёл(а) или потерял(а) что-то"],
+  ["Experienced déjà vu", "Ощутил(а) дежавю"],
+  ["Heard a funny phrase", "Слышал(а) забавную фразу"],
+  // Fun & Weird
+  ["Laughed really hard", "Очень сильно смеялся(ась)"],
+  ["Made someone laugh", "Рассмешил(а) кого-то"],
+  ["Wore bright colors", "Носил(а) яркие цвета"],
+  ["Sang out loud", "Пел(а) вслух"],
+  ["Danced with no music", "Танцевал(а) без музыки"],
+  ["Sang in the shower", "Пел(а) в душе"],
+  ["Imagined myself as movie character", "Представлял(а) себя киногероем"],
+  ["Made a meme about my day", "Сделал(а) мем про свой день"],
+  ["Felt like starting new life", "Хотел(а) начать новую жизнь"],
+  // Social & Digital
+  ["Doomscrolling time", "Залипал(а) в ленте"],
+  ["Posted something", "Что-то выложил(а)"],
+  ["Phone-free hour", "Час без телефона"],
+  ["Compared myself online", "Сравнивал(а) себя в сети"],
+  ["Sent a voice note", "Отправил(а) голосовое"],
+  ["Scrolled social media hour+", "Скроллил(а) соцсети больше часа"],
+  ["Got a like that mattered", "Получил(а) важный лайк"],
+  ["Commented on someone's post", "Оставил(а) комментарий"],
+  ["Checked ex's profile", "Заходил(а) в профиль бывшего/бывшей"],
+];
+
+const LEGACY_LIFESTREAMS_QUESTION_PAIRS: Array<[string, string]> = [
+  // Emotions & Mind
+  ["Did you wake up feeling rested?", "Ты проснулся(ась) сегодня отдохнувшим?"],
+  ["Did anxiety show up today?", "Приходила ли сегодня тревога?"],
+  ["Did you feel happy today?", "Чувствовал(а) ли ты себя сегодня счастливым(ой)?"],
+  ["Did you feel noticeable brain fog today?", "Чувствовал(а) ли ты сегодня заметный туман в голове?"],
+  ["Did you feel a creative spark today?", "Ощущал(а) ли ты сегодня творческую искру?"],
+  ["Did I cry today?", "Я сегодня плакал(а)?"],
+  ["Did I feel gratitude for something today?", "Я чувствовал(а) за что-то благодарность сегодня?"],
+  ["Did I feel anxious for no reason?", "Я чувствовал(а) тревогу без причины?"],
+  ["Did I feel inspired today?", "Я чувствовал(а) сегодня вдохновение?"],
+  ["Did I want to have a child today?", "Я хотел(а) сегодня завести ребёнка?"],
+  ["Did I feel emotionally empty?", "Я чувствовал(а) эмоциональную пустоту?"],
+  ["Did I strongly want to be left alone today?", "Мне сегодня сильно хотелось, чтобы меня оставили в покое?"],
+  ["Did I laugh out loud?", "Я сегодня громко смеялся(ась)?"],
+  // Body & Sensations
+  ["Did you have a headache today?", "У тебя сегодня болела голова?"],
+  ["Did you feel energized today?", "Ты чувствовал(а) сегодня прилив энергии?"],
+  ["Did your stomach bother you today?", "Тебя сегодня беспокоил живот?"],
+  ["Did your body feel comfortable and good today?", "Тело ощущалось сегодня комфортно и хорошо?"],
+  ["Did you feel significant physical pain today?", "Ты чувствовал(а) сегодня заметную физическую боль?"],
+  ["Did I have painful cramps today?", "У меня сегодня были болезненные спазмы?"],
+  ["Did I stumble or trip?", "Я сегодня спотыкался(ась) или чуть не упал(а)?"],
+  ["Did I feel dizzy?", "У меня сегодня кружилась голова?"],
+  ["Did my back hurt?", "У меня сегодня болела спина?"],
+  ["Did I feel tired after eating?", "Я чувствовал(а) усталость после еды?"],
+  // Connections
+  ["Did you feel loved today?", "Ты чувствовал(а) себя сегодня любимым?"],
+  ["Did you reach out to a friend or loved one?", "Ты написал(а) или позвонил(а) другу либо близкому?"],
+  ["Did you argue with your partner today?", "Ты сегодня ссорился(ась) с партнёром?"],
+  ["Did you feel lonely today?", "Ты чувствовал(а) сегодня одиночество?"],
+  ["Did you spend real quality time with someone you care about?", "Ты провёл(а) настоящее качественное время с близким человеком?"],
+  ["Did my partner do something affectionate for me today (gift, note, hug, kind word)?", "Партнёр сделал сегодня для меня что-то приятное (подарок, записка, объятие, доброе слово)?"],
+  ["Did anyone hug me today?", "Меня сегодня кто-нибудь обнял?"],
+  ["Did I call a friend today?", "Я сегодня звонил(а) другу?"],
+  ["Did a friend call me first?", "Мне сегодня первым позвонил друг?"],
+  ["Did I feel close to my partner?", "Я чувствовал(а) сегодня близость с партнёром?"],
+  ["Did anyone make me smile unexpectedly?", "Кто-то неожиданно заставил меня сегодня улыбнуться?"],
+  ["Did I spend time with family?", "Я провёл(а) сегодня время с семьёй?"],
+  // Voice
+  ["Did you say what you really meant today?", "Ты сегодня сказал(а) то, что на самом деле думал(а)?"],
+  ["Did you interrupt someone while they were talking?", "Ты сегодня перебивал(а) кого-то во время разговора?"],
+  ["Did I apologize for something today?", "Я сегодня за что-то извинялся(ась)?"],
+  ["Did you raise your voice or yell today?", "Ты сегодня повышал(а) голос или кричал(а)?"],
+  ["Did you say 'no' to something you didn't want to do?", "Ты сегодня сказал(а) «нет» тому, чего не хотел(а) делать?"],
+  ["Did I swear today?", "Я сегодня ругался(ась) матом?"],
+  ["Did I compliment someone?", "Я сегодня сделал(а) кому-то комплимент?"],
+  ["Did I say 'sorry' first?", "Я сегодня извинился(ась) первым?"],
+  ["Did I manage to stay calm instead of reacting?", "Мне удалось остаться спокойным, а не реагировать?"],
+  ["Did I say 'no' without guilt?", "Я сказал(а) «нет» без чувства вины?"],
+  // Health
+  ["Did you sleep well last night?", "Ты хорошо спал(а) этой ночью?"],
+  ["Did you intentionally move your body today (walk, stretch, dance)?", "Ты сегодня намеренно двигался(ась) (ходил(а), тянулся(ась), танцевал(а))?"],
+  ["Did you drink enough water today?", "Ты сегодня пил(а) достаточно воды?"],
+  ["Did you have more than 2 caffeinated drinks today?", "У тебя сегодня было больше 2 напитков с кофеином?"],
+  ["Did you eat at least one meal without screens or rushing?", "Ты ел(а) хотя бы один раз без экранов и без спешки?"],
+  ["Did my medication help today?", "Моё лекарство сегодня помогло?"],
+  ["Did I feel side effects?", "Я чувствовал(а) побочные эффекты?"],
+  ["Did I take my pills on time?", "Я принял(а) сегодня таблетки вовремя?"],
+  // Curious
+  ["Did you learn something new today?", "Ты сегодня узнал(а) что-то новое?"],
+  ["Did you do something kind for a stranger?", "Ты сделал(а) сегодня что-то доброе для незнакомца?"],
+  ["Did you notice something beautiful in nature today?", "Ты заметил(а) сегодня что-то красивое в природе?"],
+  ["Did something lucky or coincidental happen?", "Случилось ли что-то удачное или совпадение?"],
+  ["Did you change your mind about something today?", "Ты сегодня поменял(а) о чём-то своё мнение?"],
+  ["Did I have a weird dream?", "Мне снился странный сон?"],
+  ["Did I see something beautiful on the street?", "Я видел(а) сегодня что-то красивое на улице?"],
+  ["Did I find or lose something small?", "Я сегодня что-то маленькое нашёл(а) или потерял(а)?"],
+  ["Did I experience déjà vu?", "Я сегодня ощутил(а) дежавю?"],
+  ["Did I hear a funny phrase today?", "Я слышал(а) сегодня забавную фразу?"],
+  // Fun
+  ["Did you laugh so hard you cried or snorted?", "Ты сегодня смеялся(ась) так, что плакал(а) или фыркал(а)?"],
+  ["Did you make someone laugh today?", "Ты сегодня кого-нибудь рассмешил(а)?"],
+  ["Did you wear bright or fun colors today?", "Ты надел(а) сегодня что-то яркое или весёлое по цвету?"],
+  ["Did you sing out loud today (even badly)?", "Ты сегодня пел(а) вслух (пусть даже плохо)?"],
+  ["Did I dance with no music?", "Я сегодня танцевал(а) без музыки?"],
+  ["Did I sing in the shower?", "Я сегодня пел(а) в душе?"],
+  ["Did I imagine myself as a movie character?", "Я представлял(а) себя сегодня героем фильма?"],
+  ["Did I make a meme about my day?", "Я сделал(а) сегодня мем про свой день?"],
+  ["Did I feel like starting a new life somewhere?", "Я хотел(а) сегодня начать новую жизнь где-то ещё?"],
+  // Social
+  ["Did you spend time doomscrolling or stuck in feeds?", "Ты сегодня залипал(а) в ленте или бесконечно скроллил(а)?"],
+  ["Did you post anything on social media?", "Ты сегодня что-то выкладывал(а) в соцсетях?"],
+  ["Did you have at least one hour without your phone?", "У тебя был сегодня хотя бы один час без телефона?"],
+  ["Did I compare myself to someone online?", "Я сегодня сравнивал(а) себя с кем-то из соцсетей?"],
+  ["Did I send a voice message instead of typing?", "Ты сегодня отправил(а) голосовое вместо того, чтобы напечатать?"],
+  ["Did I scroll social media for more than an hour?", "Я сегодня скроллил(а) соцсети дольше часа?"],
+  ["Did I get a like that mattered to me?", "Мне сегодня пришёл лайк, который был для меня важен?"],
+  ["Did I comment on someone's post?", "Я сегодня оставил(а) комментарий под чужим постом?"],
+  ["Did I check my ex's profile or stories?", "Я сегодня заглядывал(а) в профиль или сторис бывшего/бывшей?"],
+];
+
 // Group header translations for the legacy TEMPLATE_GROUPS catalog — the
 // "Emotions & Mind", "Connections & Love" etc. section titles in the
 // AddTrackerModal suggested-ideas view.
@@ -97,6 +287,11 @@ const ONBOARDING_STARTER_TITLE_PAIRS: Array<[string, string]> = [
   ["My voice", "Мой голос"],
   ["Joy", "Радость"],
   ["My space", "Моё пространство"],
+  // DEFAULT_STARTERS pairs — universal-5 fallback set used when the
+  // interview gives no signal. Without these here, switching language
+  // leaves the starter trackers in their stored language ("Close ones"
+  // staying in EN view when stored from RU, etc.).
+  ["Close ones", "Близкие"],
 ];
 
 const ONBOARDING_STARTER_QUESTION_PAIRS: Array<[string, string]> = [
@@ -115,6 +310,13 @@ const ONBOARDING_STARTER_QUESTION_PAIRS: Array<[string, string]> = [
   ["Was my space comfortable today?", "Было ли моё пространство комфортным сегодня?"],
   // Hero example questions (in case any user stored them as tracker question text)
   ["Did I argue with my partner today?", "Я сегодня ссорился(ась) с партнёром?"],
+  // DEFAULT_STARTERS questions — exact strings from the universal-5
+  // fallback set (en.ts/ru.ts → onboarding.defaultStarters.*). Pair
+  // them so the starter questions translate when language switches.
+  ["Did I sleep more than 7 hours?", "Спал ли я больше 7 часов?"],
+  ["Did I move my body today?", "Двигал ли я тело сегодня?"],
+  ["Did I talk to someone close today?", "Поговорил ли я сегодня с кем-то близким?"],
+  ["Did I do something just for fun today?", "Сделал ли я сегодня что-то для удовольствия?"],
 ];
 
 // Reflection-text translations for the 18 legacy TEMPLATE_GROUPS templates.
@@ -197,13 +399,28 @@ const buildMap = (): LookupMaps => {
   LEGACY_TEMPLATE_GROUP_QUESTION_PAIRS.forEach(([en, ru]) => addPair(questions, en, ru));
   LEGACY_TEMPLATE_GROUP_ADVICE_PAIRS.forEach(([en, ru]) => addPair(advices, en, ru));
 
+  // Legacy LIFE_STREAMS pairs (templates removed in 1.6 repositioning).
+  // User trackers stored from those templates would otherwise lose
+  // translation when switching language — these pairs preserve it.
+  LEGACY_LIFESTREAMS_TITLE_PAIRS.forEach(([en, ru]) => addPair(titles, en, ru));
+  LEGACY_LIFESTREAMS_QUESTION_PAIRS.forEach(([en, ru]) => addPair(questions, en, ru));
+
   // Onboarding starters
   ONBOARDING_STARTER_TITLE_PAIRS.forEach(([en, ru]) => addPair(titles, en, ru));
   ONBOARDING_STARTER_QUESTION_PAIRS.forEach(([en, ru]) => addPair(questions, en, ru));
 
-  // Group titles and descriptions
+  // Group titles and descriptions — legacy hardcoded pairs (kept for any
+  // user data that still references old TEMPLATE_GROUPS group titles)…
   LEGACY_GROUP_TITLE_PAIRS.forEach(([en, ru]) => addPair(groupTitles, en, ru));
   LEGACY_GROUP_DESC_PAIRS.forEach(([en, ru]) => addPair(groupDescriptions, en, ru));
+
+  // …plus the live LIFE_STREAMS' title/titleRu and description pairs so
+  // the AddTrackerModal cluster headers ("Партнёр и близкие" etc.)
+  // show the active language without needing to be manually mirrored.
+  LIFE_STREAMS.forEach((stream) => {
+    addPair(groupTitles, stream.title, stream.titleRu);
+    addPair(groupDescriptions, stream.description, stream.descriptionRu);
+  });
 
   return { titles, questions, advices, groupTitles, groupDescriptions };
 };

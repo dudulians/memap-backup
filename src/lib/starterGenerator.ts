@@ -1,6 +1,8 @@
 import { Tracker, ProblemWhen } from "@/types/tracker";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
-import { TEMPLATE_GROUPS } from "./templateGroups";
+// TEMPLATE_GROUPS removed — it's now a thin adapter over LIFE_STREAMS
+// (see templateGroups.ts), so importing both would dedupe-fail and
+// double the candidate pool. LIFE_STREAMS is the single source of truth.
 import {
   localizeTrackerTitleRaw,
   localizeTrackerQuestionRaw,
@@ -84,22 +86,6 @@ const normalizeAll = (): NormalizedTemplate[] => {
         adviceAboveThreshold: tpl.adviceAboveThreshold,
         titleRu: tpl.titleRu,
         questionTextRu: tpl.questionTextRu,
-        category: tpl.category,
-        subcategory: tpl.subcategory,
-        periodDays: tpl.periodDays,
-        threshold: tpl.threshold,
-        problemWhen: tpl.problemWhen,
-      });
-    });
-  });
-
-  TEMPLATE_GROUPS.forEach((group) => {
-    group.templates.forEach((tpl) => {
-      out.push({
-        id: `tg:${group.id}:${tpl.id}`,
-        title: tpl.title,
-        questionText: tpl.questionText,
-        adviceAboveThreshold: tpl.adviceAboveThreshold,
         category: tpl.category,
         subcategory: tpl.subcategory,
         periodDays: tpl.periodDays,
@@ -473,7 +459,7 @@ export const generateStarterPack = (
   // Filter BEFORE scoring so candidates already shown can't influence
   // the diversity caps (otherwise an already-shown sleep template would
   // still consume the "1 sleep topic" slot in pickTop).
-  const candidates =
+  let candidates =
     excludeSet.size === 0
       ? all
       : all.filter((tpl) => {
@@ -481,6 +467,20 @@ export const generateStarterPack = (
           const en = tpl.title.toLowerCase().trim();
           return !excludeSet.has(ru) && !excludeSet.has(en);
         });
+
+  // HARD context filters — fixes the user's complaint that templates
+  // about a partner / kids appeared even when she said she had none.
+  // Previously these contexts were soft signals (boost when present,
+  // small penalty when absent). With "no partner" + "relationships"
+  // focus the boost from focus could outweigh the penalty and an
+  // "Argued with partner" template would still pop up. Hard exclusion
+  // makes the contradiction impossible.
+  if (answers.hasPartner === false) {
+    candidates = candidates.filter((tpl) => !matchesAny(haystack(tpl), PARTNER_KEYWORDS));
+  }
+  if (answers.hasKids === false) {
+    candidates = candidates.filter((tpl) => !matchesAny(haystack(tpl), KIDS_KEYWORDS));
+  }
   const scored = candidates.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
   const picked = pickTop(scored, count, 2);
 

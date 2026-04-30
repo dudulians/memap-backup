@@ -20,7 +20,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getCategoryColor } from "@/lib/categoryHelpers";
+import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { Search, Plus, X, ArrowUp } from "lucide-react";
 import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { toast } from "@/hooks/use-toast";
@@ -628,56 +630,89 @@ export const AddTrackerModal = ({
                   )}
                 </>
               ) : (
-                // Grouped Display
-                <div className="space-y-6">
-              {filteredGroups.map((group) => (
-                <div key={group.id} className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-base">{localizeGroupTitle(group.title)}</h3>
-                    <p className="text-sm text-muted-foreground">{localizeGroupDescription(group.description)}</p>
-                  </div>
-                  <div className="space-y-2">
-                    {group.templates.map((template) => {
-                      const categoryColor = getCategoryColor(template.category);
-                      return (
-                        <Card
-                          key={template.id}
-                          className="hover:bg-accent/30 transition-colors"
-                          style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: '3px' }}
-                        >
-                          <CardHeader className="pb-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <CardTitle className="text-base">{localizeTrackerTitle(template.title)}</CardTitle>
-                              <Badge
-                                variant="secondary"
-                                className="text-xs flex-shrink-0"
-                                style={{
-                                  backgroundColor: `hsl(var(--${categoryColor}) / 0.1)`,
-                                  color: `hsl(var(--${categoryColor}))`
-                                }}
-                              >
-                                {t(`categories.${template.category}`)}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pb-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-sm text-muted-foreground line-clamp-2 flex-1">
-                                {localizeTrackerQuestion(template.questionText)}
+                // Accordion Display — clusters collapsed by default
+                // (except the first one) so the user sees the full
+                // catalog structure at a glance and only expands what
+                // interests them. Was a flat dump of every group +
+                // every template — overwhelming once the library
+                // grows beyond a few dozen.
+                //
+                // The first cluster is open by default so the user
+                // immediately sees REAL templates (not just a list
+                // of section headers), which proves "yes there's
+                // content inside, tap to explore the rest."
+                //
+                // Cluster icons come from LIFE_STREAMS (the canonical
+                // source); we look them up by group.id to keep the
+                // visual identity consistent with rest of the app.
+                <Accordion
+                  type="multiple"
+                  defaultValue={filteredGroups.length > 0 ? [filteredGroups[0].id] : []}
+                  className="space-y-2"
+                >
+                  {filteredGroups.map((group) => {
+                    const stream = LIFE_STREAMS.find((s) => s.id === group.id);
+                    const icon = stream?.icon ?? "📁";
+                    return (
+                      <AccordionItem
+                        key={group.id}
+                        value={group.id}
+                        className="border border-border/40 rounded-2xl px-4 bg-card/30"
+                      >
+                        <AccordionTrigger className="hover:no-underline py-3 [&[data-state=open]>div>div>p.cluster-desc]:hidden">
+                          <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                            <span className="text-xl flex-shrink-0">{icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-sm truncate">
+                                {localizeGroupTitle(group.title)}
+                              </h3>
+                              <p className="cluster-desc text-xs text-muted-foreground truncate mt-0.5">
+                                {localizeGroupDescription(group.description)}
                               </p>
-                              <AddTemplateButton
-                                label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
-                                onAdd={() => handleTemplateSelect(template)}
-                              />
                             </div>
-                          </CardContent>
-                        </Card>
-                      );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                </div>
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] flex-shrink-0 bg-muted/60 text-muted-foreground font-medium"
+                            >
+                              {group.templates.length}
+                            </Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pt-0 pb-3">
+                          <div className="space-y-2">
+                            {group.templates.map((template) => {
+                              const categoryColor = getCategoryColor(template.category);
+                              return (
+                                <Card
+                                  key={template.id}
+                                  className="hover:bg-accent/30 transition-colors"
+                                  style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: "3px" }}
+                                >
+                                  <CardContent className="p-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm">
+                                          {localizeTrackerTitle(template.title)}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                          {localizeTrackerQuestion(template.questionText)}
+                                        </p>
+                                      </div>
+                                      <AddTemplateButton
+                                        label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
+                                        onAdd={() => handleTemplateSelect(template)}
+                                      />
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
               )}
             </div>
           </TabsContent>

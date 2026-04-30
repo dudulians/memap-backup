@@ -1008,6 +1008,25 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 {t("settings.exportCsv")}
               </Button>
 
+              {/* Privacy policy link — required by App Store / Play Store
+                  for any app submission. URL is the production hosted
+                  policy (GitHub Pages). Opens in external browser so
+                  the user can read it without leaving the app context. */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.open(
+                    "https://dudulians.github.io/memap-backup/PRIVACY_POLICY.html",
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
+                className="w-full justify-start"
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                {t("settings.privacyPolicy")}
+              </Button>
+
               <div className="pt-2">
                 <div className="flex items-start gap-3">
                   <Trash2 className="h-5 w-5 text-destructive mt-0.5" />
