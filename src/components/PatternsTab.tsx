@@ -91,6 +91,18 @@ export const PatternsTab = () => {
     loadData();
   }, []);
 
+  // Re-pull when storage changes elsewhere (Settings → restore backup,
+  // dev data generator, calendar editor, undo, Today tab swipes...).
+  // Without this listener, the dev data generator would write 60×N
+  // new entries while Patterns sits with its stale snapshot — no
+  // trends, no correlations, no signs anything happened. Same event
+  // other write paths dispatch.
+  useEffect(() => {
+    const sync = () => { loadData(); };
+    window.addEventListener("memap-settings-changed", sync);
+    return () => window.removeEventListener("memap-settings-changed", sync);
+  }, []);
+
   // Listen for external section-switch requests (e.g. from the
   // coachmark tour driving a step that lives on a specific sub-tab).
   useEffect(() => {

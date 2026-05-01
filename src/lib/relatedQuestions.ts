@@ -197,6 +197,16 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "drank-alcohol",
     "coffee-late",
     "felt-anxious",
+    "felt-nauseous",
+  ],
+  "felt-nauseous": [
+    "stomach-issues",
+    "migraine",
+    "drank-alcohol",
+    "coffee-late",
+    "ate-fast-food",
+    "felt-anxious",
+    "period-symptoms",
   ],
   "joint-pain": [
     "exercised",
@@ -840,6 +850,68 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "learned-something-new",
   ],
 
+  // ─── Внешние события ──────────────────────────────────────────
+  "noisy-neighbors": [
+    "slept-enough",
+    "felt-recovered",
+    "headache",
+    "snapped-at-loved-ones",
+    "felt-anxious",
+  ],
+  "construction-nearby": [
+    "slept-enough",
+    "headache",
+    "felt-anxious",
+    "snapped-at-loved-ones",
+  ],
+  "long-commute": [
+    "felt-fatigued",
+    "burned-out-after-work",
+    "snapped-at-loved-ones",
+    "didnt-want-to-work",
+  ],
+  "transport-issue": [
+    "felt-anxious",
+    "felt-angry",
+    "long-commute",
+  ],
+  "internet-down": [
+    "felt-anxious",
+    "snapped-at-loved-ones",
+    "worked-overtime",
+  ],
+  "criticized-by-close": [
+    "felt-anxious",
+    "cried-today",
+    "snapped-at-loved-ones",
+    "argued-with-partner",
+    "ate-sweets",
+  ],
+  "parent-pressured": [
+    "felt-anxious",
+    "cried-today",
+    "snapped-at-loved-ones",
+    "called-parent",
+    "criticized-by-close",
+  ],
+  "toxic-friend": [
+    "felt-anxious",
+    "drained-by-someone",
+    "felt-fatigued",
+    "saw-friends",
+  ],
+  "kids-reached-out": [
+    "felt-happy",
+    "felt-lonely",
+    "called-parent",
+    "good-time-together",
+  ],
+  "financial-issue": [
+    "felt-anxious",
+    "impulse-spending",
+    "stayed-on-budget",
+  ],
+
   // ─── Жизнь за границей (gated by isExpat) ─────────────────────
   "spoke-local-language": [
     "studied-local-language",
@@ -1054,7 +1126,11 @@ const TEMPLATE_KEYWORDS: Array<[string, string[]]> = [
   ["migraine", ["мигрен", "migraine"]],
   ["headache", ["головн", "болела голов", "болит голов", "head pain", "headache"]],
   ["back-or-neck-pain", ["спин", "шея", "шею", "back pain", "neck pain"]],
-  ["stomach-issues", ["живот", "тошн", "ЖКТ", "пищевар", "stomach", "nausea", "gut"]],
+  // felt-nauseous BEFORE stomach-issues — pure nausea signals (no
+  // stomach pain) match here first; stomach-issues catches the
+  // broader "живот болел / GI" cases below.
+  ["felt-nauseous", ["тошнило", "тошнота", "тошнит", "подташн", "feel nauseous", "felt nauseous", "queasy"]],
+  ["stomach-issues", ["живот", "ЖКТ", "пищевар", "stomach", "gut"]],
   ["joint-pain", ["суста", "коле", "запяст", "joint pain"]],
   ["slept-enough", ["выспал", "сон", "спал", "сну", "slept", "sleep enough", "rested"]],
   ["felt-fatigued", ["устал", "усталост", "выжат", "истощ", "fatigue", "drained", "exhausted"]],
@@ -1154,6 +1230,18 @@ const TEMPLATE_KEYWORDS: Array<[string, string[]]> = [
   ["practiced-skill", ["навык", "практик", "practiced skill"]],
   ["listened-podcast", ["подкаст", "аудиокниг", "podcast", "audiobook"]],
   ["read-book", ["читал книг", "прочитал книг", "read a book", "read book"]],
+
+  // External events
+  ["noisy-neighbors", ["соседи шум", "соседи громк", "noisy neighbor"]],
+  ["construction-nearby", ["стройк", "ремонт у соседей", "ремонт рядом", "construction noise"]],
+  ["long-commute", ["пробк", "дорога долго", "долго добир", "traffic jam", "long commute"]],
+  ["transport-issue", ["транспорт подвёл", "транспорт подвел", "автобус опозд", "поезд отмен", "метро отмен", "transport delay", "transport cancel"]],
+  ["internet-down", ["интернет тормоз", "интернет не работ", "связь тормоз", "связи не было", "internet down", "wifi down", "no signal"]],
+  ["criticized-by-close", ["близкий критик", "близкий обиде", "близкий давил", "close criticized"]],
+  ["parent-pressured", ["родитель давил", "родитель критик", "мама обижала", "папа критик", "parent pressured", "parent hurtful"]],
+  ["toxic-friend", ["токсичн друг", "токсичн подруг", "токсичн коллег", "toxic friend"]],
+  ["kids-reached-out", ["дети писал", "дети звонил", "дети реагир", "kids called", "kids messaged"]],
+  ["financial-issue", ["неожиданн трат", "штраф", "счета пришли", "списали ден", "unexpected charge", "fine arrived"]],
 
   // Expat
   ["spoke-local-language", ["на местном", "spoke local"]],

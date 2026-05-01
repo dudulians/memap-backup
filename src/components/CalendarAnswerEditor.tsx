@@ -136,13 +136,16 @@ export const CalendarAnswerEditor = ({
       {/* Body opts out of vaul drag so internal scroll is unimpeded.
           Dismiss-by-drag still works from the pill / top header. */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-4 pb-8">
-          {/* Pattern info */}
-          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+          {/* Tracker breadcrumb — small, muted. Title sits here as a
+              "which tracker is this" hint; the actual question (below)
+              is the visual anchor since the user is here to answer it.
+              Same hierarchy as TrackerDetails / Today card list. */}
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             {(() => {
               const CIcon = getTrackerIcon(tracker.title, tracker.category);
               return <CIcon className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />;
             })()}
-            <span className="font-medium text-foreground">{localizeTrackerTitle(tracker.title)}</span>
+            <span>{localizeTrackerTitle(tracker.title)}</span>
           </p>
 
           {/* Question card with swipe */}
@@ -176,7 +179,12 @@ export const CalendarAnswerEditor = ({
               className="relative z-10 transition-transform"
               style={{ transform: `translateX(${swipeOffset * 0.3}px)` }}
             >
-              <p className="text-sm leading-relaxed text-foreground">{localizeTrackerQuestion(tracker.questionText)}</p>
+              {/* Question is the visual anchor here — the user is
+                  filling in a past day's answer, so the question
+                  itself (with its qualifiers) needs to read like a
+                  headline. Same `text-lg font-medium leading-snug`
+                  treatment as TrackerDetails. */}
+              <p className="text-lg font-medium leading-snug text-foreground">{localizeTrackerQuestion(tracker.questionText)}</p>
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Tracker } from "@/types/tracker";
+import { Tracker, ProblemWhen } from "@/types/tracker";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
 import {
@@ -23,7 +23,29 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getCategoryColor } from "@/lib/categoryHelpers";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
-import { Search, Plus, X, ArrowUp } from "lucide-react";
+import {
+  Search,
+  Plus,
+  X,
+  Check,
+  ArrowUp,
+  // Cluster icons — replace the emoji that came from lifeStreams.ts.
+  // Emoji rendered inconsistently across iOS / Android / web (some
+  // fonts box-drew, some had off-baseline alignment, the family
+  // composite ⚭ glyph collapsed on certain installs). Lucide is
+  // already the icon system everywhere else in the app, so this
+  // unifies look-and-feel.
+  Heart,
+  Users,
+  HeartPulse,
+  Wine,
+  Sun,
+  Compass,
+  Globe,
+  Building,
+  Folder,
+  ChevronDown,
+} from "lucide-react";
 import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { toast } from "@/hooks/use-toast";
 import { uuid } from "@/lib/uuid";
@@ -36,24 +58,84 @@ interface AddTrackerModalProps {
   onNavigateToTracker?: (tracker: Tracker) => void;
 }
 
+// Cluster id → Lucide icon component. Single source of truth for the
+// visual identity of each cluster in this modal. If a future cluster
+// id isn't here, falls back to a generic Folder icon.
+const CLUSTER_ICONS: Record<string, typeof Heart> = {
+  partner: Heart,
+  parenting: Users,
+  health: HeartPulse,
+  habits: Wine,
+  state: Sun,
+  "big-decisions": Compass,
+  "external-events": Building,
+  expat: Globe,
+};
+
+// Cluster id → underlying Tracker.category. Used by the Custom-tracker
+// form: when the user picks a Theme (cluster), we derive the structural
+// category for stats/colors automatically. Mapping picks the category
+// that BEST matches the dominant data type in each cluster.
+const CLUSTER_TO_CATEGORY: Record<string, Tracker["category"]> = {
+  partner: "Connections",
+  parenting: "Connections",
+  health: "Health",
+  habits: "Health",
+  state: "Emotions",
+  "big-decisions": "Voice",
+  "external-events": "Social",
+  expat: "Voice",
+};
+
 /**
  * Dedicated Add button that fires from whichever of pointerup/click
  * arrives first. iOS Safari is flaky about synthesizing `click` from
  * touchend in some layouts — listening to pointerup makes the tap
  * land reliably, and the ref guard prevents a second fire from the
  * mouse/keyboard `click` event on desktop.
+ *
+ * Tap-vs-scroll guard (1.7+): record the pointer-down position and
+ * bail if the finger moved more than TAP_SLOP_PX between down and
+ * up. Without this, the user reported "I scrolled the template list
+ * and accidentally added 5 templates" — `onPointerUp` fires
+ * regardless of movement, unlike native `onClick` which the browser
+ * suppresses after a scroll-distance touchmove. 10px matches
+ * iOS HIG / Material Design tap-slop conventions.
  */
+const TAP_SLOP_PX = 10;
+
 const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void }) => {
   const { t } = useTranslation();
   const firedRef = useRef(false);
+  const startPosRef = useRef<{ x: number; y: number } | null>(null);
   const resetSoon = () => {
     // Reset after the current event loop so both pointerup and click
     // see the latched value, but a subsequent tap starts fresh.
-    setTimeout(() => { firedRef.current = false; }, 0);
+    setTimeout(() => {
+      firedRef.current = false;
+      startPosRef.current = null;
+    }, 0);
   };
-  const fire = (e: React.SyntheticEvent) => {
+  const handleDown = (e: React.PointerEvent) => {
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+  };
+  const fire = (e: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>) => {
     e.stopPropagation();
     if (firedRef.current) return;
+
+    // Tap-vs-scroll: if the finger drifted more than TAP_SLOP_PX
+    // between down and up, this is a scroll gesture — bail. Only
+    // applies to events that have client coords (pointer / mouse).
+    const start = startPosRef.current;
+    if (start && "clientX" in e) {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.sqrt(dx * dx + dy * dy) > TAP_SLOP_PX) {
+        startPosRef.current = null;
+        return;
+      }
+    }
+
     firedRef.current = true;
     onAdd();
     resetSoon();
@@ -62,6 +144,7 @@ const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void 
     <Button
       type="button"
       size="sm"
+      onPointerDown={handleDown}
       onPointerUp={fire}
       onClick={fire}
       style={{ touchAction: "manipulation" }}
@@ -74,6 +157,85 @@ const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void 
   );
 };
 
+// Shared dropdown for the Custom-tab title and question autocomplete.
+// Anchors absolutely under the wrapper (parent must be `relative`).
+// Renders a small "Похожее в библиотеке" header followed by up to 5
+// template hits. onPick fires before the parent input's blur-close
+// thanks to onMouseDown + preventDefault in the row's handler.
+type AutocompleteRow = {
+  id: string;
+  title: string;
+  questionText: string;
+  category: Tracker["category"];
+  subcategory?: string;
+  periodDays: number;
+  threshold: number;
+  problemWhen: ProblemWhen;
+  adviceAboveThreshold: string;
+};
+
+const AutocompleteDropdown = ({
+  headerLabel,
+  suggestions,
+  onPick,
+  t,
+}: {
+  headerLabel: string;
+  suggestions: AutocompleteRow[];
+  onPick: (template: AutocompleteRow) => void;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}) => (
+  <div className="absolute left-0 right-0 top-full mt-1 bg-background border rounded-xl shadow-lg z-50 max-h-[280px] overflow-y-auto">
+    <div className="px-3 py-2 border-b border-border/40">
+      <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">
+        {headerLabel}
+      </p>
+    </div>
+    <div className="py-1">
+      {suggestions.map((template) => {
+        const categoryColor = getCategoryColor(template.category);
+        return (
+          <button
+            key={template.id}
+            type="button"
+            // onMouseDown beats onClick to onBlur — ensures the pick
+            // fires before the input's blur-to-close triggers and
+            // unmounts the list. preventDefault also stops the
+            // input from losing focus needlessly.
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onPick(template);
+            }}
+            className="w-full flex items-start justify-between gap-3 px-3 py-2.5 hover:bg-accent cursor-pointer text-left"
+          >
+            <div className="flex-1 min-w-0">
+              {/* Question prominent, title secondary — same hierarchy
+                  as Today/TrackerDetails (1.7+). User scans the
+                  question to recognize the template; title is the
+                  short ID. */}
+              <p className="font-medium text-sm leading-snug line-clamp-2 break-words">
+                {localizeTrackerQuestion(template.questionText)}
+              </p>
+              <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
+                {localizeTrackerTitle(template.title)}
+              </p>
+            </div>
+            <Badge
+              variant="secondary"
+              className="text-xs flex-shrink-0"
+              style={{
+                backgroundColor: `hsl(var(--${categoryColor}) / 0.1)`,
+                color: `hsl(var(--${categoryColor}))`,
+              }}
+            >
+              {t(`categories.${template.category}`)}
+            </Badge>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
 
 export const AddTrackerModal = ({
   open,
@@ -94,6 +256,18 @@ export const AddTrackerModal = ({
     title: "",
     questionText: "",
     category: "Curious" as Tracker["category"],
+    // Subcategory carried for autocomplete: when the user picks a
+    // library template via the title-field autocomplete, the
+    // template's subcategory ("Pain", "Sleep", "Cycle", ...) gets
+    // pre-filled here. The custom form doesn't expose subcategory
+    // as an editable field — it just rides along to the final
+    // tracker so suggestion-picks preserve their parentage.
+    subcategory: undefined as string | undefined,
+    // Cluster id (lifeStreams). User picks via the "Theme" dropdown
+    // OR auto-fills when picking a library template. Empty means
+    // user hasn't picked a theme — when submitting we'll fall back
+    // to category="Curious" (the default neutral bucket).
+    cluster: undefined as string | undefined,
     periodDays: 30,
     threshold: 10,
     problemWhen: "yes" as "yes" | "no",
@@ -101,6 +275,29 @@ export const AddTrackerModal = ({
   });
   const [periodDaysRaw, setPeriodDaysRaw] = useState("30");
   const [thresholdRaw, setThresholdRaw] = useState("10");
+  // Per-cluster "show all" state. When false → only featured (3 picks)
+  // are shown inside the expanded cluster; user taps "Показать все N →"
+  // to reveal the rest. Reset every time the modal opens so the user
+  // re-enters into a clean discovery state.
+  const [expandedFull, setExpandedFull] = useState<Record<string, boolean>>({});
+  // Autocomplete dropdown state for the Custom-tab inputs. Shows
+  // matching library templates as the user types — Google-style: type
+  // "го" → see "Болела голова", "Готовил(а) сам(а)", etc. Pick one
+  // and the entire tracker (title, question, category, period,
+  // threshold, advice) gets pre-filled — user reviews / edits then
+  // hits Add. Two separate booleans because both the title and
+  // question fields have their own dropdown — only one is open at a
+  // time (focusing one closes the other so we don't have stacked
+  // overlays).
+  const [titleAutocompleteOpen, setTitleAutocompleteOpen] = useState(false);
+  const [questionAutocompleteOpen, setQuestionAutocompleteOpen] = useState(false);
+  useEffect(() => {
+    if (!open) {
+      setExpandedFull({});
+      setTitleAutocompleteOpen(false);
+      setQuestionAutocompleteOpen(false);
+    }
+  }, [open]);
 
   // Read user's interview answers from localStorage. We use these to
   // hide cluster groups the user opted out of (currently: the expat
@@ -169,6 +366,37 @@ export const AddTrackerModal = ({
 
   const dropdownTemplates = getAllTemplatesForDropdown();
 
+  // Custom-tab autocomplete suggestions. Filters the visible library
+  // (same gates as anywhere else: hidden expat cluster, hidden
+  // sensitive templates) by typed text. Matches against EN +
+  // localized titles AND question text so e.g. "болит" matches both
+  // "Болела голова" (title) and "Болит ли спина?" (question). Up to
+  // 5 results — more would feel noisy under a single input field.
+  // Used by BOTH the title and question inputs, each searching by
+  // its own text — pick a suggestion in either dropdown and the
+  // whole template mirrors into all fields.
+  const computeAutocompleteSuggestions = (query: string) => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const allTemplates = visibleGroups.flatMap((group) =>
+      filterSensitive(group.templates).map((template) => ({
+        ...template,
+        groupTitle: group.title,
+      })),
+    );
+    return allTemplates
+      .filter(
+        (t) =>
+          t.title.toLowerCase().includes(q) ||
+          t.questionText.toLowerCase().includes(q) ||
+          localizeTrackerTitle(t.title).toLowerCase().includes(q) ||
+          localizeTrackerQuestion(t.questionText).toLowerCase().includes(q),
+      )
+      .slice(0, 5);
+  };
+  const customTitleSuggestions = computeAutocompleteSuggestions(formData.title);
+  const customQuestionSuggestions = computeAutocompleteSuggestions(formData.questionText);
+
   // Check for duplicate trackers (active OR archived). Returns
   // tracker + isArchived so the dialog can offer "Restore from
   // archive" instead of "Open existing" when the match is archived.
@@ -215,6 +443,16 @@ export const AddTrackerModal = ({
     const localizedQuestion = localizeTrackerQuestionRaw(template.questionText);
     const localizedAdvice = localizeTrackerAdviceRaw(template.adviceAboveThreshold);
 
+    // Find the cluster id for this template — needed so the saved
+    // Tracker carries cluster info for correlation semantic verdicts.
+    let clusterId: string | undefined;
+    for (const stream of LIFE_STREAMS) {
+      if (stream.templates.some((t) => t.id === template.id)) {
+        clusterId = stream.id;
+        break;
+      }
+    }
+
     // Check for duplicates (match against the localized title since that's
     // what the user sees and what new trackers get stored as).
     const dup = await checkForDuplicate(localizedTitle, template.category);
@@ -226,6 +464,7 @@ export const AddTrackerModal = ({
         questionText: localizedQuestion,
         category: template.category,
         subcategory: template.subcategory,
+        cluster: clusterId,
         periodDays: template.periodDays,
         threshold: template.threshold,
         problemWhen: template.problemWhen,
@@ -248,6 +487,7 @@ export const AddTrackerModal = ({
       questionText: localizedQuestion,
       category: template.category,
       subcategory: template.subcategory,
+      cluster: clusterId,
       periodDays: template.periodDays,
       threshold: template.threshold,
       problemWhen: template.problemWhen,
@@ -258,6 +498,43 @@ export const AddTrackerModal = ({
     };
 
     await createTrackerDirectly(newTracker);
+  };
+
+  // Custom-tab autocomplete: user clicked a library suggestion → mirror
+  // every field of the chosen template into the custom form, but do NOT
+  // submit. The user reviews / edits the pre-filled form and decides
+  // whether to add as-is or tweak first. Strings are stored as the
+  // *Raw localized variant (gender brackets preserved on disk → polishRu
+  // resolves at display time). Period/threshold ALSO update their string
+  // mirrors so the number inputs reflect the new values.
+  const handleAutocompletePick = (
+    template: typeof TEMPLATE_GROUPS[0]["templates"][0],
+  ) => {
+    // Find cluster id by walking LIFE_STREAMS — needed so the
+    // resulting custom-form state carries cluster (which then
+    // makes it onto the saved Tracker for correlation purposes).
+    let clusterId: string | undefined;
+    for (const stream of LIFE_STREAMS) {
+      if (stream.templates.some((t) => t.id === template.id)) {
+        clusterId = stream.id;
+        break;
+      }
+    }
+    setFormData({
+      title: localizeTrackerTitleRaw(template.title),
+      questionText: localizeTrackerQuestionRaw(template.questionText),
+      category: template.category,
+      subcategory: template.subcategory,
+      cluster: clusterId,
+      periodDays: template.periodDays,
+      threshold: template.threshold,
+      problemWhen: template.problemWhen,
+      adviceAboveThreshold: localizeTrackerAdviceRaw(template.adviceAboveThreshold),
+    });
+    setPeriodDaysRaw(String(template.periodDays));
+    setThresholdRaw(String(template.threshold));
+    setTitleAutocompleteOpen(false);
+    setQuestionAutocompleteOpen(false);
   };
 
   const handleCustomSubmit = async (e: React.FormEvent) => {
@@ -302,6 +579,8 @@ export const AddTrackerModal = ({
       title: "",
       questionText: "",
       category: "Curious",
+      subcategory: undefined,
+      cluster: undefined,
       periodDays: 30,
       threshold: 10,
       problemWhen: "yes",
@@ -452,8 +731,12 @@ export const AddTrackerModal = ({
       <div
         className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-background rounded-t-3xl shadow-2xl animate-fade-in"
         style={{
-          maxHeight: "92vh",
-          height: "92vh",
+          // 86vh (was 92vh) — leaves ~14% above the modal so the
+          // app header (MeMap) stays visible AND the swipe-to-
+          // dismiss area at the top of the modal has more room.
+          // User reported "modal covers MeMap, hard to swipe down".
+          maxHeight: "86vh",
+          height: "86vh",
           transform: dragY ? `translateY(${dragY}px)` : undefined,
           transition: dragY ? "none" : "transform 0.25s ease",
         }}
@@ -558,18 +841,24 @@ export const AddTrackerModal = ({
                           <button
                             key={template.id}
                             type="button"
+                            // Tap suggestion → preview/edit (switch to
+                            // Custom tab pre-filled), not instant-add.
+                            // 1.7+ matches the same behavior as
+                            // accordion card body taps.
                             onClick={() => {
-                              handleTemplateSelect(template);
+                              handleAutocompletePick(template);
+                              setMode("custom");
                               setSearchOpen(false);
+                              setSearchQuery("");
                             }}
                             className="w-full flex items-start justify-between gap-3 px-3 py-2.5 hover:bg-accent cursor-pointer text-left"
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm truncate">
-                                {localizeTrackerTitle(template.title)}
-                              </p>
-                              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                              <p className="font-medium text-sm leading-snug line-clamp-2">
                                 {localizeTrackerQuestion(template.questionText)}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
+                                {localizeTrackerTitle(template.title)}
                               </p>
                             </div>
                             <Badge
@@ -630,12 +919,30 @@ export const AddTrackerModal = ({
                         return (
                           <Card
                             key={template.id}
-                            className="hover:bg-accent/30 transition-colors overflow-hidden"
+                            // Tap on card body → preview/edit (switch
+                            // to Custom tab pre-filled). Mirrors the
+                            // accordion behavior: body = preview,
+                            // "+" button = instant-add.
+                            onClick={() => {
+                              handleAutocompletePick(template);
+                              setMode("custom");
+                              setSearchQuery("");
+                            }}
+                            className="hover:bg-accent/30 transition-colors overflow-hidden cursor-pointer"
                             style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: '3px' }}
                           >
                             <CardHeader className="pb-2">
                               <div className="flex items-start justify-between gap-2">
-                                <CardTitle className="text-base break-words flex-1 min-w-0">{localizeTrackerTitle(template.title)}</CardTitle>
+                                {/* Question prominent — same hierarchy
+                                    as Today and TrackerDetails */}
+                                <div className="flex-1 min-w-0">
+                                  <CardTitle className="text-sm font-medium leading-snug break-words">
+                                    {localizeTrackerQuestion(template.questionText)}
+                                  </CardTitle>
+                                  <p className="text-[11px] text-muted-foreground/80 truncate mt-1">
+                                    {localizeTrackerTitle(template.title)}
+                                  </p>
+                                </div>
                                 <Badge
                                   variant="secondary"
                                   className="text-xs flex-shrink-0"
@@ -649,10 +956,7 @@ export const AddTrackerModal = ({
                               </div>
                             </CardHeader>
                             <CardContent className="pb-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm text-muted-foreground line-clamp-2 flex-1 min-w-0 break-words">
-                                  {localizeTrackerQuestion(template.questionText)}
-                                </p>
+                              <div className="flex items-center justify-end gap-3">
                                 <Button
                                   type="button"
                                   size="sm"
@@ -694,52 +998,115 @@ export const AddTrackerModal = ({
                   className="space-y-2"
                 >
                   {filteredGroups.map((group) => {
+                    const ClusterIcon = CLUSTER_ICONS[group.id] ?? Folder;
+                    // Stream lookup gives us cluster.color for tinting
+                    // the Lucide icon — keeps each cluster visually
+                    // distinct without falling back to emoji noise.
                     const stream = LIFE_STREAMS.find((s) => s.id === group.id);
-                    const icon = stream?.icon ?? "📁";
+                    const clusterColor = stream?.color ?? "muted";
                     const visibleTemplates = filterSensitive(group.templates);
+                    const featured = visibleTemplates.filter((t) => t.featured);
+                    const rest = visibleTemplates.filter((t) => !t.featured);
+                    // If a cluster has no featured templates marked
+                    // (defensive — shouldn't happen for the 7 canonical
+                    // clusters, but matters for any custom groups added
+                    // later), fall back to "show all" so we never
+                    // collapse into emptiness.
+                    const isExpanded = expandedFull[group.id] === true;
+                    const startList = featured.length === 0
+                      ? visibleTemplates
+                      : (isExpanded ? visibleTemplates : featured);
+                    const moreCount = visibleTemplates.length - featured.length;
+                    const showMoreButton =
+                      featured.length > 0 && !isExpanded && moreCount > 0;
                     return (
                       <AccordionItem
                         key={group.id}
                         value={group.id}
-                        className="border border-border/40 rounded-2xl px-4 bg-card/30"
+                        className="border border-border/40 rounded-2xl bg-card/30 overflow-hidden"
                       >
-                        <AccordionTrigger className="hover:no-underline py-3 [&[data-state=open]>div>div>p.cluster-desc]:hidden">
+                        <AccordionTrigger className="hover:no-underline py-3 px-4 gap-2">
+                          {/* Header row: icon + title/desc + count badge.
+                              Layout reworked to fix the v1.7.0 bug where
+                              the count badge floated mid-row and text
+                              clipped mid-word. min-w-0 + truncate on the
+                              text column lets it shrink cleanly; the
+                              badge is its own flex-shrink-0 column on
+                              the right so it never collides. */}
                           <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                            <span className="text-xl flex-shrink-0">{icon}</span>
+                            <span
+                              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
+                              style={{ backgroundColor: `hsl(var(--${clusterColor}) / 0.12)` }}
+                            >
+                              <ClusterIcon
+                                className="h-[18px] w-[18px]"
+                                style={{ color: `hsl(var(--${clusterColor}))` }}
+                                strokeWidth={2}
+                              />
+                            </span>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-sm truncate">
+                              <h3 className="font-semibold text-sm leading-snug break-words">
                                 {localizeGroupTitle(group.title)}
                               </h3>
-                              <p className="cluster-desc text-xs text-muted-foreground truncate mt-0.5">
+                              {/* line-clamp-2 lets the description wrap
+                                  to 2 lines instead of truncating mid-
+                                  word. break-words handles long single
+                                  words gracefully. Was: `truncate` —
+                                  fixed in 1.7.0 after user reported
+                                  cluster descriptions being cut as
+                                  "просто кажется..." */}
+                              <p className="text-xs text-muted-foreground leading-snug line-clamp-2 break-words mt-0.5">
                                 {localizeGroupDescription(group.description)}
                               </p>
                             </div>
                             <Badge
                               variant="secondary"
-                              className="text-[10px] flex-shrink-0 bg-muted/60 text-muted-foreground font-medium"
+                              className="text-[10px] flex-shrink-0 bg-muted/60 text-muted-foreground font-medium px-2 h-5 rounded-full"
                             >
                               {visibleTemplates.length}
                             </Badge>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent className="pt-0 pb-3">
+                        <AccordionContent className="pt-0 pb-3 px-4">
                           <div className="space-y-2">
-                            {visibleTemplates.map((template) => {
+                            {startList.map((template) => {
                               const categoryColor = getCategoryColor(template.category);
                               return (
                                 <Card
                                   key={template.id}
-                                  className="hover:bg-accent/30 transition-colors overflow-hidden"
+                                  // Tap on card body → opens "preview /
+                                  // edit before add" — switches to the
+                                  // Custom tab pre-filled with this
+                                  // template's data so user can review
+                                  // all fields (period, threshold,
+                                  // polarity, advice) before adding.
+                                  // The "+" button on the right keeps
+                                  // the fast-path: instant add. Built
+                                  // in 1.7 after user asked for
+                                  // template details before commit.
+                                  onClick={() => {
+                                    handleAutocompletePick(template);
+                                    setMode("custom");
+                                  }}
+                                  className="hover:bg-accent/30 transition-colors overflow-hidden cursor-pointer"
                                   style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: "3px" }}
                                 >
                                   <CardContent className="p-3">
                                     <div className="flex items-start justify-between gap-3">
                                       <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm break-words">
-                                          {localizeTrackerTitle(template.title)}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 break-words">
+                                        {/* Question prominent, title
+                                            secondary — matches the
+                                            hierarchy used on Today /
+                                            TrackerDetails / Calendar
+                                            editor (1.7+). User scans
+                                            the question to know what
+                                            she'd answer; title is just
+                                            the short ID under it. */}
+                                        <p className="font-medium text-sm leading-snug line-clamp-2 break-words">
                                           {localizeTrackerQuestion(template.questionText)}
+                                        </p>
+                                        <p className="text-[11px] text-muted-foreground/80 leading-snug truncate mt-1">
+                                          {localizeTrackerTitle(template.title)}
                                         </p>
                                       </div>
                                       <AddTemplateButton
@@ -751,6 +1118,18 @@ export const AddTrackerModal = ({
                                 </Card>
                               );
                             })}
+                            {showMoreButton && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedFull((prev) => ({ ...prev, [group.id]: true }))
+                                }
+                                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 text-xs font-medium text-primary transition-colors"
+                              >
+                                {t("addTracker.showAllInCluster", { count: moreCount })}
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </AccordionContent>
                       </AccordionItem>
@@ -770,50 +1149,109 @@ export const AddTrackerModal = ({
               </p>
             </div>
             <form onSubmit={handleCustomSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="title">{t("addTracker.fieldTitle")}</Label>
-                <Input
-                  id="title"
-                  placeholder={t("addTracker.fieldTitlePh")}
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div>
+              {/* Question is the PRIMARY field of the custom form
+                  (1.7+). Question is what the user actually answers
+                  daily, what shows on Today/TrackerDetails as the
+                  visual anchor — so it should be where creation
+                  flow leads. Title is secondary, asked second.
+                  Both fields support library autocomplete, so user
+                  can pick a matching template from either side. */}
+              <div className="relative">
                 <Label htmlFor="questionText">{t("addTracker.fieldQuestion")}</Label>
                 <Input
                   id="questionText"
                   placeholder={t("addTracker.fieldQuestionPh")}
                   value={formData.questionText}
-                  onChange={(e) =>
-                    setFormData({ ...formData, questionText: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, questionText: e.target.value });
+                    setQuestionAutocompleteOpen(true);
+                    setTitleAutocompleteOpen(false);
+                  }}
+                  onFocus={() => {
+                    setQuestionAutocompleteOpen(true);
+                    setTitleAutocompleteOpen(false);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setQuestionAutocompleteOpen(false), 200);
+                  }}
+                  autoComplete="off"
                   required
                 />
+                {questionAutocompleteOpen &&
+                  customQuestionSuggestions.length > 0 && (
+                    <AutocompleteDropdown
+                      headerLabel={t("addTracker.autocompleteHeader")}
+                      suggestions={customQuestionSuggestions}
+                      onPick={handleAutocompletePick}
+                      t={t}
+                    />
+                  )}
               </div>
 
+              {/* Title — short label for charts, correlations, lists.
+                  Also has autocomplete so the user can lock onto a
+                  template by typing the title-form. Less prominent
+                  than the question field above. */}
+              <div className="relative">
+                <Label htmlFor="title">{t("addTracker.fieldTitle")}</Label>
+                <Input
+                  id="title"
+                  placeholder={t("addTracker.fieldTitlePh")}
+                  value={formData.title}
+                  onChange={(e) => {
+                    setFormData({ ...formData, title: e.target.value });
+                    setTitleAutocompleteOpen(true);
+                    setQuestionAutocompleteOpen(false);
+                  }}
+                  onFocus={() => {
+                    setTitleAutocompleteOpen(true);
+                    setQuestionAutocompleteOpen(false);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setTitleAutocompleteOpen(false), 200);
+                  }}
+                  autoComplete="off"
+                  required
+                />
+                {titleAutocompleteOpen && customTitleSuggestions.length > 0 && (
+                  <AutocompleteDropdown
+                    headerLabel={t("addTracker.autocompleteHeader")}
+                    suggestions={customTitleSuggestions}
+                    onPick={handleAutocompletePick}
+                    t={t}
+                  />
+                )}
+              </div>
+
+              {/* Theme picker — replaces the old "Category" dropdown
+                  in 1.7+. Reasoning: the underlying Tracker.category
+                  enum (Emotions/Body/Connections/...) is structural
+                  metadata for color/grouping, not something the user
+                  thinks about. They DO think about "where in my
+                  life is this question" — partner, parenting, work,
+                  habits. So we ask for THEME (cluster), and derive
+                  category from it via CLUSTER_TO_CATEGORY map.
+                  Bonus: storing the cluster on the tracker lets
+                  correlations.ts give a softer "expected" verdict
+                  for custom × library pairs in the same cluster. */}
               <div>
-                <Label htmlFor="category">{t("addTracker.fieldCategory")}</Label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => setFormData({ ...formData, category: value as Tracker["category"] })}
+                <Label htmlFor="cluster">{t("addTracker.fieldTheme")}</Label>
+                <Select
+                  value={formData.cluster ?? ""}
+                  onValueChange={(value) => {
+                    const derivedCategory = CLUSTER_TO_CATEGORY[value] ?? "Curious";
+                    setFormData({ ...formData, cluster: value, category: derivedCategory });
+                  }}
                 >
-                  <SelectTrigger id="category">
-                    <SelectValue />
+                  <SelectTrigger id="cluster">
+                    <SelectValue placeholder={t("addTracker.themePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent className="bg-background z-50">
-                    <SelectItem value="Emotions">{t("categories.Emotions")}</SelectItem>
-                    <SelectItem value="Body">{t("categories.Body")}</SelectItem>
-                    <SelectItem value="Connections">{t("categories.Connections")}</SelectItem>
-                    <SelectItem value="Voice">{t("categories.Voice")}</SelectItem>
-                    <SelectItem value="Health">{t("categories.Health")}</SelectItem>
-                    <SelectItem value="Curious">{t("categories.Curious")}</SelectItem>
-                    <SelectItem value="Fun">{t("categories.Fun")}</SelectItem>
-                    <SelectItem value="Social">{t("categories.Social")}</SelectItem>
+                    {visibleGroups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {localizeGroupTitle(group.title)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -853,42 +1291,60 @@ export const AddTrackerModal = ({
                 </div>
               </div>
 
+              {/* Polarity toggle — visual two-button control. The
+                  selected button is GREEN (good answer); the other
+                  is RED (the signal answer). Tap either to swap.
+                  Cleaner than radio + descriptions; no "сигнал когда"
+                  jargon, just colour-coded answer choice.
+                  Wiring inversion: tapping "Да" (= Yes is good)
+                  sets problemWhen="no" since the SIGNAL fires on
+                  the No answer. Vice versa for "Нет". */}
               <div className="space-y-2">
                 <Label>{t("addTracker.fieldConcern")}</Label>
                 <p className="text-xs text-muted-foreground">
                   {t("addTracker.fieldConcernDesc")}
                 </p>
-                <div className="space-y-2 pt-1">
-                  <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
-                    style={formData.problemWhen === "yes" ? { borderColor: "hsl(var(--strong))", background: "hsl(var(--strong) / 0.05)" } : {}}>
-                    <input
-                      type="radio"
-                      name="problemWhen-new"
-                      value="yes"
-                      checked={formData.problemWhen === "yes"}
-                      onChange={() => setFormData({ ...formData, problemWhen: "yes" })}
-                      className="h-4 w-4 mt-0.5"
-                    />
-                    <div>
-                      <p className="text-sm font-medium">{t("addTracker.yesConcerning")}</p>
-                      <p className="text-xs text-muted-foreground">{t("addTracker.yesConcerningDesc")}</p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
-                    style={formData.problemWhen === "no" ? { borderColor: "hsl(var(--strong))", background: "hsl(var(--strong) / 0.05)" } : {}}>
-                    <input
-                      type="radio"
-                      name="problemWhen-new"
-                      value="no"
-                      checked={formData.problemWhen === "no"}
-                      onChange={() => setFormData({ ...formData, problemWhen: "no" })}
-                      className="h-4 w-4 mt-0.5"
-                    />
-                    <div>
-                      <p className="text-sm font-medium">{t("addTracker.noConcerning")}</p>
-                      <p className="text-xs text-muted-foreground">{t("addTracker.noConcerningDesc")}</p>
-                    </div>
-                  </label>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {(["yes", "no"] as const).map((answerKey) => {
+                    const isGood =
+                      (answerKey === "yes" && formData.problemWhen === "no") ||
+                      (answerKey === "no" && formData.problemWhen === "yes");
+                    return (
+                      <button
+                        key={answerKey}
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            // "Yes is good" → signal on No → problemWhen="no"
+                            // "No is good" → signal on Yes → problemWhen="yes"
+                            problemWhen: answerKey === "yes" ? "no" : "yes",
+                          })
+                        }
+                        className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-medium transition-all"
+                        style={
+                          isGood
+                            ? {
+                                borderColor: "hsl(var(--balanced))",
+                                background: "hsl(var(--balanced) / 0.12)",
+                                color: "hsl(var(--balanced))",
+                              }
+                            : {
+                                borderColor: "hsl(var(--strong) / 0.4)",
+                                background: "hsl(var(--strong) / 0.06)",
+                                color: "hsl(var(--strong))",
+                              }
+                        }
+                      >
+                        {isGood ? (
+                          <Check className="h-4 w-4" strokeWidth={2.5} />
+                        ) : (
+                          <X className="h-4 w-4" strokeWidth={2.5} />
+                        )}
+                        {answerKey === "yes" ? t("common.yes") : t("common.no")}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -911,9 +1367,27 @@ export const AddTrackerModal = ({
                 />
               </div>
 
-              <Button type="submit" className="w-full sticky bottom-0 shadow-lg">
-                {t("addTracker.createCustomBtn")}
-              </Button>
+              {/* Sticky action row — primary "Добавить", secondary
+                  "Отмена". Both pinned to the bottom of the form
+                  so the user can submit without scrolling further.
+                  "Добавить" wording is universal: works whether
+                  the form was filled by hand OR pre-populated from
+                  a library template tap (1.7+ "preview before add"
+                  flow). Was: "Создать свой вопрос" — misleading
+                  when arriving from a template preview. */}
+              <div className="sticky bottom-0 -mx-1 px-1 pt-3 pb-1 bg-background/95 backdrop-blur-sm flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={onClose}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" className="flex-[2] shadow-lg">
+                  {t("addTracker.add")}
+                </Button>
+              </div>
             </form>
           </TabsContent>
         </Tabs>

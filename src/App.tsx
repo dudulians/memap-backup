@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { getNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { primeAudio } from "@/lib/feedback";
+import { runStartupMigrations } from "@/lib/storage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -25,6 +26,11 @@ const App = () => {
       scheduleNotification(notificationSettings).catch(() => {});
     };
     refreshSchedule();
+
+    // Run one-time data migrations on app boot. Currently: legacy
+    // advice text auto-refresh — see storage.ts. Wrapped so failures
+    // never block the rest of the boot.
+    runStartupMigrations();
 
     // Re-schedule when the UI language changes — iOS stores the
     // localized title/body literally with each pending notification,

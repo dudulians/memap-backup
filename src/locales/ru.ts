@@ -63,7 +63,7 @@ const ru: Translation = {
 
     aboutYou: {
       title: "Один вопрос",
-      subtitle: "Чтоб глаголы в вопросах были в твоём роде. Можно пропустить — будут оба.",
+      subtitle: "Помогает подобрать вопросы под тебя. Можно пропустить.",
       male: "Мужской",
       female: "Женский",
       neutral: "Не скажу",
@@ -82,6 +82,7 @@ const ru: Translation = {
       energy: "Энергия и усталость",
       money: "Деньги",
       hobbies: "Развитие и интересы",
+      environment: "Внешние события",
     },
 
     context: {
@@ -188,7 +189,7 @@ const ru: Translation = {
     dailyRemindersDesc: "Получай напоминание заполнить день",
     enableNotifications: "Включить уведомления",
     actionSignalAlerts: "Сигналы точек действия",
-    actionSignalAlertsDesc: "Уведомление, когда вопрос достигает цели значимых дней",
+    actionSignalAlertsDesc: "Уведомление, когда вопрос достигает цели сигналов",
 
     dailySessionTitle: "Ежедневная сессия",
     dailySessionDesc: "Настрой поток ежедневных вопросов",
@@ -219,6 +220,16 @@ const ru: Translation = {
     restoreBackup: "Восстановить из бэкапа",
     exportCsv: "Экспорт в CSV (Excel)",
     privacyPolicy: "Политика конфиденциальности",
+    devDataButton: "Сгенерировать тестовые данные",
+    devDataConfirmTitle: "Сгенерировать 60 дней данных?",
+    devDataConfirmDesc: "Заполнит случайные ответы для всех твоих активных трекеров за последние 60 дней. Существующие записи в этом окне будут перезаписаны. Только для разработчика.",
+    devDataConfirmBtn: "Сгенерировать",
+    devDataRunning: "Генерируем…",
+    devDataGeneratedTitle: "Готово",
+    devDataGeneratedDesc: "Создано {{count}} записей · {{trackers}} трекеров × {{days}} дней",
+    devDataNoTrackersTitle: "Нет активных трекеров",
+    devDataNoTrackersDesc: "Сначала добавь несколько вопросов из библиотеки",
+    devDataFailedTitle: "Не получилось сгенерировать",
     resetAllTitle: "Сбросить все данные",
     resetAllDesc: "Очистить все вопросы, записи, серии и настройки",
     resetAllBtn: "Сбросить все данные",
@@ -250,8 +261,8 @@ const ru: Translation = {
     dailyTitle: "MeMap",
     dailyBody: "Время для сегодняшней сессии",
     thresholdTitle: "{{emoji}} Сигнал к действию",
-    thresholdBody: "Вопрос «{{title}}» дошёл до {{threshold}} значимых дней. Пора что-то с этим делать.",
-    thresholdBodyWithAction: "«{{title}}» — {{threshold}} значимых дней. Твоё действие: {{action}}",
+    thresholdBody: "Вопрос «{{title}}» дошёл до {{threshold}} сигналов. Пора что-то с этим делать.",
+    thresholdBodyWithAction: "«{{title}}» — {{threshold}} сигналов. Твоё действие: {{action}}",
   },
 
   permissions: {
@@ -358,12 +369,12 @@ const ru: Translation = {
     strongPattern: "Чёткое наблюдение",
     emerging: "Нарастает",
     stable: "Стабильно",
-    significantDays: "значимых дней",
+    significantDays: "сигналов",
     moreToAction: "ещё {{count}} до точки действия",
     actionReached: "Точка действия достигнута",
     reflectionSuggested: "Время действовать",
-    patternBuildingOne: "Наблюдение складывается — ещё 1 значимый день до точки действия",
-    patternBuildingMany: "Наблюдение складывается — ещё {{count}} значимых дней до точки действия",
+    patternBuildingOne: "Наблюдение складывается — ещё 1 сигнал до точки действия",
+    patternBuildingMany: "Наблюдение складывается — ещё {{count}} сигналов до точки действия",
     disclaimer: "MeMap — инструмент для саморефлексии, не диагностическое приложение.",
     disclaimer2: "Если наблюдения пугают — стоит поговорить со специалистом.",
   },
@@ -380,6 +391,7 @@ const ru: Translation = {
     searchTypeHint: "Печатай для поиска или листай подсказки ниже",
     noTemplatesFound: "Шаблоны не найдены. Попробуй другие слова.",
     moreResults: "+ ещё {{count}}",
+    showAllInCluster: "Показать ещё {{count}}",
     suggestedIdeas: "Предложенные идеи",
     suggestedIdeasDesc: "Популярные шаблоны по категориям",
     searchResults: "Результаты поиска",
@@ -392,21 +404,26 @@ const ru: Translation = {
 
     customHeader: "Создай свой вопрос",
     customDesc: "Задай свой вопрос, период и порог, которые важны для тебя.",
+    autocompleteHeader: "Похожее в библиотеке — кликни, чтоб заполнить",
     fieldTitle: "Название",
     fieldTitlePh: "например, Утренняя медитация",
     fieldQuestion: "Вопрос",
     fieldQuestionPh: "например, Медитировал(а) ли я утром?",
     fieldCategory: "Категория",
-    fieldPeriod: "Следить за последние N дней",
+    fieldTheme: "Тема",
+    themePlaceholder: "Выбери тему",
+    fieldPeriod: "Окно (дней)",
     fieldPeriodHelp: "Насколько далеко смотреть назад",
-    fieldThreshold: "Значимых дней до действия",
-    fieldThresholdHelp: "Сколько дней — и пора что-то делать",
-    fieldConcern: "Какой ответ тревожит?",
-    fieldConcernDesc: "Тревожный ответ подсветится красным и засчитается к порогу наблюдения.",
-    yesConcerning: "Да — тревожно",
-    yesConcerningDesc: "Ответ «Да» считается значимым днём",
-    noConcerning: "Нет — тревожно",
-    noConcerningDesc: "Ответ «Нет» считается значимым днём",
+    fieldThreshold: "Сигналов до действия",
+    fieldThresholdHelp: "Сколько сигналов — и пора что-то делать",
+    fieldConcern: "Хороший / положительный ответ — это:",
+    fieldConcernDesc: "Например: «Спал(а) достаточно?» → «Да» — хорошо. «Болела голова?» → «Нет» — хорошо.",
+    // Legacy keys (still referenced by older UI in case anywhere
+    // else uses them). New form uses common.yes/common.no labels.
+    yesConcerning: "Да",
+    yesConcerningDesc: "Сигнал когда ответ «Нет»",
+    noConcerning: "Нет",
+    noConcerningDesc: "Сигнал когда ответ «Да»",
     fieldAdvice: "Действие при достижении порога",
     fieldAdvicePh: "Например: «Поговорить с подругой», «Записаться к врачу», «Найти 30 минут на себя»",
     createCustomBtn: "Создать свой вопрос",
@@ -436,7 +453,7 @@ const ru: Translation = {
     currentAnswer: "Текущий ответ",
     prevPattern: "Предыдущее наблюдение",
     nextPattern: "Следующее наблюдение",
-    statSignificantDays: "значимых дней",
+    statSignificantDays: "сигналов",
     statMoreToAction: "ещё {{count}} до точки действия",
     statActionReached: "Точка действия достигнута",
     statPeriod: "Окно: {{days}} дн.",
@@ -455,8 +472,8 @@ const ru: Translation = {
     answerType: "Тип ответа",
     answerTypeHelp: "Как ты будешь отвечать на этот вопрос в разделе «Сегодня»",
     answerBool: "Да / Нет",
-    categoryLabel: "Категория (Поток жизни)",
-    categoryHelp: "Влияет на цвет и группировку вопроса",
+    categoryLabel: "Тема",
+    categoryHelp: "Где в твоей жизни находится этот вопрос. Влияет на цвет и группировку.",
     adviceLabel: "Действие при достижении порога",
     adviceHelp: "Что ты сама себе хочешь сказать сделать, когда увидишь что паттерн повторяется. Это не наш совет — это твоё намерение.",
     advicePh: "Например: «Поговорить с подругой», «Записаться к врачу», «Найти 30 минут на себя»",
@@ -571,13 +588,13 @@ const ru: Translation = {
     to: "По",
     earlier: "на день раньше",
     later: "на день позже",
-    significantDaysOf: "{{done}} / {{total}} значимых дней",
+    significantDaysOf: "{{done}} / {{total}} сигналов",
     logged: "отмечено: {{count}}",
     actionReached: "Точка действия достигнута ✓",
     moreToAction: "ещё {{count}} до точки действия",
     reflection: "Твоё действие",
     confirmTitle: "Начать новый цикл наблюдения?",
-    confirmDesc: "Текущий цикл ({{count}} значимых дней) сохранится в историю. Счётчик начнётся заново с сегодняшнего дня.",
+    confirmDesc: "Текущий цикл ({{count}} сигналов) сохранится в историю. Счётчик начнётся заново с сегодняшнего дня.",
     yesStartFresh: "Да, начать заново",
     startNewCycle: "Новый цикл",
     cycleHelp: "Сохраняет прогресс в историю и обнуляет счётчик с сегодня",
@@ -585,7 +602,7 @@ const ru: Translation = {
     noPastCycles: "Прошлых циклов пока нет · история появится, когда начнёшь новый цикл",
     reached: "Достигнуто",
     closedEarly: "Закрыт раньше",
-    significant: "значимых",
+    significant: "сигналов",
     loggedShort: "отмечено",
     windowDays: "окно {{count}} дн.",
   },
@@ -594,7 +611,7 @@ const ru: Translation = {
     title: "Тренд и связь",
     footerAggYear: "Дней в месяц · линии вверх вместе = связь",
     footerAggWeek: "Дней в неделю · линии вверх вместе = связь",
-    footerStrips: "Красный = значимый · зелёный = записан · серый = пропуск",
+    footerStrips: "Красный = сигнал · зелёный = записан · серый = пропуск",
     noTrackers: "Выбери вопросы в чипах выше",
     showAll: "Все",
     shiftBack: "Предыдущий период",
@@ -604,16 +621,47 @@ const ru: Translation = {
 
   correlations: {
     title: "Возможные взаимосвязи",
-    empty: "Отмечай хотя бы 7 дней по нескольким наблюдениям, чтобы увидеть связи между ними.",
+    empty: "Связи появятся когда два наблюдения отметятся вместе минимум 7 дней. Чем больше дней — тем точнее картинка.",
     heading: "Найденные связи",
-    strong: "Сильная",
-    moderate: "Умеренная",
-    mild: "Слабая",
-    sharedDays: "{{count}} общих дней",
-    factWith: "Когда «{{a}}» — «{{bTitle}}» в {{bYes}} из {{total}} дней",
-    factWithout: "Когда без «{{a}}» — «{{bTitle}}» в {{bYes}} из {{total}} дней",
-    timesMore: "В {{ratio}}× чаще когда первое «Да»",
-    timesLess: "В {{ratio}}× реже когда первое «Да»",
+    miniDisclaimer: "Это совпадения в данных, не причины. Повод подумать, а не диагноз.",
+    explainerOpen: "Как считаются связи",
+    explainerTitle: "Как считаются связи",
+    explainerBody1: "Мы смотрим на дни когда у тебя есть отметки сразу по двум вопросам — и сравниваем как часто они выпадают «Да» вместе vs по отдельности. Если вместе чаще — появляется связь.",
+    explainerBody2: "Показываем только те связи, которые маловероятно объяснить случайностью (тест значимости, p<0.05). Чем больше дней с отметками, тем надёжнее картина.",
+    disclaimerHeading: "Важно",
+    disclaimerBody: "Связь — это совпадение в данных, не причина. Например, «алкоголь × голова» не значит, что одно вызывает другое — может быть третий фактор (недосып) или просто совпадение. Используй это как повод подумать или поговорить с врачом, не как диагноз.",
+    // Strength labels — softened from "Слабая/Умеренная/Сильная" to
+    // descriptive language. "Слабая" sounded discouraging on a card
+    // showing a 3× ratio — the user reported it felt contradictory.
+    strong: "Устойчивый паттерн",
+    moderate: "Заметная связь",
+    mild: "Предварительный сигнал",
+    sharedDays: "{{count}} дней данных",
+    // Headlines per "frame" — derived from the polarity of each
+    // tracker (good / bad / neutral) and the sign of phi. Used only
+    // when BOTH trackers have shortLabel metadata (top-15 templates).
+    // For pairs without metadata or with a neutral tracker we fall
+    // back to the generic "Возможная связь" label. All headlines
+    // use shortLabels in nominative case ({{a}} и {{b}}: ...) to
+    // sidestep Russian declension entirely.
+    headlineCoPresence: "{{a}} и {{b}}: идут вместе",
+    headlineOpposite: "{{a}} и {{b}}: реже одновременно",
+    headlineUnexpected: "{{a}} и {{b}}: неожиданная связь",
+    headlinePossibleLink: "Возможная связь",
+    // Body — plain-language facts. Percentage prominent (49%), raw
+    // count secondary. "В дни с" / "В дни без" reads more naturally
+    // than "При" / "Без" and matches the conclusion sentence.
+    factWith: "В дни с «{{a}}»: «{{b}}» в {{percent}}% случаев ({{n}} из {{total}})",
+    factWithout: "В дни без «{{a}}»: «{{b}}» в {{percent}}% случаев ({{n}} из {{total}})",
+    // Direction sentence with smart-rounded ratio + "раз/раза"
+    // pluralisation. "В дни с" replaces the awkward "когда X
+    // отмечен" — the user pointed out "отмечен" required mental
+    // translation to "answered Yes".
+    timesMore: "→ «{{b}}» примерно в {{ratio}} чаще в дни с «{{a}}»",
+    timesLess: "→ «{{b}}» примерно в {{ratio}} реже в дни с «{{a}}»",
+    // (coAbsenceNote string removed in 1.7+ — the parallel-absence
+    // info is now visible directly in the expanded "Подробнее"
+    // facts via the symmetric percentages.)
     expected: "Ожидаемая",
     unexpected: "Неожиданная",
     unexpectedHint: "Возможно совпадение — нужно больше данных для подтверждения",
@@ -621,6 +669,8 @@ const ru: Translation = {
     lagAPredictsB: "на следующий день",
     lagBPredictsA: "за день до",
     viewInTrends: "В графике",
+    showDetails: "Подробнее",
+    hideDetails: "Свернуть",
   },
 
   overview: {
@@ -656,7 +706,7 @@ const ru: Translation = {
     daysActive: "Активных дней",
     dayStreak: "Серия дней",
     completion: "Заполнение",
-    significantAnswers: "{{count}} значимых ответов на этой неделе",
+    significantAnswers: "{{count}} сигналов на этой неделе",
   },
 
   swipeCard: {
@@ -702,7 +752,7 @@ const ru: Translation = {
     multiTitle: "Заполнить пропущенное",
     multiBody: "Тапни «Выбрать несколько» и отметь несколько дней разом — удобно если забыл что-то заполнить за прошлые дни.",
     signalsTitle: "Сигналы",
-    signalsBody: "Здесь вопросы которые набрали порог значимых дней — приложение подсказывает, что стоит обратить внимание.",
+    signalsBody: "Здесь вопросы которые набрали порог сигналов — приложение подсказывает, что стоит обратить внимание.",
     trendsTitle: "Тренды",
     trendsBody: "График ответов за последний период — видишь как меняется состояние день за днём.",
     linksTitle: "Связи",

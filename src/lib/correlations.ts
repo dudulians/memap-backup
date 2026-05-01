@@ -17,6 +17,140 @@
 
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { RELATED_QUESTIONS, matchTemplateIdByTitle } from "./relatedQuestions";
+import { LIFE_STREAMS } from "./lifeStreams";
+
+// Look up a tracker title against the curated library and return its
+// shortLabel (RU + EN forms) if the matched template has metadata.
+// Used by the Correlation Insights UI to render natural-language
+// headlines like "Алкоголь и головная боль: возможная связь" instead
+// of the safe but stiff fallback "При «X»: «Y»...". Top-15 templates
+// are annotated by hand (see lifeStreams.ts shortLabel field).
+export interface TrackerInsightLabel {
+  /** Lowercase noun phrase, EN. e.g. "alcohol", "headaches". */
+  en: string;
+  /** Lowercase noun phrase, RU. e.g. "алкоголь", "головная боль". */
+  ru: string;
+}
+export const lookupShortLabel = (
+  trackerTitle: string,
+): TrackerInsightLabel | null => {
+  const id = matchTemplateIdByTitle(trackerTitle);
+  if (!id) return null;
+  for (const stream of LIFE_STREAMS) {
+    for (const tpl of stream.templates) {
+      if (tpl.id === id) {
+        if (tpl.shortLabel && tpl.shortLabelRu) {
+          return { en: tpl.shortLabel, ru: tpl.shortLabelRu };
+        }
+        return null;
+      }
+    }
+  }
+  return null;
+};
+
+// Whether either tracker in a pair is a sensitive template (intimacy,
+// libido, ex). Used to hide correlations involving sensitive
+// templates unless the user has opted in via Settings → "Show
+// sensitive topics" (writes localStorage memap_show_sensitive=true).
+const isSensitiveTrackerTitle = (trackerTitle: string): boolean => {
+  const id = matchTemplateIdByTitle(trackerTitle);
+  if (!id) return false;
+  for (const stream of LIFE_STREAMS) {
+    for (const tpl of stream.templates) {
+      if (tpl.id === id) return tpl.sensitive === true;
+    }
+  }
+  return false;
+};
+
+const userOptedIntoSensitive = (): boolean => {
+  try {
+    return localStorage.getItem("memap_show_sensitive") === "true";
+  } catch {
+    return false;
+  }
+};
+
+// ─── Polarity-aware framing helpers ─────────────────────────────────
+//
+// Each tracker has a semantic polarity — what does "Yes" actually
+// mean for the user's wellbeing?
+//   "good"    — Yes is the desired state (slept enough, exercised,
+//               felt happy). problemWhen === "no" because it's a
+//               PROBLEM when the user answered No.
+//   "bad"     — Yes is the unwanted event (headache, argued, drank
+//               alcohol). problemWhen === "yes".
+//   "neutral" — Yes is just a thought or aspiration, neither good
+//               nor bad: "wanted a child", "thought about emigrating",
+//               "missed an ex". These have problemWhen === "yes" too
+//               (the THRESHOLD signal is "this thought repeats often")
+//               but they're not negative events. Listed by template id
+//               below so the framing engine doesn't accidentally write
+//               "Wanted a child × Joy: bad-bad pattern" — that would
+//               be tone-deaf.
+//
+// Polarity drives WHICH headline template to pick (e.g. "they go
+// together" vs "X may reduce Y" vs "unexpected pattern"). When
+// polarity can't be confidently assigned we fall back to the safe
+// generic "Possible connection" headline.
+const NEUTRAL_TEMPLATE_IDS = new Set<string>([
+  "wanted-child",
+  "thought-about-emigrating",
+  "wanted-leave-job",
+  "thought-divorce",
+  "wanted-life-change",
+  "wanted-pet",
+  "wanted-learn-new",
+  "thought-career-change",
+  "thought-about-someone-else",
+  "missed-ex",
+  "thought-about-going-back",
+  "thought-third-country",
+]);
+
+export type TrackerPolarity = "good" | "bad" | "neutral";
+
+export const trackerPolarity = (tracker: Tracker): TrackerPolarity => {
+  const id = matchTemplateIdByTitle(tracker.title);
+  if (id && NEUTRAL_TEMPLATE_IDS.has(id)) return "neutral";
+  // problemWhen is the structural truth: a problem is signalled when
+  // the user answered Yes (-> "bad") or No (-> "good").
+  return tracker.problemWhen === "yes" ? "bad" : "good";
+};
+
+// Frame type derived from (polarity A, polarity B, phi sign). Drives
+// which headline copy the UI uses. Five buckets total — kept tight so
+// a single string per language stays readable for each.
+//   "co-presence"  — same polarity + positive phi: both move together
+//                     (sleep & joy go together; alcohol & headache
+//                     show up on the same days).
+//   "opposite"     — different polarity (one good, one bad) + negative
+//                     phi: protective / disruptor pattern (exercise
+//                     on days with less anxiety; arguments on days
+//                     without joy).
+//   "unexpected"   — anything else where both polarities are non-
+//                     neutral but the phi direction goes against
+//                     intuition. Framed with curiosity, not certainty.
+//   "fallback"     — at least one tracker is neutral, or no metadata,
+//                     so we don't claim a semantic interpretation.
+export type CorrelationFrame =
+  | "co-presence"
+  | "opposite"
+  | "unexpected"
+  | "fallback";
+
+export const correlationFrame = (
+  polA: TrackerPolarity,
+  polB: TrackerPolarity,
+  phi: number,
+): CorrelationFrame => {
+  if (polA === "neutral" || polB === "neutral") return "fallback";
+  const samePolarity = polA === polB;
+  if (phi > 0 && samePolarity) return "co-presence";
+  if (phi < 0 && !samePolarity) return "opposite";
+  return "unexpected";
+};
 
 export type Lag = -1 | 0 | 1;
 
@@ -196,26 +330,59 @@ const computePairLag = (
   };
 };
 
+// Cluster id for a given template id — walks LIFE_STREAMS once.
+// Used by the semantic verdict to upgrade "unknown" to "expected"
+// when a custom tracker's saved cluster matches the library
+// template's cluster.
+const clusterIdForTemplateId = (tplId: string): string | null => {
+  for (const stream of LIFE_STREAMS) {
+    if (stream.templates.some((t) => t.id === tplId)) return stream.id;
+  }
+  return null;
+};
+
 /** Three-way verdict on the (a, b) pair semantics:
- *  - "expected"   if both trackers map to template ids AND the pair
- *                 (either direction) is in RELATED_QUESTIONS.
+ *  - "expected"   in two cases:
+ *      (a) both trackers map to template ids AND the pair (either
+ *          direction) is in RELATED_QUESTIONS;
+ *      (b) one is library-matched and the other is custom but
+ *          carries a `cluster` field equal to the library tracker's
+ *          cluster — softer signal but useful (1.7+).
  *  - "unexpected" if both trackers map to template ids BUT the pair
  *                 is not in the graph — likely coincidence.
- *  - "unknown"    if at least one tracker is genuinely custom (no
- *                 template match even via keyword fallback). We
- *                 honestly don't know — UI shouldn't hedge or boost. */
+ *  - "unknown"    fallback when we can't determine semantically. */
 const pairSemanticVerdict = (
   a: Tracker,
   b: Tracker,
 ): "expected" | "unexpected" | "unknown" => {
   const idA = matchTemplateIdByTitle(a.title);
   const idB = matchTemplateIdByTitle(b.title);
-  if (!idA || !idB) return "unknown";
-  const aRelated = RELATED_QUESTIONS[idA] ?? [];
-  if (aRelated.includes(idB)) return "expected";
-  const bRelated = RELATED_QUESTIONS[idB] ?? [];
-  if (bRelated.includes(idA)) return "expected";
-  return "unexpected";
+
+  // Both library-matched — use the curated graph as authoritative.
+  if (idA && idB) {
+    const aRelated = RELATED_QUESTIONS[idA] ?? [];
+    if (aRelated.includes(idB)) return "expected";
+    const bRelated = RELATED_QUESTIONS[idB] ?? [];
+    if (bRelated.includes(idA)) return "expected";
+    return "unexpected";
+  }
+
+  // Mixed pair: one library-matched, one custom-with-cluster. If
+  // the custom tracker's cluster matches the library template's
+  // cluster, that's an "expected" pair semantically — they belong
+  // to the same theme. Custom user typed e.g. "Шумит сосед сверху"
+  // and tagged the Theme as "Внешние события" → noisy-neighbors
+  // template lives in the same cluster → expected pair.
+  const libId = idA ?? idB;
+  const customTracker = idA ? b : a;
+  if (libId && customTracker.cluster) {
+    const libCluster = clusterIdForTemplateId(libId);
+    if (libCluster && libCluster === customTracker.cluster) {
+      return "expected";
+    }
+  }
+
+  return "unknown";
 };
 
 /**
@@ -235,10 +402,35 @@ export const computeCorrelations = (
   const dateMap = buildDateMap(entries);
   const out: CorrelationResult[] = [];
 
+  // Sensitive opt-in flag — read once per call. When false (default),
+  // pairs that include a sensitive template (intimacy/libido/ex) are
+  // suppressed from the insights view. User can opt in via Settings.
+  const includeSensitive = userOptedIntoSensitive();
+
+  // Minimum-occurrence guards. Without these, a "0/2 vs 5/58" pair
+  // could pass chi-square + phi but be a meaningless statistical
+  // accident on top of rare events. We require:
+  //   - both A=Yes AND A=No to have happened ≥ 5 times each
+  //   - B=Yes (the outcome we're connecting to) ≥ 3 times total
+  // GPT-suggested values, calibrated for our 30-90 day windows.
+  const MIN_X_OCCURRENCES = 5;
+  const MIN_Y_OCCURRENCES = 3;
+
   for (let i = 0; i < active.length; i++) {
     for (let j = i + 1; j < active.length; j++) {
       const a = active[i];
       const b = active[j];
+
+      // Sensitive gate. If either tracker is a sensitive template
+      // and the user hasn't opted in, skip the pair entirely — even
+      // the headline with sensitive titles would be intrusive on
+      // the main Patterns surface.
+      if (
+        !includeSensitive &&
+        (isSensitiveTrackerTitle(a.title) || isSensitiveTrackerTitle(b.title))
+      ) {
+        continue;
+      }
 
       // Try all three lags. Pick the strongest *significant* one for
       // this pair — we only show one direction per pair to keep the UI
@@ -249,6 +441,12 @@ export const computeCorrelations = (
         if (!stat) continue;
         if (stat.chiSquare < CHI2_P05) continue; // not significant
         if (Math.abs(stat.phi) < minPhiForSample(stat.sharedDays)) continue;
+        // Minimum-occurrence guards.
+        const aYes = stat.counts.bothYes + stat.counts.aYesBNo;
+        const aNo = stat.counts.aNoBYes + stat.counts.bothNo;
+        const bYes = stat.counts.bothYes + stat.counts.aNoBYes;
+        if (aYes < MIN_X_OCCURRENCES || aNo < MIN_X_OCCURRENCES) continue;
+        if (bYes < MIN_Y_OCCURRENCES) continue;
         candidates.push(stat);
       }
       if (candidates.length === 0) continue;

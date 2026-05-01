@@ -166,9 +166,15 @@ export const TrackerDetails = ({
   const currentAnswer = currentEntry?.value;
 
   return (
+    // px-4: gives every card inside (answer, stats, reflection,
+    // manage row) breathing room from screen edges. Without it the
+    // borders of `card-premium` got clipped by the BottomSheet's
+    // overflow-hidden — a 1.7.0 user-reported bug. Applied at the
+    // root so all three entry points (TodayTab sheet, PatternsTab
+    // sheet, TrackersTab inline) get the fix from one place.
     <div
       ref={containerRef}
-      className="space-y-4 pb-20 animate-fade-in"
+      className="px-4 space-y-4 pb-20 animate-fade-in"
     >
       {/* Navigation header */}
       {onBack && (
@@ -206,13 +212,16 @@ export const TrackerDetails = ({
         </div>
       )}
 
-      {/* Slim header — just the category as a quiet uppercase label,
-          tracker title sits in the answer card right below. The big
-          title card was eating ~80px of vertical space without earning
-          it; the answer card already carries the user's attention. */}
-      <div className="flex items-center justify-center gap-1.5 -mb-1">
+      {/* Combined breadcrumb header — category + tracker title on a
+          single muted line. Reworked in 1.7+: previously the title got
+          its own bold centered h2, which competed with the actual
+          question for attention. The question is what the user is
+          here to ANSWER, so the title is demoted to a quiet "where
+          am I" hint and the question (rendered inside QuestionSwipeCard
+          below) becomes the visual anchor. */}
+      <div className="flex items-center justify-center gap-2 flex-wrap">
         <Icon
-          className="h-3.5 w-3.5"
+          className="h-3.5 w-3.5 flex-shrink-0"
           style={{ color: `hsl(var(--${categoryColor}))` }}
           strokeWidth={1.75}
         />
@@ -222,10 +231,11 @@ export const TrackerDetails = ({
         >
           {t(`categories.${tracker.category}` as const)}
         </span>
+        <span className="text-muted-foreground/40 text-xs">·</span>
+        <span className="text-xs text-muted-foreground font-medium">
+          {localizeTrackerTitle(tracker.title)}
+        </span>
       </div>
-      <h2 className="text-base font-medium text-center -mt-0.5">
-        {localizeTrackerTitle(tracker.title)}
-      </h2>
 
       {/* Quick answer for the selected date. Shows the question once
           and the Yes/No buttons inline so answering doesn't require
@@ -522,7 +532,13 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
         }}
       >
         <CardContent className="p-5">
-          <p className="text-base leading-relaxed mb-5">
+          {/* Question is the visual anchor of this screen — the user
+              came here to answer it. Bumped from `text-base` to
+              `text-lg font-medium leading-snug` in 1.7+ so it reads
+              like a headline, not body text. The (tracker title +
+              category) breadcrumb above keeps the context line
+              available without competing for attention. */}
+          <p className="text-lg font-medium leading-snug mb-5">
             {localizeTrackerQuestion(tracker.questionText)}
           </p>
 

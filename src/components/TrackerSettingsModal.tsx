@@ -9,8 +9,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { localizeTrackerQuestion, localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { localizeTrackerQuestion, localizeTrackerAdvice, localizeTrackerTitle, localizeGroupTitle } from "@/lib/trackerLocalize";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
+import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { Check, X } from "lucide-react";
+
+// Same mapping as AddTrackerModal — when user picks a Theme
+// (cluster), we derive the structural Tracker.category for stats
+// and color. Kept local to avoid creating yet another shared
+// constants file for two callsites.
+const CLUSTER_TO_CATEGORY: Record<string, Tracker["category"]> = {
+  partner: "Connections",
+  parenting: "Connections",
+  health: "Health",
+  habits: "Health",
+  state: "Emotions",
+  "big-decisions": "Voice",
+  "external-events": "Social",
+  expat: "Voice",
+};
+
+// Reverse hint — for trackers stored BEFORE the cluster field
+// existed. Best-guess single cluster from the category enum, so
+// the "Theme" dropdown isn't empty when editing legacy data.
+// Many-to-one collisions resolved to the most common case
+// (e.g., Connections defaults to "partner" rather than
+// "parenting" because partner is more universal).
+const inferClusterFromCategory = (
+  category: Tracker["category"],
+): string | undefined => {
+  switch (category) {
+    case "Connections": return "partner";
+    case "Health":      return "health";
+    case "Emotions":    return "state";
+    case "Voice":       return "big-decisions";
+    case "Social":      return "external-events";
+    case "Curious":     return "habits";
+    case "Body":        return "health";
+    case "Fun":         return "state";
+    default:            return undefined;
+  }
+};
 
 interface TrackerSettingsModalProps {
   open: boolean;
@@ -26,6 +65,7 @@ const trackerSettingsSchema = z.object({
   threshold: z.number().min(1),
   problemWhen: z.enum(["yes", "no"]),
   category: z.enum(["Emotions", "Body", "Connections", "Voice", "Health", "Curious", "Fun", "Social"]),
+  cluster: z.string().optional(),
   adviceAboveThreshold: z.string().trim().max(500, "Advice must be less than 500 characters"),
 });
 
@@ -39,6 +79,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
     threshold: 10,
     problemWhen: "yes" as "yes" | "no",
     category: "Curious" as Tracker["category"],
+    cluster: undefined as string | undefined,
     adviceAboveThreshold: "",
   });
   const [thresholdRaw, setThresholdRaw] = useState<string>("10");
@@ -61,6 +102,10 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
         threshold: tracker.threshold,
         problemWhen: tracker.problemWhen,
         category: tracker.category,
+        // Trackers created before the cluster field existed (1.6
+        // and earlier) have no cluster set. Best-guess from their
+        // existing category so the Theme dropdown isn't empty.
+        cluster: tracker.cluster ?? inferClusterFromCategory(tracker.category),
         adviceAboveThreshold: localizeTrackerAdvice(tracker.adviceAboveThreshold),
       });
       setPeriodDaysRaw(String(tracker.periodDays));
@@ -172,23 +217,10 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
         </div>
 
         {/* Answer Type */}
-        <div className="space-y-2">
-          <Label htmlFor="answerType">{t("trackerSettings.answerType")}</Label>
-          <Select
-            value={formData.answerType}
-            onValueChange={(value) => setFormData({ ...formData, answerType: value as Tracker["answerType"] })}
-          >
-            <SelectTrigger id="answerType" className="bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              <SelectItem value="boolean">{t("trackerSettings.answerBool")}</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {t("trackerSettings.answerTypeHelp")}
-          </p>
-        </div>
+        {/* Тип ответа field removed in 1.7+ — only boolean (Да/Нет)
+            is currently supported, so the dropdown showed a single
+            disabled option. The user pointed out it was clutter.
+            If we ever add scale/count/note answer types, restore. */}
 
         {/* Period + Threshold */}
         <div className="grid grid-cols-2 gap-4">
@@ -227,65 +259,80 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
           </div>
         </div>
 
-        {/* Concerning answer */}
+        {/* Polarity — visual Yes/No colour toggle. Same component
+            as the Custom-form in AddTrackerModal (1.7+). Selected
+            button is GREEN (good answer); unselected is RED (signal).
+            problemWhen wiring inverted: tap "Да" → problemWhen="no"
+            since the SIGNAL fires on the No answer. */}
         <div className="space-y-2">
           <Label>{t("addTracker.fieldConcern")}</Label>
           <p className="text-xs text-muted-foreground">
             {t("addTracker.fieldConcernDesc")}
           </p>
-          <div className="space-y-2 pt-1">
-            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
-              style={formData.problemWhen === "yes" ? { borderColor: "hsl(var(--strong))", background: "hsl(var(--strong) / 0.05)" } : {}}>
-              <input
-                type="radio"
-                name="problemWhen"
-                value="yes"
-                checked={formData.problemWhen === "yes"}
-                onChange={() => setFormData({ ...formData, problemWhen: "yes" })}
-                className="h-4 w-4 mt-0.5"
-              />
-              <div>
-                <p className="text-sm font-medium">{t("addTracker.yesConcerning")}</p>
-                <p className="text-xs text-muted-foreground">{t("addTracker.yesConcerningDesc")}</p>
-              </div>
-            </label>
-            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl border transition-colors hover:bg-muted/30"
-              style={formData.problemWhen === "no" ? { borderColor: "hsl(var(--strong))", background: "hsl(var(--strong) / 0.05)" } : {}}>
-              <input
-                type="radio"
-                name="problemWhen"
-                value="no"
-                checked={formData.problemWhen === "no"}
-                onChange={() => setFormData({ ...formData, problemWhen: "no" })}
-                className="h-4 w-4 mt-0.5"
-              />
-              <div>
-                <p className="text-sm font-medium">{t("addTracker.noConcerning")}</p>
-                <p className="text-xs text-muted-foreground">{t("addTracker.noConcerningDesc")}</p>
-              </div>
-            </label>
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            {(["yes", "no"] as const).map((answerKey) => {
+              const isGood =
+                (answerKey === "yes" && formData.problemWhen === "no") ||
+                (answerKey === "no" && formData.problemWhen === "yes");
+              return (
+                <button
+                  key={answerKey}
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      problemWhen: answerKey === "yes" ? "no" : "yes",
+                    })
+                  }
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-medium transition-all"
+                  style={
+                    isGood
+                      ? {
+                          borderColor: "hsl(var(--balanced))",
+                          background: "hsl(var(--balanced) / 0.12)",
+                          color: "hsl(var(--balanced))",
+                        }
+                      : {
+                          borderColor: "hsl(var(--strong) / 0.4)",
+                          background: "hsl(var(--strong) / 0.06)",
+                          color: "hsl(var(--strong))",
+                        }
+                  }
+                >
+                  {isGood ? (
+                    <Check className="h-4 w-4" strokeWidth={2.5} />
+                  ) : (
+                    <X className="h-4 w-4" strokeWidth={2.5} />
+                  )}
+                  {answerKey === "yes" ? t("common.yes") : t("common.no")}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Category */}
+        {/* Theme (cluster) — replaces the old "Категория (Поток
+            жизни)" dropdown. User picks a life-area theme; we
+            derive Tracker.category for color/stats from a fixed
+            map. Same UX as the Custom form in AddTrackerModal. */}
         <div className="space-y-2">
-          <Label htmlFor="category">{t("trackerSettings.categoryLabel")}</Label>
+          <Label htmlFor="cluster">{t("trackerSettings.categoryLabel")}</Label>
           <Select
-            value={formData.category}
-            onValueChange={(value) => setFormData({ ...formData, category: value as Tracker["category"] })}
+            value={formData.cluster ?? ""}
+            onValueChange={(value) => {
+              const derivedCategory = CLUSTER_TO_CATEGORY[value] ?? formData.category;
+              setFormData({ ...formData, cluster: value, category: derivedCategory });
+            }}
           >
-            <SelectTrigger id="category" className="bg-background">
-              <SelectValue />
+            <SelectTrigger id="cluster" className="bg-background">
+              <SelectValue placeholder={t("addTracker.themePlaceholder")} />
             </SelectTrigger>
             <SelectContent className="bg-background z-50">
-              <SelectItem value="Emotions">{t("trackerSettings.categoryEmotions")}</SelectItem>
-              <SelectItem value="Body">{t("trackerSettings.categoryBody")}</SelectItem>
-              <SelectItem value="Connections">{t("trackerSettings.categoryConnections")}</SelectItem>
-              <SelectItem value="Voice">{t("trackerSettings.categoryVoice")}</SelectItem>
-              <SelectItem value="Health">{t("trackerSettings.categoryHealth")}</SelectItem>
-              <SelectItem value="Curious">{t("trackerSettings.categoryCurious")}</SelectItem>
-              <SelectItem value="Fun">{t("trackerSettings.categoryFun")}</SelectItem>
-              <SelectItem value="Social">{t("trackerSettings.categorySocial")}</SelectItem>
+              {LIFE_STREAMS.map((stream) => (
+                <SelectItem key={stream.id} value={stream.id}>
+                  {localizeGroupTitle(stream.title)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">

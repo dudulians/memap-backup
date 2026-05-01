@@ -34,6 +34,10 @@ export interface TemplateGroup {
     /** Sensitive content (intimacy, libido, ex partners). Hidden by
      *  default; user opts in via Settings → "Show sensitive topics". */
     sensitive?: boolean;
+    /** Curated starter template for the cluster — shown first when
+     *  the user expands a cluster, with the rest gated behind
+     *  "Показать все N →". Three per cluster. */
+    featured?: boolean;
   }>;
 }
 
@@ -56,5 +60,6 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = LIFE_STREAMS.map((stream) => ({
     problemWhen: t.problemWhen,
     adviceAboveThreshold: t.adviceAboveThreshold,
     sensitive: t.sensitive,
+    featured: t.featured,
   })),
 }));

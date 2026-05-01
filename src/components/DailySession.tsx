@@ -11,7 +11,7 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Shuffle, Pencil, CalendarDays, 
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
-import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { LIFE_STREAMS, LifeStreamTemplate } from "@/lib/lifeStreams";
 import { getRelatedQuestions, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
@@ -165,7 +165,66 @@ export const DailySession = ({
       // random when the user has no recognisable templates yet (all
       // custom-typed or empty deck).
 
-      const allTemplates = LIFE_STREAMS.flatMap((s) => s.templates);
+      // 1.7+ HARD INTERVIEW FILTERS: mirror the same gates that
+      // starterGenerator uses, so playMode never offers a kid /
+      // partner / expat / sensitive template the user explicitly
+      // opted out of. User reported: "I'm male without kids and
+      // got the 'wanted a child' question in a random round."
+      // Without this layer, playMode pulled from the entire
+      // LIFE_STREAMS regardless of context.
+      let interviewAnswers: {
+        hasKids?: boolean;
+        hasPartner?: boolean;
+        isExpat?: boolean;
+        showSensitive?: boolean;
+      } = {};
+      try {
+        const raw = localStorage.getItem("memap_interview");
+        const showSensitive =
+          localStorage.getItem("memap_show_sensitive") === "true";
+        const parsed = raw ? JSON.parse(raw) : {};
+        interviewAnswers =
+          parsed && typeof parsed === "object"
+            ? { ...parsed, showSensitive }
+            : { showSensitive };
+      } catch {
+        // Safe defaults — gate everything when storage is unreadable.
+      }
+      const KIDS_HAY = ["kids", "children", "parenting", "child", "ребён", "дет"];
+      const PARTNER_HAY = ["partner", "партнёр"];
+      const haystack = (tpl: LifeStreamTemplate) =>
+        [
+          tpl.title,
+          tpl.titleRu ?? "",
+          tpl.questionText,
+          tpl.questionTextRu ?? "",
+          tpl.subcategory ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+      const matchesAny = (hay: string, kws: string[]) =>
+        kws.some((k) => hay.includes(k.toLowerCase()));
+
+      const allTemplates = LIFE_STREAMS.flatMap((stream) => {
+        // Cluster-level gate — expat cluster is hard-hidden unless
+        // user opted in via the onboarding ContextScreen.
+        if (stream.gatedBy === "expat" && interviewAnswers.isExpat !== true) {
+          return [];
+        }
+        return stream.templates.filter((tpl) => {
+          // Sensitive (intimacy / libido / ex) — opt-in via Settings.
+          if (tpl.sensitive && !interviewAnswers.showSensitive) return false;
+          const hay = haystack(tpl);
+          if (interviewAnswers.hasKids === false && matchesAny(hay, KIDS_HAY))
+            return false;
+          if (
+            interviewAnswers.hasPartner === false &&
+            matchesAny(hay, PARTNER_HAY)
+          )
+            return false;
+          return true;
+        });
+      });
 
       // Existing trackers — match BY TEMPLATE ID, not just by title.
       // Title-only match used to miss the case where a stored tracker

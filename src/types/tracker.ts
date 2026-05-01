@@ -31,6 +31,14 @@ export interface Tracker {
   // in a separate section on Cards. User can bulk-delete, or "promote"
   // them to regular cards (which clears this flag).
   source?: "play";
+  // LifeStreams cluster id (e.g. "partner", "health", "external-events").
+  // Set when the tracker was created from a library template, OR when
+  // the user picked a Theme on the Custom form. Used by correlations
+  // as a soft semantic hint: a custom tracker tagged with the same
+  // cluster as a library template gets an "expected" verdict even
+  // when keyword fallback can't resolve it to a specific template id.
+  // Optional — older trackers may not have it.
+  cluster?: string;
 }
 
 export interface TrackerEntry {

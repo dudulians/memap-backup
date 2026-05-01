@@ -1,15 +1,59 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { getCategoryColor } from "@/lib/categoryHelpers";
-import { Lightbulb, ArrowRight, LineChart as LineChartIcon, AlertTriangle, Sparkles } from "lucide-react";
+import { Lightbulb, LineChart as LineChartIcon, AlertTriangle, Sparkles, Info, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   computeCorrelations,
   phiStrengthLabel,
   isHighlySignificant,
+  lookupShortLabel,
+  trackerPolarity,
+  correlationFrame,
 } from "@/lib/correlations";
+
+// Smart ratio formatter — converts 3.0× style to "3 раза" / "3 times"
+// natural language. Russian needs раз / раза agreement (1 раз, 2-4
+// раза, 5+ раз, 11-14 раз, decimals always раза). Rounding rules:
+//   ≥1.75 → round to integer (1.75-2.4 → 2, 2.5-3.4 → 3, etc.)
+//   1.0-1.74 → "1.5" (any sub-2 ratio above the visibility threshold
+//                      is dramatic enough to read as "one and a half")
+//   ≥9.5 → round to integer (cap floor irrelevant)
+const formatRatioDisplay = (ratio: number, isRu: boolean): string => {
+  const r = ratio >= 1 ? ratio : 1 / ratio;
+  let intVal: number | null = null;
+  let displayNum: string;
+  if (r >= 1.75) {
+    intVal = Math.round(r);
+    displayNum = String(intVal);
+  } else {
+    displayNum = isRu ? "1,5" : "1.5";
+  }
+  if (!isRu) return `${displayNum} times`;
+  // Russian раз/раза agreement
+  let word = "раза";
+  if (intVal !== null) {
+    const m100 = intVal % 100;
+    const m10 = intVal % 10;
+    if (m100 >= 11 && m100 <= 14) word = "раз";
+    else if (m10 === 1) word = "раз";
+    else if (m10 >= 2 && m10 <= 4) word = "раза";
+    else word = "раз";
+  }
+  return `в ${displayNum} ${word}`;
+};
+
+const capitalizeFirst = (s: string): string =>
+  s.length > 0 ? s[0].toUpperCase() + s.slice(1) : s;
 
 interface CorrelationInsightsProps {
   trackers: Tracker[];
@@ -21,6 +65,17 @@ interface CorrelationInsightsProps {
 export const CorrelationInsights = ({ trackers, entries, onSelectPair }: CorrelationInsightsProps) => {
   const { t, i18n } = useTranslation();
   const isRu = (i18n.language || "en").startsWith("ru");
+  // "How we compute connections" modal — opened from the (i) icon
+  // next to the section heading. Explains the math in plain language
+  // and carries the disclaimer (correlations ≠ causation, this is a
+  // conversation starter not a diagnosis).
+  const [explainerOpen, setExplainerOpen] = useState(false);
+  // Per-card expand state for the "facts" detail block. Conclusion
+  // is shown up-top as the headline read; facts (% of days etc.)
+  // hide behind a "Подробнее" toggle so the card scans cleanly.
+  // Keyed by correlation index (re-built each render — fine for 5
+  // items max).
+  const [expandedFacts, setExpandedFacts] = useState<Record<number, boolean>>({});
 
   const correlations = useMemo(
     () => computeCorrelations(trackers, entries, 5),
@@ -48,14 +103,31 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
   return (
     <Card className="card-premium breathing-space animate-fade-in">
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-primary/10">
+        <div className="flex items-start gap-2">
+          <div className="p-2 rounded-xl bg-primary/10 flex-shrink-0">
             <Lightbulb className="h-5 w-5 text-primary" />
           </div>
-          <div>
-            <h3 className="font-medium text-sm tracking-wide uppercase text-muted-foreground">
-              {t("correlations.heading")}
-            </h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-medium text-sm tracking-wide uppercase text-muted-foreground">
+                {t("correlations.heading")}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setExplainerOpen(true)}
+                className="p-0.5 rounded-full hover:bg-muted/50 transition-colors"
+                aria-label={t("correlations.explainerOpen")}
+              >
+                <Info className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={2} />
+              </button>
+            </div>
+            {/* Inline disclaimer right under the heading. Short — full
+                version lives in the (i) modal. The point is to make
+                sure even users who never tap the icon see at a glance
+                that these are co-occurrences, not diagnoses. */}
+            <p className="text-[11px] text-muted-foreground/90 mt-1 leading-snug">
+              {t("correlations.miniDisclaimer")}
+            </p>
           </div>
         </div>
 
@@ -66,24 +138,51 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
             const aTitle = localizeTrackerTitle(c.trackerA.title);
             const bTitle = localizeTrackerTitle(c.trackerB.title);
 
+            // Polarity-aware framing. We pick a frame based on:
+            //   - polarity of A and B (good/bad/neutral, derived
+            //     from problemWhen and the neutral-template list)
+            //   - sign of phi (positive = together, negative = apart)
+            // Frame drives the HEADLINE wording. The conclusion line
+            // below stays the same regardless (just shows ratio
+            // direction). For pairs where either tracker is neutral
+            // OR shortLabel metadata is missing, headline falls back
+            // to the safe generic "Возможная связь".
+            const labelA = lookupShortLabel(c.trackerA.title);
+            const labelB = lookupShortLabel(c.trackerB.title);
+            const polA = trackerPolarity(c.trackerA);
+            const polB = trackerPolarity(c.trackerB);
+            const frame = correlationFrame(polA, polB, c.phi);
+            const haveBothLabels = labelA && labelB;
+
+            // Pick the frame-specific headline key, OR fall back to
+            // the generic label when we can't write a confident
+            // semantic frame.
+            let headline: string | null = null;
+            if (haveBothLabels && frame !== "fallback") {
+              const aLabel = capitalizeFirst(isRu ? labelA.ru : labelA.en);
+              const bLabel = isRu ? labelB.ru : labelB.en;
+              const key =
+                frame === "co-presence"
+                  ? "correlations.headlineCoPresence"
+                  : frame === "opposite"
+                    ? "correlations.headlineOpposite"
+                    : "correlations.headlineUnexpected";
+              headline = t(key, { a: aLabel, b: bLabel });
+            } else if (haveBothLabels) {
+              headline = t("correlations.headlinePossibleLink");
+            }
+
             const aYes = c.counts.bothYes + c.counts.aYesBNo;       // total days A=yes
             const aNo = c.counts.aNoBYes + c.counts.bothNo;          // total days A=no
             const bYesGivenAYes = c.counts.bothYes;                  // out of aYes
             const bYesGivenANo = c.counts.aNoBYes;                   // out of aNo
+            const pctWithA = aYes > 0 ? Math.round((bYesGivenAYes / aYes) * 100) : 0;
+            const pctWithoutA = aNo > 0 ? Math.round((bYesGivenANo / aNo) * 100) : 0;
 
             const positive = c.phi > 0;
             const strengthLbl = phiStrengthLabel(c.phi);
             const robust = isHighlySignificant(c.chiSquare);
-
-            // Risk-ratio framing: when ratio > 1, B is more likely
-            // when A=yes; when < 1, less likely. Pick the bigger-than-1
-            // direction for cleaner phrasing ("X times more likely")
-            // regardless of which way phi happens to be signed.
-            const ratio = c.riskRatio;
-            const ratioForDisplay = ratio >= 1 ? ratio : 1 / ratio;
-            const ratioStr = ratioForDisplay >= 10
-              ? `${Math.round(ratioForDisplay)}`
-              : ratioForDisplay.toFixed(1);
+            const ratioStr = formatRatioDisplay(c.riskRatio, isRu);
 
             // Lag → human label
             const lagLabel =
@@ -121,60 +220,116 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                     : "")
                 }
               >
-                {/* Tracker pair + lag arrow */}
-                <div className="flex items-center gap-2 text-sm flex-wrap">
-                  <span
-                    className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{
-                      backgroundColor: `hsl(var(--${colorA}) / 0.15)`,
-                      color: `hsl(var(--${colorA}))`,
-                    }}
-                  >
-                    {aTitle}
-                  </span>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                  <span
-                    className="px-2 py-0.5 rounded-full text-xs font-medium"
-                    style={{
-                      backgroundColor: `hsl(var(--${colorB}) / 0.15)`,
-                      color: `hsl(var(--${colorB}))`,
-                    }}
-                  >
-                    {bTitle}
-                  </span>
-                  {c.lag !== 0 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      · {lagLabel}
-                    </span>
-                  )}
+                {/* Headline — only when both trackers have curated
+                    shortLabels and a confident frame. Reads as a
+                    heading the user can scan in one second. */}
+                {headline && (
+                  <h4 className="font-semibold text-sm leading-snug">
+                    {headline}
+                  </h4>
+                )}
+
+                {/* CONCLUSION — the only thing always visible. The
+                    user asked (1.7+) to make the conclusion the
+                    main read and tuck everything else (chips, raw
+                    %, co-absence note) behind a "Подробнее" toggle.
+                    This is the headline read in one sentence. */}
+                <div className="text-base font-medium leading-snug text-foreground">
+                  {positive
+                    ? t("correlations.timesMore", {
+                        a: aTitle,
+                        b: bTitle,
+                        ratio: ratioStr,
+                      })
+                    : t("correlations.timesLess", {
+                        a: aTitle,
+                        b: bTitle,
+                        ratio: ratioStr,
+                      })}
                 </div>
 
-                {/* Raw evidence — the heart of the new design. Show
-                    actual day counts so the user judges the pattern,
-                    not an abstract score. */}
-                <div className="text-xs leading-relaxed space-y-1 text-foreground/80 tabular-nums">
-                  <div>
-                    {t("correlations.factWith", {
-                      a: aTitle,
-                      bYes: bYesGivenAYes,
-                      total: aYes,
-                      bTitle: bTitle.toLowerCase(),
-                    })}
+                {/* Expandable detail — chips, raw %, optional
+                    co-absence note. Collapsed by default; "Подробнее"
+                    expands it; "Свернуть" collapses it back. */}
+                {expandedFacts[idx] ? (
+                  <div className="space-y-2 pt-1 border-t border-border/30">
+                    {/* Chips inside details — show which two
+                        trackers, with lag note if applicable. */}
+                    <div className="flex items-center gap-1.5 text-xs flex-wrap pt-2">
+                      <span
+                        className="px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: `hsl(var(--${colorA}) / 0.15)`,
+                          color: `hsl(var(--${colorA}))`,
+                        }}
+                      >
+                        {aTitle}
+                      </span>
+                      <span className="text-muted-foreground/60">·</span>
+                      <span
+                        className="px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          backgroundColor: `hsl(var(--${colorB}) / 0.15)`,
+                          color: `hsl(var(--${colorB}))`,
+                        }}
+                      >
+                        {bTitle}
+                      </span>
+                      {c.lag !== 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          · {lagLabel}
+                        </span>
+                      )}
+                    </div>
+                    {/* Symmetric percentage facts. The user can see
+                        49% vs 16% directly — no need for a separate
+                        "absence" note since the contrast tells the
+                        story. */}
+                    <div className="text-sm leading-snug space-y-1 text-muted-foreground tabular-nums">
+                      <div>
+                        {t("correlations.factWith", {
+                          a: aTitle,
+                          b: bTitle,
+                          n: bYesGivenAYes,
+                          total: aYes,
+                          percent: pctWithA,
+                        })}
+                      </div>
+                      <div>
+                        {t("correlations.factWithout", {
+                          a: aTitle,
+                          b: bTitle,
+                          n: bYesGivenANo,
+                          total: aNo,
+                          percent: pctWithoutA,
+                        })}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedFacts((prev) => ({ ...prev, [idx]: false }));
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {t("correlations.hideDetails")}
+                      <ChevronDown className="h-3 w-3 rotate-180 transition-transform" strokeWidth={2} />
+                    </button>
                   </div>
-                  <div className="text-muted-foreground">
-                    {t("correlations.factWithout", {
-                      a: aTitle.toLowerCase(),
-                      bYes: bYesGivenANo,
-                      total: aNo,
-                      bTitle: bTitle.toLowerCase(),
-                    })}
-                  </div>
-                  <div className="font-medium pt-0.5" style={{ color: "hsl(var(--strong))" }}>
-                    {positive
-                      ? t("correlations.timesMore", { ratio: ratioStr })
-                      : t("correlations.timesLess", { ratio: ratioStr })}
-                  </div>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedFacts((prev) => ({ ...prev, [idx]: true }));
+                    }}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {t("correlations.showDetails")}
+                    <ChevronDown className="h-3 w-3 transition-transform" strokeWidth={2} />
+                  </button>
+                )}
 
                 {/* Bottom row: strength + sample size + open Trends */}
                 <div className="flex items-center justify-between gap-2 pt-1">
@@ -227,6 +382,35 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
           })}
         </div>
       </div>
+
+      {/* Explainer modal — opened from the (i) icon next to the
+          heading. Holds the long-form explanation and the disclaimer
+          (correlation ≠ causation, talk to doctor not us). Body uses
+          plain Russian/English, no statistical jargon — only mentions
+          chi-square in passing as "тест значимости". */}
+      <Dialog open={explainerOpen} onOpenChange={setExplainerOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("correlations.explainerTitle")}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {t("correlations.explainerTitle")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-sm leading-relaxed text-foreground/85">
+            <p>{t("correlations.explainerBody1")}</p>
+            <p>{t("correlations.explainerBody2")}</p>
+            <div className="rounded-xl bg-muted/40 border border-border/40 p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600" strokeWidth={2.25} />
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                  {t("correlations.disclaimerHeading")}
+                </p>
+              </div>
+              <p className="text-xs leading-relaxed">{t("correlations.disclaimerBody")}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

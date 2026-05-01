@@ -22,7 +22,8 @@ type FocusArea =
   | "mood"
   | "energy"
   | "money"
-  | "hobbies";
+  | "hobbies"
+  | "environment";
 type Goal = "patterns" | "habit" | "understand" | "doctor";
 
 export interface InterviewAnswers {
@@ -62,6 +63,10 @@ export interface GeneratedStarter {
 interface NormalizedTemplate {
   // Stable internal id, source-prefixed so dedupe between catalogs works.
   id: string;
+  // Bare template id (without the `ls:cluster:` prefix). Used by the
+  // gender-leaning lookup tables below — those are keyed on the raw
+  // tpl.id from LIFE_STREAMS so they're easy to read and audit.
+  templateId: string;
   // EN strings used both for display when EN is active and as input to
   // localizeTrackerTitle/Question/Advice (which map EN → RU when needed).
   title: string;
@@ -93,6 +98,7 @@ const normalizeAll = (): NormalizedTemplate[] => {
     stream.templates.forEach((tpl: LifeStreamTemplate) => {
       out.push({
         id: `ls:${stream.id}:${tpl.id}`,
+        templateId: tpl.id,
         title: tpl.title,
         questionText: tpl.questionText,
         adviceAboveThreshold: tpl.adviceAboveThreshold,
@@ -124,6 +130,10 @@ const FOCUS_KEYWORDS: Record<FocusArea, string[]> = {
   energy: ["energy", "exhausted", "tired", "fatigue", "энерг", "истощ", "сил"],
   money: ["money", "finance", "spent", "saved", "деньги", "финанс", "потрат"],
   hobbies: ["creative", "hobby", "skill", "learn", "творч", "хобби", "учил"],
+  // Environment / external events — neighbors, traffic, parents,
+  // toxic friends, internet outages. New focus area in 1.7 to
+  // surface the external-events cluster templates from the library.
+  environment: ["neighbor", "construction", "commute", "traffic", "transport", "internet", "noise", "criticized", "parent", "toxic", "соседи", "стройк", "пробк", "транспорт", "интернет", "критик", "родител", "токсичн"],
 };
 
 // Subset of relationships keywords that imply a partner specifically (so
@@ -140,6 +150,117 @@ const HABIT_KEYWORDS = ["move", "moved", "movement", "exercise", "sleep", "slept
 const DOCTOR_KEYWORDS = ["headache", "migraine", "pain", "sleep", "alcohol", "medic", "pill", "side effect", "dizzy", "cramp", "back", "голова", "мигрен", "боль", "сон", "алког", "лекарств", "таблет", "побочн", "спин"];
 const PATTERNS_KEYWORDS = ["mood", "anxious", "anxiety", "lonely", "love", "partner", "argue", "family", "close", "настроени", "тревог", "одиноч", "люб", "партнёр", "ссор", "семь", "близк"];
 const UNDERSTAND_KEYWORDS = ["mood", "felt", "feel", "wanted", "thought", "noticed", "настроени", "чувств", "хотел", "замет"];
+
+// Gender-leaning template ids. Used as a soft +2 boost when the user's
+// declared pol matches the template's lean. Many templates are genuinely
+// neutral (sleep, water, mood) and stay in neither set — they keep their
+// baseline score for everyone. The lists are intentionally tight: ~25
+// templates per side, the ones with the strongest gender stereotype.
+//
+// Important: these are SOFT preferences, not hard filters. A man may
+// still pick "compared on social"; a woman may still pick "burned out
+// after work". The +2 only nudges first-impression ordering so the
+// person sees a few cards that visibly resonate before scrolling.
+//
+// Inspired by user feedback "her husband won't track this feminine
+// library" — without this, men landed on a card stack heavy with
+// crying / migraines / partner-relational while their actual concerns
+// (gym, alcohol, work, career) sat further down. Now those rise.
+
+const MALE_LEANING_IDS = new Set<string>([
+  // Body & habits
+  "exercised",
+  "trained-hard",
+  "stretched",
+  "morning-libido",
+  "felt-recovered",
+  "drank-alcohol",
+  "smoked",
+  "smoked-hookah",
+  "doomscrolled-news",
+  "gaming-streams-2h",
+  "screen-time-long",
+  "heart-palpitations",
+  // Work & career identity
+  "burned-out-after-work",
+  "didnt-want-to-work",
+  "worked-overtime",
+  "felt-fulfilled-at-work",
+  "in-flow",
+  "got-recognition",
+  "boss-was-difficult",
+  "wanted-leave-job",
+  "thought-career-change",
+  // Discipline / self-image
+  "kept-morning-promise",
+  "no-snooze",
+  "felt-proud-today",
+  "bed-before-midnight",
+  // Anger & control
+  "felt-angry",
+  "snapped-at-loved-ones",
+  "yelled-at-kid",
+  "ran-out-of-patience",
+  // Big decisions
+  "thought-about-emigrating",
+  "wanted-life-change",
+  // Learning
+  "read-book",
+  "listened-podcast",
+  "learned-something-new",
+]);
+
+const FEMALE_LEANING_IDS = new Set<string>([
+  // Partner & relational
+  "argued-with-partner",
+  "felt-lonely-with-partner",
+  "felt-close-to-partner",
+  "good-time-together",
+  "called-parent",
+  "saw-friends",
+  "complimented-stranger",
+  "apologized-first",
+  // Parenting (mom-guilt framing)
+  "felt-bad-parent",
+  "felt-overwhelmed-parenting",
+  "quality-time-kid",
+  // Female-only / stronger-female health
+  "period-symptoms",
+  "migraine",
+  "headache",
+  "stomach-issues",
+  "skin-allergy",
+  "cried-today",
+  "cried-from-something-small",
+  // Anxious eating / sweets
+  "ate-sweets",
+  "ate-by-fridge",
+  // Social-media spirals
+  "compared-on-social",
+  "envied-on-social",
+  "deleted-message",
+  "deleted-own-post",
+  "rewatched-stories",
+  "didnt-like-friend-post",
+  "stalked-ex",
+  "missed-ex",
+  // Inner state
+  "felt-anxious",
+  "felt-depressed",
+  "felt-lonely",
+  "felt-not-like-others",
+  "said-yes-when-meant-no",
+  "isolated-at-home",
+  "wore-same-shirt",
+  // Soft joy
+  "petted-an-animal",
+  "talked-to-pet",
+  "liked-my-selfie",
+  "home-was-tidy",
+  // Big decisions
+  "wanted-child",
+  "thought-divorce",
+]);
 
 // --- Helpers --------------------------------------------------------
 
@@ -225,6 +346,11 @@ const scoreTemplate = (
       }
       case "hobbies":
         if (tpl.category === "Curious" || tpl.category === "Fun") score += 5;
+        break;
+      case "environment":
+        // External-events cluster has a stable streamId we can lean
+        // on; otherwise fall back to keyword match below.
+        if (tpl.streamId === "external-events") score += 5;
         break;
     }
 
@@ -323,15 +449,28 @@ const scoreTemplate = (
       break;
   }
 
-  // pol (gender) intentionally has no scoring effect.
+  // Gender lean — soft +2 nudge so the first-impression card stack
+  // resonates with the user's stated identity. Curated lists above;
+  // pol="neutral" or undefined gets no nudge either way. Magnitude
+  // chosen to land between goal (+2) and age cohort (+1) — enough to
+  // raise a clearly-male / clearly-female card but not enough to
+  // override a strong focus-area match.
+  if (answers.pol === "male" && MALE_LEANING_IDS.has(tpl.templateId)) {
+    score += 2;
+  }
+  if (answers.pol === "female" && FEMALE_LEANING_IDS.has(tpl.templateId)) {
+    score += 2;
+  }
 
   return score;
 };
 
 // True if the interview produced any signal we'd score against — used by
 // callers to decide between "use generator" and "fall back to universal
-// 5". An interview with only `pol` or only `age` set is treated as "no
-// signal" because age alone gives at most +1, which can't differentiate.
+// 5". An interview with only `age` set is treated as "no signal" because
+// age alone gives at most +1, which can't differentiate. `pol` DOES count
+// (1.7) since male/female now triggers a +2 lean boost on ~25 curated
+// templates per side; "neutral" still doesn't count (it's the default).
 export const hasMeaningfulInterviewSignal = (
   answers: InterviewAnswers
 ): boolean => {
@@ -341,6 +480,7 @@ export const hasMeaningfulInterviewSignal = (
   if (answers.hasPets !== undefined) return true;
   if (answers.hasPartner !== undefined) return true;
   if (answers.isExpat !== undefined) return true;
+  if (answers.pol === "male" || answers.pol === "female") return true;
   return false;
 };
 
@@ -368,6 +508,13 @@ const TITLE_TOPIC_KEYWORDS: Array<[string, string[]]> = [
   ["creative",  ["creat", "draw", "music", "write", "творч", "рисовал", "писал"]],
   ["food",      ["ate", "eat", "meal", "ел", "обед", "завтрак"]],
   ["water",     ["water", "hydrat", "вод"]],
+  // External-events topics — keeps diversity caps from collapsing
+  // multiple environment-cluster templates into one bucket so the
+  // user can see e.g. "noisy neighbors" AND "long commute" in the
+  // same starter pack rather than just one of them.
+  ["neighbors", ["neighbor", "construction", "соседи", "стройк"]],
+  ["commute",   ["commute", "traffic", "transport", "пробк", "транспорт"]],
+  ["criticism", ["criticized", "pressure", "toxic", "критик", "родител давил", "токсичн"]],
 ];
 
 const topicOf = (tpl: NormalizedTemplate): string | null => {

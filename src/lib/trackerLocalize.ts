@@ -466,6 +466,25 @@ export const localizeTrackerQuestion = (q: string): string =>
 export const localizeTrackerAdvice = (a: string): string =>
   lookup(getMap().advices, a);
 
+// Used by storage migration to decide if a stored tracker came from
+// the library (title is in the current map → safe to refresh advice
+// from the canonical template) vs is a custom user-typed tracker
+// (title not in map → leave everything alone).
+export const isKnownLibraryTitle = (title: string): boolean => {
+  if (!title) return false;
+  const m = getMap().titles;
+  return m.enToRu.has(title) || m.ruToEn.has(title);
+};
+
+// Whether an advice string is recognised by the current localization
+// map. If FALSE, the user's stored advice is from a previous library
+// version (or fully custom) — migration should consider replacing it.
+export const isKnownAdvice = (advice: string): boolean => {
+  if (!advice) return true; // empty advice → nothing to migrate
+  const m = getMap().advices;
+  return m.enToRu.has(advice) || m.ruToEn.has(advice);
+};
+
 // Storage variants — return localized but un-polished text. Stored
 // trackers therefore keep "сделал(а)"-style brackets, and polishRu
 // runs at display time via the regular localize* functions above.

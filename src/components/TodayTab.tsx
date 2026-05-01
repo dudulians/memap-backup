@@ -834,10 +834,18 @@ export const TodayTab = () => {
             );
           }}
           onDateChange={setSelectedDate}
-          onPlayRandom={() => {
-            // Bump the nonce so DailySession remounts with a fresh deck
-            // even if playMode was already true (e.g. "play another round"
-            // from the play-mode Done screen).
+          onPlayRandom={async () => {
+            // Refresh trackers from storage BEFORE building the next
+            // round's deck. Without this, async tracker writes from
+            // the round that just finished (handleAnswer fires-and-
+            // forgets) might not have propagated to React state yet,
+            // and the new deck would treat just-saved play trackers
+            // as "doesn't exist" — re-suggesting the SAME template
+            // the user just answered. User reported exactly this:
+            // answered "no" to "thought-about-leaving" in round 1,
+            // got it again in round 2, both copies stayed. Awaiting
+            // loadData closes that race.
+            await loadData();
             setPlayMode(true);
             setPlayRoundNonce((n) => n + 1);
           }}
@@ -1049,12 +1057,23 @@ export const TodayTab = () => {
                   <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{localizeTrackerTitle(tracker.title)}</p>
+                  {/* Question primary, title secondary — same hierarchy
+                      as TrackerDetails. The user is here to answer
+                      ("did I work out today?"), not to read a metric
+                      label ("Тренировался"). Title still rendered as
+                      a small breadcrumb so identity is preserved. The
+                      question can wrap to 2 lines (line-clamp-2)
+                      because long questions clipped to a single line
+                      with "..." lose the qualifying details that
+                      make the question unambiguous. */}
                   {tracker.questionText && (
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    <p className="font-medium text-sm leading-snug line-clamp-2">
                       {localizeTrackerQuestion(tracker.questionText)}
                     </p>
                   )}
+                  <p className="text-[11px] text-muted-foreground/80 truncate mt-1">
+                    {localizeTrackerTitle(tracker.title)}
+                  </p>
                 </div>
                 {inSelectMode ? (
                   <div
@@ -1313,6 +1332,26 @@ export const TodayTab = () => {
           handleOpenTrackerDetails(tracker);
         }}
       />
+
+      {/* Floating Action Button — pinned bottom-right, always
+          visible. The top "+ Новый вопрос" in the header is good
+          for first-impression discovery, but as the tracker list
+          grows the user has to scroll all the way back to access
+          it. The FAB removes that friction. Tucked above the
+          bottom tab bar via safe-area-aware bottom offset.
+          aria-hidden on the duplicate label since the header
+          button already announces this action to screen readers. */}
+      <button
+        type="button"
+        onClick={() => setAddTrackerModalOpen(true)}
+        aria-label={t("common.addPattern")}
+        className="fixed right-4 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 5rem)",
+        }}
+      >
+        <Plus className="h-6 w-6" strokeWidth={2.25} />
+      </button>
     </div>
   );
 };

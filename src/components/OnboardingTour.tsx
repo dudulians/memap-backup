@@ -28,6 +28,12 @@ import {
   GeneratedStarter,
 } from "@/lib/starterGenerator";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
+import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import {
+  localizeTrackerTitleRaw,
+  localizeTrackerQuestionRaw,
+  localizeTrackerAdviceRaw,
+} from "@/lib/trackerLocalize";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -45,7 +51,8 @@ type FocusArea =
   | "mood"
   | "energy"
   | "money"
-  | "hobbies";
+  | "hobbies"
+  | "environment";
 type Goal = "patterns" | "habit" | "understand" | "doctor";
 const ALL_GOALS: Goal[] = ["patterns", "habit", "understand", "doctor"];
 
@@ -91,23 +98,20 @@ const writeInterview = (answers: InterviewAnswers) => {
 // "Skip all", and the StackReveal stub (which Part B will later replace
 // with personalised generation).
 
-interface DefaultStarterMeta {
-  id: string;
-  titleKey: string;
-  questionKey: string;
-  category: Tracker["category"];
-  problemWhen: "yes" | "no";
-}
-
-// Five universal starters covering five DIFFERENT life domains, so the
-// new user gets a varied picture from day one rather than five flavours
-// of "how I feel" or "how I sleep".
-const DEFAULT_STARTERS: DefaultStarterMeta[] = [
-  { id: "sleep",      titleKey: "sleepTitle",      questionKey: "sleepQ",      category: "Health",      problemWhen: "no"  },
-  { id: "stress",     titleKey: "stressTitle",     questionKey: "stressQ",     category: "Emotions",    problemWhen: "yes" },
-  { id: "move",       titleKey: "moveTitle",       questionKey: "moveQ",       category: "Body",        problemWhen: "no"  },
-  { id: "connection", titleKey: "connectionTitle", questionKey: "connectionQ", category: "Connections", problemWhen: "no"  },
-  { id: "joy",        titleKey: "joyTitle",        questionKey: "joyQ",        category: "Fun",         problemWhen: "no"  },
+// Five universal starter templates from the library — used to seed
+// new accounts when the user skips onboarding or the personalised
+// generator produced nothing. Reused via library template ids so
+// the seeded trackers carry full library metadata (proper questions
+// with qualifying details, advice text, cluster, polarity) instead
+// of the bespoke short titles ("Сон", "Радость") we used to mint
+// — those didn't match library templates and felt orphaned. Five
+// different clusters → varied picture from day one.
+const DEFAULT_STARTER_TEMPLATE_IDS: string[] = [
+  "slept-enough",      // Health cluster — sleep is the fundamental factor
+  "felt-anxious",      // Inner state — most-reported daily problem
+  "exercised",         // Health cluster — active habit
+  "felt-close-to-partner", // Partner cluster — relationship signal
+  "felt-happy",        // Inner state — positive baseline
 ];
 
 type TFn = (key: string) => string;
@@ -116,7 +120,14 @@ type TFn = (key: string) => string;
 // both the top-right "Skip all" button AND the StackReveal stub on
 // step 4. De-dupes by title (case-insensitive) so replaying the tour
 // doesn't pile up duplicates.
-const seedDefaultTrackers = async (t: TFn) => {
+//
+// Reworked in 1.7+: pulls from LIFE_STREAMS by template id so the
+// seeded trackers are real library entries with full metadata
+// (cluster, polarity, advice, qualifying questions). Previously
+// minted short ad-hoc trackers like "Сон" / "Спал ли я больше 7
+// часов" that didn't exist in the library — user got confused
+// editing them later because they had no template back-reference.
+const seedDefaultTrackers = async (_t: TFn) => {
   try {
     localStorage.setItem("memap_ideas_dismissed", "false");
   } catch {
@@ -131,20 +142,35 @@ const seedDefaultTrackers = async (t: TFn) => {
     const today = new Date().toISOString().split("T")[0];
     const baseSort = existing.length;
     const additions: Tracker[] = [];
-    DEFAULT_STARTERS.forEach((meta, i) => {
-      const title = t(`onboarding.defaultStarters.${meta.titleKey}`);
-      const question = t(`onboarding.defaultStarters.${meta.questionKey}`);
-      if (existingTitles.has(title.trim().toLowerCase())) return;
+    DEFAULT_STARTER_TEMPLATE_IDS.forEach((tplId, i) => {
+      // Find the canonical template + its cluster.
+      let canonical: typeof LIFE_STREAMS[0]["templates"][0] | null = null;
+      let clusterId: string | undefined;
+      for (const stream of LIFE_STREAMS) {
+        const found = stream.templates.find((tpl) => tpl.id === tplId);
+        if (found) {
+          canonical = found;
+          clusterId = stream.id;
+          break;
+        }
+      }
+      if (!canonical) return;
+      const localizedTitle = localizeTrackerTitleRaw(canonical.title);
+      const localizedQuestion = localizeTrackerQuestionRaw(canonical.questionText);
+      const localizedAdvice = localizeTrackerAdviceRaw(canonical.adviceAboveThreshold);
+      if (existingTitles.has(localizedTitle.trim().toLowerCase())) return;
       additions.push({
-        id: `${Date.now()}-${meta.id}-${i}`,
-        title,
-        category: meta.category,
-        questionText: question,
-        answerType: "boolean",
-        periodDays: 30,
-        threshold: 10,
-        problemWhen: meta.problemWhen,
-        adviceAboveThreshold: "",
+        id: `${Date.now()}-${tplId}-${i}`,
+        title: localizedTitle,
+        category: canonical.category,
+        subcategory: canonical.subcategory,
+        cluster: clusterId,
+        questionText: localizedQuestion,
+        answerType: canonical.answerType,
+        periodDays: canonical.periodDays,
+        threshold: canonical.threshold,
+        problemWhen: canonical.problemWhen,
+        adviceAboveThreshold: localizedAdvice,
         createdAt: now,
         sortIndex: baseSort + i,
         cycleStartDate: today,
@@ -540,11 +566,15 @@ const LanguagePickerScreen = ({ onNext }: { onNext: () => void }) => {
                   : "bg-card border-border/50 hover:border-border"
               )}
             >
+              {/* Single-line label only — was showing native + EN
+                  name as a subtitle, but for English they were
+                  identical so it rendered as one line; for Russian
+                  it was two ("Русский" + "Russian") which made the
+                  buttons different heights. User flagged this as
+                  visually broken. Drop the redundant transliteration
+                  — users recognize their own language name. */}
               <div className="flex-1 min-w-0">
                 <div className="text-base font-medium">{lng.native}</div>
-                {lng.native !== lng.name && (
-                  <div className="text-xs text-muted-foreground mt-0.5">{lng.name}</div>
-                )}
               </div>
               {isSelected && (
                 <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -672,6 +702,7 @@ const FOCUS_OPTIONS: FocusArea[] = [
   "energy",
   "money",
   "hobbies",
+  "environment",
 ];
 
 const FocusScreen = ({

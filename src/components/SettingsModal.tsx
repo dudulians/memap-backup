@@ -15,8 +15,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { getNotificationSettings, saveNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
+import { generateDevData } from "@/lib/devDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -207,6 +208,18 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       setNotificationSettings(getNotificationSettings());
       setSessionSettings(getSessionSettings());
       setIdeasDismissed(localStorage.getItem("memap_ideas_dismissed") === "true");
+      // Re-sync gender, language, theme — these are also read once
+      // on first mount via lazy useState, but the SettingsModal
+      // stays mounted across the app's lifetime. If the user picks
+      // a gender during onboarding AFTER first mount, the in-state
+      // currentPol is stale and shows "neutral" even though
+      // localStorage has "male". User flagged this. Same risk for
+      // language and theme — they can change from any other surface
+      // (e.g. system theme switch). Refresh on every open.
+      setCurrentPol(getPol() ?? "neutral");
+      setCurrentLang(getLanguage());
+      setThemeState(getTheme());
+      setShowSensitive(localStorage.getItem("memap_show_sensitive") === "true");
     }
   }, [open]);
 
@@ -293,6 +306,53 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     );
     setTrackers(updatedTrackers);
     await saveTrackers(updatedTrackers);
+  };
+
+  // Dev-only: generate 60 days of biased fake data for every active
+  // tracker. Used by the owner to inspect how Trends and Correlations
+  // look with realistic-looking data without waiting weeks of real
+  // tracking. Confirmation dialog up-front because it OVERWRITES any
+  // real entries inside the 60-day window.
+  const [devGenDialogOpen, setDevGenDialogOpen] = useState(false);
+  const [devGenRunning, setDevGenRunning] = useState(false);
+  const handleGenerateDevData = async () => {
+    setDevGenRunning(true);
+    try {
+      const [trackersData, entriesData] = await Promise.all([
+        getTrackers(),
+        getEntries(),
+      ]);
+      const result = generateDevData(trackersData, entriesData);
+      if (result.trackerCount === 0) {
+        toast({
+          title: t("settings.devDataNoTrackersTitle"),
+          description: t("settings.devDataNoTrackersDesc"),
+        });
+        return;
+      }
+      await saveEntries(result.newEntries);
+      toast({
+        title: t("settings.devDataGeneratedTitle"),
+        description: t("settings.devDataGeneratedDesc", {
+          count: result.generatedCount,
+          trackers: result.trackerCount,
+          days: result.daysCount,
+        }),
+      });
+      // Notify other tabs (Today / Patterns) that entries changed so
+      // their views re-pull. Same event other write paths use.
+      window.dispatchEvent(new CustomEvent("memap-settings-changed"));
+    } catch (err) {
+      console.error("generateDevData failed:", err);
+      toast({
+        variant: "destructive",
+        title: t("settings.devDataFailedTitle"),
+        description: String((err as Error)?.message ?? err),
+      });
+    } finally {
+      setDevGenRunning(false);
+      setDevGenDialogOpen(false);
+    }
   };
 
   const handleExportData = async () => {
@@ -1045,6 +1105,24 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 {t("settings.exportCsv")}
               </Button>
 
+              {/* Dev-only test data generator. Owner-facing tool to fill
+                  60 days of biased fake entries so Trends and Correlations
+                  have realistic data without waiting weeks. Hidden in
+                  prod by `import.meta.env.DEV` — never shipped to App
+                  Store / Play Store users. Subtle visual treatment
+                  (orange border) signals "this is not for you" if it
+                  ever leaks through accidentally. */}
+              {import.meta.env.DEV && (
+                <Button
+                  variant="outline"
+                  onClick={() => setDevGenDialogOpen(true)}
+                  className="w-full justify-start border-orange-500/40 text-orange-600 hover:bg-orange-500/10 hover:text-orange-600"
+                >
+                  <FlaskConical className="h-4 w-4 mr-2" />
+                  {t("settings.devDataButton")}
+                </Button>
+              )}
+
               {/* Privacy policy link — required by App Store / Play Store
                   for any app submission. URL is the production hosted
                   policy (GitHub Pages). Opens in external browser so
@@ -1090,6 +1168,26 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           </div>
         </div>
       </BottomSheet>
+
+      {/* Dev-data generator confirmation. Off in prod (button hidden
+          via import.meta.env.DEV) but the dialog is rendered
+          unconditionally so the JSX tree shape stays stable. */}
+      <AlertDialog open={devGenDialogOpen} onOpenChange={setDevGenDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.devDataConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.devDataConfirmDesc")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={devGenRunning}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleGenerateDevData} disabled={devGenRunning}>
+              {devGenRunning ? t("settings.devDataRunning") : t("settings.devDataConfirmBtn")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <AlertDialogContent>

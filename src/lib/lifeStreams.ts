@@ -18,6 +18,21 @@ export interface LifeStreamTemplate {
   /** Sensitive content (intimacy, libido, ex partners). Hidden by
    *  default; user opts in via Settings → "Show sensitive topics". */
   sensitive?: boolean;
+  /** Featured / starter template for its cluster. Shown first when
+   *  the user expands a cluster in AddTrackerModal — three per
+   *  cluster, the most universal "points of entry" so the user
+   *  isn't dumped into a wall of 27 cards. The full list still
+   *  surfaces via "Показать все N →" button beneath them. */
+  featured?: boolean;
+  /** Short noun-phrase label used inside Correlation Insights
+   *  headlines like "{shortLabel} и {other}: возможная связь".
+   *  Lowercase, no caps. Filled out only for the ~15 templates
+   *  that are most likely to surface in correlations — the rest
+   *  fall back to the safe fallback wording with the localized
+   *  title in quotes ("Когда ты отмечала «X», «Y» появлялось
+   *  чаще"). Two languages both required when set. */
+  shortLabelRu?: string;
+  shortLabel?: string; // EN
 }
 
 export interface LifeStream {
@@ -71,6 +86,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Write down what usually triggers fights",
         adviceAboveThresholdRu: "Записать что чаще всего вызывает ссоры",
+        featured: true,
+        shortLabel: "partner arguments",
+        shortLabelRu: "ссоры с партнёром",
       },
       {
         id: "felt-close-to-partner",
@@ -86,6 +104,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Plan one shared moment this week without phones",
         adviceAboveThresholdRu: "Запланировать один совместный момент на эту неделю без телефонов",
+        featured: true,
       },
       {
         id: "felt-lonely-with-partner",
@@ -192,6 +211,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Text one friend today, no reason needed",
         adviceAboveThresholdRu: "Написать одному другу сегодня без повода",
+        featured: true,
       },
       {
         id: "apologized-first",
@@ -314,6 +334,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Find 30 minutes for myself daily, no kid no tasks no phone",
         adviceAboveThresholdRu: "Найти 30 минут в день только себе, без ребёнка, задач и телефона",
+        featured: true,
       },
       {
         id: "felt-bad-parent",
@@ -344,6 +365,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Block 15 minutes daily for the kid, no phone",
         adviceAboveThresholdRu: "Выделить 15 минут в день только на ребёнка, без телефона",
+        featured: true,
       },
       {
         id: "ran-out-of-patience",
@@ -374,6 +396,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Ask for specific concrete help",
         adviceAboveThresholdRu: "Попросить конкретную помощь — у партнёра, семьи, бэбиситтера",
+        featured: true,
       },
     ],
   },
@@ -404,6 +427,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Book a doctor visit with my month's data",
         adviceAboveThresholdRu: "Записаться к терапевту — взять с собой данные за месяц",
+        featured: true,
+        shortLabel: "headaches",
+        shortLabelRu: "головная боль",
       },
       {
         id: "migraine",
@@ -419,6 +445,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Book a neurologist with my data",
         adviceAboveThresholdRu: "Записаться к неврологу с данными",
+        shortLabel: "migraine",
+        shortLabelRu: "мигрень",
       },
       {
         id: "back-or-neck-pain",
@@ -451,6 +479,21 @@ export const LIFE_STREAMS: LifeStream[] = [
         adviceAboveThresholdRu: "Записывать что ела за сутки до — искать еду-триггер",
       },
       {
+        id: "felt-nauseous",
+        title: "Felt nauseous",
+        titleRu: "Тошнило",
+        questionText: "Did you feel nauseous today (without an obvious food cause)?",
+        questionTextRu: "Сегодня тошнило (не от очевидной еды)?",
+        category: "Body",
+        subcategory: "Nausea",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 5,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Log time of day and what was happening just before",
+        adviceAboveThresholdRu: "Записывать время и что происходило перед этим",
+      },
+      {
         id: "joint-pain",
         title: "Joint pain",
         titleRu: "Болели суставы",
@@ -479,6 +522,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Set a 'bedtime' alarm 8 hours before wake-up",
         adviceAboveThresholdRu: "Поставить будильник «спать» за 8 часов до подъёма",
+        featured: true,
+        shortLabel: "good sleep",
+        shortLabelRu: "хороший сон",
       },
       {
         id: "felt-fatigued",
@@ -494,6 +540,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Get bloodwork — iron, ferritin, B12, thyroid",
         adviceAboveThresholdRu: "Сдать кровь — железо, ферритин, B12, щитовидка",
+        shortLabel: "fatigue",
+        shortLabelRu: "усталость",
       },
       {
         id: "period-symptoms",
@@ -509,6 +557,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "See a gynaecologist about cycle symptoms",
         adviceAboveThresholdRu: "Записаться к гинекологу про симптомы цикла",
+        shortLabel: "cycle symptoms",
+        shortLabelRu: "симптомы цикла",
       },
       {
         id: "exercised",
@@ -524,6 +574,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Book 3 workout slots in calendar this week",
         adviceAboveThresholdRu: "Внести 3 тренировки в календарь на эту неделю",
+        featured: true,
+        shortLabel: "exercise",
+        shortLabelRu: "тренировки",
       },
       {
         id: "trained-hard",
@@ -735,6 +788,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Notice what I'm chasing — stress, boredom, loneliness",
         adviceAboveThresholdRu: "Заметить что я ловлю — стресс, скуку, одиночество",
+        featured: true,
+        shortLabel: "alcohol",
+        shortLabelRu: "алкоголь",
       },
       {
         id: "smoked",
@@ -780,6 +836,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Move last coffee to noon for one week",
         adviceAboveThresholdRu: "Перенести последний кофе на 12:00 на неделю",
+        shortLabel: "late coffee",
+        shortLabelRu: "поздний кофе",
       },
       {
         id: "ate-sweets",
@@ -795,6 +853,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Swap dessert for fruit twice a week",
         adviceAboveThresholdRu: "Заменить десерт на фрукт два раза в неделю",
+        featured: true,
+        shortLabel: "sweets",
+        shortLabelRu: "сладкое",
       },
       {
         id: "screen-time-long",
@@ -810,6 +871,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Set an app time limit on the worst offender",
         adviceAboveThresholdRu: "Поставить лимит на самое затягивающее приложение",
+        featured: true,
+        shortLabel: "long screen time",
+        shortLabelRu: "долгое время в экране",
       },
       {
         id: "ate-fast-food",
@@ -845,8 +909,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         id: "doomscrolled-news",
         title: "Too much news / sports",
         titleRu: "Слишком много новостей / спорта",
-        questionText: "Did you spend too much time in news / sports / war content?",
-        questionTextRu: "Сегодня много залипал(а) в новости / спорт / войну?",
+        questionText: "Did you spend too much time in news / sports content today?",
+        questionTextRu: "Сегодня много залипал(а) в новости / спорт?",
         category: "Social",
         subcategory: "News",
         answerType: "boolean",
@@ -1011,7 +1075,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         title: "Wore the same shirt second day",
         titleRu: "Носил(а) одну футболку второй день",
         questionText: "Did you wear the same outfit as yesterday?",
-        questionTextRu: "Не переодевал(ась) с вчера?",
+        questionTextRu: "Носил(а) сегодня ту же одежду что вчера?",
         category: "Curious",
         subcategory: "Selfcare",
         answerType: "boolean",
@@ -1140,6 +1204,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Write 3 things draining the joy and reduce one",
         adviceAboveThresholdRu: "Записать 3 вещи что забирают радость и уменьшить одну",
+        featured: true,
+        shortLabel: "happiness",
+        shortLabelRu: "счастье",
       },
       {
         id: "felt-anxious",
@@ -1155,6 +1222,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Schedule a therapy session with my data",
         adviceAboveThresholdRu: "Записаться к психотерапевту с данными",
+        featured: true,
+        shortLabel: "anxiety",
+        shortLabelRu: "тревога",
       },
       {
         id: "felt-depressed",
@@ -1215,11 +1285,14 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Get bloodwork — iron, ferritin, B12, thyroid",
         adviceAboveThresholdRu: "Сдать кровь — железо, ферритин, B12, щитовидка",
+        featured: true,
+        shortLabel: "energy",
+        shortLabelRu: "энергия",
       },
       {
         id: "cried-today",
-        title: "Cried today",
-        titleRu: "Плакал(а) сегодня",
+        title: "Cried",
+        titleRu: "Плакал(а)",
         questionText: "Did you cry today (even briefly)?",
         questionTextRu: "Сегодня плакал(а) — даже коротко?",
         category: "Emotions",
@@ -1338,8 +1411,8 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "felt-proud-today",
-        title: "Felt proud of today",
-        titleRu: "Гордился(ась) сделанным сегодня",
+        title: "Felt proud of the day",
+        titleRu: "Гордился(ась) сделанным",
         questionText: "At day's end, was there a feeling of 'I did what I wanted'?",
         questionTextRu: "Под конец дня — ощущение «сделал(а) что хотел(а)»?",
         category: "Voice",
@@ -1380,6 +1453,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Find what was BEFORE the snap — sleep, food, conversation",
         adviceAboveThresholdRu: "Найти что было ПЕРЕД срывом — сон, голод, разговор",
+        shortLabel: "snapping at loved ones",
+        shortLabelRu: "срывы на близких",
       },
       {
         id: "calm-day",
@@ -1668,8 +1743,8 @@ export const LIFE_STREAMS: LifeStream[] = [
     templates: [
       {
         id: "wanted-child",
-        title: "Wanted a child today",
-        titleRu: "Сегодня хотелось ребёнка",
+        title: "Wanted a child",
+        titleRu: "Хотелось ребёнка",
         questionText: "Did the desire to have a child come up today?",
         questionTextRu: "Сегодня было желание иметь ребёнка?",
         category: "Curious",
@@ -1680,6 +1755,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Talk specifics with my partner — money, home, emotional readiness",
         adviceAboveThresholdRu: "Поговорить с партнёром предметно — финансово, бытово, эмоционально",
+        featured: true,
       },
       {
         id: "thought-about-emigrating",
@@ -1695,6 +1771,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Write 3 reasons to leave and 3 to stay",
         adviceAboveThresholdRu: "Записать 3 причины уехать и 3 причины остаться",
+        featured: true,
       },
       {
         id: "wanted-leave-job",
@@ -1890,12 +1967,191 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Keep the book where I sit with my phone",
         adviceAboveThresholdRu: "Положить книгу там где сижу с телефоном",
+        featured: true,
       },
     ],
   },
 
   // ─────────────────────────────────────────────────────────────
-  // 7. EXPAT LIFE (gated by isExpat)
+  // 7. EXTERNAL EVENTS — things that happen TO you, not by you
+  // ─────────────────────────────────────────────────────────────
+  // Stress and friction from outside your direct control —
+  // neighbors, traffic, internet outages, criticism from people
+  // around you. The user's framing rule for this cluster:
+  // each tracker should lead to a CONCRETE ACTION when the
+  // pattern repeats (escalate to building manager, switch
+  // commute, set a boundary). Wellbeing-factor tracking
+  // ("home was hot today") is intentionally NOT in this cluster
+  // — those belong to Health/State if anywhere.
+  {
+    id: "external-events",
+    title: "External Events",
+    titleRu: "Внешние события",
+    icon: "🏘️",
+    description: "Stress that comes from outside — neighbors, traffic, others' moods. Track what's worth acting on.",
+    descriptionRu: "Стресс приходит извне — соседи, пробки, чужое настроение. Отметь что стоит действия.",
+    color: "social",
+    templates: [
+      {
+        id: "noisy-neighbors",
+        title: "Noisy neighbors",
+        titleRu: "Шумели соседи",
+        questionText: "Did neighbors disturb you with noise today?",
+        questionTextRu: "Соседи мешали шумом сегодня?",
+        category: "Social",
+        subcategory: "Neighbors",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 8,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Log specific times — useful evidence if escalating to the building",
+        adviceAboveThresholdRu: "Записать конкретное время — пригодится если жаловаться в ТСЖ",
+        featured: true,
+        shortLabel: "noisy neighbors",
+        shortLabelRu: "шум от соседей",
+      },
+      {
+        id: "construction-nearby",
+        title: "Construction or renovation nearby",
+        titleRu: "Стройка или ремонт рядом",
+        questionText: "Was there construction or renovation noise around today?",
+        questionTextRu: "Был сегодня шум стройки или ремонта рядом?",
+        category: "Social",
+        subcategory: "Neighbors",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 6,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Check official quiet hours and document violations",
+        adviceAboveThresholdRu: "Проверить регламент шумных работ и фиксировать нарушения",
+      },
+      {
+        id: "long-commute",
+        title: "Long commute or traffic",
+        titleRu: "Долгая дорога или пробка",
+        questionText: "Did the commute or trip take significantly longer today?",
+        questionTextRu: "Дорога заняла больше обычного?",
+        category: "Social",
+        subcategory: "Commute",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 10,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Try shifting departure 30 min earlier or asking for one remote day a week",
+        adviceAboveThresholdRu: "Сместить выезд на 30 минут раньше или попросить один remote-день в неделю",
+      },
+      {
+        id: "transport-issue",
+        title: "Transport let me down",
+        titleRu: "Транспорт подвёл",
+        questionText: "Did transport fail today (cancellation, delay, breakdown)?",
+        questionTextRu: "Был сегодня сбой в транспорте (отмена, опоздание, поломка)?",
+        category: "Social",
+        subcategory: "Commute",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 6,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Plan a backup route (different mode, taxi, mapped alternatives)",
+        adviceAboveThresholdRu: "Запланировать резервный маршрут — другой транспорт, такси, альтернативы",
+      },
+      {
+        id: "internet-down",
+        title: "Internet or connection issues",
+        titleRu: "Связь или интернет тормозили",
+        questionText: "Were there internet or connection problems today?",
+        questionTextRu: "Сегодня были проблемы со связью или интернетом?",
+        category: "Social",
+        subcategory: "Connectivity",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 6,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Set up a backup hotspot or a second provider — outages are predictable risk",
+        adviceAboveThresholdRu: "Настроить резервную точку доступа или второго провайдера — отключения уже предсказуемый риск",
+        featured: true,
+      },
+      {
+        id: "criticized-by-close",
+        title: "Someone close criticized me",
+        titleRu: "Кто-то близкий критиковал",
+        questionText: "Did someone close criticize, push their opinion, or hurt you today?",
+        questionTextRu: "Кто-то близкий сегодня критиковал, давил мнением или обижал?",
+        category: "Connections",
+        subcategory: "Boundaries",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 6,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Write down what was said and what boundary I want to set",
+        adviceAboveThresholdRu: "Записать что было сказано и какую границу хочу поставить",
+        featured: true,
+      },
+      {
+        id: "parent-pressured",
+        title: "Parent pushed or hurt me",
+        titleRu: "Родитель давил или обижал",
+        questionText: "Did a parent push their opinion, criticize, or hurt today?",
+        questionTextRu: "Родитель сегодня давил мнением, критиковал или обижал?",
+        category: "Connections",
+        subcategory: "Family",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 6,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Notice the pattern — decide on contact limit or therapy support",
+        adviceAboveThresholdRu: "Заметить паттерн — решить про лимит общения или поддержку психолога",
+      },
+      {
+        id: "toxic-friend",
+        title: "Draining friend interaction",
+        titleRu: "Токсичное общение с другом или подругой",
+        questionText: "Was there a draining or toxic interaction with a friend today?",
+        questionTextRu: "Было сегодня выматывающее или токсичное общение с другом / подругой?",
+        category: "Connections",
+        subcategory: "Friends",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 5,
+        problemWhen: "yes",
+        adviceAboveThreshold: "If it's repeatedly the same person — distance gradually or cut contact",
+        adviceAboveThresholdRu: "Если это один и тот же человек — постепенно дистанцироваться или прекратить контакт",
+      },
+      {
+        id: "kids-reached-out",
+        title: "Kids called or messaged",
+        titleRu: "Дети писали или звонили",
+        questionText: "Did the kids reach out today (call, message)?",
+        questionTextRu: "Дети сегодня писали или звонили?",
+        category: "Connections",
+        subcategory: "Kids",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 12,
+        problemWhen: "no",
+        adviceAboveThreshold: "Reach out to them first — don't wait for it to be their job",
+        adviceAboveThresholdRu: "Написать им первой — не ждать что инициатива всегда их",
+      },
+      {
+        id: "financial-issue",
+        title: "Unexpected charges or bills",
+        titleRu: "Неожиданные траты или счета",
+        questionText: "Were there unexpected charges, fines, or bills today?",
+        questionTextRu: "Были сегодня неожиданные траты, штрафы или счета?",
+        category: "Curious",
+        subcategory: "Money",
+        answerType: "boolean",
+        periodDays: 30,
+        threshold: 5,
+        problemWhen: "yes",
+        adviceAboveThreshold: "Check subscriptions and dispute charges where possible",
+        adviceAboveThresholdRu: "Проверить подписки и оспорить лишние списания",
+      },
+    ],
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // 8. EXPAT LIFE (gated by isExpat)
   // ─────────────────────────────────────────────────────────────
   {
     id: "expat",
@@ -1921,6 +2177,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Ask one question per day in the local language",
         adviceAboveThresholdRu: "Задавать минимум один вопрос в день на местном",
+        featured: true,
       },
       {
         id: "studied-local-language",
@@ -1996,6 +2253,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Schedule a video call with someone who gets the context",
         adviceAboveThresholdRu: "Запланировать видеозвонок с тем кто понимает контекст",
+        featured: true,
       },
       {
         id: "called-someone-back-home",
@@ -2056,6 +2314,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Write what specifically triggered it — look, conversation, situation",
         adviceAboveThresholdRu: "Записать что именно вызвало — взгляд, диалог, ситуация",
+        featured: true,
       },
       {
         id: "felt-settled-in",
