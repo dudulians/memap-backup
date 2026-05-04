@@ -856,12 +856,12 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Header row: streak chip + action buttons. The streak chip
-          is hidden entirely until 3 days of consecutive activity
-          (1.7.3 tightened — earlier 1.7.2 still showed a muted
-          placeholder, which read as just-another-empty-state). On
-          days 0–2 the row collapses to action buttons only; from
-          day 3 the orange flame chip appears on the left. */}
+      {/* Header row: streak chip + action buttons. From 3 days the
+          chip uses the orange-gradient flame; below that it stays
+          muted, but still shows the count so the user sees their
+          streak ticking up from day 1. The earlier "Answer today
+          to start your streak" placeholder copy was dropped in
+          1.7.3 — it read as preachy, the count alone is cleaner. */}
       <div className="animate-fade-in space-y-3">
         <div className="flex items-center justify-between gap-2">
           {globalStreak.currentStreak >= 3 ? (
@@ -883,9 +883,24 @@ export const TodayTab = () => {
               </span>
             </div>
           ) : (
-            // Below 3 days: empty spacer to keep action buttons
-            // pinned right via justify-between.
-            <div />
+            // Days 0–2: muted version of the same chip. Always
+            // shows the count (including "0") so it reads as a
+            // single visual that stays put, not a placeholder
+            // that morphs.
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/30 border-border/40">
+              <Flame
+                className="h-3.5 w-3.5 text-muted-foreground"
+                strokeWidth={2}
+              />
+              <span className="text-xs font-medium text-muted-foreground">
+                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
+                <span className="ml-1">
+                  {globalStreak.currentStreak === 1
+                    ? t("today.streakDaysOne")
+                    : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
+                </span>
+              </span>
+            </div>
           )}
           <div className="flex items-center gap-1.5">
             {/* Always-accessible Random Play — opens the session in play
