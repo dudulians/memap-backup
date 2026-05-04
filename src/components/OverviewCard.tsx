@@ -47,19 +47,13 @@ export const OverviewCard = ({
   const [calendarView, setCalendarView] = useState<CalendarView>("month");
   const [notes, setNotes] = useState<Note[]>([]);
 
-  // Year-view eligibility — needs ≥90 distinct tracked days for the
-  // heatmap to be visually meaningful. Gates the toggle button below
-  // and (defensively) snaps the view back to month if user is on
-  // year while the threshold isn't met (e.g. after a data reset).
-  const yearViewEligible = useMemo(
-    () => new Set(entries.map((e) => e.date)).size >= 90,
-    [entries],
-  );
-  useEffect(() => {
-    if (!yearViewEligible && calendarView === "year") {
-      setCalendarView("month");
-    }
-  }, [yearViewEligible, calendarView]);
+  // Year-view toggle is always available (1.7.3 reverted the 1.7.2
+  // ≥90-distinct-days gate). The empty-month-cells concern was real
+  // for brand-new users, but hiding the toggle entirely turned out
+  // to be more confusing than helpful — users hit the calendar
+  // expecting a yearly heatmap and didn't see how to get there.
+  // Better: show the toggle, let early data look sparse — sparse
+  // data IS informative ("oh, I just started").
 
   const reloadNotes = () => getNotes().then(setNotes);
 
@@ -583,19 +577,15 @@ export const OverviewCard = ({
                   return s.charAt(0).toUpperCase() + s.slice(1);
                 })()}
               </h3>
-              {/* Year view toggle gated by ≥90 distinct days of
-                  tracked data (1.7.2). Below that the year heatmap
-                  is mostly empty grey months — visually depressing
-                  and not informative. Toggle reappears once the
-                  user has enough history. */}
-              {yearViewEligible && (
-                <button
-                  onClick={() => { haptics.tap(); setCalendarView(calendarView === "month" ? "year" : "month"); }}
-                  className="h-6 px-2 text-[10px] rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition-colors"
-                >
-                  {calendarView === "month" ? t("overview.year") : t("overview.month")}
-                </button>
-              )}
+              {/* Year/Month view toggle. Always visible since 1.7.3 —
+                  earlier 1.7.2 hid it under a 90-distinct-day gate
+                  which left users wondering how to switch views. */}
+              <button
+                onClick={() => { haptics.tap(); setCalendarView(calendarView === "month" ? "year" : "month"); }}
+                className="h-6 px-2 text-[10px] rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition-colors"
+              >
+                {calendarView === "month" ? t("overview.year") : t("overview.month")}
+              </button>
               {onBulkAnswer && (
                 <Button
                   variant={multiSelectMode ? "default" : "outline"}
