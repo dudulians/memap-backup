@@ -138,6 +138,20 @@ export const polishRu = (text: string, pol?: Pol | null): string => {
     ) {
       return base.slice(0, -2) + suffix;
     }
+
+    // Instrumental-case adjective: masculine "первым" → feminine
+    // "первой" (source bracketed as "первым(ой)"). The default
+    // concat would give garbage "первымой"; we strip the "-ым" /
+    // "-им" pair and append the feminine ending. Restricted to
+    // multi-letter vowel-led suffixes so it doesn't catch verb
+    // tails like "съем(ла)" (suffix "ла" starts with consonant).
+    if (
+      suffix.length >= 2 &&
+      /^[аяоеиыэёюАЯОЕИЫЭЁЮ]/.test(suffix) &&
+      /[ыи][мМ]$/i.test(base)
+    ) {
+      return base.slice(0, -2) + suffix;
+    }
     // Older single-letter rule kept for backwards compat: base ending
     // in just "й" / "и" with a multi-letter vowel suffix.
     if (
