@@ -19,7 +19,7 @@ import { playSwipeSound } from "@/lib/feedback";
 import { haptics } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
-import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerTheme } from "@/lib/trackerLocalize";
 import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
@@ -1230,7 +1230,7 @@ export const DailySession = ({
                       const QIcon = getTrackerIcon(currentQuestion.tracker.title, currentQuestion.tracker.category);
                       return <QIcon className="h-3 w-3 mr-1 inline-block" strokeWidth={1.75} />;
                     })()}
-                    {t(`categories.${currentQuestion.tracker.category}` as const)}
+                    {localizeTrackerTheme(currentQuestion.tracker)}
                   </Badge>
                   {currentQuestion.isNew && (
                     <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">

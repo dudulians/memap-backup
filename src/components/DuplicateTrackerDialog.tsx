@@ -7,7 +7,7 @@ import { AlertCircle } from "lucide-react";
 import { getEntries } from "@/lib/storage";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerTheme } from "@/lib/trackerLocalize";
 
 interface DuplicateTrackerDialogProps {
   open: boolean;
@@ -105,7 +105,7 @@ export const DuplicateTrackerDialog = ({
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-base break-words">{localizeTrackerTitle(existingTracker.title)}</h3>
                 <p className="text-xs uppercase tracking-wider mt-1" style={{ color: `hsl(var(--${categoryColor}))` }}>
-                  {t(`categories.${existingTracker.category}` as const)}
+                  {localizeTrackerTheme(existingTracker)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2 font-playful break-words">
                   {localizeTrackerQuestion(existingTracker.questionText)}

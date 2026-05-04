@@ -254,6 +254,7 @@ const sampleAnswer = (bias: Bias, ctx: DayContext): boolean => {
 
 export interface DevDataGenerationResult {
   newEntries: TrackerEntry[];
+  newTrackers: Tracker[];
   generatedCount: number;
   trackerCount: number;
   daysCount: number;
@@ -266,8 +267,15 @@ export interface DevDataGenerationResult {
  *   running it twice would dupe entries per day).
  * - Entries outside the date range (older than NUM_DAYS, or future)
  *   are left untouched.
+ * - Each active tracker's cycleStartDate is also pulled back to the
+ *   oldest generated date. Without this, Signals (which gates on
+ *   cycleStartDate) would only count from "today" forward and miss
+ *   the 60 days of generated history — making the dev tool look
+ *   broken when actually it's just the cycle window not seeing the
+ *   fake past.
  *
- * Returns the new full entries list ready to pass to saveEntries.
+ * Returns the new full entries list and the trackers list with shifted
+ * cycleStartDate values, ready to pass to saveEntries / saveTrackers.
  */
 export const generateDevData = (
   trackers: Tracker[],
@@ -277,6 +285,7 @@ export const generateDevData = (
   if (activeTrackers.length === 0) {
     return {
       newEntries: existingEntries,
+      newTrackers: trackers,
       generatedCount: 0,
       trackerCount: 0,
       daysCount: NUM_DAYS,
@@ -290,6 +299,7 @@ export const generateDevData = (
   const dates: string[] = [];
   for (let i = numDays - 1; i >= 0; i--) dates.push(dateNDaysAgo(i));
   const dateSet = new Set(dates);
+  const oldestDate = dates[0];
 
   // Strip existing entries that fall within the date range — the
   // user explicitly asked to regenerate this window. Keep entries
@@ -298,6 +308,7 @@ export const generateDevData = (
   const preservedEntries = existingEntries.filter((e) => !dateSet.has(e.date));
 
   const generatedEntries: TrackerEntry[] = [];
+  const activeTrackerIds = new Set(activeTrackers.map((t) => t.id));
 
   for (const tracker of activeTrackers) {
     const tplId = matchTemplateIdByTitle(tracker.title);
@@ -314,8 +325,15 @@ export const generateDevData = (
     }
   }
 
+  // Shift cycleStartDate on every active tracker so Signals counts
+  // the freshly generated history. Archived trackers untouched.
+  const newTrackers = trackers.map((t) =>
+    activeTrackerIds.has(t.id) ? { ...t, cycleStartDate: oldestDate } : t,
+  );
+
   return {
     newEntries: [...preservedEntries, ...generatedEntries],
+    newTrackers,
     generatedCount: generatedEntries.length,
     trackerCount: activeTrackers.length,
     daysCount: numDays,

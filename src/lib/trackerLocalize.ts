@@ -503,6 +503,44 @@ export const localizeGroupTitle = (title: string): string =>
 export const localizeGroupDescription = (desc: string): string =>
   lookup(getMap().groupDescriptions, desc);
 
+// Best-guess mapping from the legacy `category` to a cluster id, used
+// for trackers stored before the cluster field existed (1.6 and
+// earlier). Many-to-one collisions resolved to the most universal
+// case (Connections → "partner", not "parenting").
+const CATEGORY_TO_CLUSTER: Record<string, string> = {
+  Connections: "partner",
+  Health: "health",
+  Body: "health",
+  Emotions: "state",
+  Fun: "state",
+  Voice: "big-decisions",
+  Social: "external-events",
+  Curious: "habits",
+};
+
+// Display-time helper: returns the localized Theme name for a tracker.
+// Used by Signals + anywhere else we'd otherwise show the legacy
+// `category` (which leaks raw English keys like "Voice" into Russian
+// UI). Falls back to the localized category if the cluster can't be
+// resolved, so untouched legacy data still renders something useful.
+export const localizeTrackerTheme = (tracker: {
+  cluster?: string;
+  category: string;
+}): string => {
+  const clusterId = tracker.cluster ?? CATEGORY_TO_CLUSTER[tracker.category];
+  if (clusterId) {
+    const stream = LIFE_STREAMS.find((s) => s.id === clusterId);
+    if (stream) {
+      // Pick the active-language title directly from LIFE_STREAMS — no
+      // need to round-trip through groupTitles lookup since the source
+      // already has both forms.
+      return getLanguage() === "ru" ? stream.titleRu : stream.title;
+    }
+  }
+  // Last-resort fallback: localized category key.
+  return localizeGroupTitle(tracker.category);
+};
+
 export const localizeTracker = <T extends { title: string; questionText?: string }>(tracker: T): T => {
   // Both directions handled inside localizeTrackerTitle/Question — they
   // pick the right lookup based on getLanguage(). No early-return needed.

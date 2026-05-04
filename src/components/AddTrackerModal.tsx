@@ -10,6 +10,7 @@ import {
   localizeTrackerAdviceRaw,
   localizeGroupTitle,
   localizeGroupDescription,
+  localizeTrackerTheme,
 } from "@/lib/trackerLocalize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -228,7 +229,7 @@ const AutocompleteDropdown = ({
                 color: `hsl(var(--${categoryColor}))`,
               }}
             >
-              {t(`categories.${template.category}`)}
+              {localizeTrackerTheme(template)}
             </Badge>
           </button>
         );
@@ -869,7 +870,7 @@ export const AddTrackerModal = ({
                                 color: `hsl(var(--${categoryColor}))`
                               }}
                             >
-                              {t(`categories.${template.category}`)}
+                              {localizeTrackerTheme(template)}
                             </Badge>
                           </button>
                         );
@@ -951,7 +952,7 @@ export const AddTrackerModal = ({
                                     color: `hsl(var(--${categoryColor}))`
                                   }}
                                 >
-                                  {t(`categories.${template.category}`)}
+                                  {localizeTrackerTheme(template)}
                                 </Badge>
                               </div>
                             </CardHeader>

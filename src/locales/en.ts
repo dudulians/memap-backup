@@ -95,7 +95,7 @@ const en = {
     },
 
     goal: {
-      title: "Why this app, for you?",
+      title: "Why this app for you?",
       subtitle: "Pick any that fit",
       patterns: {
         title: "See it as it really is",
@@ -291,7 +291,7 @@ const en = {
     addNew: "Add question",
     streakDaysOne: "day in a row",
     streakDaysMany: "days in a row",
-    streakStartHint: "Start today's session to begin a streak",
+    streakStartHint: "Answer today to start your streak",
     answeredToday: "Answered today",
     notAnsweredToday: "Not answered yet today",
     notifBannerTitle: "Don't lose your streak",

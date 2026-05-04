@@ -19,7 +19,7 @@ import { TrackerDetails } from "./TrackerDetails";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
-import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion, localizeTrackerTheme } from "@/lib/trackerLocalize";
 
 export const PatternsTab = () => {
   const { t } = useTranslation();
@@ -453,7 +453,7 @@ export const PatternsTab = () => {
                         </p>
                       )}
                       <p className="text-xs uppercase tracking-wider mt-1.5" style={{ color: `hsl(var(--${categoryColor}))` }}>
-                        {t(`categories.${tracker.category}`)}
+                        {localizeTrackerTheme(tracker)}
                       </p>
                     </div>
                   </div>

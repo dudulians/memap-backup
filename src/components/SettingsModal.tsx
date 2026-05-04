@@ -330,6 +330,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         });
         return;
       }
+      // Persist trackers first (cycleStartDate shifted back) so when
+      // saveEntries fires the memap-settings-changed event listeners
+      // re-pull they see the new cycle window.
+      await saveTrackers(result.newTrackers);
       await saveEntries(result.newEntries);
       toast({
         title: t("settings.devDataGeneratedTitle"),

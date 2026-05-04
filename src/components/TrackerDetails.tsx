@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/uuid";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
-import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerAdvice } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerAdvice, localizeTrackerTheme } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
 
 interface TrackerDetailsProps {
@@ -229,7 +229,7 @@ export const TrackerDetails = ({
           className="text-[10px] font-semibold tracking-[0.2em] uppercase"
           style={{ color: `hsl(var(--${categoryColor}))` }}
         >
-          {t(`categories.${tracker.category}` as const)}
+          {localizeTrackerTheme(tracker)}
         </span>
         <span className="text-muted-foreground/40 text-xs">·</span>
         <span className="text-xs text-muted-foreground font-medium">
