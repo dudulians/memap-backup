@@ -1,6 +1,11 @@
 import { Tracker } from "@/types/tracker";
+// Sparkles deliberately NOT imported. It used to be the "positive
+// moment / category-Body fallback" icon, but in 2025-2026 the
+// Sparkles glyph reads as "AI feature" everywhere (ChatGPT, Notion
+// AI, Apple Intelligence) — paraistic noise on a body-tracker icon.
+// Replaced with plain Star or Heart depending on context.
 import {
-  Brain, Sparkles, Heart, MessageCircle, Activity, Search, Drama, Smartphone,
+  Brain, Heart, MessageCircle, Activity, Search, Drama, Smartphone,
   Cloud, Pill, Zap, Bandage, HeartCrack, HeartPulse, Handshake, MessageSquare, Volume2,
   Moon, Sun, Dumbbell, Droplet, Coffee, Utensils, BookOpen, Leaf, Clover, RefreshCw,
   Laugh, Star, Music, Camera, PhoneOff, Users, Mic, LucideIcon
@@ -142,16 +147,18 @@ export const getTrackerIcon = (
   // saw a star and asked why a body-tracker had a "star icon".
   if (t.includes("rested") || t.includes("woke up")
       || t.includes("отдохн") || t.includes("проснул")) return Sun;
-  // Genuine "positive moment" Sparkles — kind acts, beautiful
-  // observations. Kept narrow so we don't spam stars on every
-  // vaguely-positive tracker.
+  // "Beautiful / good moment" — observation of something nice.
+  // Use plain Star, not Sparkles: the Sparkles glyph reads as
+  // "AI feature" to most users in 2025-2026 (ChatGPT / Notion AI
+  // / Apple Intelligence all use it) and is paraistic noise on
+  // a body-tracker icon. Plain Star is just a star.
   if (t.includes("good") || t.includes("beautiful")
-      || t.includes("красив")) return Sparkles;
+      || t.includes("красив")) return Star;
   if (t.includes("dizzy") || t.includes("stumbled") || t.includes("tired") || t.includes("trip")
       || t.includes("кружил") || t.includes("устал") || t.includes("истощ") || t.includes("выжат")) return Cloud;
 
-  if (t.includes("love") || t.includes("partner") || t.includes("gratitude") || t.includes("close") || t.includes("hug") || t.includes("flower") || t.includes("smile")
-      || t.includes("любим") || t.includes("партнёр") || t.includes("партнер") || t.includes("близост") || t.includes("обним") || t.includes("обнял") || t.includes("улыбн")) return Heart;
+  if (t.includes("love") || t.includes("partner") || t.includes("gratitude") || t.includes("close") || t.includes("hug") || t.includes("flower") || t.includes("smile") || t.includes("good time") || t.includes("together") || t.includes("flirt")
+      || t.includes("любим") || t.includes("партнёр") || t.includes("партнер") || t.includes("близост") || t.includes("обним") || t.includes("обнял") || t.includes("улыбн") || t.includes("вдвоём") || t.includes("вдвоем") || t.includes("флирт") || t.includes("провели время")) return Heart;
   if (t.includes("argument") || t.includes("argued")
       || t.includes("ссор") || t.includes("поссорил") || t.includes("ругал")) return HeartCrack;
   if (t.includes("quality time") || t.includes("reach") || t.includes("family") || t.includes("friend") || t.includes("called")
@@ -178,8 +185,11 @@ export const getTrackerIcon = (
 
   if (t.includes("learn") || t.includes("read")
       || t.includes("учил") || t.includes("узнал") || t.includes("читал") || t.includes("книг")) return BookOpen;
+  // Kind acts / random kindness — Heart fits semantically (caring
+  // gesture). Was Sparkles, but switched away — Sparkles reads
+  // as "AI feature" to users now, not "kindness".
   if (t.includes("kind") || t.includes("random")
-      || t.includes("доброт") || t.includes("случайн доброт")) return Sparkles;
+      || t.includes("доброт") || t.includes("случайн доброт")) return Heart;
   if (t.includes("nature")
       || t.includes("природ")) return Leaf;
   if (t.includes("lucky") || t.includes("found") || t.includes("déjà")
