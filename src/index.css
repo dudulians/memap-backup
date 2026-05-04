@@ -245,6 +245,102 @@
     --note: 190 70% 40%;
   }
 
+  /* ---------- Liquid: iOS 26-style glass over a soft mesh ---------- */
+  /* The selling point isn't the palette — it's the material. Cards
+     and the floating nav lean hard on backdrop-filter so the mesh
+     gradient (set on body) refracts through every surface. Variables
+     stay light/cool so the glass reads "frosted" not "smoked".      */
+  [data-theme="liquid"] {
+    --background: 220 50% 96%;          /* near-white cool */
+    --foreground: 230 25% 18%;          /* dark indigo ink */
+
+    --card: 0 0% 100%;                  /* pure white base — actual translucency
+                                            applied via .card-premium override below */
+    --card-foreground: 230 25% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 25% 18%;
+
+    --primary: 265 70% 55%;             /* soft electric purple */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 40% 94%;
+    --secondary-foreground: 230 25% 18%;
+
+    --muted: 220 35% 94%;
+    --muted-foreground: 225 15% 42%;
+
+    --accent: 265 60% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 350 75% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 225 25% 88%;
+    --input: 225 25% 88%;
+    --ring: 265 70% 55%;
+
+    /* Pattern status — keep the same semantic colours, lifted slightly
+       to read on cool-pastel backgrounds without losing meaning. */
+    --balanced: 160 55% 65%;
+    --balanced-foreground: 160 70% 18%;
+    --emerging: 35 85% 68%;
+    --emerging-foreground: 30 70% 18%;
+    --strong: 350 75% 68%;
+    --strong-foreground: 350 70% 22%;
+    --untracked: 220 30% 92%;
+    --untracked-foreground: 225 15% 45%;
+
+    --note: 220 70% 50%;
+  }
+
+  /* ---------- Terra: warm earthy minimalism (parchment + terracotta) ---------- */
+  /* The dominant 2025 wellness palette — terracotta + sage + sand on
+     a warm-paper background. Reads grown-up and grounded; complements
+     Botanica which leans bright/coral. Optional 3% noise on body for
+     paper-feel — applied via body::before override below.            */
+  [data-theme="terra"] {
+    --background: 36 30% 94%;           /* warm parchment */
+    --foreground: 25 25% 22%;           /* warm charcoal */
+
+    --card: 36 40% 97%;                 /* near-white cream */
+    --card-foreground: 25 25% 22%;
+
+    --popover: 36 40% 97%;
+    --popover-foreground: 25 25% 22%;
+
+    --primary: 14 55% 52%;              /* terracotta */
+    --primary-foreground: 36 40% 97%;
+
+    --secondary: 28 35% 90%;            /* sand */
+    --secondary-foreground: 25 25% 22%;
+
+    --muted: 32 25% 90%;
+    --muted-foreground: 25 15% 40%;
+
+    --accent: 85 18% 45%;               /* sage */
+    --accent-foreground: 36 40% 97%;
+
+    --destructive: 8 55% 50%;
+    --destructive-foreground: 36 40% 97%;
+
+    --border: 32 18% 84%;
+    --input: 32 18% 84%;
+    --ring: 14 55% 52%;
+
+    /* Pattern status — earthy versions of balanced/emerging/strong */
+    --balanced: 85 28% 60%;             /* sage-mid */
+    --balanced-foreground: 85 35% 18%;
+    --emerging: 32 60% 64%;             /* warm tan */
+    --emerging-foreground: 28 50% 20%;
+    --strong: 14 60% 60%;               /* terracotta-mid */
+    --strong-foreground: 14 55% 22%;
+    --untracked: 32 22% 90%;
+    --untracked-foreground: 25 15% 45%;
+
+    --note: 25 35% 38%;                 /* dark warm brown */
+  }
+
   .dark {
     --background: 222 20% 10%;
     --foreground: 210 40% 98%;
@@ -379,9 +475,45 @@
     display: none;
   }
 
-  /* Aurora typography — modern sans everywhere, no serif numerals */
+  /* Liquid — soft cool mesh with three orbs (lavender, sky, mint).
+     The mesh is the show: cards above use heavy backdrop-blur so this
+     gradient refracts through every surface. Saturated enough that the
+     blur doesn't wash out, gentle enough that text on cards stays
+     readable. */
+  [data-theme="liquid"] body {
+    background:
+      radial-gradient(60% 50% at 12% 8%, rgba(196, 181, 253, 0.55) 0%, transparent 60%),
+      radial-gradient(55% 45% at 92% 18%, rgba(186, 230, 253, 0.55) 0%, transparent 60%),
+      radial-gradient(70% 55% at 50% 100%, rgba(167, 243, 208, 0.45) 0%, transparent 60%),
+      linear-gradient(180deg, #f0f3fb 0%, #eef0fa 50%, #ecf3f8 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+  }
+  /* Kill the warm noise overlay — incompatible with the cool mesh */
+  [data-theme="liquid"] body::before {
+    display: none;
+  }
+
+  /* Terra — warm parchment with subtle noise grain for paper-feel.
+     No orbs / gradients: the texture IS the differentiator. The
+     default body::before already paints a 3% noise; we just keep
+     it AND warm the base. */
+  [data-theme="terra"] body {
+    background: linear-gradient(180deg, #f4ede0 0%, #ede4d3 50%, #e7dcc8 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+  }
+  /* Slightly more grain than default for a real paper feel */
+  [data-theme="terra"] body::before {
+    opacity: 0.05;
+  }
+
+  /* Aurora typography — modern sans everywhere, no serif numerals.
+     Liquid tags along since glass+serif looks dated. Terra stays
+     out — it WANTS the serif for parchment-and-ink feel. */
   [data-theme="aurora"],
-  [data-theme="aurora-light"] {
+  [data-theme="aurora-light"],
+  [data-theme="liquid"] {
     letter-spacing: 0.005em;
   }
   [data-theme="aurora"] h1,
@@ -391,17 +523,24 @@
   [data-theme="aurora-light"] h1,
   [data-theme="aurora-light"] h2,
   [data-theme="aurora-light"] h3,
-  [data-theme="aurora-light"] h4 {
+  [data-theme="aurora-light"] h4,
+  [data-theme="liquid"] h1,
+  [data-theme="liquid"] h2,
+  [data-theme="liquid"] h3,
+  [data-theme="liquid"] h4 {
     font-weight: 600;
     letter-spacing: -0.015em;
   }
-  /* Kill serif display on both aurora variants — numerals & headings should feel modern */
+  /* Kill serif display on aurora + liquid — numerals & headings should feel modern */
   html[data-theme="aurora"] .font-serif,
   html[data-theme="aurora"] .font-serif-display,
   html[data-theme="aurora"] .italic,
   html[data-theme="aurora-light"] .font-serif,
   html[data-theme="aurora-light"] .font-serif-display,
-  html[data-theme="aurora-light"] .italic {
+  html[data-theme="aurora-light"] .italic,
+  html[data-theme="liquid"] .font-serif,
+  html[data-theme="liquid"] .font-serif-display,
+  html[data-theme="liquid"] .italic {
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
     font-feature-settings: "tnum" 1, "ss01" 1;
     letter-spacing: -0.02em;
@@ -489,6 +628,66 @@
     box-shadow:
       0 12px 40px -4px rgba(15, 40, 60, 0.28),
       inset 0 1px 0 0 rgba(255, 255, 255, 0.30);
+  }
+
+  /* Liquid — the iOS 26 hero treatment. Lower opacity than aurora-light
+     so the mesh below actually shows through; higher saturate boost so
+     colours stay vivid behind the frost. The thin highlight ring on top
+     (inset white 1px) is what gives glass its "edge of a lens" feel.   */
+  [data-theme="liquid"] .card-premium {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.62) 0%,
+      rgba(255, 255, 255, 0.38) 100%
+    );
+    backdrop-filter: blur(28px) saturate(1.8);
+    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow:
+      0 10px 40px -6px rgba(80, 60, 140, 0.14),
+      0 2px 10px -2px rgba(80, 60, 140, 0.08),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  }
+  [data-theme="liquid"] .card-premium:hover {
+    border-color: rgba(196, 181, 253, 0.6);
+    box-shadow:
+      0 14px 48px -6px rgba(80, 60, 140, 0.18),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.98);
+  }
+  [data-theme="liquid"] .nav-floating {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(32px) saturate(1.8);
+    -webkit-backdrop-filter: blur(32px) saturate(1.8);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 -4px 28px rgba(80, 60, 140, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* Terra — opposite philosophy: NO blur, NO transparency, just warm
+     opaque cream cards with a soft warm shadow. The grain on the body
+     is the texture; cards stay clean to keep text readable. */
+  [data-theme="terra"] .card-premium {
+    background: hsl(36 40% 97%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid hsl(32 18% 86%);
+    box-shadow:
+      0 4px 18px -4px rgba(80, 50, 30, 0.08),
+      0 1px 4px -1px rgba(80, 50, 30, 0.04);
+  }
+  [data-theme="terra"] .card-premium:hover {
+    border-color: hsl(14 35% 70%);
+    box-shadow:
+      0 6px 22px -4px rgba(80, 50, 30, 0.12),
+      0 2px 6px -1px rgba(80, 50, 30, 0.06);
+  }
+  [data-theme="terra"] .nav-floating {
+    background: hsl(36 40% 97%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid hsl(32 18% 86%);
+    box-shadow: 0 -2px 14px rgba(80, 50, 30, 0.08);
   }
   
   /* Floating Navigation — radius matches `.card-premium` (1.5rem) so

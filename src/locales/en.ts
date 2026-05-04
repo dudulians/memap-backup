@@ -181,6 +181,10 @@ const en = {
     themeAuroraLightDesc: "Airy white glass",
     themeAuroraDark: "Aurora Dark",
     themeAuroraDarkDesc: "Modern teal glass",
+    themeLiquid: "Liquid",
+    themeLiquidDesc: "iOS frosted glass",
+    themeTerra: "Terra",
+    themeTerraDesc: "Warm earthy paper",
 
     dailyRemindersTitle: "Daily Reminders",
     dailyRemindersDesc: "Get notified to check in each day",

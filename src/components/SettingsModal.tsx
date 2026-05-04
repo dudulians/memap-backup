@@ -17,7 +17,7 @@ import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { generateDevData } from "@/lib/devDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -591,11 +591,15 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 {(() => {
                   const langLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.label ?? "";
                   const polLabel = t(`gender.${currentPol}`);
-                  const themeLabel = theme === "aurora-dark"
+                  const themeLabel = theme === "aurora"
                     ? t("settings.themeAuroraDark")
                     : theme === "aurora-light"
                       ? t("settings.themeAuroraLight")
-                      : t("settings.themeClassic");
+                      : theme === "liquid"
+                        ? t("settings.themeLiquid")
+                        : theme === "terra"
+                          ? t("settings.themeTerra")
+                          : t("settings.themeClassic");
                   const notifLabel = notificationSettings.enabled
                     ? notificationSettings.time
                     : t("common.off", { defaultValue: "Off" });
@@ -731,7 +735,11 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  {/* 2-col grid — five themes split 2 / 2 / 1. Switched
+                      from 3-col when Liquid + Terra were added (1.7.4):
+                      tighter cards fit better on phones than three
+                      narrow ones with squashed labels. */}
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => handleThemeChange("classic")}
                       className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
@@ -778,6 +786,38 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       </div>
                       <span className="text-[10px] text-muted-foreground leading-snug">
                         {t("settings.themeAuroraDarkDesc")}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => handleThemeChange("liquid")}
+                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
+                        theme === "liquid"
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border/50 hover:border-border bg-muted/20"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Droplets className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{t("settings.themeLiquid")}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground leading-snug">
+                        {t("settings.themeLiquidDesc")}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => handleThemeChange("terra")}
+                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
+                        theme === "terra"
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border/50 hover:border-border bg-muted/20"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Leaf className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{t("settings.themeTerra")}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground leading-snug">
+                        {t("settings.themeTerraDesc")}
                       </span>
                     </button>
                   </div>

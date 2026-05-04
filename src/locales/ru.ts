@@ -188,6 +188,10 @@ const ru: Translation = {
     themeAuroraLightDesc: "Воздушное белое стекло",
     themeAuroraDark: "Аврора Тёмная",
     themeAuroraDarkDesc: "Современное бирюзовое стекло",
+    themeLiquid: "Liquid",
+    themeLiquidDesc: "Матовое стекло iOS",
+    themeTerra: "Terra",
+    themeTerraDesc: "Тёплая бумага и земля",
 
     dailyRemindersTitle: "Ежедневные напоминания",
     dailyRemindersDesc: "Получай напоминание заполнить день",
