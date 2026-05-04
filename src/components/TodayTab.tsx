@@ -857,12 +857,11 @@ export const TodayTab = () => {
       )}
 
       {/* Header row: streak chip + action buttons. The streak chip
-          is now hidden until 3 days of consecutive activity (1.7.2):
-          showing "0 days in a row 🔥" on day one is demoralizing —
-          a feedback loop that punishes blank state. From day 3 it
-          appears with the orange gradient. Below 3 days the row
-          starts with a placeholder chip "Start your streak today"
-          that turns into the real streak as the user tracks. */}
+          is hidden entirely until 3 days of consecutive activity
+          (1.7.3 tightened — earlier 1.7.2 still showed a muted
+          placeholder, which read as just-another-empty-state). On
+          days 0–2 the row collapses to action buttons only; from
+          day 3 the orange flame chip appears on the left. */}
       <div className="animate-fade-in space-y-3">
         <div className="flex items-center justify-between gap-2">
           {globalStreak.currentStreak >= 3 ? (
@@ -884,23 +883,9 @@ export const TodayTab = () => {
               </span>
             </div>
           ) : (
-            // Pre-streak placeholder — soft "encouragement" chip
-            // instead of the empty "0 days" state that read as
-            // failure.
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/30 border-border/40"
-              title={t("today.streakStartHint")}
-            >
-              <Flame
-                className="h-3.5 w-3.5 text-muted-foreground"
-                strokeWidth={2}
-              />
-              <span className="text-xs font-medium text-muted-foreground">
-                {globalStreak.currentStreak === 0
-                  ? t("today.streakStartHint")
-                  : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
-              </span>
-            </div>
+            // Below 3 days: empty spacer to keep action buttons
+            // pinned right via justify-between.
+            <div />
           )}
           <div className="flex items-center gap-1.5">
             {/* Always-accessible Random Play — opens the session in play

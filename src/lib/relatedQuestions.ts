@@ -327,7 +327,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "drank-water",
   ],
 
-  // ─── Привычки в вопросе ────────────────────────────────────────
+  // ─── Привычки ──────────────────────────────────────────────────
   "drank-alcohol": [
     "slept-enough",
     "headache",

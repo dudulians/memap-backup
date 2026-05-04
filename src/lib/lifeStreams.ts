@@ -763,12 +763,12 @@ export const LIFE_STREAMS: LifeStream[] = [
   },
 
   // ─────────────────────────────────────────────────────────────
-  // 4. HABITS IN QUESTION
+  // 4. HABITS
   // ─────────────────────────────────────────────────────────────
   {
     id: "habits",
-    title: "Habits in Question",
-    titleRu: "Привычки в вопросе",
+    title: "Habits",
+    titleRu: "Привычки",
     icon: "🍷",
     description: "'Wine every evening' — really every? Data settles the question.",
     descriptionRu: "«Бокал вина каждый вечер» — правда каждый? Данные ответят честно.",

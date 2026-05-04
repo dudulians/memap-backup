@@ -300,7 +300,6 @@ const ru: Translation = {
     addNew: "Новый вопрос",
     streakDaysOne: "день подряд",
     streakDaysMany: "дн. подряд",
-    streakStartHint: "Ответь сегодня — и пойдёт ритм",
     answeredToday: "Сегодня отвечено",
     notAnsweredToday: "Ещё не отвечено сегодня",
     notifBannerTitle: "Не теряй ритм",

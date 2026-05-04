@@ -291,7 +291,6 @@ const en = {
     addNew: "Add question",
     streakDaysOne: "day in a row",
     streakDaysMany: "days in a row",
-    streakStartHint: "Answer today to start your streak",
     answeredToday: "Answered today",
     notAnsweredToday: "Not answered yet today",
     notifBannerTitle: "Don't lose your streak",
