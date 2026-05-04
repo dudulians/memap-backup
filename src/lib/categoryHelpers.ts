@@ -2,7 +2,7 @@ import { Tracker } from "@/types/tracker";
 import {
   Brain, Sparkles, Heart, MessageCircle, Activity, Search, Drama, Smartphone,
   Cloud, Pill, Zap, Bandage, HeartCrack, HeartPulse, Handshake, MessageSquare, Volume2,
-  Moon, Dumbbell, Droplet, Coffee, Utensils, BookOpen, Leaf, Clover, RefreshCw,
+  Moon, Sun, Dumbbell, Droplet, Coffee, Utensils, BookOpen, Leaf, Clover, RefreshCw,
   Laugh, Star, Music, Camera, PhoneOff, Users, Mic, LucideIcon
 } from "lucide-react";
 
@@ -134,14 +134,19 @@ export const getTrackerIcon = (
       || t.includes("энерг") || t.includes("бодр")) return Zap;
   if (t.includes("stomach") || t.includes("pain") || t.includes("cramp") || t.includes("hurt") || t.includes("back") || t.includes("nause")
       || t.includes("живот") || t.includes("спин") || t.includes("суста") || t.includes("болит") || t.includes("болел") || t.includes("спазм") || t.includes("тошн") || t.includes("аллерг") || t.includes("сыпь")) return Bandage;
-  // Sparkles = "felt rested / refreshed / something nice" — POSITIVE
-  // FEELING about waking up, NOT the act of sleeping. "выспал" stem
-  // looked like a candidate but it sits inside "выспался" which we
-  // want routed to Moon (sleep). The Moon branch below catches it
-  // via the "спал" substring already, so leaving it out here is
-  // correct.
-  if (t.includes("rested") || t.includes("woke up") || t.includes("good") || t.includes("beautiful")
-      || t.includes("отдохн") || t.includes("красив")) return Sparkles;
+  // "Woke up rested / felt recovered after sleep" — about morning
+  // refresh, not sleep itself. Use Sun (morning sunrise) so this
+  // distinct meaning has its own icon. Earlier we mapped this to
+  // Sparkles, but Sparkles is literally a star-burst glyph in
+  // Lucide → users with Russian-stored "Проснулся отдохнувшим"
+  // saw a star and asked why a body-tracker had a "star icon".
+  if (t.includes("rested") || t.includes("woke up")
+      || t.includes("отдохн") || t.includes("проснул")) return Sun;
+  // Genuine "positive moment" Sparkles — kind acts, beautiful
+  // observations. Kept narrow so we don't spam stars on every
+  // vaguely-positive tracker.
+  if (t.includes("good") || t.includes("beautiful")
+      || t.includes("красив")) return Sparkles;
   if (t.includes("dizzy") || t.includes("stumbled") || t.includes("tired") || t.includes("trip")
       || t.includes("кружил") || t.includes("устал") || t.includes("истощ") || t.includes("выжат")) return Cloud;
 
