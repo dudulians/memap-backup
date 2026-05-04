@@ -41,7 +41,7 @@ const ru: Translation = {
   },
 
   gender: {
-    settingsLabel: "Пол",
+    settingsLabel: "Профиль",
     subtitle: "Чтобы вопросы писались правильно (сделал/сделала)",
     male: "Мужской",
     female: "Женский",
@@ -55,9 +55,13 @@ const ru: Translation = {
 
     welcome: {
       title: "Привет",
-      body1: "Мы плохо помним то, что для нас важнее всего. Последнюю ссору помним ярче трёх спокойных недель. Хорошие дни помним хуже плохих.",
+      // Tagline first (large, bold) — it's the brand promise. Then
+      // ONE short paragraph that grounds it. Was three blocks of
+      // text — too heavy for the first screen, the slogan got
+      // buried.
       tagline: "Память врёт. Данные нет.",
-      body2: "MeMap копит факты — а ты потом смотришь, что на самом деле правда, а что — искажение момента. И принимаешь решения уже не на эмоциях.",
+      body1: "Плохие дни ты помнишь ярче, чем хорошие. MeMap копит факты — чтобы ты потом увидела, что на самом деле было.",
+      body2: "",
       cta: "Поехали",
     },
 
@@ -207,6 +211,9 @@ const ru: Translation = {
 
     trackersTitle: "Вопросы",
     trackersDesc: "Включай и выключай вопросы для ежедневных сессий",
+    trackersCount_one: "{{count}} активный",
+    trackersCount_few: "{{count}} активных",
+    trackersCount_many: "{{count}} активных",
     noTrackersYet: "Пока нет вопросов",
     showSensitive: "Чувствительные темы",
     showSensitiveDesc: "Близость, либидо, бывшие — добавит ещё несколько вопросов в библиотеку",
@@ -297,6 +304,7 @@ const ru: Translation = {
     answeredToday: "Сегодня отвечено",
     notAnsweredToday: "Ещё не отвечено сегодня",
     notifBannerTitle: "Не теряй ритм",
+    notifBannerTitleStart: "Начни с привычки 30 секунд в день",
     notifBannerBody: "Лёгкое напоминание раз в день — чтобы привычка закрепилась.",
     notifBannerEnable: "Включить",
     notifBannerEnabled: "Напоминания включены. Время можно поменять в Настройках.",

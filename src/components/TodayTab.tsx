@@ -856,36 +856,52 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Header row: streak chip on the left, action buttons on the
-          right. The streak chip is ALWAYS rendered (even at 0) so the
-          left side never looks empty and the user always knows where
-          to find their streak. */}
+      {/* Header row: streak chip + action buttons. The streak chip
+          is now hidden until 3 days of consecutive activity (1.7.2):
+          showing "0 days in a row 🔥" on day one is demoralizing —
+          a feedback loop that punishes blank state. From day 3 it
+          appears with the orange gradient. Below 3 days the row
+          starts with a placeholder chip "Start your streak today"
+          that turns into the real streak as the user tracks. */}
       <div className="animate-fade-in space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${
-              globalStreak.currentStreak > 0
-                ? "bg-gradient-to-br from-orange-500/15 to-orange-600/5 border-orange-500/20"
-                : "bg-muted/30 border-border/40"
-            }`}
-            title={globalStreak.currentStreak > 0
-              ? undefined
-              : t("today.streakStartHint")}
-          >
-            <Flame
-              className={`h-3.5 w-3.5 ${globalStreak.currentStreak > 0 ? "text-orange-500" : "text-muted-foreground"}`}
-              strokeWidth={2}
-              fill={globalStreak.currentStreak > 0 ? "currentColor" : "none"}
-            />
-            <span className="text-xs font-medium text-foreground">
-              <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
-              <span className="text-muted-foreground ml-1">
-                {globalStreak.currentStreak === 1
-                  ? t("today.streakDaysOne")
+          {globalStreak.currentStreak >= 3 ? (
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-gradient-to-br from-orange-500/15 to-orange-600/5 border-orange-500/20"
+            >
+              <Flame
+                className="h-3.5 w-3.5 text-orange-500"
+                strokeWidth={2}
+                fill="currentColor"
+              />
+              <span className="text-xs font-medium text-foreground">
+                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
+                <span className="text-muted-foreground ml-1">
+                  {globalStreak.currentStreak === 1
+                    ? t("today.streakDaysOne")
+                    : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
+                </span>
+              </span>
+            </div>
+          ) : (
+            // Pre-streak placeholder — soft "encouragement" chip
+            // instead of the empty "0 days" state that read as
+            // failure.
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/30 border-border/40"
+              title={t("today.streakStartHint")}
+            >
+              <Flame
+                className="h-3.5 w-3.5 text-muted-foreground"
+                strokeWidth={2}
+              />
+              <span className="text-xs font-medium text-muted-foreground">
+                {globalStreak.currentStreak === 0
+                  ? t("today.streakStartHint")
                   : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
               </span>
-            </span>
-          </div>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             {/* Always-accessible Random Play — opens the session in play
                 mode straight away, no need to wait for the Done screen. */}
@@ -933,8 +949,16 @@ export const TodayTab = () => {
             <Bell className="h-4 w-4" strokeWidth={1.75} />
           </div>
           <div className="flex-1 min-w-0">
+            {/* Conditional title (1.7.2): showing "Don't lose your
+                streak" when the user HAS no streak yet (streak<3)
+                is logically wrong — they have nothing to lose.
+                Switch to a softer "build a daily habit" framing
+                pre-streak. The "real" don't-lose-streak banner
+                only appears once they're past day 3. */}
             <p className="text-sm font-medium leading-snug">
-              {t("today.notifBannerTitle")}
+              {globalStreak.currentStreak >= 3
+                ? t("today.notifBannerTitle")
+                : t("today.notifBannerTitleStart")}
             </p>
             <p className="text-xs text-muted-foreground leading-snug mt-0.5">
               {t("today.notifBannerBody")}
@@ -974,16 +998,21 @@ export const TodayTab = () => {
           <div className="relative px-1">
             <Carousel
               opts={{
-                align: "start",
+                align: "center",
                 loop: true,
                 skipSnaps: false,
                 dragFree: false,
               }}
               className="w-full"
             >
+              {/* Card width 88vw clamped to a sensible upper bound
+                  on tablets — shows ONE full card with a small peek
+                  of the next so the swipe affordance is visible.
+                  Was basis-[270px] which caused mid-word clipping
+                  on the right edge of the second card on iPhone. */}
               <CarouselContent className="-ml-3">
                 {randomIdeas.map((idea: any, index) => (
-                  <CarouselItem key={idea.id} className="pl-3 basis-[270px] sm:basis-[290px]">
+                  <CarouselItem key={idea.id} className="pl-3 basis-[88%] sm:basis-[320px]">
                     <Card
                       className="h-[115px] flex flex-col transition-all duration-200 hover:shadow-lg hover:-translate-y-1 bg-muted/30 border-muted/50 shadow-sm"
                       style={{ animationDelay: `${index * 0.1}s` }}

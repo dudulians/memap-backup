@@ -39,7 +39,7 @@ const en = {
   },
 
   gender: {
-    settingsLabel: "Gender",
+    settingsLabel: "Profile",
     subtitle: "So questions read correctly (he/she forms in Russian)",
     male: "Male",
     female: "Female",
@@ -53,9 +53,9 @@ const en = {
 
     welcome: {
       title: "Hi",
-      body1: "We remember what matters most to us the worst. The last fight more vividly than three calm weeks. The bad days more clearly than the good ones.",
       tagline: "Memory lies. Data doesn't.",
-      body2: "MeMap keeps the facts — so later you can see what's actually true, and what was just the emotion of the moment. Decisions get easier when they're not made on the fly.",
+      body1: "You remember the bad days more clearly than the good ones. MeMap keeps the facts — so later you can see what was actually true.",
+      body2: "",
       cta: "Let's go",
     },
 
@@ -204,6 +204,8 @@ const en = {
 
     trackersTitle: "Questions",
     trackersDesc: "Toggle questions on/off for daily sessions",
+    trackersCount_one: "{{count}} active",
+    trackersCount_other: "{{count}} active",
     noTrackersYet: "No questions yet",
     showSensitive: "Sensitive topics",
     showSensitiveDesc: "Intimacy, libido, exes — adds a few more questions to the library",
@@ -293,6 +295,7 @@ const en = {
     answeredToday: "Answered today",
     notAnsweredToday: "Not answered yet today",
     notifBannerTitle: "Don't lose your streak",
+    notifBannerTitleStart: "Build the 30-second daily habit",
     notifBannerBody: "A small daily nudge so the routine sticks.",
     notifBannerEnable: "Turn on",
     notifBannerEnabled: "Reminders on. You can change the time in Settings.",

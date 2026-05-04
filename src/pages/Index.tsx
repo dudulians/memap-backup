@@ -28,6 +28,15 @@ const Index = () => {
 
   // Coachmark steps — each highlights a real UI element by data-attribute.
   // Order is roughly "what you'll do every day" → "deeper features".
+  // Coachmark tour reduced from 12 → 5 essential steps in 1.7.2.
+  // The 7 deeper tooltips (shuffle, notes, overview-chips,
+  // multi-select, signals-tab, trends-tab, links-tab) were
+  // friction without payoff — most users dropped off before reaching
+  // them. These features are now "discovered at point of use" —
+  // the first time a user taps Patterns the sub-tabs are visible
+  // and self-explanatory; the random-play 🎲 button is right next
+  // to the visible Play; notes-link is next to Add. No tooltip
+  // needed for things one tap away from where you already are.
   const coachmarkSteps: CoachmarkStep[] = [
     {
       id: "cards",
@@ -48,29 +57,10 @@ const Index = () => {
       padding: 8,
     },
     {
-      id: "shuffle",
-      targetSelector: "[data-coachmark='shuffle-button']",
-      titleKey: "coachmark.shuffleTitle",
-      bodyKey: "coachmark.shuffleBody",
-      shape: "circle",
-      placement: "bottom",
-      padding: 6,
-      requireTab: "cards",
-    },
-    {
       id: "add",
       targetSelector: "[data-coachmark='add-button']",
       titleKey: "coachmark.addTitle",
       bodyKey: "coachmark.addBody",
-      placement: "bottom",
-      padding: 6,
-      requireTab: "cards",
-    },
-    {
-      id: "notes",
-      targetSelector: "[data-coachmark='notes-link']",
-      titleKey: "coachmark.notesTitle",
-      bodyKey: "coachmark.notesBody",
       placement: "bottom",
       padding: 6,
       requireTab: "cards",
@@ -82,55 +72,6 @@ const Index = () => {
       bodyKey: "coachmark.patternsBody",
       placement: "top",
       padding: 6,
-    },
-    // Patterns sub-tour — once we're on the Patterns tab, walk through
-    // its four sections so the user knows what each gives them.
-    {
-      id: "overview-chips",
-      targetSelector: "[data-coachmark='overview-chips']",
-      titleKey: "coachmark.chipsTitle",
-      bodyKey: "coachmark.chipsBody",
-      placement: "bottom",
-      padding: 4,
-      requireTab: "patterns",
-      requirePatternsSection: "overview",
-    },
-    {
-      id: "multi-select",
-      targetSelector: "[data-coachmark='multi-select-toggle']",
-      titleKey: "coachmark.multiTitle",
-      bodyKey: "coachmark.multiBody",
-      placement: "bottom",
-      padding: 4,
-      requireTab: "patterns",
-      requirePatternsSection: "overview",
-    },
-    {
-      id: "signals-tab",
-      targetSelector: "[data-coachmark='patterns-signals-tab']",
-      titleKey: "coachmark.signalsTitle",
-      bodyKey: "coachmark.signalsBody",
-      placement: "bottom",
-      padding: 4,
-      requireTab: "patterns",
-    },
-    {
-      id: "trends-tab",
-      targetSelector: "[data-coachmark='patterns-trends-tab']",
-      titleKey: "coachmark.trendsTitle",
-      bodyKey: "coachmark.trendsBody",
-      placement: "bottom",
-      padding: 4,
-      requireTab: "patterns",
-    },
-    {
-      id: "links-tab",
-      targetSelector: "[data-coachmark='patterns-links-tab']",
-      titleKey: "coachmark.linksTitle",
-      bodyKey: "coachmark.linksBody",
-      placement: "bottom",
-      padding: 4,
-      requireTab: "patterns",
     },
     {
       id: "settings",

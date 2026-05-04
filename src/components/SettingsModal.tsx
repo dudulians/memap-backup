@@ -609,7 +609,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     { key: "appearance", icon: Palette, label: t("settings.appearance"), value: themeLabel },
                     { key: "notifications", icon: Bell, label: t("settings.dailyRemindersTitle"), value: notifLabel },
                     { key: "soundHaptics", icon: Volume2, label: t("settings.soundAndHaptics") },
-                    { key: "trackers", icon: ListChecks, label: t("settings.trackersTitle"), value: String(activeTrackerCount) },
+                    { key: "trackers", icon: ListChecks, label: t("settings.trackersTitle"), value: t("settings.trackersCount", { count: activeTrackerCount }) },
                     { key: "help", icon: HelpCircle, label: t("settings.helpTitle") },
                     { key: "data", icon: Database, label: t("settings.dataPrivacyTitle") },
                   ];
@@ -1058,6 +1058,19 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 <HelpCircle className="h-4 w-4 mr-2" />
                 {t("settings.showAppTour")}
               </Button>
+
+              {/* Single-source disclaimer (1.7.2). Was shown on every
+                  Patterns sub-tab — became invisible repetition. Now
+                  lives once here so users who want to know what
+                  MeMap is and isn't have a stable place to find it. */}
+              <div className="rounded-xl bg-muted/40 border border-border/30 p-3 space-y-2">
+                <p className="text-xs leading-relaxed text-foreground/85">
+                  {t("patterns.disclaimer")}
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("patterns.disclaimer2")}
+                </p>
+              </div>
             </div>
             )}
 

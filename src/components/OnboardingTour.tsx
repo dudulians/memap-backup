@@ -613,20 +613,27 @@ const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
         <Brain className="h-6 w-6" strokeWidth={1.75} />
       </div>
 
-      <h1 className="font-serif text-2xl font-medium text-center mb-3">
+      <h1 className="font-serif text-2xl font-medium text-center mb-2">
         {t("onboarding.welcome.title")}
       </h1>
 
+      {/* Tagline-first layout (1.7.2): the slogan is the brand
+          promise — putting it ABOVE the explanation gives it the
+          weight it deserves. Was buried after a long body
+          paragraph. body2 is reserved for future use, currently
+          empty — render conditionally to avoid an empty <p>. */}
       <div className="space-y-3 max-w-[340px] mb-6 text-center">
-        <p className="text-sm text-foreground/80 leading-relaxed">
-          {t("onboarding.welcome.body1")}
-        </p>
-        <p className="text-base font-semibold text-foreground">
+        <p className="font-serif text-xl font-medium text-foreground leading-snug">
           {t("onboarding.welcome.tagline")}
         </p>
         <p className="text-sm text-foreground/80 leading-relaxed">
-          {t("onboarding.welcome.body2")}
+          {t("onboarding.welcome.body1")}
         </p>
+        {t("onboarding.welcome.body2") && (
+          <p className="text-sm text-foreground/80 leading-relaxed">
+            {t("onboarding.welcome.body2")}
+          </p>
+        )}
       </div>
 
       <Button

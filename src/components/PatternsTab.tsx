@@ -458,19 +458,25 @@ export const PatternsTab = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Badge
-                      variant="secondary"
-                      className={`
-                        ${stats.status === "emerging" ? "bg-emerging/20 text-emerging border-emerging/30" : ""}
-                        ${stats.status === "balanced" ? "bg-balanced/20 text-balanced border-balanced/30" : ""}
-                        ${stats.status === "strong" ? "bg-strong/20 text-strong border-strong/30" : ""}
-                        text-xs font-medium rounded-full px-3
-                      `}
-                    >
-                      {stats.status === "strong" && t("patterns.strongPattern")}
-                      {stats.status === "emerging" && t("patterns.emerging")}
-                      {stats.status === "balanced" && t("patterns.stable")}
-                    </Badge>
+                    {/* "Stable" badge dropped in 1.7.2 — without
+                        context it read as "is stable good or bad?".
+                        Strong-pattern and emerging stay because
+                        those have actionable meaning. The
+                        progress-bar below still color-codes the
+                        balanced state for at-a-glance scanning. */}
+                    {stats.status !== "balanced" && (
+                      <Badge
+                        variant="secondary"
+                        className={`
+                          ${stats.status === "emerging" ? "bg-emerging/20 text-emerging border-emerging/30" : ""}
+                          ${stats.status === "strong" ? "bg-strong/20 text-strong border-strong/30" : ""}
+                          text-xs font-medium rounded-full px-3
+                        `}
+                      >
+                        {stats.status === "strong" && t("patterns.strongPattern")}
+                        {stats.status === "emerging" && t("patterns.emerging")}
+                      </Badge>
+                    )}
                     <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
                   </div>
                 </div>
@@ -565,14 +571,12 @@ export const PatternsTab = () => {
         )}
       </div>
 
-      {/* Disclaimer (always shown, regardless of tab) */}
-      <div className="pt-6 mt-8">
-        <p className="text-xs text-muted-foreground text-center px-4 leading-relaxed font-playful">
-          {t("patterns.disclaimer")}
-          <br />
-          {t("patterns.disclaimer2")}
-        </p>
-      </div>
+      {/* Disclaimer removed from Patterns in 1.7.2 — was shown on
+          EVERY sub-tab (Overview / Trends / Signals / Links) which
+          made it visual noise that users stopped reading. The full
+          disclaimer now lives once in Settings → Help, and the
+          correlations-specific disclaimer remains inside the
+          Correlation Insights "(i)" explainer modal. */}
 
       {/* Bottom Sheet for Tracker Details. Header is hidden visually
           (sr-only) since TrackerDetails already renders its own
