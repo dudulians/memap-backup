@@ -24,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getCategoryColor } from "@/lib/categoryHelpers";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import {
   Search,
   Plus,
@@ -401,18 +402,42 @@ export const AddTrackerModal = ({
   // Check for duplicate trackers (active OR archived). Returns
   // tracker + isArchived so the dialog can offer "Restore from
   // archive" instead of "Open existing" when the match is archived.
+  //
+  // Two-pass match (1.7.3+):
+  //   1. Exact title match (case-insensitive) within the same category.
+  //   2. If no hit, route both stored title and incoming title through
+  //      `matchTemplateIdByTitle` — if both resolve to the same
+  //      template id, treat as duplicate. This catches renames across
+  //      versions (legacy "Сегодня голова болела" still maps to the
+  //      "headache" template id, same as the current "Болела голова"
+  //      title), so the user doesn't end up with two semantically-
+  //      identical trackers after a library refresh.
   const checkForDuplicate = async (
     title: string,
     category: Tracker["category"],
+    incomingTemplateId?: string,
   ): Promise<{ tracker: Tracker; isArchived: boolean } | null> => {
     const trackers = await getTrackers();
     const normalizedTitle = title.trim().toLowerCase();
 
-    const matches = trackers.filter(
+    let matches = trackers.filter(
       (t) =>
         t.title.trim().toLowerCase() === normalizedTitle &&
         t.category === category,
     );
+
+    // Pass 2: template-id equivalence. Cheap to compute, only runs
+    // when the strict title match found nothing.
+    if (matches.length === 0) {
+      const targetId =
+        incomingTemplateId ?? matchTemplateIdByTitle(title) ?? null;
+      if (targetId) {
+        matches = trackers.filter(
+          (t) => matchTemplateIdByTitle(t.title) === targetId,
+        );
+      }
+    }
+
     if (matches.length === 0) return null;
     const active = matches.find((t) => !t.archived);
     if (active) return { tracker: active, isArchived: false };
@@ -455,8 +480,11 @@ export const AddTrackerModal = ({
     }
 
     // Check for duplicates (match against the localized title since that's
-    // what the user sees and what new trackers get stored as).
-    const dup = await checkForDuplicate(localizedTitle, template.category);
+    // what the user sees and what new trackers get stored as). Pass the
+    // template id so the duplicate check can catch renames — e.g. an old
+    // stored tracker "Сегодня голова болела" still maps to template id
+    // "headache", same as the current title "Болела голова".
+    const dup = await checkForDuplicate(localizedTitle, template.category, template.id);
 
     if (dup) {
       // Store the pending tracker and show duplicate dialog

@@ -109,50 +109,93 @@ export const getTrackerIcon = (
 ): LucideIcon => {
   const t = title.toLowerCase();
 
-  if (t.includes("mood") || t.includes("anxiety") || t.includes("anxious")) return Brain;
-  if (t.includes("cry") || t.includes("cried") || t.includes("empty") || t.includes("disappear") || t.includes("lonely")) return HeartCrack;
-  if (t.includes("fog") || t.includes("creative") || t.includes("inspired") || t.includes("imagined")) return Cloud;
+  // Each branch lists ENGLISH keywords first, then RUSSIAN word stems
+  // (1.7.3+). Without the ru stems, a tracker stored as "Сегодня
+  // голова болела" wouldn't match any English keyword and fell
+  // through to the category fallback — which for Body returns
+  // Sparkles (looks like a star), confusing users into thinking
+  // the icon was wrong. Stems use prefixes (e.g. "болел", "болит")
+  // so they catch all gendered/declined forms.
 
-  if (t.includes("headache") || t.includes("migraine") || t.includes("pill") || t.includes("medication") || t.includes("side effect")) return Pill;
-  if (t.includes("energy") || t.includes("energiz")) return Zap;
-  if (t.includes("stomach") || t.includes("pain") || t.includes("cramp") || t.includes("hurt") || t.includes("back")) return Bandage;
-  if (t.includes("rested") || t.includes("woke up") || t.includes("good") || t.includes("beautiful")) return Sparkles;
-  if (t.includes("dizzy") || t.includes("stumbled") || t.includes("tired") || t.includes("trip")) return Cloud;
+  if (t.includes("mood") || t.includes("anxiety") || t.includes("anxious")
+      || t.includes("настроен") || t.includes("тревож") || t.includes("тревог")) return Brain;
+  if (t.includes("cry") || t.includes("cried") || t.includes("empty") || t.includes("disappear") || t.includes("lonely")
+      || t.includes("плакал") || t.includes("плач") || t.includes("одинок") || t.includes("пустот")) return HeartCrack;
+  if (t.includes("fog") || t.includes("creative") || t.includes("inspired") || t.includes("imagined")
+      || t.includes("туман") || t.includes("творч") || t.includes("вдохнов") || t.includes("представ")) return Cloud;
 
-  if (t.includes("love") || t.includes("partner") || t.includes("gratitude") || t.includes("close") || t.includes("hug") || t.includes("flower") || t.includes("smile")) return Heart;
-  if (t.includes("argument") || t.includes("argued")) return HeartCrack;
-  if (t.includes("quality time") || t.includes("reach") || t.includes("family") || t.includes("friend") || t.includes("called")) return Handshake;
+  if (t.includes("headache") || t.includes("migraine") || t.includes("pill") || t.includes("medication") || t.includes("side effect")
+      || t.includes("голов") || t.includes("мигрен") || t.includes("таблет") || t.includes("лекарств") || t.includes("побочн")) return Pill;
+  if (t.includes("energy") || t.includes("energiz")
+      || t.includes("энерг") || t.includes("бодр")) return Zap;
+  if (t.includes("stomach") || t.includes("pain") || t.includes("cramp") || t.includes("hurt") || t.includes("back")
+      || t.includes("живот") || t.includes("спин") || t.includes("суста") || t.includes("болит") || t.includes("болел") || t.includes("спазм")) return Bandage;
+  if (t.includes("rested") || t.includes("woke up") || t.includes("good") || t.includes("beautiful")
+      || t.includes("отдохн") || t.includes("выспал") || t.includes("красив")) return Sparkles;
+  if (t.includes("dizzy") || t.includes("stumbled") || t.includes("tired") || t.includes("trip")
+      || t.includes("кружил") || t.includes("устал") || t.includes("истощ") || t.includes("выжат")) return Cloud;
 
-  if (t.includes("truth") || t.includes("spoke") || t.includes("speak") || t.includes("compliment")) return MessageCircle;
-  if (t.includes("sorry") || t.includes("interrupt") || t.includes("swore") || t.includes("calm") || t.includes("react")) return MessageSquare;
+  if (t.includes("love") || t.includes("partner") || t.includes("gratitude") || t.includes("close") || t.includes("hug") || t.includes("flower") || t.includes("smile")
+      || t.includes("любим") || t.includes("партнёр") || t.includes("партнер") || t.includes("близост") || t.includes("обним") || t.includes("обнял") || t.includes("улыбн")) return Heart;
+  if (t.includes("argument") || t.includes("argued")
+      || t.includes("ссор") || t.includes("поссорил") || t.includes("ругал")) return HeartCrack;
+  if (t.includes("quality time") || t.includes("reach") || t.includes("family") || t.includes("friend") || t.includes("called")
+      || t.includes("друз") || t.includes("подруг") || t.includes("семь") || t.includes("звонил") || t.includes("позвон") || t.includes("связал")) return Handshake;
+
+  if (t.includes("truth") || t.includes("spoke") || t.includes("speak") || t.includes("compliment")
+      || t.includes("правд") || t.includes("сказал") || t.includes("комплимент")) return MessageCircle;
+  if (t.includes("sorry") || t.includes("interrupt") || t.includes("swore") || t.includes("calm") || t.includes("react")
+      || t.includes("извинил") || t.includes("перебивал") || t.includes("матом") || t.includes("спокойн") || t.includes("реагир")) return MessageSquare;
   if (t.includes("voice") && !t.includes("voice note")) return Volume2;
-  if (t.includes("said no") || t.includes("raised my voice")) return Volume2;
+  if (t.includes("said no") || t.includes("raised my voice")
+      || t.includes("повышал голос") || t.includes("крич") || t.includes("сказал нет")) return Volume2;
 
-  if (t.includes("sleep") || t.includes("slept")) return Moon;
-  if (t.includes("move") || t.includes("exercise") || t.includes("danced") || t.includes("dance")) return Dumbbell;
-  if (t.includes("water") || t.includes("hydrat")) return Droplet;
-  if (t.includes("caffeine") || t.includes("drink")) return Coffee;
-  if (t.includes("ate") || t.includes("meal") || t.includes("eating")) return Utensils;
+  if (t.includes("sleep") || t.includes("slept")
+      || t.includes("спал") || t.includes("сну") || t.includes("сон")) return Moon;
+  if (t.includes("move") || t.includes("exercise") || t.includes("danced") || t.includes("dance")
+      || t.includes("двигал") || t.includes("трениров") || t.includes("зарядк") || t.includes("танцевал")) return Dumbbell;
+  if (t.includes("water") || t.includes("hydrat")
+      || t.includes("воду") || t.includes("воды")) return Droplet;
+  if (t.includes("caffeine") || t.includes("drink")
+      || t.includes("кофе") || t.includes("кофеин")) return Coffee;
+  if (t.includes("ate") || t.includes("meal") || t.includes("eating")
+      || t.includes("ел(а)") || t.includes("ел ") || t.includes("ела ") || t.includes("обед") || t.includes("завтрак") || t.includes("ужин") || t.includes("осознанн")) return Utensils;
 
-  if (t.includes("learn") || t.includes("read")) return BookOpen;
-  if (t.includes("kind") || t.includes("random")) return Sparkles;
-  if (t.includes("nature")) return Leaf;
-  if (t.includes("lucky") || t.includes("found") || t.includes("déjà")) return Clover;
-  if (t.includes("changed my mind") || t.includes("new life")) return RefreshCw;
+  if (t.includes("learn") || t.includes("read")
+      || t.includes("учил") || t.includes("узнал") || t.includes("читал") || t.includes("книг")) return BookOpen;
+  if (t.includes("kind") || t.includes("random")
+      || t.includes("доброт") || t.includes("случайн доброт")) return Sparkles;
+  if (t.includes("nature")
+      || t.includes("природ")) return Leaf;
+  if (t.includes("lucky") || t.includes("found") || t.includes("déjà")
+      || t.includes("удач") || t.includes("дежавю") || t.includes("нашёл") || t.includes("нашла")) return Clover;
+  if (t.includes("changed my mind") || t.includes("new life")
+      || t.includes("поменял мнен") || t.includes("новую жизн")) return RefreshCw;
 
-  if (t.includes("laugh")) return Laugh;
-  if (t.includes("dream")) return Moon;
-  if (t.includes("joke") || t.includes("made") || t.includes("meme")) return Drama;
-  if (t.includes("color") || t.includes("wore") || t.includes("bright")) return Star;
-  if (t.includes("sang") || t.includes("sing") || t.includes("music")) return Music;
+  if (t.includes("laugh")
+      || t.includes("смеял") || t.includes("смех") || t.includes("рассмеш")) return Laugh;
+  if (t.includes("dream")
+      || t.includes("снил") || t.includes("сновид")) return Moon;
+  if (t.includes("joke") || t.includes("made") || t.includes("meme")
+      || t.includes("шутк") || t.includes("мем")) return Drama;
+  if (t.includes("color") || t.includes("wore") || t.includes("bright")
+      || t.includes("ярк") || t.includes("надел")) return Star;
+  if (t.includes("sang") || t.includes("sing") || t.includes("music")
+      || t.includes("пел") || t.includes("музык")) return Music;
 
-  if (t.includes("voice note")) return Mic;
-  if (t.includes("scroll") || t.includes("doom")) return Smartphone;
-  if (t.includes("post") || t.includes("like") || t.includes("comment")) return Camera;
-  if (t.includes("phone")) return PhoneOff;
-  if (t.includes("compare") || t.includes("ex's") || t.includes("ex profile") || t.includes("checked ex")) return Users;
+  if (t.includes("voice note")
+      || t.includes("голосов")) return Mic;
+  if (t.includes("scroll") || t.includes("doom")
+      || t.includes("залип") || t.includes("скролл")) return Smartphone;
+  if (t.includes("post") || t.includes("like") || t.includes("comment")
+      || t.includes("выложил") || t.includes("выставил") || t.includes("лайк") || t.includes("коммент")) return Camera;
+  if (t.includes("phone")
+      || t.includes("телефон") || t.includes("телефона")) return PhoneOff;
+  if (t.includes("compare") || t.includes("ex's") || t.includes("ex profile") || t.includes("checked ex")
+      || t.includes("сравнивал") || t.includes("бывш") || t.includes("профил")) return Users;
 
-  if (t.includes("child") || t.includes("baby")) return Heart;
+  if (t.includes("child") || t.includes("baby")
+      || t.includes("ребёнк") || t.includes("ребенк") || t.includes("ребёнок") || t.includes("ребенок") || t.includes("малыш")) return Heart;
 
   // Fallback: use category icon so we never show a generic orphan star
   if (category) return getCategoryIcon(category);
