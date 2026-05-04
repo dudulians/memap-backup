@@ -1,7 +1,7 @@
 import { Tracker } from "@/types/tracker";
 import {
   Brain, Sparkles, Heart, MessageCircle, Activity, Search, Drama, Smartphone,
-  Cloud, Pill, Zap, Bandage, HeartCrack, Handshake, MessageSquare, Volume2,
+  Cloud, Pill, Zap, Bandage, HeartCrack, HeartPulse, Handshake, MessageSquare, Volume2,
   Moon, Dumbbell, Droplet, Coffee, Utensils, BookOpen, Leaf, Clover, RefreshCw,
   Laugh, Star, Music, Camera, PhoneOff, Users, Mic, LucideIcon
 } from "lucide-react";
@@ -92,7 +92,11 @@ export const getTrackerEmoji = (title: string): string => {
 export const getCategoryIcon = (category: Tracker["category"]): LucideIcon => {
   const map: Record<Tracker["category"], LucideIcon> = {
     Emotions: Brain,
-    Body: Sparkles,
+    // Body fell back to Sparkles which renders as a star ✨ — wrong
+    // signal for physical/medical trackers (headache, joints, GI).
+    // 1.7.3+: HeartPulse so a category-fallback for Body still
+    // reads as "your body / health-adjacent" instead of "magic".
+    Body: HeartPulse,
     Connections: Heart,
     Voice: MessageCircle,
     Health: Activity,
@@ -128,10 +132,16 @@ export const getTrackerIcon = (
       || t.includes("голов") || t.includes("мигрен") || t.includes("таблет") || t.includes("лекарств") || t.includes("побочн")) return Pill;
   if (t.includes("energy") || t.includes("energiz")
       || t.includes("энерг") || t.includes("бодр")) return Zap;
-  if (t.includes("stomach") || t.includes("pain") || t.includes("cramp") || t.includes("hurt") || t.includes("back")
-      || t.includes("живот") || t.includes("спин") || t.includes("суста") || t.includes("болит") || t.includes("болел") || t.includes("спазм")) return Bandage;
+  if (t.includes("stomach") || t.includes("pain") || t.includes("cramp") || t.includes("hurt") || t.includes("back") || t.includes("nause")
+      || t.includes("живот") || t.includes("спин") || t.includes("суста") || t.includes("болит") || t.includes("болел") || t.includes("спазм") || t.includes("тошн") || t.includes("аллерг") || t.includes("сыпь")) return Bandage;
+  // Sparkles = "felt rested / refreshed / something nice" — POSITIVE
+  // FEELING about waking up, NOT the act of sleeping. "выспал" stem
+  // looked like a candidate but it sits inside "выспался" which we
+  // want routed to Moon (sleep). The Moon branch below catches it
+  // via the "спал" substring already, so leaving it out here is
+  // correct.
   if (t.includes("rested") || t.includes("woke up") || t.includes("good") || t.includes("beautiful")
-      || t.includes("отдохн") || t.includes("выспал") || t.includes("красив")) return Sparkles;
+      || t.includes("отдохн") || t.includes("красив")) return Sparkles;
   if (t.includes("dizzy") || t.includes("stumbled") || t.includes("tired") || t.includes("trip")
       || t.includes("кружил") || t.includes("устал") || t.includes("истощ") || t.includes("выжат")) return Cloud;
 
@@ -152,8 +162,8 @@ export const getTrackerIcon = (
 
   if (t.includes("sleep") || t.includes("slept")
       || t.includes("спал") || t.includes("сну") || t.includes("сон")) return Moon;
-  if (t.includes("move") || t.includes("exercise") || t.includes("danced") || t.includes("dance")
-      || t.includes("двигал") || t.includes("трениров") || t.includes("зарядк") || t.includes("танцевал")) return Dumbbell;
+  if (t.includes("move") || t.includes("exercise") || t.includes("danced") || t.includes("dance") || t.includes("stretch") || t.includes("walk")
+      || t.includes("двигал") || t.includes("трениров") || t.includes("зарядк") || t.includes("танцевал") || t.includes("растяжк") || t.includes("растяг") || t.includes("гулял") || t.includes("прогулк")) return Dumbbell;
   if (t.includes("water") || t.includes("hydrat")
       || t.includes("воду") || t.includes("воды")) return Droplet;
   if (t.includes("caffeine") || t.includes("drink")
