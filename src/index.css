@@ -626,15 +626,24 @@
     opacity: 0.05;
   }
 
-  /* Hush — warm linen with subtle sage corner. Quiet bg that
-     lets the pastel-tinted cards above breathe. Optional grain
-     overlay (via body::before kept on, opacity raised) for a
-     paper-fabric texture feel — close to linen weave. */
+  /* Hush — warm linen with FOUR subtle pastel orbs in corners
+     (peach / lavender / mint / honey) so that the translucent
+     cards above can actually pick up colour through their blur.
+     Earlier the bg was too monotone and glass cards landed on a
+     flat cream — couldn't read as "real glass". Orbs are very
+     low alpha (~0.30) so the linen vibe stays muted, but blur
+     amplifies them enough that surfaces above glow. */
   [data-theme="hush"] body {
     background:
-      radial-gradient(60% 50% at 0% 0%, rgba(220, 210, 190, 0.55) 0%, transparent 60%),
-      radial-gradient(50% 40% at 100% 100%, rgba(155, 175, 145, 0.20) 0%, transparent 65%),
-      linear-gradient(180deg, #e6dec8 0%, #e2d9c2 50%, #ddd3ba 100%);
+      /* Top-left peach */
+      radial-gradient(50% 40% at 5% 8%, rgba(252, 215, 190, 0.45) 0%, transparent 60%),
+      /* Top-right lavender */
+      radial-gradient(45% 38% at 100% 8%, rgba(220, 205, 235, 0.40) 0%, transparent 60%),
+      /* Bottom-left mint */
+      radial-gradient(50% 40% at 0% 100%, rgba(195, 215, 195, 0.45) 0%, transparent 60%),
+      /* Bottom-right honey */
+      radial-gradient(50% 40% at 100% 100%, rgba(245, 225, 180, 0.40) 0%, transparent 60%),
+      linear-gradient(180deg, #e8e0c8 0%, #e3dac0 50%, #ded2b8 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
   }
@@ -1314,47 +1323,197 @@
      pastel-tinted cards rotating)
      ─────────────────────────────────────────────────────────────  */
 
-  /* CARDS — pastel-tinted glass. Four tints rotate via nth-of-type
-     so consecutive cards each pick up a slightly different soft
-     pastel (peach / lavender / mint / honey). Translucent enough
-     that the linen bg shows through. */
+  /* CARDS — proper translucent glass with specular sheen.
+     Recipe (1.7.3 second pass):
+     1. Heavy translucency (0.40→0.20 base) so the colourful body
+        shows through real, not painted-on
+     2. Strong backdrop-blur(28px) + saturate(2.0) so colours stay
+        vivid behind the frost (without saturate, blur turns
+        everything grey)
+     3. ::before pseudo paints a DIAGONAL SHEEN — a 115° linear
+        gradient with a bright streak. This is the "glint of light
+        on glass" detail that separates premium glass from cheap
+        glassmorphism
+     4. ::after adds a soft inner radial GLOW in the tint colour,
+        positioned top-left so the card has dimensional luminance
+     5. Drop shadows tinted with the card's pastel colour, not flat
+        grey. Tinted shadows are what make Apple's pastel cards
+        feel like physical glass over a coloured surface          */
   [data-theme="hush"] .card-premium {
     position: relative;
-    backdrop-filter: blur(20px) saturate(1.3);
-    -webkit-backdrop-filter: blur(20px) saturate(1.3);
+    /* Base = very translucent white so the bg orbs show through */
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.20) 100%
+    );
+    backdrop-filter: blur(28px) saturate(2.0);
+    -webkit-backdrop-filter: blur(28px) saturate(2.0);
     border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 1.75rem;
     box-shadow:
-      0 6px 20px -6px rgba(80, 60, 30, 0.10),
-      0 2px 6px -1px rgba(80, 60, 30, 0.06),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
-    border-radius: 1.5rem;
-    /* Default tint = warm cream (used as fallback) */
-    background: linear-gradient(145deg,
-      rgba(255, 250, 240, 0.78) 0%,
-      rgba(248, 240, 225, 0.55) 100%);
+      /* Outer ambient halo */
+      0 0 0 1px rgba(255, 255, 255, 0.55),
+      /* Default warm shadow (overridden per tint below) */
+      0 12px 32px -8px rgba(140, 110, 80, 0.20),
+      0 4px 12px -2px rgba(140, 110, 80, 0.12),
+      /* Inset top edge highlight */
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      /* Inset bottom subtle dark for thickness */
+      inset 0 -1px 0 0 rgba(140, 110, 80, 0.06);
   }
-  /* Rotating pastel tints — 4-cycle so consecutive cards differ
-     visibly without looking random. Cards in different sections
-     restart the rotation since they're in different parents. */
+  /* PASTEL GLOW (per-tint, ::before) — soft radial glow positioned
+     top-left to give each card a "lit corner" — like a window
+     catching morning light. ::before sits below ::after in
+     stacking order so the sheen above paints OVER it. */
+
+  /* SPECULAR SHEEN (universal, ::after) — diagonal bright streak.
+     This is the "glint of light on glass" that separates premium
+     glass from cheap glassmorphism. Always visible, not animated
+     (tasteful subtle detail, not flashy reflection). Source order
+     puts ::after on top of ::before, so sheen is the topmost
+     decorative layer.                                              */
+  [data-theme="hush"] .card-premium::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      115deg,
+      transparent 35%,
+      rgba(255, 255, 255, 0.45) 48%,
+      rgba(255, 255, 255, 0.20) 52%,
+      transparent 65%
+    );
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.85;
+  }
+  /* Card content sits ABOVE both pseudos */
+  [data-theme="hush"] .card-premium > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Per-card pastel tint via ::before — soft radial glow in the
+     tint colour. Plus the box-shadow override gets a matching
+     coloured tint so the card casts a soft coloured shadow on
+     the linen bg below. Four tints cycle via :nth-of-type.       */
+
+  /* (1) PEACH */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 1) {
-    background: linear-gradient(145deg,
-      rgba(252, 232, 218, 0.72) 0%,    /* peach */
-      rgba(248, 222, 205, 0.50) 100%);
+    background: linear-gradient(
+      145deg,
+      rgba(254, 215, 190, 0.50) 0%,
+      rgba(255, 235, 220, 0.25) 60%,
+      rgba(255, 255, 255, 0.15) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgba(255, 235, 220, 0.65),
+      0 14px 36px -8px rgba(220, 140, 90, 0.22),
+      0 4px 12px -2px rgba(220, 140, 90, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 0 rgba(180, 110, 70, 0.08);
   }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 1)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      55% 45% at 22% 22%,
+      rgba(254, 200, 170, 0.32) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* (2) LAVENDER */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 2) {
-    background: linear-gradient(145deg,
-      rgba(230, 220, 240, 0.72) 0%,    /* lavender */
-      rgba(218, 208, 232, 0.50) 100%);
+    background: linear-gradient(
+      145deg,
+      rgba(220, 210, 240, 0.50) 0%,
+      rgba(235, 230, 248, 0.25) 60%,
+      rgba(255, 255, 255, 0.15) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgba(235, 230, 248, 0.65),
+      0 14px 36px -8px rgba(150, 130, 200, 0.22),
+      0 4px 12px -2px rgba(150, 130, 200, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 0 rgba(120, 100, 170, 0.08);
   }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 2)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      55% 45% at 22% 22%,
+      rgba(210, 195, 240, 0.32) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* (3) MINT */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 3) {
-    background: linear-gradient(145deg,
-      rgba(220, 235, 220, 0.72) 0%,    /* mint */
-      rgba(208, 224, 208, 0.50) 100%);
+    background: linear-gradient(
+      145deg,
+      rgba(200, 225, 200, 0.50) 0%,
+      rgba(225, 240, 225, 0.25) 60%,
+      rgba(255, 255, 255, 0.15) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgba(225, 240, 225, 0.65),
+      0 14px 36px -8px rgba(110, 160, 110, 0.22),
+      0 4px 12px -2px rgba(110, 160, 110, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 0 rgba(80, 130, 80, 0.08);
   }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 3)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      55% 45% at 22% 22%,
+      rgba(180, 215, 180, 0.32) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* (4) HONEY */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 4) {
-    background: linear-gradient(145deg,
-      rgba(248, 238, 215, 0.72) 0%,    /* honey */
-      rgba(240, 225, 195, 0.50) 100%);
+    background: linear-gradient(
+      145deg,
+      rgba(248, 225, 180, 0.50) 0%,
+      rgba(252, 240, 215, 0.25) 60%,
+      rgba(255, 255, 255, 0.15) 100%
+    );
+    box-shadow:
+      0 0 0 1px rgba(252, 240, 215, 0.65),
+      0 14px 36px -8px rgba(190, 150, 80, 0.22),
+      0 4px 12px -2px rgba(190, 150, 80, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      inset 0 -1px 0 0 rgba(150, 115, 60, 0.08);
+  }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 4)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      55% 45% at 22% 22%,
+      rgba(248, 215, 165, 0.32) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
   }
 
   /* nav-floating — same warm linen feel, slightly more opaque */
