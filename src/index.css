@@ -626,22 +626,16 @@
     opacity: 0.05;
   }
 
-  /* Hush — neutral warm-grey canvas (not yellow-cream) with FOUR
-     subtle orbs in corners. Rebalanced 1.7.3: previous palette was
-     peach + lavender + mint + honey — too orange-leaning. Now:
-     blue-grey, pink-grey, mint, with a small gold accent. Linen
-     vibe stays via the warm undertone of the base, but the colour
-     story is cooler and more sophisticated.                       */
+  /* Hush — uses an artistic photo wallpaper as the body background
+     (frosted-glass shapes in cream / lavender / sage). Path lives
+     under public/themes/ so Vite serves it at /themes/hush-bg.jpg.
+     The cards above (already heavy backdrop-blur 28px + saturate 2.0)
+     refract through this real image, which gives FAR more depth
+     than synthetic radial-gradient orbs ever did. Falls back to
+     the warm-grey linen gradient if the image fails to load. */
   [data-theme="hush"] body {
     background:
-      /* Top-left BLUE-GREY (foggy denim) */
-      radial-gradient(50% 40% at 5% 8%, rgba(180, 200, 215, 0.50) 0%, transparent 60%),
-      /* Top-right PINK-GREY (dusty rose) */
-      radial-gradient(45% 38% at 100% 8%, rgba(220, 195, 205, 0.45) 0%, transparent 60%),
-      /* Bottom-left MINT (cool, not yellow) */
-      radial-gradient(50% 40% at 0% 100%, rgba(190, 215, 200, 0.45) 0%, transparent 60%),
-      /* Bottom-right GOLD — kept subtle (the "немного золота") */
-      radial-gradient(40% 32% at 100% 100%, rgba(220, 200, 155, 0.30) 0%, transparent 65%),
+      url('/themes/hush-bg.jpg') center/cover no-repeat fixed,
       linear-gradient(180deg, #e8e6df 0%, #e3e1da 50%, #ddd9d2 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
@@ -1553,40 +1547,48 @@
      Blend mode: overlay (top), normal (bottom). The overlay blend
      modulates the gradient with the noise, giving the surface a
      fine grit. */
+  /* Translucent SMOKED-GLASS pills (1.7.3 polish) — earlier solid
+     black was too oppressive against the pastel wallpaper. Now:
+     dark warm graphite at ~72% opacity with backdrop-blur, so the
+     wallpaper underneath softly shows through. Still high enough
+     contrast that white text reads cleanly, but the buttons
+     "breathe" with the background instead of stamping on it. */
   [data-theme="hush"] button.bg-primary,
   [data-theme="hush"] button[class*="from-primary"],
   [data-theme="hush"] [data-app-fab] {
     background-image:
       radial-gradient(circle at 30% 22%,
-        hsl(25 14% 22%) 0%,
-        hsl(25 18% 12%) 55%,
-        hsl(25 20% 8%) 100%),
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' opacity='0.5' /%3E%3C/svg%3E") !important;
+        rgba(70, 58, 48, 0.62) 0%,
+        rgba(40, 32, 26, 0.74) 55%,
+        rgba(22, 18, 14, 0.80) 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' opacity='0.4' /%3E%3C/svg%3E") !important;
     background-blend-mode: overlay, normal !important;
-    background-color: hsl(25 18% 12%) !important;
+    background-color: transparent !important;
+    backdrop-filter: blur(16px) saturate(1.3);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3);
     color: hsl(35 30% 96%) !important;
     border: none !important;
     border-radius: 9999px !important;
     box-shadow:
-      0 6px 18px -4px rgba(25, 18, 12, 0.40),
-      0 2px 6px -1px rgba(25, 18, 12, 0.25),
-      inset 0 1px 0 0 rgba(255, 240, 225, 0.10),
-      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.30) !important;
+      0 6px 18px -4px rgba(25, 18, 12, 0.32),
+      0 2px 6px -1px rgba(25, 18, 12, 0.20),
+      inset 0 1px 0 0 rgba(255, 240, 225, 0.18),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.25) !important;
   }
   [data-theme="hush"] button.bg-primary:hover,
   [data-theme="hush"] button[class*="from-primary"]:hover,
   [data-theme="hush"] [data-app-fab]:hover {
     background-image:
       radial-gradient(circle at 30% 22%,
-        hsl(25 14% 28%) 0%,
-        hsl(25 18% 18%) 55%,
-        hsl(25 20% 12%) 100%),
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' opacity='0.5' /%3E%3C/svg%3E") !important;
+        rgba(85, 70, 58, 0.68) 0%,
+        rgba(50, 40, 32, 0.78) 55%,
+        rgba(28, 22, 18, 0.84) 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' opacity='0.4' /%3E%3C/svg%3E") !important;
     box-shadow:
-      0 8px 24px -4px rgba(95, 110, 90, 0.32),
-      0 3px 8px -1px rgba(25, 18, 12, 0.28),
-      inset 0 1px 0 0 rgba(255, 240, 225, 0.14),
-      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.30) !important;
+      0 8px 24px -4px rgba(95, 110, 90, 0.30),
+      0 3px 8px -1px rgba(25, 18, 12, 0.24),
+      inset 0 1px 0 0 rgba(255, 240, 225, 0.22),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.26) !important;
   }
   [data-theme="hush"] button.bg-primary svg,
   [data-theme="hush"] button[class*="from-primary"] svg,
