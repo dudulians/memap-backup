@@ -1533,31 +1533,37 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
   }
 
-  /* PRIMARY BUTTONS — textured black pills (1.7.3 second pass).
-     Solid black looked flat / cheap. Now textured via:
-     1. RADIAL ILLUMINATION gradient (subtle off-center light source
-        — top-left lifts to a charcoal, bottom-right drops to deep
-        black). Reads as "lit from above-left", same as a 3D
-        material catching ambient light.
-     2. INSET TOP HIGHLIGHT (rgba 0.10 white) — the lit edge of
-        the pill, very faint but it gives the rim a glint.
-     3. INSET BOTTOM SHADOW (rgba 0.30 black) — the unlit underside
-        of the curve.
-     4. NOISE TEXTURE OVERLAY via the same SVG noise filter used
-        for body grain — at low opacity (0.20), gives the surface
-        a fine paper-grain feel. Very subtle but kills the "flat
-        plastic" reading.
+  /* PRIMARY BUTTONS — textured black pills (1.7.3 third pass).
+     Solid black looked flat. The previous pass used a ::after pseudo
+     for the noise overlay, but that required `position: relative`
+     on the button — which broke the FAB and scroll-up buttons that
+     rely on `position: fixed` from Tailwind. Position override is
+     too aggressive a side-effect for a styling layer.
 
-     Catches all primary-button selectors uniformly. */
+     New approach: stack the noise SVG and the radial illumination
+     gradient as TWO background-image layers on the SAME element,
+     blended with `background-blend-mode: overlay`. No pseudo-element,
+     no position override, no z-index gymnastics — the texture is
+     baked into the button's own background, and Tailwind's `fixed`
+     positioning stays intact.
+
+     Layering (top-to-bottom in source order):
+       1. radial-gradient — illumination, off-center light source
+       2. SVG fractalNoise — paper-grain texture
+     Blend mode: overlay (top), normal (bottom). The overlay blend
+     modulates the gradient with the noise, giving the surface a
+     fine grit. */
   [data-theme="hush"] button.bg-primary,
   [data-theme="hush"] button[class*="from-primary"],
   [data-theme="hush"] [data-app-fab] {
-    position: relative;
-    background:
+    background-image:
       radial-gradient(circle at 30% 22%,
         hsl(25 14% 22%) 0%,
         hsl(25 18% 12%) 55%,
-        hsl(25 20% 8%) 100%) !important;
+        hsl(25 20% 8%) 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' opacity='0.5' /%3E%3C/svg%3E") !important;
+    background-blend-mode: overlay, normal !important;
+    background-color: hsl(25 18% 12%) !important;
     color: hsl(35 30% 96%) !important;
     border: none !important;
     border-radius: 9999px !important;
@@ -1567,29 +1573,15 @@
       inset 0 1px 0 0 rgba(255, 240, 225, 0.10),
       inset 0 -1px 2px 0 rgba(0, 0, 0, 0.30) !important;
   }
-  /* Noise grain overlay — adds paper-fabric texture to the pill
-     surface. Same SVG fractalNoise as body::before, slightly
-     stronger opacity so it reads at small button scale. */
-  [data-theme="hush"] button.bg-primary::after,
-  [data-theme="hush"] button[class*="from-primary"]::after,
-  [data-theme="hush"] [data-app-fab]::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' /%3E%3C/svg%3E");
-    opacity: 0.18;
-    mix-blend-mode: overlay;
-    pointer-events: none;
-  }
   [data-theme="hush"] button.bg-primary:hover,
   [data-theme="hush"] button[class*="from-primary"]:hover,
   [data-theme="hush"] [data-app-fab]:hover {
-    background:
+    background-image:
       radial-gradient(circle at 30% 22%,
         hsl(25 14% 28%) 0%,
         hsl(25 18% 18%) 55%,
-        hsl(25 20% 12%) 100%) !important;
+        hsl(25 20% 12%) 100%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' opacity='0.5' /%3E%3C/svg%3E") !important;
     box-shadow:
       0 8px 24px -4px rgba(95, 110, 90, 0.32),
       0 3px 8px -1px rgba(25, 18, 12, 0.28),
@@ -1600,15 +1592,6 @@
   [data-theme="hush"] button[class*="from-primary"] svg,
   [data-theme="hush"] [data-app-fab] svg {
     color: hsl(35 30% 96%);
-    position: relative;
-    z-index: 1;
-  }
-  /* Button text/content sits ABOVE the noise overlay */
-  [data-theme="hush"] button.bg-primary > *,
-  [data-theme="hush"] button[class*="from-primary"] > *,
-  [data-theme="hush"] [data-app-fab] > * {
-    position: relative;
-    z-index: 1;
   }
 
   /* OUTLINE Yes/No buttons in DailySession — keep their colour
