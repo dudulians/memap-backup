@@ -1101,6 +1101,142 @@
     letter-spacing: -0.015em;
     font-weight: 600;
   }
+
+  /* ─────────────────────────────────────────────────────────────
+     Pop polish (1.7.3) — bringing remaining flat UI into the
+     glass-pebble world so nothing reads as "leftover from another
+     theme". Twelve elements identified by audit; the visually
+     prominent ones are styled below.
+     ─────────────────────────────────────────────────────────────  */
+
+  /* PatternsTab tabs — Overview / Trends / Signals / Links.
+     Originally an underline-style active state (border-b-2). On
+     a glass-pebble theme the underline reads as a leftover from
+     a flat design. Active tab now gets a subtle inset glass
+     pebble background and the underline drops. */
+  [data-theme="pop"] [role="tablist"] [data-state="active"] {
+    background:
+      linear-gradient(145deg,
+        rgba(255, 255, 255, 0.65) 0%,
+        rgba(255, 255, 255, 0.40) 100%) !important;
+    backdrop-filter: blur(8px) saturate(1.4);
+    -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    border-bottom-color: transparent !important;
+    border-radius: 0.9rem !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.5),
+      0 2px 6px -1px rgba(60, 120, 200, 0.18),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
+  }
+
+  /* Year / Multi / small utility pill buttons in OverviewCard.
+     These use h-6 px-2 text-[10px] rounded-full bg-muted/40 — a
+     flat utility shape. In Pop give them the same glass treatment
+     so they harmonise with the rest. */
+  [data-theme="pop"] button.rounded-full[class*="bg-muted/"] {
+    background: linear-gradient(145deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(220, 235, 250, 0.35) 100%) !important;
+    backdrop-filter: blur(6px) saturate(1.3);
+    -webkit-backdrop-filter: blur(6px) saturate(1.3);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.45),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+      0 1px 3px -1px rgba(60, 120, 200, 0.15);
+  }
+
+  /* Status badges in Signals — "Strong pattern" / "Emerging".
+     Use bg-strong/20, bg-emerging/20 etc. Catch them via the /20
+     opacity-variant pattern and apply matching glass tint. */
+  [data-theme="pop"] [class*="bg-strong/2"],
+  [data-theme="pop"] [class*="bg-emerging/2"],
+  [data-theme="pop"] [class*="bg-balanced/2"] {
+    backdrop-filter: blur(4px) saturate(1.3);
+    -webkit-backdrop-filter: blur(4px) saturate(1.3);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.4),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+      0 1px 3px -1px rgba(60, 120, 200, 0.12);
+  }
+
+  /* Threshold progress meter track — was bg-muted/30 (flat grey).
+     Make it a thin glass tube so the inner gradient bar reads as
+     "filling" the glass rather than painted onto it. */
+  [data-theme="pop"] .h-2\.5[class*="bg-muted/"],
+  [data-theme="pop"] .h-2[class*="bg-muted/"] {
+    background: linear-gradient(180deg,
+      rgba(220, 235, 250, 0.40) 0%,
+      rgba(200, 220, 240, 0.30) 100%) !important;
+    box-shadow:
+      inset 0 1px 2px 0 rgba(60, 120, 200, 0.10),
+      inset 0 -1px 0 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* Inline-style reflection / alert blocks in Signals (use
+     hsl(var(--strong) / 0.06) inline backgrounds). We can't
+     override the inline colour cleanly, but we CAN add backdrop-
+     blur + inset highlight via attribute selector to give them
+     a glass-pane feel. The inline tint stays, it just looks
+     "behind glass" now. */
+  [data-theme="pop"] [style*="hsl(var(--strong) / 0.06)"],
+  [data-theme="pop"] [style*="hsl(var(--emerging) / 0.06)"],
+  [data-theme="pop"] [style*="hsl(var(--balanced) / 0.06)"] {
+    backdrop-filter: blur(8px) saturate(1.3);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+      0 2px 8px -2px rgba(60, 120, 200, 0.12);
+  }
+
+  /* Notes preview / utility containers using bg-muted/40 — give
+     them the same soft glass treatment. */
+  [data-theme="pop"] .rounded-2xl[class*="bg-muted/"],
+  [data-theme="pop"] .rounded-xl[class*="bg-muted/"] {
+    background: linear-gradient(145deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(225, 240, 255, 0.35) 100%) !important;
+    backdrop-filter: blur(8px) saturate(1.3);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+      0 1px 4px -1px rgba(60, 120, 200, 0.10);
+  }
+
+  /* shadcn SelectTrigger (used in TrackerSettingsModal Theme
+     dropdown, etc.) — was flat bg-background. Glass treatment
+     so it matches the rest of the form. */
+  [data-theme="pop"] [role="combobox"],
+  [data-theme="pop"] button[role="combobox"] {
+    background: linear-gradient(145deg,
+      rgba(255, 255, 255, 0.65) 0%,
+      rgba(225, 240, 255, 0.40) 100%) !important;
+    backdrop-filter: blur(10px) saturate(1.4);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7),
+      0 2px 6px -1px rgba(60, 120, 200, 0.10);
+  }
+
+  /* shadcn Switch (Settings toggles) — glass track.
+     Switch element has role="switch", thumb has data-state attr. */
+  [data-theme="pop"] [role="switch"][data-state="checked"] {
+    background: linear-gradient(145deg,
+      rgba(125, 211, 252, 0.85) 0%,
+      rgba(56, 154, 230, 0.75) 100%) !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.5),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+      0 1px 3px -1px rgba(30, 100, 200, 0.25);
+  }
+  [data-theme="pop"] [role="switch"][data-state="unchecked"] {
+    background: linear-gradient(145deg,
+      rgba(220, 230, 245, 0.65) 0%,
+      rgba(200, 215, 230, 0.45) 100%) !important;
+    box-shadow:
+      inset 0 1px 2px 0 rgba(60, 120, 200, 0.10),
+      inset 0 -1px 0 0 rgba(255, 255, 255, 0.6);
+  }
   
   /* Floating Navigation — radius matches `.card-premium` (1.5rem) so
      the whole UI shares one corner language. Inner active pills should
