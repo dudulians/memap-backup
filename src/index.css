@@ -626,24 +626,23 @@
     opacity: 0.05;
   }
 
-  /* Hush — warm linen with FOUR subtle pastel orbs in corners
-     (peach / lavender / mint / honey) so that the translucent
-     cards above can actually pick up colour through their blur.
-     Earlier the bg was too monotone and glass cards landed on a
-     flat cream — couldn't read as "real glass". Orbs are very
-     low alpha (~0.30) so the linen vibe stays muted, but blur
-     amplifies them enough that surfaces above glow. */
+  /* Hush — neutral warm-grey canvas (not yellow-cream) with FOUR
+     subtle orbs in corners. Rebalanced 1.7.3: previous palette was
+     peach + lavender + mint + honey — too orange-leaning. Now:
+     blue-grey, pink-grey, mint, with a small gold accent. Linen
+     vibe stays via the warm undertone of the base, but the colour
+     story is cooler and more sophisticated.                       */
   [data-theme="hush"] body {
     background:
-      /* Top-left peach */
-      radial-gradient(50% 40% at 5% 8%, rgba(252, 215, 190, 0.45) 0%, transparent 60%),
-      /* Top-right lavender */
-      radial-gradient(45% 38% at 100% 8%, rgba(220, 205, 235, 0.40) 0%, transparent 60%),
-      /* Bottom-left mint */
-      radial-gradient(50% 40% at 0% 100%, rgba(195, 215, 195, 0.45) 0%, transparent 60%),
-      /* Bottom-right honey */
-      radial-gradient(50% 40% at 100% 100%, rgba(245, 225, 180, 0.40) 0%, transparent 60%),
-      linear-gradient(180deg, #e8e0c8 0%, #e3dac0 50%, #ded2b8 100%);
+      /* Top-left BLUE-GREY (foggy denim) */
+      radial-gradient(50% 40% at 5% 8%, rgba(180, 200, 215, 0.50) 0%, transparent 60%),
+      /* Top-right PINK-GREY (dusty rose) */
+      radial-gradient(45% 38% at 100% 8%, rgba(220, 195, 205, 0.45) 0%, transparent 60%),
+      /* Bottom-left MINT (cool, not yellow) */
+      radial-gradient(50% 40% at 0% 100%, rgba(190, 215, 200, 0.45) 0%, transparent 60%),
+      /* Bottom-right GOLD — kept subtle (the "немного золота") */
+      radial-gradient(40% 32% at 100% 100%, rgba(220, 200, 155, 0.30) 0%, transparent 65%),
+      linear-gradient(180deg, #e8e6df 0%, #e3e1da 50%, #ddd9d2 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
   }
@@ -1400,20 +1399,20 @@
      coloured tint so the card casts a soft coloured shadow on
      the linen bg below. Four tints cycle via :nth-of-type.       */
 
-  /* (1) PEACH */
+  /* (1) BLUE-GREY — foggy denim */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 1) {
     background: linear-gradient(
       145deg,
-      rgba(254, 215, 190, 0.50) 0%,
-      rgba(255, 235, 220, 0.25) 60%,
+      rgba(190, 205, 220, 0.50) 0%,
+      rgba(210, 220, 232, 0.25) 60%,
       rgba(255, 255, 255, 0.15) 100%
     );
     box-shadow:
-      0 0 0 1px rgba(255, 235, 220, 0.65),
-      0 14px 36px -8px rgba(220, 140, 90, 0.22),
-      0 4px 12px -2px rgba(220, 140, 90, 0.12),
+      0 0 0 1px rgba(210, 220, 232, 0.65),
+      0 14px 36px -8px rgba(110, 140, 175, 0.22),
+      0 4px 12px -2px rgba(110, 140, 175, 0.12),
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(180, 110, 70, 0.08);
+      inset 0 -1px 0 0 rgba(80, 110, 145, 0.08);
   }
   [data-theme="hush"] .card-premium:nth-of-type(4n + 1)::before {
     content: "";
@@ -1422,27 +1421,27 @@
     border-radius: inherit;
     background: radial-gradient(
       55% 45% at 22% 22%,
-      rgba(254, 200, 170, 0.32) 0%,
+      rgba(180, 200, 220, 0.32) 0%,
       transparent 70%
     );
     pointer-events: none;
     z-index: 0;
   }
 
-  /* (2) LAVENDER */
+  /* (2) PINK-GREY — dusty rose */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 2) {
     background: linear-gradient(
       145deg,
-      rgba(220, 210, 240, 0.50) 0%,
-      rgba(235, 230, 248, 0.25) 60%,
+      rgba(225, 200, 210, 0.50) 0%,
+      rgba(235, 218, 224, 0.25) 60%,
       rgba(255, 255, 255, 0.15) 100%
     );
     box-shadow:
-      0 0 0 1px rgba(235, 230, 248, 0.65),
-      0 14px 36px -8px rgba(150, 130, 200, 0.22),
-      0 4px 12px -2px rgba(150, 130, 200, 0.12),
+      0 0 0 1px rgba(235, 218, 224, 0.65),
+      0 14px 36px -8px rgba(170, 130, 145, 0.22),
+      0 4px 12px -2px rgba(170, 130, 145, 0.12),
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(120, 100, 170, 0.08);
+      inset 0 -1px 0 0 rgba(140, 100, 115, 0.08);
   }
   [data-theme="hush"] .card-premium:nth-of-type(4n + 2)::before {
     content: "";
@@ -1451,27 +1450,27 @@
     border-radius: inherit;
     background: radial-gradient(
       55% 45% at 22% 22%,
-      rgba(210, 195, 240, 0.32) 0%,
+      rgba(220, 195, 205, 0.32) 0%,
       transparent 70%
     );
     pointer-events: none;
     z-index: 0;
   }
 
-  /* (3) MINT */
+  /* (3) MINT — cool, slightly grey-leaning */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 3) {
     background: linear-gradient(
       145deg,
-      rgba(200, 225, 200, 0.50) 0%,
-      rgba(225, 240, 225, 0.25) 60%,
+      rgba(195, 218, 210, 0.50) 0%,
+      rgba(218, 232, 224, 0.25) 60%,
       rgba(255, 255, 255, 0.15) 100%
     );
     box-shadow:
-      0 0 0 1px rgba(225, 240, 225, 0.65),
-      0 14px 36px -8px rgba(110, 160, 110, 0.22),
-      0 4px 12px -2px rgba(110, 160, 110, 0.12),
+      0 0 0 1px rgba(218, 232, 224, 0.65),
+      0 14px 36px -8px rgba(100, 150, 130, 0.22),
+      0 4px 12px -2px rgba(100, 150, 130, 0.12),
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(80, 130, 80, 0.08);
+      inset 0 -1px 0 0 rgba(75, 120, 100, 0.08);
   }
   [data-theme="hush"] .card-premium:nth-of-type(4n + 3)::before {
     content: "";
@@ -1480,27 +1479,31 @@
     border-radius: inherit;
     background: radial-gradient(
       55% 45% at 22% 22%,
-      rgba(180, 215, 180, 0.32) 0%,
+      rgba(180, 210, 195, 0.32) 0%,
       transparent 70%
     );
     pointer-events: none;
     z-index: 0;
   }
 
-  /* (4) HONEY */
+  /* (4) GOLD — deliberately the QUIETEST tint of the four. The
+     user asked for "немного золота" — not a fourth equal-weight
+     pastel but an occasional small accent. Lower colour saturation
+     and less prominent radial glow so it reads as "warm cream
+     with a hint of gold" rather than "yellow card". */
   [data-theme="hush"] .card-premium:nth-of-type(4n + 4) {
     background: linear-gradient(
       145deg,
-      rgba(248, 225, 180, 0.50) 0%,
-      rgba(252, 240, 215, 0.25) 60%,
+      rgba(228, 215, 175, 0.40) 0%,
+      rgba(240, 230, 200, 0.20) 60%,
       rgba(255, 255, 255, 0.15) 100%
     );
     box-shadow:
-      0 0 0 1px rgba(252, 240, 215, 0.65),
-      0 14px 36px -8px rgba(190, 150, 80, 0.22),
-      0 4px 12px -2px rgba(190, 150, 80, 0.12),
+      0 0 0 1px rgba(240, 230, 200, 0.55),
+      0 14px 36px -8px rgba(180, 150, 80, 0.18),
+      0 4px 12px -2px rgba(180, 150, 80, 0.10),
       inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(150, 115, 60, 0.08);
+      inset 0 -1px 0 0 rgba(150, 115, 60, 0.06);
   }
   [data-theme="hush"] .card-premium:nth-of-type(4n + 4)::before {
     content: "";
@@ -1509,7 +1512,7 @@
     border-radius: inherit;
     background: radial-gradient(
       55% 45% at 22% 22%,
-      rgba(248, 215, 165, 0.32) 0%,
+      rgba(225, 200, 145, 0.22) 0%,
       transparent 70%
     );
     pointer-events: none;
@@ -1530,34 +1533,82 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
   }
 
-  /* PRIMARY BUTTONS — black pills. The high-contrast hero of this
-     theme. Catches all the same selectors as Pop (default variant
-     + Play button gradient + FAB) but renders as solid black with
-     a subtle sage glow on hover. No 3D illusion — the punch comes
-     from the colour contrast against warm cream. */
+  /* PRIMARY BUTTONS — textured black pills (1.7.3 second pass).
+     Solid black looked flat / cheap. Now textured via:
+     1. RADIAL ILLUMINATION gradient (subtle off-center light source
+        — top-left lifts to a charcoal, bottom-right drops to deep
+        black). Reads as "lit from above-left", same as a 3D
+        material catching ambient light.
+     2. INSET TOP HIGHLIGHT (rgba 0.10 white) — the lit edge of
+        the pill, very faint but it gives the rim a glint.
+     3. INSET BOTTOM SHADOW (rgba 0.30 black) — the unlit underside
+        of the curve.
+     4. NOISE TEXTURE OVERLAY via the same SVG noise filter used
+        for body grain — at low opacity (0.20), gives the surface
+        a fine paper-grain feel. Very subtle but kills the "flat
+        plastic" reading.
+
+     Catches all primary-button selectors uniformly. */
   [data-theme="hush"] button.bg-primary,
   [data-theme="hush"] button[class*="from-primary"],
   [data-theme="hush"] [data-app-fab] {
-    background: hsl(25 18% 12%) !important;
+    position: relative;
+    background:
+      radial-gradient(circle at 30% 22%,
+        hsl(25 14% 22%) 0%,
+        hsl(25 18% 12%) 55%,
+        hsl(25 20% 8%) 100%) !important;
     color: hsl(35 30% 96%) !important;
     border: none !important;
     border-radius: 9999px !important;
     box-shadow:
-      0 4px 14px -3px rgba(25, 18, 12, 0.30),
-      0 1px 3px -1px rgba(25, 18, 12, 0.18) !important;
+      0 6px 18px -4px rgba(25, 18, 12, 0.40),
+      0 2px 6px -1px rgba(25, 18, 12, 0.25),
+      inset 0 1px 0 0 rgba(255, 240, 225, 0.10),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.30) !important;
+  }
+  /* Noise grain overlay — adds paper-fabric texture to the pill
+     surface. Same SVG fractalNoise as body::before, slightly
+     stronger opacity so it reads at small button scale. */
+  [data-theme="hush"] button.bg-primary::after,
+  [data-theme="hush"] button[class*="from-primary"]::after,
+  [data-theme="hush"] [data-app-fab]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='nf'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23nf)' /%3E%3C/svg%3E");
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    pointer-events: none;
   }
   [data-theme="hush"] button.bg-primary:hover,
   [data-theme="hush"] button[class*="from-primary"]:hover,
   [data-theme="hush"] [data-app-fab]:hover {
-    background: hsl(25 18% 18%) !important;
+    background:
+      radial-gradient(circle at 30% 22%,
+        hsl(25 14% 28%) 0%,
+        hsl(25 18% 18%) 55%,
+        hsl(25 20% 12%) 100%) !important;
     box-shadow:
-      0 6px 18px -3px rgba(95, 110, 90, 0.35),
-      0 2px 5px -1px rgba(25, 18, 12, 0.22) !important;
+      0 8px 24px -4px rgba(95, 110, 90, 0.32),
+      0 3px 8px -1px rgba(25, 18, 12, 0.28),
+      inset 0 1px 0 0 rgba(255, 240, 225, 0.14),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.30) !important;
   }
   [data-theme="hush"] button.bg-primary svg,
   [data-theme="hush"] button[class*="from-primary"] svg,
   [data-theme="hush"] [data-app-fab] svg {
     color: hsl(35 30% 96%);
+    position: relative;
+    z-index: 1;
+  }
+  /* Button text/content sits ABOVE the noise overlay */
+  [data-theme="hush"] button.bg-primary > *,
+  [data-theme="hush"] button[class*="from-primary"] > *,
+  [data-theme="hush"] [data-app-fab] > * {
+    position: relative;
+    z-index: 1;
   }
 
   /* OUTLINE Yes/No buttons in DailySession — keep their colour
