@@ -475,17 +475,27 @@
     display: none;
   }
 
-  /* Liquid — soft cool mesh with three orbs (lavender, sky, mint).
-     The mesh is the show: cards above use heavy backdrop-blur so this
-     gradient refracts through every surface. Saturated enough that the
-     blur doesn't wash out, gentle enough that text on cards stays
-     readable. */
+  /* Liquid — saturated mesh with five orbs (lavender, sky, mint,
+     coral-pink, lemon). Higher opacity (0.7-0.85) than the previous
+     pastel pass: the orbs need to be VISIBLE through 28px blur. Pre-
+     blur was washing them out into the white base. Two top orbs +
+     two bottom orbs + one centre = the five-point composition that
+     iOS 26 gallery wallpapers all use — colour from every quadrant
+     so blurred glass picks up something everywhere. */
   [data-theme="liquid"] body {
     background:
-      radial-gradient(60% 50% at 12% 8%, rgba(196, 181, 253, 0.55) 0%, transparent 60%),
-      radial-gradient(55% 45% at 92% 18%, rgba(186, 230, 253, 0.55) 0%, transparent 60%),
-      radial-gradient(70% 55% at 50% 100%, rgba(167, 243, 208, 0.45) 0%, transparent 60%),
-      linear-gradient(180deg, #f0f3fb 0%, #eef0fa 50%, #ecf3f8 100%);
+      /* top-left: vivid lavender */
+      radial-gradient(55% 45% at 8% 6%, rgba(167, 139, 250, 0.85) 0%, transparent 65%),
+      /* top-right: cyan-sky */
+      radial-gradient(50% 40% at 95% 14%, rgba(125, 211, 252, 0.80) 0%, transparent 60%),
+      /* mid-left: warm coral-pink */
+      radial-gradient(45% 40% at 5% 60%, rgba(251, 207, 232, 0.75) 0%, transparent 60%),
+      /* mid-right: lemon-tinted */
+      radial-gradient(45% 40% at 100% 65%, rgba(254, 240, 138, 0.55) 0%, transparent 60%),
+      /* bottom-centre: bright mint */
+      radial-gradient(70% 50% at 50% 105%, rgba(110, 231, 183, 0.75) 0%, transparent 60%),
+      /* base: very pale cool */
+      linear-gradient(180deg, #eef1f9 0%, #ecf0f8 50%, #ebf2f6 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
   }
@@ -630,38 +640,116 @@
       inset 0 1px 0 0 rgba(255, 255, 255, 0.30);
   }
 
-  /* Liquid — the iOS 26 hero treatment. Lower opacity than aurora-light
-     so the mesh below actually shows through; higher saturate boost so
-     colours stay vivid behind the frost. The thin highlight ring on top
-     (inset white 1px) is what gives glass its "edge of a lens" feel.   */
+  /* Liquid — the iOS 26 hero treatment. Premium pass (1.7.3 polish):
+     real Apple Liquid Glass differs from generic glassmorphism in
+     four signature details, all stacked here:
+     1. GRADIENT BORDER, not flat. White-bright at top, dim at
+        bottom — mimics how a glass edge catches light from above.
+        Done via mask-composited pseudo, since CSS borders can't
+        gradient natively.
+     2. LAYERED SHADOW STACK — outer ambient glow + key shadow +
+        inset top highlight + inset bottom shadow. The combo is what
+        gives glass actual physical thickness.
+     3. OPACITY HIERARCHY — nav-floating most opaque (80%), main
+        cards mid (60%→40%), hover/active even lower. Different
+        z-levels read as different depth.
+     4. HEAVY backdrop-blur AND saturate(2.0) — the saturate is what
+        makes the underlying mesh stay vivid through the frost
+        instead of washing to grey.
+
+     The ::before pseudo paints the gradient border using a
+     padding-box / border-box mask — a webkit-friendly trick that
+     works on iOS Safari. */
   [data-theme="liquid"] .card-premium {
+    position: relative;
     background: linear-gradient(
       145deg,
-      rgba(255, 255, 255, 0.62) 0%,
-      rgba(255, 255, 255, 0.38) 100%
+      rgba(255, 255, 255, 0.65) 0%,
+      rgba(255, 255, 255, 0.40) 100%
     );
-    backdrop-filter: blur(28px) saturate(1.8);
-    -webkit-backdrop-filter: blur(28px) saturate(1.8);
-    border: 1px solid rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(30px) saturate(2.0);
+    -webkit-backdrop-filter: blur(30px) saturate(2.0);
+    border: 1px solid transparent;  /* placeholder — real border drawn by ::before */
     box-shadow:
-      0 10px 40px -6px rgba(80, 60, 140, 0.14),
-      0 2px 10px -2px rgba(80, 60, 140, 0.08),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+      /* Outer ambient glow — soft purple-tinted halo */
+      0 0 0 1px rgba(255, 255, 255, 0.4),
+      /* Key shadow — cool purple-grey, large and soft */
+      0 12px 36px -8px rgba(80, 60, 140, 0.18),
+      /* Mid shadow — closer, defines the lift */
+      0 4px 14px -3px rgba(80, 60, 140, 0.10),
+      /* Inset top edge highlight — the "lens edge catches light" */
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      /* Inset bottom edge subtle dark — gives the disc thickness */
+      inset 0 -1px 0 0 rgba(120, 100, 160, 0.08);
+  }
+  /* Gradient border: brighter at top (light source from above) and
+     darker at the bottom edge. Drawn via ::before because CSS doesn't
+     support gradient borders directly on the element. */
+  [data-theme="liquid"] .card-premium::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.55) 40%,
+      rgba(255, 255, 255, 0.25) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
   }
   [data-theme="liquid"] .card-premium:hover {
-    border-color: rgba(196, 181, 253, 0.6);
     box-shadow:
-      0 14px 48px -6px rgba(80, 60, 140, 0.18),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.98);
+      0 0 0 1px rgba(196, 181, 253, 0.5),
+      0 16px 44px -8px rgba(80, 60, 140, 0.22),
+      0 6px 18px -3px rgba(80, 60, 140, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.98),
+      inset 0 -1px 0 0 rgba(120, 100, 160, 0.10);
   }
+  /* Floating nav — top of the hierarchy, most opaque (~80%) so the
+     UI chrome reads as "above" the cards. Heavier blur too for
+     pinned feel. */
   [data-theme="liquid"] .nav-floating {
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(32px) saturate(1.8);
-    -webkit-backdrop-filter: blur(32px) saturate(1.8);
-    border: 1px solid rgba(255, 255, 255, 0.85);
+    position: relative;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.82) 0%,
+      rgba(255, 255, 255, 0.62) 100%
+    );
+    backdrop-filter: blur(36px) saturate(2.0);
+    -webkit-backdrop-filter: blur(36px) saturate(2.0);
+    border: 1px solid transparent;
     box-shadow:
-      0 -4px 28px rgba(80, 60, 140, 0.12),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+      0 0 0 1px rgba(255, 255, 255, 0.5),
+      0 -6px 32px -4px rgba(80, 60, 140, 0.18),
+      inset 0 1px 0 0 rgba(255, 255, 255, 1.0),
+      inset 0 -1px 0 0 rgba(120, 100, 160, 0.08);
+  }
+  /* Same gradient-border treatment as cards — bright top, dim bottom */
+  [data-theme="liquid"] .nav-floating::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 1.0) 0%,
+      rgba(255, 255, 255, 0.5) 50%,
+      rgba(255, 255, 255, 0.2) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
   }
 
   /* Terra — opposite philosophy: NO blur, NO transparency, just warm
