@@ -383,13 +383,17 @@
     --input: 35 14% 80%;
     --ring: 95 18% 50%;
 
-    /* Pattern status — earth-ish but soft */
+    /* Pattern status — earth-ish but soft.
+       --strong was originally terracotta (14, 55%, 60%) which read
+       as too orange/rust against the cooler card tints. Swapped to
+       a dustier rose (355, 28%, 65%) — pinker, less saturated, sits
+       in the same family as the pink-grey card tint. */
     --balanced: 95 25% 55%;             /* sage-mid */
     --balanced-foreground: 95 35% 18%;
-    --emerging: 32 55% 62%;             /* warm tan */
+    --emerging: 32 35% 65%;             /* warm tan, desaturated */
     --emerging-foreground: 28 50% 20%;
-    --strong: 14 55% 60%;               /* terracotta */
-    --strong-foreground: 14 55% 22%;
+    --strong: 355 28% 65%;              /* dusty rose, gentle */
+    --strong-foreground: 355 35% 28%;
     --untracked: 35 16% 90%;
     --untracked-foreground: 25 14% 45%;
 
@@ -1624,7 +1628,9 @@
   }
 
   /* CALENDAR DAY DOTS — soft paper-y, no glass blur. Earthy
-     mint-green and warm coral instead of vivid green/red. */
+     mint-green and dusty rose (was warm coral / terracotta —
+     felt too orange). Now harmonises with the pink-grey card
+     tint. */
   [data-theme="hush"] .grid-cols-7 button[class*="bg-balanced"] {
     background: rgba(180, 200, 165, 0.45) !important;
     color: hsl(95 35% 22%) !important;
@@ -1633,8 +1639,8 @@
     font-weight: 600;
   }
   [data-theme="hush"] .grid-cols-7 button[class*="bg-strong"] {
-    background: rgba(220, 170, 145, 0.45) !important;
-    color: hsl(14 50% 22%) !important;
+    background: rgba(220, 180, 195, 0.42) !important;
+    color: hsl(355 35% 28%) !important;
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
     font-weight: 600;

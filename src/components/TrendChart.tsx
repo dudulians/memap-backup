@@ -69,15 +69,15 @@ const HUSH_PALETTE = [
   "#8fa886", // sage
   "#c9a3ad", // dusty rose
   "#91a4b6", // blue-grey
-  "#c9a86b", // warm gold
+  "#c9a86b", // warm gold (kept — Hush's "немного золота" accent)
   "#a89bbf", // soft lavender
   "#9bbfa8", // mint-grey
-  "#b87968", // terracotta
+  "#b88a96", // mauve (replaces terracotta — pinker, less orange)
   "#a09a90", // pewter
   "#7a8e72", // deep sage
   "#a8889a", // muted plum
   "#7d92a8", // deep blue-grey
-  "#b89770", // amber-tan
+  "#a89070", // softened amber-tan (was b89770, dropped saturation)
 ];
 
 const getPaletteForTheme = (theme: AppTheme): string[] => {
