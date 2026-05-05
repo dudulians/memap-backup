@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getTheme, type AppTheme } from "@/lib/theme";
 import {
   LineChart,
   Line,
@@ -40,8 +41,9 @@ const RANGE_DAYS: Record<TimeRange, number> = {
   "1y": 365,
 };
 
-// Distinct palette — assigned per tracker ID (not category) so no two lines look the same
-const PALETTE = [
+// Default vivid palette — used by most themes. Distinct per tracker
+// ID (not category) so no two lines look the same.
+const DEFAULT_PALETTE = [
   "#a78bfa", // violet
   "#f87171", // red
   "#34d399", // emerald
@@ -55,6 +57,33 @@ const PALETTE = [
   "#e879f9", // fuchsia
   "#fbbf24", // amber
 ];
+
+// Hush palette — muted earth tones to harmonise with the linen +
+// pastel-tinted-glass aesthetic. Vivid hex colours from
+// DEFAULT_PALETTE clashed with the wallpaper bg. Each entry is
+// pulled from the colour family Hush already uses (sage / dusty
+// rose / blue-grey / warm gold / lavender / mint-grey / terracotta)
+// at saturation levels that read clearly against pastel cards
+// without being loud.
+const HUSH_PALETTE = [
+  "#8fa886", // sage
+  "#c9a3ad", // dusty rose
+  "#91a4b6", // blue-grey
+  "#c9a86b", // warm gold
+  "#a89bbf", // soft lavender
+  "#9bbfa8", // mint-grey
+  "#b87968", // terracotta
+  "#a09a90", // pewter
+  "#7a8e72", // deep sage
+  "#a8889a", // muted plum
+  "#7d92a8", // deep blue-grey
+  "#b89770", // amber-tan
+];
+
+const getPaletteForTheme = (theme: AppTheme): string[] => {
+  if (theme === "hush") return HUSH_PALETTE;
+  return DEFAULT_PALETTE;
+};
 
 // 7d → dots per lane. 30d/90d → weekly bars. 1y → monthly bars.
 const bucketSize = (range: TimeRange) => {
@@ -77,6 +106,17 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
   // 1 = previous window of the same length; etc. Lets the user step
   // back/forward through history with ← / → buttons.
   const [offset, setOffset] = useState(0);
+
+  // Theme-aware palette. CSS handles theme-specific colours for most
+  // surfaces, but Recharts strokes are React props (hex strings), so
+  // we need a theme-aware swap here. Re-pick on every theme change.
+  const [activeTheme, setActiveTheme] = useState<AppTheme>(() => getTheme());
+  useEffect(() => {
+    const handler = () => setActiveTheme(getTheme());
+    window.addEventListener("memap-theme-changed", handler);
+    return () => window.removeEventListener("memap-theme-changed", handler);
+  }, []);
+  const PALETTE = useMemo(() => getPaletteForTheme(activeTheme), [activeTheme]);
 
   // External pre-filter (e.g. user tapped a correlation in Connections).
   // Reset selection to those IDs and pin range to 30d — short enough to
@@ -131,7 +171,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
       map.set(tr.id, PALETTE[i % PALETTE.length]);
     });
     return map;
-  }, [activeTrackers]);
+  }, [activeTrackers, PALETTE]);
 
   const colorFor = (tracker: Tracker): string =>
     trackerColorMap.get(tracker.id) ?? PALETTE[0];
