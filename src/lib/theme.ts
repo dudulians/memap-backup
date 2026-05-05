@@ -1,4 +1,4 @@
-export type AppTheme = "classic" | "aurora" | "aurora-light" | "liquid" | "terra" | "pop";
+export type AppTheme = "classic" | "aurora" | "aurora-light" | "liquid" | "terra" | "pop" | "hush";
 
 const THEME_KEY = "memap_theme";
 
@@ -9,6 +9,7 @@ export const getTheme = (): AppTheme => {
   if (stored === "liquid") return "liquid";
   if (stored === "terra") return "terra";
   if (stored === "pop") return "pop";
+  if (stored === "hush") return "hush";
   return "aurora-light"; // default for new & unset users
 };
 

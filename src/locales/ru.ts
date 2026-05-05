@@ -194,6 +194,8 @@ const ru: Translation = {
     themeTerraDesc: "Тёплая бумага и земля",
     themePop: "Pop",
     themePopDesc: "Синие стеклянные камушки",
+    themeHush: "Hush",
+    themeHushDesc: "Лён, шалфей и чёрный",
 
     dailyRemindersTitle: "Ежедневные напоминания",
     dailyRemindersDesc: "Получай напоминание заполнить день",

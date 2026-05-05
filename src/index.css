@@ -341,6 +341,61 @@
     --note: 25 35% 38%;                 /* dark warm brown */
   }
 
+  /* ---------- Hush: muted wellness — linen + sage + black pills ----------
+     Inspired by the lazyInterface "Equilibrium" concept. The hero
+     elements: warm linen-cream canvas, sage-green accent, soft
+     pastel-tinted glass cards (peach / lavender / mint rotating),
+     and BLACK pill buttons for sharp contrast. Quiet, sophisticated
+     — premium-wellness brand tonality. Different from Terra (which
+     is also warm but uses terracotta primary + opaque cream cards
+     with paper grain); Hush is glass-tinted with pastel rotation
+     and high-contrast black CTAs.                                       */
+  [data-theme="hush"] {
+    --background: 35 22% 90%;           /* warm linen */
+    --foreground: 25 18% 16%;           /* warm charcoal */
+
+    --card: 35 30% 96%;
+    --card-foreground: 25 18% 16%;
+
+    --popover: 35 30% 96%;
+    --popover-foreground: 25 18% 16%;
+
+    /* Primary = near-black for high-contrast pills.
+       Pure #000 felt heavy; hsl(25 18% 12%) is a warm graphite. */
+    --primary: 25 18% 12%;
+    --primary-foreground: 35 30% 96%;
+
+    --secondary: 35 18% 86%;
+    --secondary-foreground: 25 18% 16%;
+
+    --muted: 35 16% 88%;
+    --muted-foreground: 25 14% 42%;
+
+    /* Accent = sage green, the "Available for work" badge colour
+       in the reference. */
+    --accent: 95 18% 50%;
+    --accent-foreground: 35 30% 96%;
+
+    --destructive: 8 55% 50%;
+    --destructive-foreground: 35 30% 96%;
+
+    --border: 35 14% 80%;
+    --input: 35 14% 80%;
+    --ring: 95 18% 50%;
+
+    /* Pattern status — earth-ish but soft */
+    --balanced: 95 25% 55%;             /* sage-mid */
+    --balanced-foreground: 95 35% 18%;
+    --emerging: 32 55% 62%;             /* warm tan */
+    --emerging-foreground: 28 50% 20%;
+    --strong: 14 55% 60%;               /* terracotta */
+    --strong-foreground: 14 55% 22%;
+    --untracked: 35 16% 90%;
+    --untracked-foreground: 25 14% 45%;
+
+    --note: 95 30% 35%;                 /* dark sage */
+  }
+
   /* ---------- Pop: blue glass pebbles (1.7.3 rework) ---------- */
   /* Was violet claymorphism (opaque plump). User feedback: wanted
      "стеклянные камушки в синеве" — glass pebbles in blue. Fully
@@ -568,6 +623,22 @@
   }
   /* Slightly more grain than default for a real paper feel */
   [data-theme="terra"] body::before {
+    opacity: 0.05;
+  }
+
+  /* Hush — warm linen with subtle sage corner. Quiet bg that
+     lets the pastel-tinted cards above breathe. Optional grain
+     overlay (via body::before kept on, opacity raised) for a
+     paper-fabric texture feel — close to linen weave. */
+  [data-theme="hush"] body {
+    background:
+      radial-gradient(60% 50% at 0% 0%, rgba(220, 210, 190, 0.55) 0%, transparent 60%),
+      radial-gradient(50% 40% at 100% 100%, rgba(155, 175, 145, 0.20) 0%, transparent 65%),
+      linear-gradient(180deg, #e6dec8 0%, #e2d9c2 50%, #ddd3ba 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+  }
+  [data-theme="hush"] body::before {
     opacity: 0.05;
   }
 
@@ -1236,6 +1307,176 @@
     box-shadow:
       inset 0 1px 2px 0 rgba(60, 120, 200, 0.10),
       inset 0 -1px 0 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Hush theme — muted wellness (linen / sage / black pills /
+     pastel-tinted cards rotating)
+     ─────────────────────────────────────────────────────────────  */
+
+  /* CARDS — pastel-tinted glass. Four tints rotate via nth-of-type
+     so consecutive cards each pick up a slightly different soft
+     pastel (peach / lavender / mint / honey). Translucent enough
+     that the linen bg shows through. */
+  [data-theme="hush"] .card-premium {
+    position: relative;
+    backdrop-filter: blur(20px) saturate(1.3);
+    -webkit-backdrop-filter: blur(20px) saturate(1.3);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    box-shadow:
+      0 6px 20px -6px rgba(80, 60, 30, 0.10),
+      0 2px 6px -1px rgba(80, 60, 30, 0.06),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+    border-radius: 1.5rem;
+    /* Default tint = warm cream (used as fallback) */
+    background: linear-gradient(145deg,
+      rgba(255, 250, 240, 0.78) 0%,
+      rgba(248, 240, 225, 0.55) 100%);
+  }
+  /* Rotating pastel tints — 4-cycle so consecutive cards differ
+     visibly without looking random. Cards in different sections
+     restart the rotation since they're in different parents. */
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 1) {
+    background: linear-gradient(145deg,
+      rgba(252, 232, 218, 0.72) 0%,    /* peach */
+      rgba(248, 222, 205, 0.50) 100%);
+  }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 2) {
+    background: linear-gradient(145deg,
+      rgba(230, 220, 240, 0.72) 0%,    /* lavender */
+      rgba(218, 208, 232, 0.50) 100%);
+  }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 3) {
+    background: linear-gradient(145deg,
+      rgba(220, 235, 220, 0.72) 0%,    /* mint */
+      rgba(208, 224, 208, 0.50) 100%);
+  }
+  [data-theme="hush"] .card-premium:nth-of-type(4n + 4) {
+    background: linear-gradient(145deg,
+      rgba(248, 238, 215, 0.72) 0%,    /* honey */
+      rgba(240, 225, 195, 0.50) 100%);
+  }
+
+  /* nav-floating — same warm linen feel, slightly more opaque */
+  [data-theme="hush"] .nav-floating {
+    background: linear-gradient(145deg,
+      rgba(255, 252, 245, 0.85) 0%,
+      rgba(248, 240, 225, 0.65) 100%);
+    backdrop-filter: blur(28px) saturate(1.4);
+    -webkit-backdrop-filter: blur(28px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 1.5rem;
+    box-shadow:
+      0 -4px 24px -4px rgba(80, 60, 30, 0.12),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  }
+
+  /* PRIMARY BUTTONS — black pills. The high-contrast hero of this
+     theme. Catches all the same selectors as Pop (default variant
+     + Play button gradient + FAB) but renders as solid black with
+     a subtle sage glow on hover. No 3D illusion — the punch comes
+     from the colour contrast against warm cream. */
+  [data-theme="hush"] button.bg-primary,
+  [data-theme="hush"] button[class*="from-primary"],
+  [data-theme="hush"] [data-app-fab] {
+    background: hsl(25 18% 12%) !important;
+    color: hsl(35 30% 96%) !important;
+    border: none !important;
+    border-radius: 9999px !important;
+    box-shadow:
+      0 4px 14px -3px rgba(25, 18, 12, 0.30),
+      0 1px 3px -1px rgba(25, 18, 12, 0.18) !important;
+  }
+  [data-theme="hush"] button.bg-primary:hover,
+  [data-theme="hush"] button[class*="from-primary"]:hover,
+  [data-theme="hush"] [data-app-fab]:hover {
+    background: hsl(25 18% 18%) !important;
+    box-shadow:
+      0 6px 18px -3px rgba(95, 110, 90, 0.35),
+      0 2px 5px -1px rgba(25, 18, 12, 0.22) !important;
+  }
+  [data-theme="hush"] button.bg-primary svg,
+  [data-theme="hush"] button[class*="from-primary"] svg,
+  [data-theme="hush"] [data-app-fab] svg {
+    color: hsl(35 30% 96%);
+  }
+
+  /* OUTLINE Yes/No buttons in DailySession — keep their colour
+     borders but soften into a paper-card feel. */
+  [data-theme="hush"] button.bg-transparent.rounded-full[class*="border-"] {
+    background: rgba(255, 252, 245, 0.55) !important;
+    backdrop-filter: blur(8px) saturate(1.2);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    box-shadow:
+      0 2px 6px -1px rgba(80, 60, 30, 0.08),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* TRACKER ICON BLOCKS — small sage-tinted glass pebble. Subtle:
+     the eye should land on the question text, not the icon. */
+  [data-theme="hush"] [data-tracker-icon] {
+    background: linear-gradient(135deg,
+      rgba(180, 200, 175, 0.75) 0%,
+      rgba(155, 180, 145, 0.65) 100%) !important;
+    box-shadow:
+      0 2px 6px -1px rgba(95, 110, 90, 0.18),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.55);
+    border-radius: 0.75rem;
+  }
+  [data-theme="hush"] [data-tracker-icon] svg {
+    color: hsl(95 35% 22%) !important;
+    stroke-width: 1.75 !important;
+  }
+
+  /* CALENDAR DAY DOTS — soft paper-y, no glass blur. Earthy
+     mint-green and warm coral instead of vivid green/red. */
+  [data-theme="hush"] .grid-cols-7 button[class*="bg-balanced"] {
+    background: rgba(180, 200, 165, 0.45) !important;
+    color: hsl(95 35% 22%) !important;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+  }
+  [data-theme="hush"] .grid-cols-7 button[class*="bg-strong"] {
+    background: rgba(220, 170, 145, 0.45) !important;
+    color: hsl(14 50% 22%) !important;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+  }
+
+  /* Small utility pill buttons (Year / Multi etc.) */
+  [data-theme="hush"] button.rounded-full[class*="bg-muted/"] {
+    background: rgba(255, 250, 240, 0.55) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow:
+      0 1px 3px -1px rgba(80, 60, 30, 0.08),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+  }
+
+  /* SelectTrigger + Switch */
+  [data-theme="hush"] [role="combobox"],
+  [data-theme="hush"] button[role="combobox"] {
+    background: rgba(255, 250, 240, 0.65) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(180, 165, 135, 0.4) !important;
+  }
+  [data-theme="hush"] [role="switch"][data-state="checked"] {
+    background: hsl(95 25% 50%) !important;
+  }
+  [data-theme="hush"] [role="switch"][data-state="unchecked"] {
+    background: rgba(180, 165, 135, 0.35) !important;
+  }
+
+  /* Tabs — quiet active state, just darker text + subtle bottom
+     bar. Hush is too quiet for glass-pill tabs (would feel out
+     of place against linen). Keep typography-led. */
+  [data-theme="hush"] [role="tablist"] [data-state="active"] {
+    background: transparent !important;
+    border-bottom-color: hsl(25 18% 16%) !important;
+    box-shadow: none;
   }
   
   /* Floating Navigation — radius matches `.card-premium` (1.5rem) so
