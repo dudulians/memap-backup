@@ -17,7 +17,7 @@ import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { generateDevData } from "@/lib/devDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -599,7 +599,9 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         ? t("settings.themeLiquid")
                         : theme === "terra"
                           ? t("settings.themeTerra")
-                          : t("settings.themeClassic");
+                          : theme === "pop"
+                            ? t("settings.themePop")
+                            : t("settings.themeClassic");
                   const notifLabel = notificationSettings.enabled
                     ? notificationSettings.time
                     : t("common.off", { defaultValue: "Off" });
@@ -818,6 +820,22 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       </div>
                       <span className="text-[10px] text-muted-foreground leading-snug">
                         {t("settings.themeTerraDesc")}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => handleThemeChange("pop")}
+                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
+                        theme === "pop"
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border/50 hover:border-border bg-muted/20"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{t("settings.themePop")}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground leading-snug">
+                        {t("settings.themePopDesc")}
                       </span>
                     </button>
                   </div>

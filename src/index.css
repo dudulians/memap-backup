@@ -341,6 +341,55 @@
     --note: 25 35% 38%;                 /* dark warm brown */
   }
 
+  /* ---------- Pop: bold violet claymorphism (Dribbble vibe) ---------- */
+  /* The "loud / playful" theme — saturated violet hero cards, vivid
+     colour pills, plump 3D-lookalike FAB. CSS-only claymorphism via
+     layered shadows + inset gradients (we don't have actual 3D
+     illustration assets, but the volumetric feel comes through on
+     buttons and pills). Tonally distinct from the rest: this is the
+     theme for users who want energy/play, not gentle observation. */
+  [data-theme="pop"] {
+    --background: 252 60% 96%;          /* light lilac canvas */
+    --foreground: 260 35% 18%;          /* deep violet ink */
+
+    --card: 0 0% 100%;                  /* crisp white cards (contrast vs lilac bg) */
+    --card-foreground: 260 35% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 260 35% 18%;
+
+    --primary: 265 85% 60%;             /* vivid violet */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 252 50% 92%;
+    --secondary-foreground: 260 35% 18%;
+
+    --muted: 252 40% 94%;
+    --muted-foreground: 260 18% 40%;
+
+    --accent: 165 70% 55%;              /* mint accent for pop */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 350 80% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 252 30% 88%;
+    --input: 252 30% 88%;
+    --ring: 265 85% 60%;
+
+    /* Pattern status — lifted to read on lilac with bold colour */
+    --balanced: 165 65% 55%;
+    --balanced-foreground: 165 70% 18%;
+    --emerging: 35 90% 62%;
+    --emerging-foreground: 30 70% 18%;
+    --strong: 265 80% 65%;
+    --strong-foreground: 265 60% 22%;
+    --untracked: 252 30% 92%;
+    --untracked-foreground: 260 18% 45%;
+
+    --note: 265 60% 45%;
+  }
+
   .dark {
     --background: 222 20% 10%;
     --foreground: 210 40% 98%;
@@ -516,6 +565,22 @@
   /* Slightly more grain than default for a real paper feel */
   [data-theme="terra"] body::before {
     opacity: 0.05;
+  }
+
+  /* Pop — light lilac canvas with one BIG soft violet orb top-left.
+     Different shape from Liquid: not a 5-orb mesh but a single
+     dominant gradient corner, like the Dribbble reference. The
+     volume in this theme comes from CARDS, not the bg. */
+  [data-theme="pop"] body {
+    background:
+      radial-gradient(80% 60% at 0% 0%, rgba(196, 181, 253, 0.55) 0%, transparent 65%),
+      radial-gradient(70% 55% at 100% 100%, rgba(167, 243, 208, 0.30) 0%, transparent 65%),
+      linear-gradient(180deg, #ece8fa 0%, #ebe7fa 60%, #ece9f5 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+  }
+  [data-theme="pop"] body::before {
+    display: none;
   }
 
   /* Aurora typography — modern sans everywhere, no serif numerals.
@@ -776,6 +841,125 @@
     -webkit-backdrop-filter: none;
     border: 1px solid hsl(32 18% 86%);
     box-shadow: 0 -2px 14px rgba(80, 50, 30, 0.08);
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     Pop theme — claymorphism via layered shadows
+     ─────────────────────────────────────────────────────────────
+     Three signature treatments here:
+     1. Card-premium: crisp white card with strong tinted shadow
+        (purple-grey, not flat black) + subtle violet gradient
+        accent at the top-right corner — gives the "lifted plump"
+        feel without breaking text legibility.
+     2. FAB ([data-app-fab]): the Dribbble-style 3D ball — multiple
+        radial gradients fake a glossy sphere, layered shadows lift
+        it off the page. This is the "необычная кнопка" the user
+        asked for.
+     3. nav-floating: clean white with stronger purple shadow.
+     The "play button" / FAB is the hero element — that's the
+     attention-grabbing piece.                                          */
+
+  [data-theme="pop"] .card-premium {
+    position: relative;       /* required for ::after gradient corner */
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid hsl(252 30% 92%);
+    /* Layered tinted shadows — purple-tinged, not grey, so cards
+       feel "of the same world" as the lilac background. */
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.9) inset,         /* top edge highlight */
+      0 14px 32px -10px rgba(120, 90, 200, 0.22),       /* deep cool shadow */
+      0 4px 12px -2px rgba(120, 90, 200, 0.10);         /* close shadow */
+    border-radius: 1.75rem;                              /* extra-rounded for "plump" */
+  }
+  [data-theme="pop"] .card-premium:hover {
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
+      0 18px 40px -10px rgba(120, 90, 200, 0.28),
+      0 6px 16px -2px rgba(120, 90, 200, 0.14);
+    transform: translateY(-1px);
+  }
+  [data-theme="pop"] .nav-floating {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid hsl(252 30% 90%);
+    box-shadow:
+      0 -8px 24px -4px rgba(120, 90, 200, 0.18),
+      0 1px 0 0 rgba(255, 255, 255, 0.9) inset;
+    border-radius: 1.75rem;
+  }
+
+  /* THE FAB. This is the "objёmnaya plyushevaya knopka" — claymorphism
+     done right via CSS only:
+     - Dual radial gradient on background fakes a 3D sphere with
+       a bright top-left specular highlight and a darker bottom-right
+       (where light doesn't hit the curve)
+     - Inset white highlight on top-left = the lit edge of the curve
+     - Inset dark shadow on bottom-right = the unlit underside
+     - Multi-layer drop shadow (close + far + tint) = floating ball
+     Combined: the button reads as a glossy plump 3D bubble. */
+  [data-theme="pop"] [data-app-fab] {
+    background:
+      radial-gradient(circle at 28% 28%,
+        hsl(280 95% 80%) 0%,
+        hsl(265 85% 60%) 45%,
+        hsl(260 80% 48%) 100%);
+    border: none;
+    box-shadow:
+      /* Outer halo — soft purple aura */
+      0 0 0 1px rgba(255, 255, 255, 0.4),
+      /* Far drop shadow — long & soft */
+      0 18px 32px -8px rgba(120, 60, 220, 0.45),
+      /* Close drop shadow — defines the lift */
+      0 6px 16px -2px rgba(120, 60, 220, 0.30),
+      /* Inset top-left specular — the bright lit edge */
+      inset 2px 2px 4px 0 rgba(255, 255, 255, 0.50),
+      /* Inset bottom-right shadow — the unlit underside */
+      inset -2px -2px 6px 0 rgba(80, 30, 180, 0.35);
+    /* Slightly bigger so the gradient has room to breathe */
+    transform-origin: center;
+  }
+  [data-theme="pop"] [data-app-fab]:hover {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.5),
+      0 22px 38px -8px rgba(120, 60, 220, 0.55),
+      0 8px 18px -2px rgba(120, 60, 220, 0.36),
+      inset 2px 2px 4px 0 rgba(255, 255, 255, 0.55),
+      inset -2px -2px 6px 0 rgba(80, 30, 180, 0.38);
+  }
+  [data-theme="pop"] [data-app-fab] svg {
+    /* Subtle drop shadow on the + icon so it pops off the gradient */
+    filter: drop-shadow(0 1px 2px rgba(80, 30, 180, 0.30));
+    stroke-width: 2.5;
+  }
+
+  /* Tracker swipe cards — get a soft gradient corner so they're
+     not "boring white". Subtle enough to keep text readable, but
+     visible enough to give the card visual interest. The corner
+     tint matches the lilac-mint palette of the theme. */
+  [data-theme="pop"] .card-premium::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(
+      circle at 100% 0%,
+      rgba(167, 139, 250, 0.18) 0%,
+      rgba(167, 139, 250, 0.06) 35%,
+      transparent 70%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Make sure card content sits ABOVE the gradient corner */
+  [data-theme="pop"] .card-premium > * {
+    position: relative;
+    z-index: 1;
   }
   
   /* Floating Navigation — radius matches `.card-premium` (1.5rem) so

@@ -185,6 +185,8 @@ const en = {
     themeLiquidDesc: "iOS frosted glass",
     themeTerra: "Terra",
     themeTerraDesc: "Warm earthy paper",
+    themePop: "Pop",
+    themePopDesc: "Bold violet & 3D pop",
 
     dailyRemindersTitle: "Daily Reminders",
     dailyRemindersDesc: "Get notified to check in each day",
