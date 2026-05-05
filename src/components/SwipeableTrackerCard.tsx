@@ -259,6 +259,7 @@ export const SwipeableTrackerCard = ({
         >
           <div className="flex items-start gap-3">
             <div
+              data-tracker-icon
               className={cn(
                 "flex items-center justify-center rounded-xl shrink-0",
                 compact ? "w-9 h-9" : "w-11 h-11"

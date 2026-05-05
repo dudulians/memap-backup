@@ -440,6 +440,7 @@ export const PatternsTab = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 flex-1">
                     <div
+                      data-tracker-icon
                       className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
                       style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.22)` }}
                     >

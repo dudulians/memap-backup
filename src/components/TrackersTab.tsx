@@ -304,6 +304,7 @@ export const TrackersTab = () => {
                   >
                     <div className="flex items-start gap-3">
                       <div
+              data-tracker-icon
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.22)` }}
             >
@@ -426,6 +427,7 @@ const SortableTrackerCard = ({
             className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
           >
             <div
+              data-tracker-icon
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.22)` }}
             >
