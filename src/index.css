@@ -341,53 +341,57 @@
     --note: 25 35% 38%;                 /* dark warm brown */
   }
 
-  /* ---------- Pop: bold violet claymorphism (Dribbble vibe) ---------- */
-  /* The "loud / playful" theme — saturated violet hero cards, vivid
-     colour pills, plump 3D-lookalike FAB. CSS-only claymorphism via
-     layered shadows + inset gradients (we don't have actual 3D
-     illustration assets, but the volumetric feel comes through on
-     buttons and pills). Tonally distinct from the rest: this is the
-     theme for users who want energy/play, not gentle observation. */
+  /* ---------- Pop: blue glass pebbles (1.7.3 rework) ---------- */
+  /* Was violet claymorphism (opaque plump). User feedback: wanted
+     "стеклянные камушки в синеве" — glass pebbles in blue. Fully
+     reworked: blue palette, translucent surfaces with backdrop-blur,
+     all primary-coloured controls (FAB, play button, date pills,
+     yes/no, calendar dots) get the same glass-pebble treatment so
+     the visual language is consistent. Pebble = solid-feeling but
+     light-passes-through, with an inset top highlight (lit edge)
+     and a soft tinted drop shadow.                                  */
   [data-theme="pop"] {
-    --background: 252 60% 96%;          /* light lilac canvas */
-    --foreground: 260 35% 18%;          /* deep violet ink */
+    --background: 210 65% 96%;          /* light cool blue canvas */
+    --foreground: 215 40% 18%;          /* deep navy ink */
 
-    --card: 0 0% 100%;                  /* crisp white cards (contrast vs lilac bg) */
-    --card-foreground: 260 35% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 40% 18%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 260 35% 18%;
+    --popover-foreground: 215 40% 18%;
 
-    --primary: 265 85% 60%;             /* vivid violet */
+    --primary: 210 90% 55%;             /* vivid sky blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 252 50% 92%;
-    --secondary-foreground: 260 35% 18%;
+    --secondary: 210 55% 92%;
+    --secondary-foreground: 215 40% 18%;
 
-    --muted: 252 40% 94%;
-    --muted-foreground: 260 18% 40%;
+    --muted: 210 45% 94%;
+    --muted-foreground: 215 18% 40%;
 
-    --accent: 165 70% 55%;              /* mint accent for pop */
+    --accent: 190 85% 50%;              /* cyan accent */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 350 80% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 252 30% 88%;
-    --input: 252 30% 88%;
-    --ring: 265 85% 60%;
+    --border: 210 35% 86%;
+    --input: 210 35% 86%;
+    --ring: 210 90% 55%;
 
-    /* Pattern status — lifted to read on lilac with bold colour */
-    --balanced: 165 65% 55%;
-    --balanced-foreground: 165 70% 18%;
+    /* Pattern status — keep balanced=green, strong=red (calendar
+       colour coding stays familiar), but shift to slightly cooler
+       hues so they harmonise with the blue surroundings. */
+    --balanced: 158 60% 55%;            /* mint-green */
+    --balanced-foreground: 158 70% 18%;
     --emerging: 35 90% 62%;
     --emerging-foreground: 30 70% 18%;
-    --strong: 265 80% 65%;
-    --strong-foreground: 265 60% 22%;
-    --untracked: 252 30% 92%;
-    --untracked-foreground: 260 18% 45%;
+    --strong: 0 75% 65%;                /* coral-red */
+    --strong-foreground: 0 70% 22%;
+    --untracked: 210 35% 92%;
+    --untracked-foreground: 215 18% 45%;
 
-    --note: 265 60% 45%;
+    --note: 210 70% 45%;
   }
 
   .dark {
@@ -567,15 +571,16 @@
     opacity: 0.05;
   }
 
-  /* Pop — light lilac canvas with one BIG soft violet orb top-left.
-     Different shape from Liquid: not a 5-orb mesh but a single
-     dominant gradient corner, like the Dribbble reference. The
-     volume in this theme comes from CARDS, not the bg. */
+  /* Pop — cool blue/cyan mesh. Three orbs: sky-blue top-left,
+     mint bottom-right, soft cyan bottom-centre. Saturated enough
+     that translucent glass surfaces above pick up real colour. */
   [data-theme="pop"] body {
     background:
-      radial-gradient(80% 60% at 0% 0%, rgba(196, 181, 253, 0.55) 0%, transparent 65%),
-      radial-gradient(70% 55% at 100% 100%, rgba(167, 243, 208, 0.30) 0%, transparent 65%),
-      linear-gradient(180deg, #ece8fa 0%, #ebe7fa 60%, #ece9f5 100%);
+      radial-gradient(70% 55% at 0% 5%, rgba(125, 211, 252, 0.65) 0%, transparent 65%),
+      radial-gradient(60% 50% at 100% 95%, rgba(110, 231, 183, 0.50) 0%, transparent 60%),
+      radial-gradient(75% 50% at 50% 100%, rgba(147, 197, 253, 0.55) 0%, transparent 65%),
+      radial-gradient(50% 40% at 100% 8%, rgba(186, 230, 253, 0.55) 0%, transparent 60%),
+      linear-gradient(180deg, #eaf3fb 0%, #e7f0fa 50%, #e8f2f7 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
   }
@@ -844,193 +849,245 @@
   }
 
   /* ─────────────────────────────────────────────────────────────
-     Pop theme — claymorphism via layered shadows
+     Pop theme — blue glass pebbles (1.7.3 rework)
      ─────────────────────────────────────────────────────────────
-     Three signature treatments here:
-     1. Card-premium: crisp white card with strong tinted shadow
-        (purple-grey, not flat black) + subtle violet gradient
-        accent at the top-right corner — gives the "lifted plump"
-        feel without breaking text legibility.
-     2. FAB ([data-app-fab]): the Dribbble-style 3D ball — multiple
-        radial gradients fake a glossy sphere, layered shadows lift
-        it off the page. This is the "необычная кнопка" the user
-        asked for.
-     3. nav-floating: clean white with stronger purple shadow.
-     The "play button" / FAB is the hero element — that's the
-     attention-grabbing piece.                                          */
+     Glass-pebble = translucent rgba background + backdrop-blur +
+     bright inset highlight on top edge + soft tinted drop shadow.
+     Same recipe applied uniformly to: cards, FAB, play button,
+     primary buttons, outline yes/no buttons, calendar day cells,
+     tracker icon blocks. One visual language, all blue glass.
 
+     Why "all the same recipe": user feedback was that previous
+     selective treatment created an inconsistent app — only some
+     buttons looked volumetric and others stayed flat. Glass
+     pebble shape is generic enough to apply everywhere without
+     looking weird.                                                  */
+
+  /* ── CARDS — translucent white glass ────────────────────────── */
   [data-theme="pop"] .card-premium {
-    position: relative;       /* required for ::after gradient corner */
-    background: #ffffff;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border: 1px solid hsl(252 30% 92%);
-    /* Layered tinted shadows — purple-tinged, not grey, so cards
-       feel "of the same world" as the lilac background. */
+    position: relative;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(255, 255, 255, 0.58) 100%
+    );
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid transparent;
     box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.9) inset,         /* top edge highlight */
-      0 14px 32px -10px rgba(120, 90, 200, 0.22),       /* deep cool shadow */
-      0 4px 12px -2px rgba(120, 90, 200, 0.10);         /* close shadow */
-    border-radius: 1.75rem;                              /* extra-rounded for "plump" */
-  }
-  [data-theme="pop"] .card-premium:hover {
-    box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.9) inset,
-      0 18px 40px -10px rgba(120, 90, 200, 0.28),
-      0 6px 16px -2px rgba(120, 90, 200, 0.14);
-    transform: translateY(-1px);
-  }
-  [data-theme="pop"] .nav-floating {
-    background: #ffffff;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border: 1px solid hsl(252 30% 90%);
-    box-shadow:
-      0 -8px 24px -4px rgba(120, 90, 200, 0.18),
-      0 1px 0 0 rgba(255, 255, 255, 0.9) inset;
+      /* Outer ambient halo — soft blue */
+      0 0 0 1px rgba(255, 255, 255, 0.5),
+      /* Key shadow — cool blue */
+      0 12px 32px -8px rgba(60, 120, 200, 0.18),
+      0 4px 12px -2px rgba(60, 120, 200, 0.10),
+      /* Inset top highlight */
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      /* Inset bottom subtle dark */
+      inset 0 -1px 0 0 rgba(60, 100, 160, 0.06);
     border-radius: 1.75rem;
   }
-
-  /* THE FAB. This is the "objёmnaya plyushevaya knopka" — claymorphism
-     done right via CSS only:
-     - Dual radial gradient on background fakes a 3D sphere with
-       a bright top-left specular highlight and a darker bottom-right
-       (where light doesn't hit the curve)
-     - Inset white highlight on top-left = the lit edge of the curve
-     - Inset dark shadow on bottom-right = the unlit underside
-     - Multi-layer drop shadow (close + far + tint) = floating ball
-     Combined: the button reads as a glossy plump 3D bubble. */
-  [data-theme="pop"] [data-app-fab] {
-    background:
-      radial-gradient(circle at 28% 28%,
-        hsl(280 95% 80%) 0%,
-        hsl(265 85% 60%) 45%,
-        hsl(260 80% 48%) 100%);
-    border: none;
-    box-shadow:
-      /* Outer halo — soft purple aura */
-      0 0 0 1px rgba(255, 255, 255, 0.4),
-      /* Far drop shadow — long & soft */
-      0 18px 32px -8px rgba(120, 60, 220, 0.45),
-      /* Close drop shadow — defines the lift */
-      0 6px 16px -2px rgba(120, 60, 220, 0.30),
-      /* Inset top-left specular — the bright lit edge */
-      inset 2px 2px 4px 0 rgba(255, 255, 255, 0.50),
-      /* Inset bottom-right shadow — the unlit underside */
-      inset -2px -2px 6px 0 rgba(80, 30, 180, 0.35);
-    /* Slightly bigger so the gradient has room to breathe */
-    transform-origin: center;
-  }
-  [data-theme="pop"] [data-app-fab]:hover {
-    box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.5),
-      0 22px 38px -8px rgba(120, 60, 220, 0.55),
-      0 8px 18px -2px rgba(120, 60, 220, 0.36),
-      inset 2px 2px 4px 0 rgba(255, 255, 255, 0.55),
-      inset -2px -2px 6px 0 rgba(80, 30, 180, 0.38);
-  }
-  [data-theme="pop"] [data-app-fab] svg {
-    /* Subtle drop shadow on the + icon so it pops off the gradient */
-    filter: drop-shadow(0 1px 2px rgba(80, 30, 180, 0.30));
-    stroke-width: 2.5;
-  }
-
-  /* Tracker swipe cards — get a soft gradient corner so they're
-     not "boring white". Subtle enough to keep text readable, but
-     visible enough to give the card visual interest. The corner
-     tint matches the lilac-mint palette of the theme. */
-  [data-theme="pop"] .card-premium::after {
+  /* Gradient border — bright top, dim bottom (lens edge effect) */
+  [data-theme="pop"] .card-premium::before {
     content: "";
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 60%;
-    height: 60%;
-    background: radial-gradient(
-      circle at 100% 0%,
-      rgba(167, 139, 250, 0.18) 0%,
-      rgba(167, 139, 250, 0.06) 35%,
-      transparent 70%
-    );
+    inset: 0;
     border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.55) 40%,
+      rgba(180, 200, 230, 0.30) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
     pointer-events: none;
     z-index: 0;
   }
-  /* Make sure card content sits ABOVE the gradient corner */
+  /* Card content above the border pseudo */
   [data-theme="pop"] .card-premium > * {
     position: relative;
     z-index: 1;
   }
+  [data-theme="pop"] .card-premium:hover {
+    box-shadow:
+      0 0 0 1px rgba(125, 211, 252, 0.5),
+      0 16px 40px -8px rgba(60, 120, 200, 0.22),
+      0 6px 16px -2px rgba(60, 120, 200, 0.14),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.98),
+      inset 0 -1px 0 0 rgba(60, 100, 160, 0.06);
+  }
 
-  /* Tracker icon block — the small coloured square next to each
-     tracker title. In Pop theme it becomes a chunky 3D-feeling
-     block: violet gradient bg, white icon, inset highlight on the
-     top edge, soft purple shadow underneath. This is what makes
-     the "boring white card" pop visually — the eye lands on the
-     plump coloured block first.
+  /* ── FLOATING NAV — most-opaque tier ────────────────────────── */
+  [data-theme="pop"] .nav-floating {
+    position: relative;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.85) 0%,
+      rgba(255, 255, 255, 0.65) 100%
+    );
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    border: 1px solid transparent;
+    border-radius: 1.75rem;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.6),
+      0 -6px 28px -4px rgba(60, 120, 200, 0.18),
+      inset 0 1px 0 0 rgba(255, 255, 255, 1.0);
+  }
+  [data-theme="pop"] .nav-floating::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 1.0) 0%,
+      rgba(255, 255, 255, 0.5) 50%,
+      rgba(180, 200, 230, 0.25) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
 
-     We override the inline backgroundColor with !important since
-     the card sets it via React inline style (category color tint
-     at 22%). For Pop the colour story is monochromatic violet,
-     not category-coloured. */
+  /* ── ALL PRIMARY-COLOURED BUTTONS ─ glass pebble treatment ────
+     Catches:
+     - shadcn default variant (bg-primary)
+     - the Play button in Index.tsx (bg-gradient-to-br from-primary)
+     - The "+" FAB ([data-app-fab])
+     Excludes opacity variants (bg-primary/10) — those are subtle
+     accents, glass treatment would look weird on small chips.    */
+  [data-theme="pop"] button.bg-primary:not([class*="bg-primary/"]),
+  [data-theme="pop"] button[class*="from-primary"]:not([class*="from-primary/"]),
+  [data-theme="pop"] [data-app-fab] {
+    background:
+      radial-gradient(circle at 30% 28%,
+        rgba(186, 230, 253, 0.85) 0%,
+        rgba(56, 154, 230, 0.70) 50%,
+        rgba(30, 100, 200, 0.65) 100%) !important;
+    backdrop-filter: blur(8px) saturate(1.6);
+    -webkit-backdrop-filter: blur(8px) saturate(1.6);
+    border: none !important;
+    color: #ffffff !important;
+    box-shadow:
+      /* Outer ambient halo */
+      0 0 0 1px rgba(255, 255, 255, 0.45),
+      /* Far drop shadow with blue tint */
+      0 8px 20px -4px rgba(30, 100, 200, 0.40),
+      /* Close drop shadow */
+      0 3px 8px -1px rgba(30, 100, 200, 0.22),
+      /* Inset top-left specular — lit edge of the pebble */
+      inset 1.5px 1.5px 3px 0 rgba(255, 255, 255, 0.55),
+      /* Inset bottom-right shadow — unlit curve */
+      inset -1px -1px 2px 0 rgba(15, 60, 130, 0.30) !important;
+  }
+  [data-theme="pop"] button.bg-primary:not([class*="bg-primary/"]):hover,
+  [data-theme="pop"] button[class*="from-primary"]:not([class*="from-primary/"]):hover,
+  [data-theme="pop"] [data-app-fab]:hover {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 12px 26px -4px rgba(30, 100, 200, 0.50),
+      0 4px 10px -1px rgba(30, 100, 200, 0.28),
+      inset 1.5px 1.5px 3px 0 rgba(255, 255, 255, 0.65),
+      inset -1px -1px 2px 0 rgba(15, 60, 130, 0.32) !important;
+  }
+  [data-theme="pop"] button.bg-primary svg,
+  [data-theme="pop"] button[class*="from-primary"] svg,
+  [data-theme="pop"] [data-app-fab] svg {
+    color: #ffffff;
+    filter: drop-shadow(0 1px 2px rgba(15, 60, 130, 0.35));
+  }
+
+  /* ── OUTLINE YES/NO BUTTONS in DailySession ─ glass pebble ────
+     Selector: bg-transparent + border-2 with category colour.
+     We can't use generic [class*="border-strong"] etc. because
+     those colour names also appear in non-button contexts. Instead
+     target Button-with-rounded-full + bg-transparent specifically. */
+  [data-theme="pop"] button.bg-transparent.rounded-full[class*="border-"] {
+    background: rgba(255, 255, 255, 0.45) !important;
+    backdrop-filter: blur(10px) saturate(1.5);
+    -webkit-backdrop-filter: blur(10px) saturate(1.5);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.4) inset,
+      0 4px 12px -2px rgba(60, 120, 200, 0.18),
+      inset 1px 1px 2px 0 rgba(255, 255, 255, 0.7),
+      inset -1px -1px 2px 0 rgba(60, 100, 160, 0.10);
+  }
+  [data-theme="pop"] button.bg-transparent.rounded-full[class*="border-strong"] {
+    background: rgba(254, 226, 226, 0.55) !important;  /* faint coral wash */
+  }
+  [data-theme="pop"] button.bg-transparent.rounded-full[class*="border-balanced"] {
+    background: rgba(209, 250, 229, 0.55) !important;  /* faint mint wash */
+  }
+
+  /* ── TRACKER ICON BLOCKS ─ glass pebble in blue ────────────── */
   [data-theme="pop"] [data-tracker-icon] {
     background:
-      linear-gradient(135deg,
-        hsl(265 95% 78%) 0%,
-        hsl(265 85% 60%) 55%,
-        hsl(260 80% 48%) 100%) !important;
+      radial-gradient(circle at 30% 28%,
+        rgba(186, 230, 253, 0.85) 0%,
+        rgba(56, 154, 230, 0.75) 55%,
+        rgba(30, 100, 200, 0.70) 100%) !important;
+    backdrop-filter: blur(6px) saturate(1.5);
+    -webkit-backdrop-filter: blur(6px) saturate(1.5);
     box-shadow:
-      /* Outer drop shadow — soft violet halo */
-      0 6px 14px -2px rgba(120, 60, 220, 0.32),
-      0 2px 6px -1px rgba(120, 60, 220, 0.18),
-      /* Inset top highlight — lit edge */
+      0 4px 10px -2px rgba(30, 100, 200, 0.30),
+      0 1px 4px -1px rgba(30, 100, 200, 0.15),
       inset 1px 1px 2px 0 rgba(255, 255, 255, 0.55),
-      /* Inset bottom shadow — depth */
-      inset -1px -1px 3px 0 rgba(80, 30, 180, 0.30);
+      inset -1px -1px 2px 0 rgba(15, 60, 130, 0.25);
     border-radius: 0.9rem;
   }
-  /* Override the icon colour via stronger selector — inline style
-     is on the <svg> via React, so we use [style] hack for specificity */
   [data-theme="pop"] [data-tracker-icon] svg {
     color: #ffffff !important;
-    filter: drop-shadow(0 1px 1px rgba(80, 30, 180, 0.30));
+    filter: drop-shadow(0 1px 1px rgba(15, 60, 130, 0.35));
     stroke-width: 2 !important;
   }
 
-  /* All primary (violet) buttons get the same FAB-style claymorph
-     treatment — radial gradient sphere illusion, layered shadows,
-     inset highlights. User explicitly asked: "давай в таком же
-     стиле все фиолетовые кнопки".
+  /* ── CALENDAR DAY DOTS ─ glass pebbles in green/red ────────── */
+  /* Day cells in OverviewCard use bg-balanced/70 (green) and
+     bg-strong/70 (red). We target those specifically inside the
+     calendar grid (grid-cols-7) so we don't accidentally hit
+     other places that use those colours. */
+  [data-theme="pop"] .grid-cols-7 button[class*="bg-balanced"],
+  [data-theme="pop"] .grid-cols-7 button[class*="bg-strong"] {
+    backdrop-filter: blur(4px) saturate(1.5);
+    -webkit-backdrop-filter: blur(4px) saturate(1.5);
+    box-shadow:
+      inset 1px 1px 2px 0 rgba(255, 255, 255, 0.5),
+      inset -1px -1px 2px 0 rgba(0, 0, 0, 0.10),
+      0 2px 4px -1px rgba(60, 120, 200, 0.20);
+    font-weight: 600;
+  }
+  [data-theme="pop"] .grid-cols-7 button[class*="bg-balanced"] {
+    background: radial-gradient(circle at 30% 28%,
+      rgba(167, 243, 208, 0.95) 0%,
+      rgba(52, 211, 153, 0.85) 100%) !important;
+    color: hsl(158 70% 18%) !important;
+  }
+  [data-theme="pop"] .grid-cols-7 button[class*="bg-strong"] {
+    background: radial-gradient(circle at 30% 28%,
+      rgba(254, 202, 202, 0.95) 0%,
+      rgba(248, 113, 113, 0.85) 100%) !important;
+    color: hsl(0 70% 22%) !important;
+  }
 
-     Targets shadcn Button default variant (bg-primary). Excludes
-     the FAB itself (already styled separately above) and excludes
-     buttons with bg-primary/X (opacity variants — those are
-     usually subtle accents, shouldn't get heavy 3D). */
-  [data-theme="pop"] button.bg-primary:not([data-app-fab]):not([class*="bg-primary/"]) {
-    background:
-      radial-gradient(circle at 30% 28%,
-        hsl(280 95% 78%) 0%,
-        hsl(265 85% 58%) 50%,
-        hsl(260 80% 46%) 100%) !important;
-    border: none;
-    box-shadow:
-      0 6px 14px -2px rgba(120, 60, 220, 0.40),
-      0 2px 6px -1px rgba(120, 60, 220, 0.22),
-      inset 1px 1px 2px 0 rgba(255, 255, 255, 0.45),
-      inset -1px -1px 3px 0 rgba(80, 30, 180, 0.30);
-    color: #ffffff !important;
-  }
-  [data-theme="pop"] button.bg-primary:not([data-app-fab]):not([class*="bg-primary/"]):hover {
-    box-shadow:
-      0 8px 18px -2px rgba(120, 60, 220, 0.48),
-      0 3px 8px -1px rgba(120, 60, 220, 0.26),
-      inset 1px 1px 2px 0 rgba(255, 255, 255, 0.55),
-      inset -1px -1px 3px 0 rgba(80, 30, 180, 0.32);
-  }
-  /* Icons inside primary buttons stay white */
-  [data-theme="pop"] button.bg-primary:not([data-app-fab]) svg {
-    color: #ffffff;
-    filter: drop-shadow(0 1px 1px rgba(80, 30, 180, 0.25));
+  /* ── TYPOGRAPHY ─ drop the serif on play-mode question ──────
+     User said the swipe-card font wasn't liked. The DailySession
+     question uses .font-serif (Fraunces) — for Pop we override to
+     the modern sans family for a cleaner glass-card look. */
+  html[data-theme="pop"] .font-serif,
+  html[data-theme="pop"] .font-serif-display {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+    letter-spacing: -0.015em;
+    font-weight: 600;
   }
   
   /* Floating Navigation — radius matches `.card-premium` (1.5rem) so

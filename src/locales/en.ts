@@ -186,7 +186,7 @@ const en = {
     themeTerra: "Terra",
     themeTerraDesc: "Warm earthy paper",
     themePop: "Pop",
-    themePopDesc: "Bold violet & 3D pop",
+    themePopDesc: "Blue glass pebbles",
 
     dailyRemindersTitle: "Daily Reminders",
     dailyRemindersDesc: "Get notified to check in each day",

@@ -193,7 +193,7 @@ const ru: Translation = {
     themeTerra: "Terra",
     themeTerraDesc: "Тёплая бумага и земля",
     themePop: "Pop",
-    themePopDesc: "Объёмный фиолетовый",
+    themePopDesc: "Синие стеклянные камушки",
 
     dailyRemindersTitle: "Ежедневные напоминания",
     dailyRemindersDesc: "Получай напоминание заполнить день",
