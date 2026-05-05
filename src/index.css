@@ -863,16 +863,20 @@
      pebble shape is generic enough to apply everywhere without
      looking weird.                                                  */
 
-  /* ── CARDS — translucent white glass ────────────────────────── */
+  /* ── CARDS — translucent blue-tinted glass ─────────────────────
+     Lower opacity (62%→38% gradient) so the mesh below actually
+     shows through — earlier 78%→58% read as "mostly white" to
+     the user. Slight cool tint (240, 248, 255 base) instead of
+     pure white reinforces the "glass over blue water" feel. */
   [data-theme="pop"] .card-premium {
     position: relative;
     background: linear-gradient(
       145deg,
-      rgba(255, 255, 255, 0.78) 0%,
-      rgba(255, 255, 255, 0.58) 100%
+      rgba(240, 248, 255, 0.62) 0%,
+      rgba(225, 240, 255, 0.38) 100%
     );
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
     border: 1px solid transparent;
     box-shadow:
       /* Outer ambient halo — soft blue */
@@ -963,10 +967,18 @@
      - shadcn default variant (bg-primary)
      - the Play button in Index.tsx (bg-gradient-to-br from-primary)
      - The "+" FAB ([data-app-fab])
-     Excludes opacity variants (bg-primary/10) — those are subtle
-     accents, glass treatment would look weird on small chips.    */
-  [data-theme="pop"] button.bg-primary:not([class*="bg-primary/"]),
-  [data-theme="pop"] button[class*="from-primary"]:not([class*="from-primary/"]),
+
+     The previous version of this selector tried to exclude opacity
+     variants via :not([class*="bg-primary/"]). That was a bug:
+     shadcn Button always emits `bg-primary text-primary-foreground
+     hover:bg-primary/90`, so the `hover:bg-primary/90` token tripped
+     the :not() and silently excluded every default-variant button
+     ("Add question", "Enable notifications", etc.). Dropped the
+     exclusion — `button.` prefix already narrows the selector to
+     button elements, and there's no real-world case of a button
+     using only `bg-primary/10` as its full background.            */
+  [data-theme="pop"] button.bg-primary,
+  [data-theme="pop"] button[class*="from-primary"],
   [data-theme="pop"] [data-app-fab] {
     background:
       radial-gradient(circle at 30% 28%,
@@ -989,8 +1001,8 @@
       /* Inset bottom-right shadow — unlit curve */
       inset -1px -1px 2px 0 rgba(15, 60, 130, 0.30) !important;
   }
-  [data-theme="pop"] button.bg-primary:not([class*="bg-primary/"]):hover,
-  [data-theme="pop"] button[class*="from-primary"]:not([class*="from-primary/"]):hover,
+  [data-theme="pop"] button.bg-primary:hover,
+  [data-theme="pop"] button[class*="from-primary"]:hover,
   [data-theme="pop"] [data-app-fab]:hover {
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.55),
@@ -1050,32 +1062,32 @@
     stroke-width: 2 !important;
   }
 
-  /* ── CALENDAR DAY DOTS ─ glass pebbles in green/red ────────── */
-  /* Day cells in OverviewCard use bg-balanced/70 (green) and
-     bg-strong/70 (red). We target those specifically inside the
-     calendar grid (grid-cols-7) so we don't accidentally hit
-     other places that use those colours. */
+  /* ── CALENDAR DAY DOTS ─ soft glass pebbles in green/red ────
+     Lower opacity than the original (0.55-0.40 instead of 0.95-
+     0.85) so the calendar reads as a quiet sheet of pastel dots
+     instead of a saturated traffic-light grid. User specifically
+     asked to tone these down. */
   [data-theme="pop"] .grid-cols-7 button[class*="bg-balanced"],
   [data-theme="pop"] .grid-cols-7 button[class*="bg-strong"] {
-    backdrop-filter: blur(4px) saturate(1.5);
-    -webkit-backdrop-filter: blur(4px) saturate(1.5);
+    backdrop-filter: blur(4px) saturate(1.3);
+    -webkit-backdrop-filter: blur(4px) saturate(1.3);
     box-shadow:
-      inset 1px 1px 2px 0 rgba(255, 255, 255, 0.5),
-      inset -1px -1px 2px 0 rgba(0, 0, 0, 0.10),
-      0 2px 4px -1px rgba(60, 120, 200, 0.20);
+      inset 1px 1px 2px 0 rgba(255, 255, 255, 0.45),
+      inset -1px -1px 1px 0 rgba(0, 0, 0, 0.06),
+      0 1px 3px -1px rgba(60, 120, 200, 0.12);
     font-weight: 600;
   }
   [data-theme="pop"] .grid-cols-7 button[class*="bg-balanced"] {
     background: radial-gradient(circle at 30% 28%,
-      rgba(167, 243, 208, 0.95) 0%,
-      rgba(52, 211, 153, 0.85) 100%) !important;
-    color: hsl(158 70% 18%) !important;
+      rgba(167, 243, 208, 0.55) 0%,
+      rgba(110, 231, 183, 0.40) 100%) !important;
+    color: hsl(158 60% 28%) !important;
   }
   [data-theme="pop"] .grid-cols-7 button[class*="bg-strong"] {
     background: radial-gradient(circle at 30% 28%,
-      rgba(254, 202, 202, 0.95) 0%,
-      rgba(248, 113, 113, 0.85) 100%) !important;
-    color: hsl(0 70% 22%) !important;
+      rgba(254, 202, 202, 0.55) 0%,
+      rgba(252, 165, 165, 0.40) 100%) !important;
+    color: hsl(0 60% 32%) !important;
   }
 
   /* ── TYPOGRAPHY ─ drop the serif on play-mode question ──────
