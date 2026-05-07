@@ -1773,14 +1773,22 @@
     }
   }
 
+  /* fadeIn — OPACITY ONLY. Originally had translateY(12px → 0) for
+     the "drift up" feel, but transform on a parent breaks the
+     backdrop-filter on its children for the duration of the
+     animation: backdrop-filter cannot composite through a transformed
+     ancestor (per WebKit/Chrome compositing rules). On Hush / Liquid
+     glass cards this manifested as the card visibly "flashing" from
+     opaque (fallback colour) to transparent (blur kicked in) every
+     time it animated in — most noticeable on tab switches in
+     PatternsTab. Apple themselves dropped translateY from glass-card
+     entries in iOS 26 HIG for the same reason. */
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(12px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
   
