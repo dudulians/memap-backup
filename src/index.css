@@ -398,6 +398,32 @@
     --untracked-foreground: 25 14% 45%;
 
     --note: 95 30% 35%;                 /* dark sage */
+
+    /* Category colours — overridden for Hush. Default values from
+       :root are pastels at 73-80% lightness (e.g. --health 190 50%
+       75% = pale cyan), which on Hush's light wallpaper + pastel
+       cards became invisible. User: "в разных местах цвет порой
+       такой что не видно ничего что написано". Now all category
+       hues sit at 35-42% lightness — readable on light bg, still
+       distinct hue per category so the colour-coding signal stays.
+       Saturation also dropped slightly to fit the muted Hush
+       aesthetic. */
+    --emotions: 0 30% 42%;              /* muted dusty red */
+    --emotions-secondary: 350 28% 48%;
+    --body: 150 22% 38%;                /* deep sage */
+    --body-secondary: 160 20% 42%;
+    --connections: 15 35% 42%;          /* warm earth */
+    --connections-secondary: 20 32% 46%;
+    --voice: 45 45% 38%;                /* dark gold */
+    --voice-secondary: 40 40% 42%;
+    --health: 190 30% 35%;              /* deep teal */
+    --health-secondary: 195 28% 38%;
+    --curious: 270 22% 42%;             /* deep plum */
+    --curious-secondary: 265 20% 46%;
+    --fun: 290 22% 42%;                 /* muted purple */
+    --fun-secondary: 285 20% 46%;
+    --social: 215 28% 40%;              /* deep blue-grey */
+    --social-secondary: 220 26% 44%;
   }
 
   /* ---------- Pop: blue glass pebbles (1.7.3 rework) ---------- */
@@ -587,26 +613,20 @@
     display: none;
   }
 
-  /* Liquid — saturated mesh with five orbs (lavender, sky, mint,
-     coral-pink, lemon). Higher opacity (0.7-0.85) than the previous
-     pastel pass: the orbs need to be VISIBLE through 28px blur. Pre-
-     blur was washing them out into the white base. Two top orbs +
-     two bottom orbs + one centre = the five-point composition that
-     iOS 26 gallery wallpapers all use — colour from every quadrant
-     so blurred glass picks up something everywhere. */
+  /* Liquid — uses an iridescent pearl wallpaper as the body
+     background (flowing glass waves in lavender / pearl-white /
+     sky-blue with holographic shimmer). Path lives under
+     public/themes/ so Vite serves it at /themes/liquid-bg.jpg.
+     The cards above with backdrop-blur(30px) saturate(2.0) refract
+     through the real image — the iOS 26 Liquid Glass effect lands
+     much harder on a real iridescent photo than on synthetic mesh
+     orbs. Falls back to the 5-orb mesh if image fails to load. */
   [data-theme="liquid"] body {
     background:
-      /* top-left: vivid lavender */
-      radial-gradient(55% 45% at 8% 6%, rgba(167, 139, 250, 0.85) 0%, transparent 65%),
-      /* top-right: cyan-sky */
-      radial-gradient(50% 40% at 95% 14%, rgba(125, 211, 252, 0.80) 0%, transparent 60%),
-      /* mid-left: warm coral-pink */
-      radial-gradient(45% 40% at 5% 60%, rgba(251, 207, 232, 0.75) 0%, transparent 60%),
-      /* mid-right: lemon-tinted */
-      radial-gradient(45% 40% at 100% 65%, rgba(254, 240, 138, 0.55) 0%, transparent 60%),
-      /* bottom-centre: bright mint */
-      radial-gradient(70% 50% at 50% 105%, rgba(110, 231, 183, 0.75) 0%, transparent 60%),
-      /* base: very pale cool */
+      url('/themes/liquid-bg.jpg') center/cover no-repeat fixed,
+      radial-gradient(55% 45% at 8% 6%, rgba(167, 139, 250, 0.65) 0%, transparent 65%),
+      radial-gradient(50% 40% at 95% 14%, rgba(125, 211, 252, 0.60) 0%, transparent 60%),
+      radial-gradient(70% 50% at 50% 105%, rgba(110, 231, 183, 0.55) 0%, transparent 60%),
       linear-gradient(180deg, #eef1f9 0%, #ecf0f8 50%, #ebf2f6 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
