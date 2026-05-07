@@ -189,7 +189,7 @@ const ru: Translation = {
     themeAuroraDark: "Аврора Тёмная",
     themeAuroraDarkDesc: "Современное бирюзовое стекло",
     themeLiquid: "Liquid",
-    themeLiquidDesc: "Матовое стекло iOS",
+    themeLiquidDesc: "Перламутровое матовое стекло",
     themeTerra: "Terra",
     themeTerraDesc: "Тёплая бумага и земля",
     themePop: "Pop",

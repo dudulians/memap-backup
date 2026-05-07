@@ -182,7 +182,7 @@ const en = {
     themeAuroraDark: "Aurora Dark",
     themeAuroraDarkDesc: "Modern teal glass",
     themeLiquid: "Liquid",
-    themeLiquidDesc: "iOS frosted glass",
+    themeLiquidDesc: "Iridescent frosted glass",
     themeTerra: "Terra",
     themeTerraDesc: "Warm earthy paper",
     themePop: "Pop",

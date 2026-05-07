@@ -636,12 +636,13 @@
     display: none;
   }
 
-  /* Terra — warm parchment with subtle noise grain for paper-feel.
-     No orbs / gradients: the texture IS the differentiator. The
-     default body::before already paints a 3% noise; we just keep
-     it AND warm the base. */
+  /* Terra — uses a warm earthy artwork wallpaper. Path served from
+     public/themes/terra-bg.jpg. Falls back to the warm parchment
+     gradient + noise grain if the image fails to load. */
   [data-theme="terra"] body {
-    background: linear-gradient(180deg, #f4ede0 0%, #ede4d3 50%, #e7dcc8 100%);
+    background:
+      url('/themes/terra-bg.jpg') center/cover no-repeat fixed,
+      linear-gradient(180deg, #f4ede0 0%, #ede4d3 50%, #e7dcc8 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
   }
@@ -668,15 +669,14 @@
     opacity: 0.05;
   }
 
-  /* Pop — cool blue/cyan mesh. Three orbs: sky-blue top-left,
-     mint bottom-right, soft cyan bottom-centre. Saturated enough
-     that translucent glass surfaces above pick up real colour. */
+  /* Pop — uses a cool-blue artwork wallpaper. Path served from
+     public/themes/pop-bg.jpg. Falls back to the cool-blue mesh
+     if the image fails to load. */
   [data-theme="pop"] body {
     background:
-      radial-gradient(70% 55% at 0% 5%, rgba(125, 211, 252, 0.65) 0%, transparent 65%),
-      radial-gradient(60% 50% at 100% 95%, rgba(110, 231, 183, 0.50) 0%, transparent 60%),
-      radial-gradient(75% 50% at 50% 100%, rgba(147, 197, 253, 0.55) 0%, transparent 65%),
-      radial-gradient(50% 40% at 100% 8%, rgba(186, 230, 253, 0.55) 0%, transparent 60%),
+      url('/themes/pop-bg.jpg') center/cover no-repeat fixed,
+      radial-gradient(70% 55% at 0% 5%, rgba(125, 211, 252, 0.45) 0%, transparent 65%),
+      radial-gradient(60% 50% at 100% 95%, rgba(110, 231, 183, 0.30) 0%, transparent 60%),
       linear-gradient(180deg, #eaf3fb 0%, #e7f0fa 50%, #e8f2f7 100%);
     background-attachment: fixed;
     color: hsl(var(--foreground));
@@ -1650,20 +1650,47 @@
   /* CALENDAR DAY DOTS — soft paper-y, no glass blur. Earthy
      mint-green and dusty rose (was warm coral / terracotta —
      felt too orange). Now harmonises with the pink-grey card
-     tint. */
-  [data-theme="hush"] .grid-cols-7 button[class*="bg-balanced"] {
+     tint. Two variants:
+
+     MONTH VIEW = rounded-full (bigger circles, kept soft 0.45
+     opacity — they're large enough to read on the wallpaper bg)
+
+     YEAR VIEW = rounded-sm (tiny aspect-square cells in a
+     dense grid — at 0.45 opacity they vanished into the busy
+     wallpaper. User: "когда календарь делаешь год, то очень
+     плохо видно кружки"). Year cells need much higher
+     opacity + saturation to read at small size. */
+  [data-theme="hush"] .grid-cols-7 button.rounded-full[class*="bg-balanced"] {
     background: rgba(180, 200, 165, 0.45) !important;
     color: hsl(95 35% 22%) !important;
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
     font-weight: 600;
   }
-  [data-theme="hush"] .grid-cols-7 button[class*="bg-strong"] {
+  [data-theme="hush"] .grid-cols-7 button.rounded-full[class*="bg-strong"] {
     background: rgba(220, 180, 195, 0.42) !important;
     color: hsl(355 35% 28%) !important;
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
     font-weight: 600;
+  }
+  /* Year-view tiny cells — much more solid/saturated so they
+     read as a heatmap against the wallpaper. */
+  [data-theme="hush"] .grid-cols-7 button.rounded-sm[class*="bg-balanced"] {
+    background: rgba(140, 175, 135, 0.85) !important;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
+  }
+  [data-theme="hush"] .grid-cols-7 button.rounded-sm[class*="bg-strong"] {
+    background: rgba(195, 145, 165, 0.85) !important;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.3);
+  }
+  /* Untracked year-view cells — give them a soft outline
+     instead of just bg-muted/40 which disappears entirely */
+  [data-theme="hush"] .grid-cols-7 button.rounded-sm[class*="bg-muted/"] {
+    background: rgba(255, 250, 240, 0.55) !important;
+    border: 1px solid rgba(180, 165, 135, 0.30) !important;
   }
 
   /* Small utility pill buttons (Year / Multi etc.) */
