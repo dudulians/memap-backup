@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeMap — Memory lies. Data doesn't.</title>
+  <meta name="description" content="A 30-second daily check-in app that reveals what's actually happening in your life — not what you remember." />
+  <meta property="og:title" content="MeMap — Memory lies. Data doesn't." />
+  <meta property="og:description" content="A 30-second daily check-in app that reveals what's actually happening in your life — not what you remember." />
+  <meta property="og:type" content="website" />
+  <style>
+    :root {
+      --bg: #fbf8f2;
+      --fg: #2c2a26;
+      --muted: #6b6862;
+      --accent: #4ad6c8;
+      --accent-deep: #0a3d3a;
+      --card: #ffffff;
+      --border: rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    /* Top nav — minimal language toggle */
+    .top-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .top-bar button {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .top-bar button.active {
+      color: var(--fg);
+      border-color: var(--accent);
+      background: rgba(74, 214, 200, 0.08);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 56px 28px 64px;
+      text-align: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      margin-bottom: 32px;
+      box-shadow: 0 8px 32px rgba(74, 214, 200, 0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      right: -120px;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(74, 214, 200, 0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -120px;
+      left: -120px;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(220, 195, 205, 0.20) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+    .tagline {
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      font-weight: 600;
+      margin-bottom: 12px;
+      opacity: 0.7;
+    }
+    h1 {
+      font-size: 44px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin: 0 0 16px 0;
+      letter-spacing: -0.02em;
+    }
+    .hero p.sub {
+      font-size: 18px;
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 32px;
+    }
+    .cta-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #1a1a1a;
+      color: white;
+      padding: 11px 22px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+    }
+    .badge.coming {
+      background: var(--card);
+      color: var(--muted);
+      border: 1px dashed var(--border);
+      font-style: italic;
+    }
+    .badge svg { flex-shrink: 0; }
+
+    /* Sections */
+    section.feature {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+    }
+    section.feature h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      letter-spacing: -0.01em;
+    }
+    section.feature p {
+      color: var(--muted);
+      margin: 0 0 14px;
+      font-size: 15.5px;
+    }
+    .quote {
+      font-size: 15px;
+      color: var(--fg);
+      padding: 14px 18px;
+      background: rgba(74, 214, 200, 0.06);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      margin: 14px 0 0;
+      line-height: 1.55;
+    }
+    ul.bullets {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+    }
+    ul.bullets li {
+      padding: 6px 0;
+      color: var(--muted);
+      font-size: 15px;
+      position: relative;
+      padding-left: 22px;
+    }
+    ul.bullets li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* Privacy promise */
+    .privacy-block {
+      background: linear-gradient(135deg, rgba(74, 214, 200, 0.10), rgba(74, 214, 200, 0.04));
+      border: 1px solid rgba(74, 214, 200, 0.25);
+      border-radius: 20px;
+      padding: 28px 26px;
+      margin-bottom: 32px;
+    }
+    .privacy-block h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .privacy-block p {
+      margin: 6px 0;
+      color: var(--fg);
+      font-size: 14.5px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding-top: 32px;
+    }
+    footer a { color: var(--muted); margin: 0 8px; }
+    footer .copy { margin-top: 12px; opacity: 0.6; }
+
+    .lang-section { display: none; }
+    .lang-section.active { display: block; }
+
+    @media (max-width: 600px) {
+      h1 { font-size: 32px; }
+      .hero { padding: 40px 20px 48px; }
+      .hero p.sub { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <button class="active" onclick="setLang('en')">EN</button>
+      <button onclick="setLang('ru')">РУ</button>
+    </div>
+
+    <section class="lang-section active" id="lang-en">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="tagline">A daily check-in journal</div>
+          <h1>Memory lies. Data doesn't.</h1>
+          <p class="sub">You remember the last fight more clearly than three calm weeks. MeMap keeps the facts — so later, you can see what was actually true.</p>
+          <div class="cta-row">
+            <span class="badge coming">Coming soon to the App Store</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="feature">
+        <h2>How it works</h2>
+        <p>Each evening, swipe through 5–10 yes / no questions about your day. 30 seconds. That's it.</p>
+        <p>After a few weeks, MeMap reveals what your memory couldn't — patterns you didn't see, days you misremembered, connections you'd never notice on your own.</p>
+        <blockquote class="quote">"Headaches happen 3× more often when I'm thinking about quitting my job."</blockquote>
+      </section>
+
+      <section class="feature">
+        <h2>What you track is up to you</h2>
+        <p>130+ ready-to-use questions across themes: sleep, mood, partner, work, health, money, parenting, environment. Add your own. Remove what doesn't fit.</p>
+        <p>Track yourself, the people around you, your environment — anything you keep wondering about.</p>
+      </section>
+
+      <section class="feature">
+        <h2>When people use MeMap</h2>
+        <ul class="bullets">
+          <li>Before a big decision (leaving, staying, moving, having kids)</li>
+          <li>When something feels "off" but you can't name it</li>
+          <li>Before a doctor's appointment — bring numbers, not "kind of"</li>
+          <li>During hard conversations — argue with receipts, not feelings</li>
+          <li>After therapy — track between sessions, see what changed</li>
+        </ul>
+      </section>
+
+      <div class="privacy-block">
+        <h2>Private by design</h2>
+        <p>No account. No cloud sync to our servers. No tracking by us.</p>
+        <p>Your data stays on your device. On Android, automatic backup via Google Drive. On iOS, export to a file you save wherever you want — iCloud Drive, Files, anywhere.</p>
+        <p>We can't sell your data because we don't have it.</p>
+      </div>
+
+      <footer>
+        <a href="PRIVACY_POLICY.html">Privacy Policy</a> ·
+        <a href="TERMS.html">Terms of Service</a> ·
+        <a href="SUPPORT.html">Support</a>
+        <div class="copy">© 2026 MeMap. Made with care.</div>
+      </footer>
+    </section>
+
+    <section class="lang-section" id="lang-ru">
+      <div class="hero">
+        <div class="hero-content">
+          <div class="tagline">Ежедневный дневник в одно касание</div>
+          <h1>Память врёт. Данные — нет.</h1>
+          <p class="sub">Последнюю ссору ты помнишь яснее чем три спокойные недели. MeMap хранит факты — чтобы потом ты могла увидеть, что было на самом деле.</p>
+          <div class="cta-row">
+            <span class="badge coming">Скоро в App Store</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="feature">
+        <h2>Как это работает</h2>
+        <p>Каждый вечер свайпай через 5–10 вопросов «да / нет» о своём дне. 30 секунд. Всё.</p>
+        <p>Через пару недель MeMap покажет то, чего твоя память сама бы не вспомнила — паттерны, которые ты не замечала, дни которые помнятся не так, связи, которые ни за что не увидишь обычным взглядом.</p>
+        <blockquote class="quote">«Головная боль появляется в 3 раза чаще когда я думаю об увольнении.»</blockquote>
+      </section>
+
+      <section class="feature">
+        <h2>Что отслеживать — решаешь ты</h2>
+        <p>130+ готовых вопросов по темам: сон, настроение, партнёр, работа, здоровье, деньги, родительство, окружение. Добавляй свои. Убирай ненужное.</p>
+        <p>Можно трекать себя, людей вокруг, своё окружение — всё, о чём ты задаёшься вопросом.</p>
+      </section>
+
+      <section class="feature">
+        <h2>Когда люди используют MeMap</h2>
+        <ul class="bullets">
+          <li>Перед большим решением (уйти, остаться, переехать, завести ребёнка)</li>
+          <li>Когда что-то «не так», но не можешь назвать что</li>
+          <li>Перед визитом к врачу — приходишь с цифрами, а не «иногда болит»</li>
+          <li>В сложных разговорах — спорить фактами, а не чувствами</li>
+          <li>После терапии — отслеживать между сессиями, видеть что изменилось</li>
+        </ul>
+      </section>
+
+      <div class="privacy-block">
+        <h2>Приватность с первого дня</h2>
+        <p>Без аккаунта. Без синка на наши серверы. Без отслеживания.</p>
+        <p>Твои данные — на твоём устройстве. На Android — автоматический бэкап через Google Drive. На iOS — экспорт в файл, который ты сохраняешь куда хочешь: iCloud Drive, Files, куда угодно.</p>
+        <p>Мы не можем продать твои данные, потому что у нас их нет.</p>
+      </div>
+
+      <footer>
+        <a href="PRIVACY_POLICY.html">Политика конфиденциальности</a> ·
+        <a href="TERMS.html">Условия использования</a> ·
+        <a href="SUPPORT.html">Поддержка</a>
+        <div class="copy">© 2026 MeMap. Сделано с заботой.</div>
+      </footer>
+    </section>
+  </div>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('.lang-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.top-bar button').forEach(b => b.classList.remove('active'));
+      document.getElementById('lang-' + lang).classList.add('active');
+      document.querySelector('.top-bar button[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+      // Update <html lang>
+      document.documentElement.setAttribute('lang', lang);
+    }
+    if (navigator.language && navigator.language.startsWith('ru')) setLang('ru');
+  </script>
+</body>
+</html>

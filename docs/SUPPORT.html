@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — MeMap</title>
+  <style>
+    :root {
+      --bg: #fbf8f2;
+      --fg: #2c2a26;
+      --muted: #6b6862;
+      --accent: #4ad6c8;
+      --card: #ffffff;
+      --border: rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+    }
+    h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 600; }
+    h2 { margin: 32px 0 12px 0; font-size: 20px; font-weight: 600; }
+    h3 { margin: 20px 0 8px 0; font-size: 16px; font-weight: 600; color: var(--fg); }
+    p { margin: 12px 0; }
+    .lead {
+      color: var(--muted);
+      font-size: 17px;
+      font-weight: 500;
+      padding: 14px 18px;
+      background: rgba(74, 214, 200, 0.08);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      margin: 16px 0 24px;
+    }
+    .contact-block {
+      background: rgba(74, 214, 200, 0.06);
+      border: 1px solid rgba(74, 214, 200, 0.30);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin: 20px 0 32px;
+      text-align: center;
+    }
+    .contact-block p { margin: 4px 0 12px; color: var(--muted); }
+    .email-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #0a3d3a;
+      text-decoration: none;
+      padding: 11px 24px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .email-btn:hover { background: #3cc4b6; }
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-item h3 { margin-top: 0; }
+    a { color: #1d77b8; }
+    .lang-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .lang-toggle button {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .lang-toggle button.active {
+      color: var(--fg);
+      border-color: var(--accent);
+      background: rgba(74, 214, 200, 0.08);
+    }
+    .lang-section { display: none; }
+    .lang-section.active { display: block; }
+    .footer-links {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 32px;
+    }
+    .footer-links a { margin: 0 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="lang-toggle">
+      <button class="active" onclick="setLang('en')">English</button>
+      <button onclick="setLang('ru')">Русский</button>
+    </div>
+
+    <div class="card">
+      <section class="lang-section active" id="lang-en">
+        <h1>MeMap Support</h1>
+        <p class="lead">Need help with MeMap? Found a bug? Have a question or a feature idea? Reach out — we read every message.</p>
+
+        <div class="contact-block">
+          <p>Email us anytime:</p>
+          <a href="mailto:memap.support@gmail.com" class="email-btn">memap.support@gmail.com</a>
+        </div>
+
+        <h2>Frequently asked</h2>
+
+        <div class="faq-item">
+          <h3>How do I back up my data?</h3>
+          <p>Open the app → <strong>Settings → Data</strong> → <strong>Backup full data (.json)</strong>. The system Share Sheet appears — save the file to iCloud Drive, Files, AirDrop, email, or anywhere you keep important files.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>I lost my data after reinstalling — can I get it back?</h3>
+          <p>If you'd previously created a backup file (see above), open Settings → Data → <strong>Restore from backup</strong> and pick the file. Your data will be restored.</p>
+          <p>On Android, automatic backup via Google Drive is also enabled by default — when you reinstall the app on the same Google account, your data should restore automatically.</p>
+          <p>If you didn't back up and the data is gone, unfortunately we cannot recover it — everything is stored only on your device, never on our servers.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>How do I change the language?</h3>
+          <p>Open <strong>Settings → Language</strong> and pick between English and Russian. The app's text changes immediately — tracker titles you've created stay in whichever language they were written.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>How do I delete a tracker?</h3>
+          <p>Open the tracker's detail view (tap on it) → <strong>Edit</strong> in the top-right → scroll down → <strong>Delete tracker</strong>. Or you can archive instead, which hides it but preserves its history.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>What does "signal" / "point of action" mean?</h3>
+          <p>Each tracker has a threshold — for example, "if I've had a headache 8+ days out of the last 30." When you hit that threshold, the tracker becomes a <strong>signal</strong> — a sign that this pattern is real enough to act on. The app suggests an action you can take (talk to a doctor, change a habit, etc.).</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Is my data sent to a server?</h3>
+          <p>No. All your tracker content (titles, answers, notes) stays on your device. We use Sentry for anonymous crash reports and Mixpanel for anonymous usage metrics (e.g., "user opened the app today"). Neither service receives any of your tracker content. See our <a href="PRIVACY_POLICY.html">Privacy Policy</a> for full details.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>How do I report a bug?</h3>
+          <p>Email us at <a href="mailto:memap.support@gmail.com">memap.support@gmail.com</a> with:</p>
+          <ul>
+            <li>What you were doing when it happened</li>
+            <li>What you expected</li>
+            <li>What actually happened</li>
+            <li>Your device (iPhone 15, Pixel 7, etc.) and OS version</li>
+            <li>Screenshot if you can</li>
+          </ul>
+        </div>
+
+        <div class="faq-item">
+          <h3>Can I suggest a new feature?</h3>
+          <p>Yes please. Email us — we read every suggestion and prioritise what real users ask for over what we think they want.</p>
+        </div>
+      </section>
+
+      <section class="lang-section" id="lang-ru">
+        <h1>Поддержка MeMap</h1>
+        <p class="lead">Нужна помощь? Нашёл(а) баг? Есть вопрос или идея? Напиши — мы читаем каждое сообщение.</p>
+
+        <div class="contact-block">
+          <p>Пиши в любое время:</p>
+          <a href="mailto:memap.support@gmail.com" class="email-btn">memap.support@gmail.com</a>
+        </div>
+
+        <h2>Частые вопросы</h2>
+
+        <div class="faq-item">
+          <h3>Как сделать резервную копию данных?</h3>
+          <p>Открой приложение → <strong>Настройки → Данные</strong> → <strong>Сохранить копию (.json)</strong>. Появится системное окно Share — сохрани файл в iCloud Drive, Files, AirDrop, email или куда удобно.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Я удалил(а) приложение и потерял(а) данные — можно вернуть?</h3>
+          <p>Если ты заранее сохранил(а) резервную копию (см. выше), открой Настройки → Данные → <strong>Восстановить из копии</strong> и выбери файл — данные восстановятся.</p>
+          <p>На Android автоматический бэкап через Google Drive включён по умолчанию — при переустановке приложения с тем же Google-аккаунтом данные должны восстановиться сами.</p>
+          <p>Если резервной копии не было — к сожалению, мы не можем восстановить данные. Всё хранится только у тебя на устройстве, у нас на серверах ничего нет.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Как поменять язык?</h3>
+          <p>Открой <strong>Настройки → Язык</strong> и выбери английский или русский. Текст приложения сменится сразу — заголовки трекеров которые ты сам(а) создавал(а) останутся на том языке, на котором ты их писал(а).</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Как удалить трекер?</h3>
+          <p>Открой детальный экран трекера (тапни на него) → <strong>Изменить</strong> в правом верхнем углу → пролистай вниз → <strong>Удалить трекер</strong>. Или можно архивировать — трекер скроется, но история сохранится.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Что значит «сигнал» / «точка действия»?</h3>
+          <p>У каждого трекера есть порог — например, «если голова болела 8+ дней из последних 30». Когда ты достигаешь порога, трекер становится <strong>сигналом</strong> — знак что паттерн достаточно реальный чтобы с ним что-то сделать. Приложение предложит конкретное действие (сходить к врачу, поменять привычку и т.д.).</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Мои данные уходят на сервер?</h3>
+          <p>Нет. Содержимое трекеров (заголовки, ответы, заметки) остаётся на устройстве. Мы используем Sentry для анонимных отчётов о крашах и Mixpanel для анонимной аналитики (например «юзер открыл приложение сегодня»). Ни один сервис не получает содержимое твоих трекеров. Подробности — в <a href="PRIVACY_POLICY.html">Политике конфиденциальности</a>.</p>
+        </div>
+
+        <div class="faq-item">
+          <h3>Как сообщить о баге?</h3>
+          <p>Напиши на <a href="mailto:memap.support@gmail.com">memap.support@gmail.com</a> с такой информацией:</p>
+          <ul>
+            <li>Что ты делал(а) когда это случилось</li>
+            <li>Что ожидал(а)</li>
+            <li>Что произошло на самом деле</li>
+            <li>Какое устройство (iPhone 15, Pixel 7 и т.д.) и версия ОС</li>
+            <li>Скриншот, если можно</li>
+          </ul>
+        </div>
+
+        <div class="faq-item">
+          <h3>Можно предложить новую фичу?</h3>
+          <p>Да, пожалуйста. Напиши нам — мы читаем все предложения и приоритизируем то, что просят реальные юзеры, а не то, что нам самим кажется важным.</p>
+        </div>
+      </section>
+    </div>
+
+    <p class="footer-links">
+      <a href="PRIVACY_POLICY.html">Privacy Policy</a> ·
+      <a href="TERMS.html">Terms of Service</a> ·
+      <a href="index.html">MeMap</a>
+    </p>
+  </div>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('.lang-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.lang-toggle button').forEach(b => b.classList.remove('active'));
+      document.getElementById('lang-' + lang).classList.add('active');
+      document.querySelector('.lang-toggle button[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+    }
+    if (navigator.language && navigator.language.startsWith('ru')) setLang('ru');
+  </script>
+</body>
+</html>
