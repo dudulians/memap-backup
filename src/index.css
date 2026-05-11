@@ -1379,17 +1379,9 @@
       /* Inset bottom subtle dark for thickness */
       inset 0 -1px 0 0 rgba(140, 110, 80, 0.06);
   }
-  /* PASTEL GLOW (per-tint, ::before) — soft radial glow positioned
-     top-left to give each card a "lit corner" — like a window
-     catching morning light. ::before sits below ::after in
-     stacking order so the sheen above paints OVER it. */
-
   /* SPECULAR SHEEN (universal, ::after) — diagonal bright streak.
      This is the "glint of light on glass" that separates premium
-     glass from cheap glassmorphism. Always visible, not animated
-     (tasteful subtle detail, not flashy reflection). Source order
-     puts ::after on top of ::before, so sheen is the topmost
-     decorative layer.                                              */
+     glass from cheap glassmorphism. */
   [data-theme="hush"] .card-premium::after {
     content: "";
     position: absolute;
@@ -1406,131 +1398,35 @@
     z-index: 0;
     opacity: 0.85;
   }
-  /* Card content sits ABOVE both pseudos */
+  /* Soft pearl glow at top-left (::before) — uniform across all
+     cards. Earlier I rotated 4 different tints (peach / lavender
+     / mint / honey, then blue-grey / pink-grey / mint / gold) via
+     :nth-of-type. That was unstable: nth-of-type counts position
+     among ALL siblings of the same tag, so when the parent's DOM
+     order shifted (loading states mounting, empty states swapping
+     in, modals injecting siblings) the cards' nth positions
+     reshuffled — same card "Терпения не хватило" landed on
+     position 1 (peach) one render and position 2 (lavender) the
+     next. User saw colours visibly jumping between renders ("цвета
+     прыгают, я ничего не делала"). Fix: drop the rotation. ONE
+     uniform pearl glow for every card. Visual variation now comes
+     entirely from the wallpaper bg refracting through backdrop-
+     filter — different cards sit over different parts of the
+     image, so they pick up real colour difference without any
+     CSS-driven nth tricks. Same approach Apple uses in iOS 26
+     Liquid Glass. */
   [data-theme="hush"] .card-premium > * {
     position: relative;
     z-index: 1;
   }
-
-  /* Per-card pastel tint via ::before — soft radial glow in the
-     tint colour. Plus the box-shadow override gets a matching
-     coloured tint so the card casts a soft coloured shadow on
-     the linen bg below. Four tints cycle via :nth-of-type.       */
-
-  /* (1) BLUE-GREY — foggy denim */
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 1) {
-    background: linear-gradient(
-      145deg,
-      rgba(190, 205, 220, 0.50) 0%,
-      rgba(210, 220, 232, 0.25) 60%,
-      rgba(255, 255, 255, 0.15) 100%
-    );
-    box-shadow:
-      0 0 0 1px rgba(210, 220, 232, 0.65),
-      0 14px 36px -8px rgba(110, 140, 175, 0.22),
-      0 4px 12px -2px rgba(110, 140, 175, 0.12),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(80, 110, 145, 0.08);
-  }
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 1)::before {
+  [data-theme="hush"] .card-premium::before {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
     background: radial-gradient(
-      55% 45% at 22% 22%,
-      rgba(180, 200, 220, 0.32) 0%,
-      transparent 70%
-    );
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* (2) PINK-GREY — dusty rose */
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 2) {
-    background: linear-gradient(
-      145deg,
-      rgba(225, 200, 210, 0.50) 0%,
-      rgba(235, 218, 224, 0.25) 60%,
-      rgba(255, 255, 255, 0.15) 100%
-    );
-    box-shadow:
-      0 0 0 1px rgba(235, 218, 224, 0.65),
-      0 14px 36px -8px rgba(170, 130, 145, 0.22),
-      0 4px 12px -2px rgba(170, 130, 145, 0.12),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(140, 100, 115, 0.08);
-  }
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 2)::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(
-      55% 45% at 22% 22%,
-      rgba(220, 195, 205, 0.32) 0%,
-      transparent 70%
-    );
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* (3) MINT — cool, slightly grey-leaning */
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 3) {
-    background: linear-gradient(
-      145deg,
-      rgba(195, 218, 210, 0.50) 0%,
-      rgba(218, 232, 224, 0.25) 60%,
-      rgba(255, 255, 255, 0.15) 100%
-    );
-    box-shadow:
-      0 0 0 1px rgba(218, 232, 224, 0.65),
-      0 14px 36px -8px rgba(100, 150, 130, 0.22),
-      0 4px 12px -2px rgba(100, 150, 130, 0.12),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(75, 120, 100, 0.08);
-  }
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 3)::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(
-      55% 45% at 22% 22%,
-      rgba(180, 210, 195, 0.32) 0%,
-      transparent 70%
-    );
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* (4) GOLD — deliberately the QUIETEST tint of the four. The
-     user asked for "немного золота" — not a fourth equal-weight
-     pastel but an occasional small accent. Lower colour saturation
-     and less prominent radial glow so it reads as "warm cream
-     with a hint of gold" rather than "yellow card". */
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 4) {
-    background: linear-gradient(
-      145deg,
-      rgba(228, 215, 175, 0.40) 0%,
-      rgba(240, 230, 200, 0.20) 60%,
-      rgba(255, 255, 255, 0.15) 100%
-    );
-    box-shadow:
-      0 0 0 1px rgba(240, 230, 200, 0.55),
-      0 14px 36px -8px rgba(180, 150, 80, 0.18),
-      0 4px 12px -2px rgba(180, 150, 80, 0.10),
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
-      inset 0 -1px 0 0 rgba(150, 115, 60, 0.06);
-  }
-  [data-theme="hush"] .card-premium:nth-of-type(4n + 4)::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(
-      55% 45% at 22% 22%,
-      rgba(225, 200, 145, 0.22) 0%,
+      60% 50% at 22% 22%,
+      rgba(225, 220, 230, 0.30) 0%,
       transparent 70%
     );
     pointer-events: none;

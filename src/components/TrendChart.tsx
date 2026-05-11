@@ -60,11 +60,7 @@ const DEFAULT_PALETTE = [
 
 // Hush palette — muted earth tones to harmonise with the linen +
 // pastel-tinted-glass aesthetic. Vivid hex colours from
-// DEFAULT_PALETTE clashed with the wallpaper bg. Each entry is
-// pulled from the colour family Hush already uses (sage / dusty
-// rose / blue-grey / warm gold / lavender / mint-grey / terracotta)
-// at saturation levels that read clearly against pastel cards
-// without being loud.
+// DEFAULT_PALETTE clashed with the wallpaper bg.
 const HUSH_PALETTE = [
   "#8fa886", // sage
   "#c9a3ad", // dusty rose
@@ -77,11 +73,48 @@ const HUSH_PALETTE = [
   "#7a8e72", // deep sage
   "#a8889a", // muted plum
   "#7d92a8", // deep blue-grey
-  "#a89070", // softened amber-tan (was b89770, dropped saturation)
+  "#a89070", // softened amber-tan
+];
+
+// Terra palette — warm earth: terracotta, ochre, kraft, clay,
+// olive. Saturation tuned to read on warm parchment / clay-bg
+// without the cool jewel tones of DEFAULT_PALETTE jumping out.
+const TERRA_PALETTE = [
+  "#b86048", // terracotta
+  "#7a8a5c", // olive
+  "#c98a48", // ochre
+  "#8a6850", // kraft brown
+  "#a87a90", // dusty mauve
+  "#6b8870", // sage moss
+  "#c9a36a", // honey
+  "#9a5e58", // brick
+  "#5d7558", // deep olive
+  "#a08070", // taupe
+  "#c47860", // rust
+  "#9c8a5a", // warm sand
+];
+
+// Pop palette — saturated cool blues / cyans / mints harmonising
+// with the cool-blue mesh and glass-pebble aesthetic.
+const POP_PALETTE = [
+  "#3b8fd9", // sky blue
+  "#52b3c4", // teal
+  "#8c66e0", // electric violet
+  "#10b981", // emerald
+  "#5e7cd9", // periwinkle
+  "#23a8b8", // ocean
+  "#7a9bd9", // dusty blue
+  "#06d4d4", // cyan
+  "#5468d4", // deep blue
+  "#9747e8", // vivid violet
+  "#3fc888", // mint
+  "#8eb6d9", // pale steel
 ];
 
 const getPaletteForTheme = (theme: AppTheme): string[] => {
   if (theme === "hush") return HUSH_PALETTE;
+  if (theme === "terra") return TERRA_PALETTE;
+  if (theme === "pop") return POP_PALETTE;
   return DEFAULT_PALETTE;
 };
 
