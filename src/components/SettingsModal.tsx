@@ -17,7 +17,7 @@ import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { generateDevData } from "@/lib/devDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -1197,6 +1197,48 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
               >
                 <HelpCircle className="h-4 w-4 mr-2" />
                 {t("settings.showAppTour")}
+              </Button>
+
+              {/* Contact / support email. Opens the user's default
+                  mail client pre-filled with subject + diagnostic
+                  body (app version, OS) so we get useful context
+                  when they write. The email below is a placeholder
+                  — swap to a real Support inbox before public launch. */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const subject = encodeURIComponent("MeMap support");
+                  const body = encodeURIComponent(
+                    `\n\n\n---\nApp version: 1.7.3\nPlatform: ${Capacitor.getPlatform()}\nLanguage: ${getLanguage()}`,
+                  );
+                  window.open(
+                    `mailto:memap.support@gmail.com?subject=${subject}&body=${body}`,
+                    "_blank",
+                  );
+                }}
+                className="w-full justify-start"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                {t("settings.contactSupport")}
+              </Button>
+
+              {/* Terms of Service — required by both App Store and
+                  Play Store to be linked from somewhere visible
+                  inside the app. URL is the production GitHub Pages
+                  alongside the Privacy Policy. */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.open(
+                    "https://dudulians.github.io/memap-backup/TERMS.html",
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
+                className="w-full justify-start"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {t("settings.termsOfService")}
               </Button>
 
               {/* Single-source disclaimer (1.7.2). Was shown on every

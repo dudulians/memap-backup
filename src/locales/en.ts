@@ -220,6 +220,8 @@ const en = {
 
     helpTitle: "Help",
     showAppTour: "Show app tour",
+    contactSupport: "Contact support",
+    termsOfService: "Terms of Service",
 
     dataPrivacyTitle: "Data & Privacy",
     dataPrivacyLock: "Your data lives only on this device — nothing is sent to a server or collected by us. Use Backup regularly to keep a safe copy, especially before changing devices.",
