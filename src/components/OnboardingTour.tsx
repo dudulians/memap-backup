@@ -28,6 +28,7 @@ import {
   GeneratedStarter,
 } from "@/lib/starterGenerator";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
+import { track } from "@/lib/analytics";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import {
   localizeTrackerTitleRaw,
@@ -278,6 +279,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
 
   const finish = useCallback(() => {
     localStorage.setItem(TOUR_SEEN_KEY, "true");
+    track("onboarding_completed");
     document.body.style.overflow = "";
     onClose();
   }, [onClose]);

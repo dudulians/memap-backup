@@ -8,7 +8,10 @@ import "./lib/i18n";
 // initial paint (rare but possible — bad localStorage state, plugin
 // init failure, etc.) are also captured. No-op in dev.
 import { initSentry } from "./lib/sentry";
+// Init Mixpanel analytics. Anonymous, event-only, no PII. No-op in dev.
+import { initAnalytics } from "./lib/analytics";
 
 initSentry();
+initAnalytics();
 
 createRoot(document.getElementById("root")!).render(<App />);

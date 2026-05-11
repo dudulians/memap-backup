@@ -20,6 +20,7 @@ import { haptics } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerTheme } from "@/lib/trackerLocalize";
+import { track } from "@/lib/analytics";
 import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
@@ -361,10 +362,15 @@ export const DailySession = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | "down" | null>(null);
   const [completed, setCompleted] = useState(false);
-  // Fire one success haptic when the round transitions to "done", no
-  // matter which path triggered it (last answer, last skip, disable-recs).
+  // Fire one success haptic + one analytics event when the round
+  // transitions to "done", no matter which path triggered it (last
+  // answer, last skip, disable-recs). Single source of truth for
+  // session-completion side-effects.
   useEffect(() => {
-    if (completed) haptics.success();
+    if (completed) {
+      haptics.success();
+      track("daily_session_completed");
+    }
   }, [completed]);
   // The custom sheet-drag state used to live here — it's gone now
   // because the whole session is wrapped in our vaul-based

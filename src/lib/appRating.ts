@@ -30,6 +30,7 @@
 import { InAppReview } from "@capacitor-community/in-app-review";
 import { getEntries } from "./storage";
 import { captureError } from "./sentry";
+import { track } from "./analytics";
 
 const ASKED_KEY = "memap_rating_asked_at";
 const SEEN_CORRELATION_KEY = "memap_rating_seen_correlation";
@@ -89,6 +90,7 @@ export const maybeRequestRating = async (): Promise<boolean> => {
     // (e.g. simulator without an App Store account).
     await InAppReview.requestReview();
     localStorage.setItem(ASKED_KEY, new Date().toISOString());
+    track("rating_prompt_shown", { distinctDays });
     return true;
   } catch (err) {
     // Don't crash the app over a rating prompt. Log to Sentry so

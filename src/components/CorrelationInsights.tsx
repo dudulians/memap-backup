@@ -21,6 +21,7 @@ import {
   correlationFrame,
 } from "@/lib/correlations";
 import { markCorrelationSeen } from "@/lib/appRating";
+import { track } from "@/lib/analytics";
 
 // Smart ratio formatter — converts 3.0× style to "3 раза" / "3 times"
 // natural language. Russian needs раз / раза agreement (1 раз, 2-4
@@ -85,11 +86,14 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
 
   // Once the user has seen at least one real correlation, record it
   // as a "value moment" — this is one of the gates for the App Store
-  // rating prompt. Fired by appRating only when the user has built
-  // a track record (5+ tracked days) AND has seen this insight.
+  // rating prompt. Also emit analytics so we can answer "what % of
+  // active users ever see a correlation?". Both no-op repeatedly —
+  // the marker is localStorage-gated; the analytics track() is fine
+  // to call multiple times (Mixpanel will record one per session).
   useEffect(() => {
     if (correlations.length > 0) {
       markCorrelationSeen();
+      track("correlation_viewed", { count: correlations.length });
     }
   }, [correlations.length]);
 

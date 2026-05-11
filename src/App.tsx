@@ -13,6 +13,9 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { maybeRequestRating } from "@/lib/appRating";
+import { track, setUserProperty } from "@/lib/analytics";
+import { getTheme } from "@/lib/theme";
+import { getLanguage } from "@/lib/i18n";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +87,19 @@ const App = () => {
     // a cold app launch actually plays. Mobile browsers & Capacitor
     // WebView block audio until a user gesture.
     primeAudio();
+
+    // Analytics — single event per cold start. Includes the current
+    // theme + language as event properties, so we can answer "is Pop
+    // theme used more than Aurora?" / "are Russian users retaining
+    // better?" without identifying anyone.
+    track("app_opened", {
+      theme: getTheme(),
+      language: getLanguage(),
+    });
+    // Also set theme + language as USER properties so future Mixpanel
+    // funnels can segment by them without re-emitting on every event.
+    setUserProperty("theme", getTheme());
+    setUserProperty("language", getLanguage());
 
     // App Store / Play Store rating prompt — checks all gates (5+ tracked
     // days AND seen a correlation AND not asked in 120 days) and asks

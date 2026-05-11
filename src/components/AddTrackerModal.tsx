@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Tracker, ProblemWhen } from "@/types/tracker";
+import { track } from "@/lib/analytics";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { TEMPLATE_GROUPS } from "@/lib/templateGroups";
 import {
@@ -449,7 +450,16 @@ export const AddTrackerModal = ({
     await saveTrackers([...trackers, newTracker]);
     setSearchQuery("");
     setSearchOpen(false);
-    
+
+    // Analytics — we track whether it was a library template
+    // (cluster set) or a custom user-typed tracker (cluster null).
+    // Title / question text are NOT sent — privacy-first.
+    track("tracker_added", {
+      source: newTracker.cluster ? "template" : "custom",
+      category: newTracker.category,
+      total_active: trackers.filter((t) => !t.archived).length + 1,
+    });
+
     // Show success toast
     toast({
       title: t("today.trackerAdded"),
