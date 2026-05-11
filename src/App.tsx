@@ -12,6 +12,7 @@ import { runStartupMigrations } from "@/lib/storage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { maybeRequestRating } from "@/lib/appRating";
 
 const queryClient = new QueryClient();
 
@@ -84,10 +85,23 @@ const App = () => {
     // WebView block audio until a user gesture.
     primeAudio();
 
+    // App Store / Play Store rating prompt — checks all gates (5+ tracked
+    // days AND seen a correlation AND not asked in 120 days) and asks
+    // only if eligible. Safe to call on every cold start: internal logic
+    // gates everything. Native OS itself further rate-limits to ~3/year.
+    //
+    // Defer by 2 seconds so the prompt doesn't pop up over the splash /
+    // initial render — feels more "in context" if it appears once the
+    // user is actually looking at content.
+    const ratingTimer = window.setTimeout(() => {
+      maybeRequestRating();
+    }, 2000);
+
     return () => {
       window.removeEventListener("memap-language-changed", refreshSchedule);
       window.removeEventListener("memap-entries-changed", refreshSchedule);
       notifSubPromise?.then((sub) => sub?.remove()).catch(() => {});
+      window.clearTimeout(ratingTimer);
     };
   }, []);
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Card } from "@/components/ui/card";
 import { getCategoryColor } from "@/lib/categoryHelpers";
@@ -20,6 +20,7 @@ import {
   trackerPolarity,
   correlationFrame,
 } from "@/lib/correlations";
+import { markCorrelationSeen } from "@/lib/appRating";
 
 // Smart ratio formatter — converts 3.0× style to "3 раза" / "3 times"
 // natural language. Russian needs раз / раза agreement (1 раз, 2-4
@@ -81,6 +82,16 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
     () => computeCorrelations(trackers, entries, 5),
     [trackers, entries],
   );
+
+  // Once the user has seen at least one real correlation, record it
+  // as a "value moment" — this is one of the gates for the App Store
+  // rating prompt. Fired by appRating only when the user has built
+  // a track record (5+ tracked days) AND has seen this insight.
+  useEffect(() => {
+    if (correlations.length > 0) {
+      markCorrelationSeen();
+    }
+  }, [correlations.length]);
 
   if (correlations.length === 0) {
     return (
