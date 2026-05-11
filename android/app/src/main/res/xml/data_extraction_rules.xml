@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ (API 31) data extraction rules. Replaces the older
+  android:fullBackupContent attribute on newer OS versions. Same
+  intent as backup_rules.xml but split into two scopes:
+    - cloud-backup: what gets uploaded to user's Google Drive
+    - device-transfer: what gets copied during device-to-device
+      migration (e.g. Quick Switch on new phone)
+
+  Both include everything except WebView caches.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="root" path="." />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+
+        <exclude domain="root" path="app_webview/Default/Service Worker" />
+        <exclude domain="root" path="app_webview/Default/GPUCache" />
+        <exclude domain="root" path="app_webview/Default/Cache" />
+        <exclude domain="root" path="cache" />
+    </cloud-backup>
+
+    <device-transfer>
+        <include domain="root" path="." />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <include domain="file" path="." />
+
+        <exclude domain="root" path="app_webview/Default/Service Worker" />
+        <exclude domain="root" path="app_webview/Default/GPUCache" />
+        <exclude domain="root" path="app_webview/Default/Cache" />
+        <exclude domain="root" path="cache" />
+    </device-transfer>
+</data-extraction-rules>

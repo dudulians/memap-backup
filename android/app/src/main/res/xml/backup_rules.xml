@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Auto Backup rules for MeMap (Android 6-11 / API 23-30).
+
+  Backs up everything in the app's data directory by default. The
+  critical piece is the WebView local storage where Capacitor stores
+  all tracker / entry / notes data via window.localStorage. Without
+  explicit rules, some manufacturer Android builds skip WebView data
+  during Auto Backup, leading to "lost all my data after reinstall"
+  ★1 reviews.
+
+  Excludes:
+    - WebView Service Worker caches (recreated on demand)
+    - WebView GPU caches (recreated on demand)
+
+  See: https://developer.android.com/guide/topics/data/autobackup
+-->
+<full-backup-content>
+    <include domain="root" path="." />
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <include domain="file" path="." />
+
+    <!-- Skip ephemeral WebView caches — not user data, would just
+         inflate the backup. -->
+    <exclude domain="root" path="app_webview/Default/Service Worker" />
+    <exclude domain="root" path="app_webview/Default/GPUCache" />
+    <exclude domain="root" path="app_webview/Default/Cache" />
+    <exclude domain="root" path="cache" />
+</full-backup-content>
