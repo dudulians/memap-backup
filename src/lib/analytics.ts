@@ -115,4 +115,6 @@ export type AnalyticsEvent =
   | "daily_session_completed"
   | "correlation_viewed"
   | "theme_changed"
-  | "rating_prompt_shown";
+  | "rating_prompt_shown"
+  | "data_exported"
+  | "data_imported";

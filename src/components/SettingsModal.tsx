@@ -25,6 +25,11 @@ import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { resetTourSeen } from "@/components/OnboardingTour";
 import { getTheme, setTheme, AppTheme } from "@/lib/theme";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+import { Capacitor } from "@capacitor/core";
+import { track } from "@/lib/analytics";
+import { captureError } from "@/lib/sentry";
 
 interface SettingsModalProps {
   open: boolean;
@@ -431,41 +436,87 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   };
 
   const handleBackupJSON = async () => {
-    const [trackersData, entriesData] = await Promise.all([getTrackers(), getEntries()]);
-    const notes = JSON.parse(localStorage.getItem("memap_notes") ?? "[]");
-    const settings: Record<string, string | null> = {};
-    SETTINGS_KEYS.forEach((k) => { settings[k] = localStorage.getItem(k); });
+    try {
+      const [trackersData, entriesData] = await Promise.all([getTrackers(), getEntries()]);
+      const notes = JSON.parse(localStorage.getItem("memap_notes") ?? "[]");
+      const settings: Record<string, string | null> = {};
+      SETTINGS_KEYS.forEach((k) => { settings[k] = localStorage.getItem(k); });
 
-    const payload: BackupPayload = {
-      version: BACKUP_VERSION,
-      exportedAt: new Date().toISOString(),
-      trackers: trackersData,
-      entries: entriesData,
-      notes,
-      settings,
-    };
+      const payload: BackupPayload = {
+        version: BACKUP_VERSION,
+        exportedAt: new Date().toISOString(),
+        trackers: trackersData,
+        entries: entriesData,
+        notes,
+        settings,
+      };
 
-    const today = new Date().toISOString().split("T")[0];
-    const filename = `memap-backup-${today}.json`;
-    const file = new File([JSON.stringify(payload, null, 2)], filename, { type: "application/json" });
+      const today = new Date().toISOString().split("T")[0];
+      const filename = `memap-backup-${today}.json`;
+      const json = JSON.stringify(payload, null, 2);
 
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: "MeMap Backup" });
-        return;
-      } catch {
+      // Native path (iOS / Android) — write to Cache, then hand the
+      // file URI to the OS share sheet via @capacitor/share. On iOS
+      // this exposes iCloud Drive, Files, AirDrop, Mail, Notes etc.
+      // — every reliable backup destination Apple offers. More
+      // robust than navigator.share which can be flaky in Capacitor
+      // WebView depending on iOS version.
+      if (Capacitor.isNativePlatform()) {
+        const written = await Filesystem.writeFile({
+          path: filename,
+          data: json,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+        await Share.share({
+          title: "MeMap Backup",
+          text: "MeMap data backup — save to restore later or on another device",
+          url: written.uri,
+          dialogTitle: t("settings.backupShareDialogTitle", {
+            defaultValue: "Save MeMap backup",
+          }),
+        });
+        track("data_exported", {
+          platform: Capacitor.getPlatform(),
+          size_bytes: json.length,
+        });
         return;
       }
+
+      // Web path — Web Share API for files if available, else
+      // anchor-download fallback. Used in browser preview / Lovable.
+      const file = new File([json], filename, { type: "application/json" });
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "MeMap Backup" });
+          track("data_exported", { platform: "web_share" });
+          return;
+        } catch {
+          // User cancelled — silent.
+          return;
+        }
+      }
+
+      const url = URL.createObjectURL(file);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      track("data_exported", { platform: "web_download" });
+      toast({ title: t("settings.backupSaved"), description: t("settings.backupSavedDesc") });
+    } catch (err) {
+      // Log so we know if export breaks for real users — share-sheet
+      // failures (e.g. user cancels) shouldn't crash UI but ARE worth
+      // knowing about if they get common.
+      captureError(err, { source: "handleBackupJSON" });
+      toast({
+        title: t("settings.backupSaved"),
+        description: String((err as Error)?.message ?? err),
+        variant: "destructive",
+      });
     }
-
-    const url = URL.createObjectURL(file);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({ title: t("settings.backupSaved"), description: t("settings.backupSavedDesc") });
   };
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,6 +559,15 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         else localStorage.setItem(k, v);
       });
     }
+
+    track("data_imported", {
+      trackers_count: pendingImport.trackers.length,
+      entries_count: pendingImport.entries.length,
+      backup_age_days: pendingImport.exportedAt
+        ? (Date.now() - new Date(pendingImport.exportedAt).getTime()) /
+          (1000 * 60 * 60 * 24)
+        : -1,
+    });
 
     setImportDialogOpen(false);
     setPendingImport(null);
