@@ -354,7 +354,36 @@ const clusterIdForTemplateId = (tplId: string): string | null => {
 const pairSemanticVerdict = (
   a: Tracker,
   b: Tracker,
+  phi: number,
 ): "expected" | "unexpected" | "unknown" => {
+  // POLARITY CHECK FIRST (1.7.3+).
+  //
+  // Earlier version only checked the curated RELATED_QUESTIONS graph,
+  // which flagged "good thing × bad thing inverse correlation" as
+  // "unexpected" if the specific pair wasn't in the graph. But that's
+  // the most expected relationship in the world: a good event and a
+  // bad event SHOULD inversely correlate.
+  //
+  // New rule: if both trackers have non-neutral polarity, check
+  // whether the observed phi sign matches what polarity logic
+  // predicts:
+  //   same polarity (pos×pos OR neg×neg) → positive phi expected
+  //   opposite polarity (pos×neg)        → negative phi expected
+  // Sign-match → "expected" regardless of graph membership.
+  // Sign-mismatch → flow through to the graph for a second opinion.
+  const polA = trackerPolarity(a);
+  const polB = trackerPolarity(b);
+  if (polA !== "neutral" && polB !== "neutral") {
+    const samePolarity = polA === polB;
+    const expectedPhiPositive = samePolarity;
+    const observedPhiPositive = phi > 0;
+    if (expectedPhiPositive === observedPhiPositive) {
+      return "expected";
+    }
+    // Sign mismatch — could still be a real curated unexpected pair,
+    // fall through to graph check.
+  }
+
   const idA = matchTemplateIdByTitle(a.title);
   const idB = matchTemplateIdByTitle(b.title);
 
@@ -470,7 +499,7 @@ export const computeCorrelations = (
         chiSquare: best.chiSquare,
         sharedDays: best.sharedDays,
         riskRatio: best.riskRatio,
-        semanticVerdict: pairSemanticVerdict(a, b),
+        semanticVerdict: pairSemanticVerdict(a, b, best.phi),
         counts: best.counts,
       });
     }

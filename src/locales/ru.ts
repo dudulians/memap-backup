@@ -676,6 +676,16 @@ const ru: Translation = {
     // translation to "answered Yes".
     timesMore: "→ «{{b}}» примерно в {{ratio}} чаще в дни с «{{a}}»",
     timesLess: "→ «{{b}}» примерно в {{ratio}} реже в дни с «{{a}}»",
+    // Natural-language variants for extreme cases (one side at 0%
+    // or 100%) — the "Infinity раз реже" bug fix. Used when the
+    // ratio would either be infinite (denominator 0) or zero
+    // (numerator 0), or when the gap between with-A and without-A
+    // is so large that "X times more" reads awkwardly.
+    naturalBNeverWithA:  "→ «{{b}}» не случается в дни с «{{a}}»",
+    naturalBOnlyWithA:   "→ «{{b}}» бывает только в дни с «{{a}}»",
+    naturalBAlwaysWithA: "→ «{{b}}» бывает всегда в дни с «{{a}}»",
+    naturalBMoreOftenWithA: "→ «{{b}}» бывает чаще в дни с «{{a}}»",
+    naturalBLessOftenWithA: "→ «{{b}}» бывает реже в дни с «{{a}}»",
     // (coAbsenceNote string removed in 1.7+ — the parallel-absence
     // info is now visible directly in the expanded "Подробнее"
     // facts via the symmetric percentages.)

@@ -195,9 +195,56 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
             const pctWithoutA = aNo > 0 ? Math.round((bYesGivenANo / aNo) * 100) : 0;
 
             const positive = c.phi > 0;
-            const strengthLbl = phiStrengthLabel(c.phi);
+            // "Strong" pattern label requires BOTH strong phi AND a
+            // healthy sample size (≥30 shared days). With smaller
+            // samples a high phi can be a streak rather than a real
+            // pattern — so we down-cast strong → moderate for
+            // <30-day correlations. Otherwise the badge promises more
+            // certainty than the data deserves.
+            const rawStrength = phiStrengthLabel(c.phi);
+            const strengthLbl =
+              rawStrength === "strong" && c.sharedDays < 30
+                ? "moderate"
+                : rawStrength;
             const robust = isHighlySignificant(c.chiSquare);
             const ratioStr = formatRatioDisplay(c.riskRatio, isRu);
+
+            // Pick the conclusion line.
+            //
+            // Extreme cases (0% or 100% prevalence in one group) → use
+            // natural-language variants. The previous code piped 0 /
+            // Infinity into formatRatioDisplay which rendered "Infinity"
+            // in the UI (the "Infinity раз реже" bug). For wide gaps
+            // (Δ ≥ 40 percentage points) we also prefer the natural
+            // form over "N times more/less", which gets clunky at
+            // extreme values.
+            //
+            // Order matters — more specific cases first.
+            let conclusionKey: string;
+            const conclusionParams: Record<string, string> = {
+              a: aTitle,
+              b: bTitle,
+            };
+            const gap = pctWithA - pctWithoutA; // positive → B more with A
+
+            if (pctWithA === 0 && pctWithoutA >= 30) {
+              conclusionKey = "correlations.naturalBNeverWithA";
+            } else if (pctWithoutA === 0 && pctWithA >= 30) {
+              conclusionKey = "correlations.naturalBOnlyWithA";
+            } else if (pctWithA === 100 && pctWithoutA <= 70) {
+              conclusionKey = "correlations.naturalBAlwaysWithA";
+            } else if (positive && gap >= 40) {
+              conclusionKey = "correlations.naturalBMoreOftenWithA";
+            } else if (!positive && gap <= -40) {
+              conclusionKey = "correlations.naturalBLessOftenWithA";
+            } else {
+              // Mid-gap ratios — keep the "in N times" wording which
+              // gives a magnitude sense humans can compare.
+              conclusionKey = positive
+                ? "correlations.timesMore"
+                : "correlations.timesLess";
+              conclusionParams.ratio = ratioStr;
+            }
 
             // Lag → human label
             const lagLabel =
@@ -248,19 +295,12 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                     user asked (1.7+) to make the conclusion the
                     main read and tuck everything else (chips, raw
                     %, co-absence note) behind a "Подробнее" toggle.
-                    This is the headline read in one sentence. */}
+                    This is the headline read in one sentence.
+
+                    Key + params chosen above based on extremes /
+                    gap size — see conclusionKey logic. */}
                 <div className="text-base font-medium leading-snug text-foreground">
-                  {positive
-                    ? t("correlations.timesMore", {
-                        a: aTitle,
-                        b: bTitle,
-                        ratio: ratioStr,
-                      })
-                    : t("correlations.timesLess", {
-                        a: aTitle,
-                        b: bTitle,
-                        ratio: ratioStr,
-                      })}
+                  {t(conclusionKey, conclusionParams)}
                 </div>
 
                 {/* Expandable detail — chips, raw %, optional

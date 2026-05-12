@@ -645,6 +645,14 @@ const en = {
     factWithout: "On days without \"{{a}}\": \"{{b}}\" {{percent}}% of the time ({{n}} of {{total}})",
     timesMore: "→ \"{{b}}\" about {{ratio}} more often on days with \"{{a}}\"",
     timesLess: "→ \"{{b}}\" about {{ratio}} less often on days with \"{{a}}\"",
+    // Natural-language variants for extreme cases (one side at 0%
+    // or 100%) — fixes the "Infinity times less" bug + reads more
+    // human for big gaps.
+    naturalBNeverWithA:  "→ \"{{b}}\" never happens on days with \"{{a}}\"",
+    naturalBOnlyWithA:   "→ \"{{b}}\" only happens on days with \"{{a}}\"",
+    naturalBAlwaysWithA: "→ \"{{b}}\" always happens on days with \"{{a}}\"",
+    naturalBMoreOftenWithA: "→ \"{{b}}\" happens more on days with \"{{a}}\"",
+    naturalBLessOftenWithA: "→ \"{{b}}\" happens less on days with \"{{a}}\"",
     expected: "Expected",
     unexpected: "Unexpected",
     unexpectedHint: "Could be coincidence — needs more data to confirm",
