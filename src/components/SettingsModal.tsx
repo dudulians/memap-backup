@@ -16,6 +16,7 @@ import { getNotificationSettings, saveNotificationSettings, requestNotificationP
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { generateDevData } from "@/lib/devDataGenerator";
+import { generateDemoData } from "@/lib/demoDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -315,6 +316,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   // real entries inside the 60-day window.
   const [devGenDialogOpen, setDevGenDialogOpen] = useState(false);
   const [devGenRunning, setDevGenRunning] = useState(false);
+  // Marketing demo generator — replaces ALL trackers + entries with
+  // a curated 8-tracker / 60-day script engineered to produce stable
+  // correlations + one fresh-window pattern. Used by the owner to
+  // grab screenshots / App-Store preview frames without waiting.
+  const [demoGenDialogOpen, setDemoGenDialogOpen] = useState(false);
+  const [demoGenRunning, setDemoGenRunning] = useState(false);
   const handleGenerateDevData = async () => {
     setDevGenRunning(true);
     try {
@@ -356,6 +363,41 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     } finally {
       setDevGenRunning(false);
       setDevGenDialogOpen(false);
+    }
+  };
+
+  // Demo data — destructive. Wipes existing trackers + entries and
+  // replaces them with the curated 8-tracker / 60-day demo script
+  // (see demoDataGenerator.ts). Behind an explicit confirm because
+  // it nukes whatever the user had.
+  const handleGenerateDemoData = async () => {
+    setDemoGenRunning(true);
+    try {
+      const result = generateDemoData();
+      // saveTrackers FIRST so the freshly persisted cycleStartDate is
+      // in place by the time the entries-changed event listeners
+      // re-pull entries.
+      await saveTrackers(result.newTrackers);
+      await saveEntries(result.newEntries);
+      setTrackers(result.newTrackers);
+      toast({
+        title: t("settings.demoDataGeneratedTitle"),
+        description: t("settings.demoDataGeneratedDesc", {
+          trackers: result.trackerCount,
+          days: result.daysCount,
+        }),
+      });
+      window.dispatchEvent(new CustomEvent("memap-settings-changed"));
+    } catch (err) {
+      console.error("generateDemoData failed:", err);
+      toast({
+        variant: "destructive",
+        title: t("settings.demoDataFailedTitle"),
+        description: String((err as Error)?.message ?? err),
+      });
+    } finally {
+      setDemoGenRunning(false);
+      setDemoGenDialogOpen(false);
     }
   };
 
@@ -1274,6 +1316,24 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </Button>
               )}
 
+              {/* Demo generator — owner-only marketing tool. REPLACES
+                  trackers + entries with a curated 8-tracker / 60-day
+                  script engineered to produce textbook correlations
+                  (stable + fresh) for App Store screenshots and
+                  preview recordings. DEV-only too, but uses a
+                  primary tint to distinguish it from the noisy
+                  random dev generator above. */}
+              {import.meta.env.DEV && (
+                <Button
+                  variant="outline"
+                  onClick={() => setDemoGenDialogOpen(true)}
+                  className="w-full justify-start border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  {t("settings.demoDataButton")}
+                </Button>
+              )}
+
               {/* Privacy policy link — required by App Store / Play Store
                   for any app submission. URL is the production hosted
                   policy (GitHub Pages). Opens in external browser so
@@ -1335,6 +1395,26 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             <AlertDialogCancel disabled={devGenRunning}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleGenerateDevData} disabled={devGenRunning}>
               {devGenRunning ? t("settings.devDataRunning") : t("settings.devDataConfirmBtn")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Demo-data confirmation. Destructive — wipes all trackers
+          and entries. The copy in the description makes that
+          explicit so a stray DEV-build tap doesn't kill real data. */}
+      <AlertDialog open={demoGenDialogOpen} onOpenChange={setDemoGenDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.demoDataConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.demoDataConfirmDesc")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={demoGenRunning}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleGenerateDemoData} disabled={demoGenRunning}>
+              {demoGenRunning ? t("settings.demoDataRunning") : t("settings.demoDataConfirmBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
