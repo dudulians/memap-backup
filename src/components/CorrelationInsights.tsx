@@ -293,11 +293,25 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
             // form over "N times more/less", which gets clunky at
             // extreme values.
             //
+            // {{context}} is filled in from lag so conclusions read
+            // accurately for lag-0 / lag-+1 / lag--1 pairs without
+            // duplicating each conclusion key three times. A
+            // hangover-style "drank → headache next day" used to
+            // surface as "headache on days with alcohol" — same-day
+            // framing — which misled the user.
+            //
             // Order matters — more specific cases first.
+            const contextKey =
+              c.lag === 0
+                ? "correlations.contextSameDay"
+                : c.lag === 1
+                  ? "correlations.contextAfter"
+                  : "correlations.contextBefore";
             let conclusionKey: string;
             const conclusionParams: Record<string, string> = {
               a: aTitle,
               b: bTitle,
+              context: t(contextKey, { a: aTitle }),
             };
             const gap = pctWithA - pctWithoutA; // positive → B more with A
 

@@ -648,16 +648,27 @@ const en = {
     headlinePossibleLink: "Possible link",
     factWith: "On days with \"{{a}}\": \"{{b}}\" {{percent}}% of the time ({{n}} of {{total}})",
     factWithout: "On days without \"{{a}}\": \"{{b}}\" {{percent}}% of the time ({{n}} of {{total}})",
-    timesMore: "→ \"{{b}}\" about {{ratio}} more often on days with \"{{a}}\"",
-    timesLess: "→ \"{{b}}\" about {{ratio}} less often on days with \"{{a}}\"",
+    // {{context}} is filled in by the UI from lag:
+    //   lag 0  → "on days with \"A\""
+    //   lag +1 → "the day after \"A\""
+    //   lag -1 → "the day before \"A\""
+    // Before this refactor, conclusions were locked to same-day
+    // phrasing regardless of lag, so a hangover-style lag-+1 pair
+    // ("drank → headache next day") read as same-day. Misleading.
+    timesMore: "→ \"{{b}}\" about {{ratio}} more often {{context}}",
+    timesLess: "→ \"{{b}}\" about {{ratio}} less often {{context}}",
     // Natural-language variants for extreme cases (one side at 0%
     // or 100%) — fixes the "Infinity times less" bug + reads more
     // human for big gaps.
-    naturalBNeverWithA:  "→ \"{{b}}\" never happens on days with \"{{a}}\"",
-    naturalBOnlyWithA:   "→ \"{{b}}\" only happens on days with \"{{a}}\"",
-    naturalBAlwaysWithA: "→ \"{{b}}\" always happens on days with \"{{a}}\"",
-    naturalBMoreOftenWithA: "→ \"{{b}}\" happens more on days with \"{{a}}\"",
-    naturalBLessOftenWithA: "→ \"{{b}}\" happens less on days with \"{{a}}\"",
+    naturalBNeverWithA:  "→ \"{{b}}\" never happens {{context}}",
+    naturalBOnlyWithA:   "→ \"{{b}}\" only happens {{context}}",
+    naturalBAlwaysWithA: "→ \"{{b}}\" always happens {{context}}",
+    naturalBMoreOftenWithA: "→ \"{{b}}\" happens more {{context}}",
+    naturalBLessOftenWithA: "→ \"{{b}}\" happens less {{context}}",
+    // {{context}} variants. Inlined into conclusion templates above.
+    contextSameDay: "on days with \"{{a}}\"",
+    contextAfter: "the day after \"{{a}}\"",
+    contextBefore: "the day before \"{{a}}\"",
     // Maturity stages — 1.7.3+
     stageEarly: "Early observation",
     stageFresh: "Recent observation",

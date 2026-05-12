@@ -679,18 +679,31 @@ const ru: Translation = {
     // pluralisation. "В дни с" replaces the awkward "когда X
     // отмечен" — the user pointed out "отмечен" required mental
     // translation to "answered Yes".
-    timesMore: "→ «{{b}}» примерно в {{ratio}} чаще в дни с «{{a}}»",
-    timesLess: "→ «{{b}}» примерно в {{ratio}} реже в дни с «{{a}}»",
+    //
+    // {{context}} is filled in by the UI from lag:
+    //   lag 0  → "в дни с «A»"
+    //   lag +1 → "на следующий день после «A»"
+    //   lag -1 → "за день до «A»"
+    // Before the {{context}} refactor, conclusions always read
+    // "в дни с" regardless of lag, so a hangover-style lag-+1
+    // pair ("выпил → завтра голова") was framed as same-day —
+    // misleading.
+    timesMore: "→ «{{b}}» примерно в {{ratio}} чаще {{context}}",
+    timesLess: "→ «{{b}}» примерно в {{ratio}} реже {{context}}",
     // Natural-language variants for extreme cases (one side at 0%
     // or 100%) — the "Infinity раз реже" bug fix. Used when the
     // ratio would either be infinite (denominator 0) or zero
     // (numerator 0), or when the gap between with-A and without-A
     // is so large that "X times more" reads awkwardly.
-    naturalBNeverWithA:  "→ «{{b}}» не случается в дни с «{{a}}»",
-    naturalBOnlyWithA:   "→ «{{b}}» бывает только в дни с «{{a}}»",
-    naturalBAlwaysWithA: "→ «{{b}}» бывает всегда в дни с «{{a}}»",
-    naturalBMoreOftenWithA: "→ «{{b}}» бывает чаще в дни с «{{a}}»",
-    naturalBLessOftenWithA: "→ «{{b}}» бывает реже в дни с «{{a}}»",
+    naturalBNeverWithA:  "→ «{{b}}» не случается {{context}}",
+    naturalBOnlyWithA:   "→ «{{b}}» бывает только {{context}}",
+    naturalBAlwaysWithA: "→ «{{b}}» бывает всегда {{context}}",
+    naturalBMoreOftenWithA: "→ «{{b}}» бывает чаще {{context}}",
+    naturalBLessOftenWithA: "→ «{{b}}» бывает реже {{context}}",
+    // {{context}} variants. Inlined into conclusion templates above.
+    contextSameDay: "в дни с «{{a}}»",
+    contextAfter: "на следующий день после «{{a}}»",
+    contextBefore: "за день до «{{a}}»",
     // Maturity stages — 1.7.3+
     stageFresh: "Свежее наблюдение",
     stageEarly: "Раннее наблюдение",
