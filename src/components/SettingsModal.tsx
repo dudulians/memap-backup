@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { haptics, runHapticsDiagnostic, type HapticDiagnostic } from "@/lib/haptics";
+import { haptics } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -112,11 +112,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [showSensitive, setShowSensitive] = useState(
     () => localStorage.getItem("memap_show_sensitive") === "true",
   );
-  // Inline diagnostic result for the haptics test button. Stored here
-  // (not in a toast) because the user needs to see it for several
-  // seconds and possibly screenshot it back to me — toasts auto-dismiss.
-  const [hapticDiag, setHapticDiag] = useState<HapticDiagnostic | null>(null);
-  const [hapticTesting, setHapticTesting] = useState(false);
   const [theme, setThemeState] = useState<AppTheme>(() => getTheme());
   const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => getLanguage());
   const [currentPol, setCurrentPol] = useState<"male" | "female" | "neutral">(() => getPol() ?? "neutral");
@@ -1032,72 +1027,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     />
                   </div>
 
-                  {/* Diagnostic button + inline result panel. The previous
-                      version fired three haptics into a toast and trusted
-                      that one of them would feel right — but the user got
-                      ZERO vibration on her TestFlight build, so we need
-                      to know *which call* failed and how. runHaptics-
-                      Diagnostic now tries every distinct iOS haptic API
-                      individually (Light, Medium, Success, selection,
-                      vibrate) with a 250 ms gap between each, returns a
-                      structured per-call result. We render that result
-                      below the button so she can read it at her leisure
-                      and screenshot it if needed.
-                       Possible outcomes she might see:
-                       - All ✓ but no vibration felt → device-level setting
-                         (we already verified those — narrow path)
-                       - All ✗ with same error → plugin not registered
-                       - Some ✓, some ✗ → only certain APIs broken
-                       - Native: no → Capacitor bridge isn't init'd */}
-                  {sessionSettings.hapticsEnabled && (
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={hapticTesting}
-                        className="w-full rounded-full text-xs"
-                        onClick={async () => {
-                          setHapticTesting(true);
-                          setHapticDiag(null);
-                          try {
-                            const result = await runHapticsDiagnostic();
-                            setHapticDiag(result);
-                          } finally {
-                            setHapticTesting(false);
-                          }
-                        }}
-                      >
-                        <Vibrate className="h-3.5 w-3.5 mr-1.5" />
-                        {hapticTesting
-                          ? t("settings.hapticsTestRunning")
-                          : t("settings.hapticsTestButton")}
-                      </Button>
-                      {hapticDiag && (
-                        <div className="rounded-2xl bg-muted/30 border border-border/50 p-3 space-y-1.5 text-[11px] font-mono animate-fade-in">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Native:</span>
-                            <span className={hapticDiag.isNative ? "text-emerald-600" : "text-destructive"}>
-                              {hapticDiag.isNative ? "✓ yes" : "✗ no"}
-                            </span>
-                          </div>
-                          {hapticDiag.results.map((r) => (
-                            <div key={r.label} className="flex items-start justify-between gap-2">
-                              <span className="text-muted-foreground shrink-0">{r.label}:</span>
-                              <span
-                                className={cn(
-                                  "text-right break-all",
-                                  r.ok ? "text-emerald-600" : "text-destructive",
-                                )}
-                              >
-                                {r.ok ? "✓ ok" : `✗ ${r.error ?? "fail"}`}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

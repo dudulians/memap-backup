@@ -9,6 +9,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
 import { CoachmarkTour, shouldShowCoachmark, type CoachmarkStep } from "@/components/CoachmarkTour";
 import { applyTheme, getTheme } from "@/lib/theme";
+import { haptics } from "@/lib/haptics";
 import { getTrackers, getEntries } from "@/lib/storage";
 
 // "today" tab is renamed conceptually to "cards" — it's now the trackers
@@ -268,6 +269,11 @@ const Index = () => {
             <button
               data-coachmark="play-button"
               onClick={() => {
+                // Tactile confirmation that the round is starting.
+                // primeHaptics (App.tsx) has already warmed up Core
+                // Haptics by the time this runs, so this medium thump
+                // fires without the first-tap dud.
+                haptics.medium();
                 if (activeTab !== "cards") setActiveTab("cards");
                 // Defer so TodayTab mounts (when we just swapped tabs)
                 // and registers its window listener before we dispatch.

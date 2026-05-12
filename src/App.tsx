@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { getNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { primeAudio } from "@/lib/feedback";
+import { primeHaptics } from "@/lib/haptics";
 import { runStartupMigrations } from "@/lib/storage";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
@@ -87,6 +88,12 @@ const App = () => {
     // a cold app launch actually plays. Mobile browsers & Capacitor
     // WebView block audio until a user gesture.
     primeAudio();
+    // Same gesture-gating story for iOS Core Haptics: the engine takes
+    // ~10-50 ms to start, and a pattern submitted while it's still
+    // starting silently no-ops. Fire a minimal haptic on the first
+    // pointerdown so the *next* haptic (Play tap, swipe commit, etc.)
+    // fires instantly without the first-tap dud.
+    primeHaptics();
 
     // Analytics — single event per cold start. Includes the current
     // theme + language as event properties, so we can answer "is Pop

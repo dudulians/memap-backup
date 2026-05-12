@@ -83,6 +83,38 @@ const isHapticsEnabled = (): boolean => {
 //        Android → @capacitor/haptics (UIImpactFeedbackGenerator analogue)
 //        Web → navigator.vibrate fallback
 
+// Warm-up flag. iOS Core Haptics (CHHapticEngine) takes ~10-50 ms to
+// initialise on first use; if a haptic pattern is submitted while the
+// engine is starting, it silently no-ops. Same gesture-gating story
+// for Android Haptics on some devices. Calling a single subtle haptic
+// on the first user gesture starts the engine so the *next* call —
+// usually the Play-button tap that triggered the prime — fires
+// instantly with no delay or skipped vibration.
+let hapticsPrimed = false;
+
+/**
+ * Attach one-shot listeners that fire a minimal haptic on the first
+ * pointerdown / touchstart / keydown after app launch. Mirrors
+ * primeAudio() in lib/feedback.ts. Idempotent — safe to call from
+ * multiple mount points; only the first call attaches listeners.
+ */
+export const primeHaptics = () => {
+  if (hapticsPrimed || typeof window === "undefined") return;
+  const prime = () => {
+    if (hapticsPrimed) return;
+    hapticsPrimed = true;
+    if (isIOS) safe(CoreHaptics.swipe());
+    else if (isAndroid) safe(Haptics.impact({ style: ImpactStyle.Light }));
+    window.removeEventListener("pointerdown", prime);
+    window.removeEventListener("touchstart", prime);
+    window.removeEventListener("keydown", prime);
+  };
+  const opts: AddEventListenerOptions = { once: false, passive: true };
+  window.addEventListener("pointerdown", prime, opts);
+  window.addEventListener("touchstart", prime, opts);
+  window.addEventListener("keydown", prime, opts);
+};
+
 export const haptics = {
   /** Light swipe-commit pulse. */
   swipe: () => {
@@ -133,104 +165,3 @@ export const haptics = {
   },
 };
 
-// --- Diagnostic harness ----------------------------------------------
-// The user's TestFlight build silently fails on every haptic call —
-// no error, no vibration. To find out where it dies we need to surface
-// each call result individually instead of swallowing them. This
-// function tries every distinct iOS haptic API the plugin exposes and
-// returns a structured report that the Settings test button can
-// display inline.
-
-export interface HapticDiagnostic {
-  isNative: boolean;
-  results: Array<{
-    label: string;
-    ok: boolean;
-    error?: string;
-  }>;
-}
-
-const tryCall = async (label: string, fn: () => Promise<unknown>) => {
-  try {
-    await fn();
-    return { label, ok: true };
-  } catch (err) {
-    return {
-      label,
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
-  }
-};
-
-export const runHapticsDiagnostic = async (): Promise<HapticDiagnostic> => {
-  const isNative = (() => {
-    try {
-      return Capacitor.isNativePlatform();
-    } catch {
-      return false;
-    }
-  })();
-
-  if (!isNative) {
-    return {
-      isNative: false,
-      results: [
-        { label: "platform", ok: false, error: "Capacitor.isNativePlatform() returned false" },
-      ],
-    };
-  }
-
-  // Tests BOTH haptic systems back-to-back so the user can feel the
-  // difference. Old @capacitor/haptics first (5 calls — the ones that
-  // felt like crude vibration on her device), then ~600 ms gap, then
-  // the new Core Haptics plugin (6 calls — should feel like proper
-  // Taptic Engine: precise, contextual, "Fishdom-grade").
-  const results: HapticDiagnostic["results"] = [];
-
-  results.push(await tryCall("[old] impact:Light", () => Haptics.impact({ style: ImpactStyle.Light })));
-  await new Promise((r) => setTimeout(r, 250));
-
-  results.push(await tryCall("[old] impact:Medium", () => Haptics.impact({ style: ImpactStyle.Medium })));
-  await new Promise((r) => setTimeout(r, 250));
-
-  results.push(await tryCall("[old] notification:Success", () => Haptics.notification({ type: NotificationType.Success })));
-  await new Promise((r) => setTimeout(r, 250));
-
-  results.push(await tryCall("[old] selectionChanged", () => Haptics.selectionChanged()));
-  await new Promise((r) => setTimeout(r, 250));
-
-  results.push(await tryCall("[old] vibrate", () => Haptics.vibrate({ duration: 200 })));
-
-  // Pause so the user can mentally separate "old engine" from "new engine".
-  await new Promise((r) => setTimeout(r, 600));
-
-  // --- Core Haptics (new) ---------------------------------------------
-
-  const availability = await tryCall("[new] isAvailable", async () => {
-    const result = await CoreHaptics.isAvailable();
-    if (!result.available) throw new Error("Core Haptics not supported on this device");
-  });
-  results.push(availability);
-
-  if (availability.ok) {
-    results.push(await tryCall("[new] swipe", () => CoreHaptics.swipe()));
-    await new Promise((r) => setTimeout(r, 250));
-
-    results.push(await tryCall("[new] tap", () => CoreHaptics.tap()));
-    await new Promise((r) => setTimeout(r, 250));
-
-    results.push(await tryCall("[new] medium", () => CoreHaptics.medium()));
-    await new Promise((r) => setTimeout(r, 250));
-
-    results.push(await tryCall("[new] success", () => CoreHaptics.success()));
-    await new Promise((r) => setTimeout(r, 350));
-
-    results.push(await tryCall("[new] warning", () => CoreHaptics.warning()));
-    await new Promise((r) => setTimeout(r, 350));
-
-    results.push(await tryCall("[new] error", () => CoreHaptics.error()));
-  }
-
-  return { isNative: true, results };
-};
