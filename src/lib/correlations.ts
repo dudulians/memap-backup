@@ -485,15 +485,25 @@ export const computeCorrelations = (
       // the strict one if available.
       const strictCandidates: PairStats[] = [];
       const earlyCandidates: PairStats[] = [];
-      // Early-tier gate (tightened in 1.7.3 after user feedback that
-      // pairs like "headache × stomach 5 days out of 59" surfaced as
-      // early patterns even when those 5 co-occurrences were
-      // essentially random chance):
-      //   - bothYes ≥ 5    (was 3 — 3 felt like coincidence, not a
-      //                     trend, even to non-statistical users)
-      //   - sharedDays ≥ 7 (was 3 — need at least a week of overlap)
-      //   - lift ≥ 1.5     (observed co-occurrences must be at least
-      //                     1.5× what independence would predict)
+      // Early-tier gate (1.7.3, revised after user feedback that
+      // pairs like "head × stomach 7 days of 59" surfaced as early
+      // patterns despite the remaining 52 days being "in disarray" —
+      // lift-based filter alone passed because individual base rates
+      // were low, but the user's intuition is that "7 together vs. 13
+      // apart" isn't a pattern):
+      //
+      //   - bothYes ≥ 5            (need at least 5 concrete co-occurrences)
+      //   - sharedDays ≥ 7         (at least a week of overlap)
+      //   - concordant ≥ discordant
+      //       (co-occurrences must outnumber "only one of them"
+      //        days; i.e. bothYes ≥ aYesBNo + aNoBYes. Simplifies
+      //        to bothYes ≥ (aYes + bYes) / 3. This is the
+      //        primary intuition filter — "the pair is together
+      //        more often than apart, among days where at least
+      //        one happened")
+      //   - lift ≥ 1.5             (kept as a secondary noise floor
+      //                             for cases where both events
+      //                             are common)
       const MIN_EARLY_BOTH_YES = 5;
       const MIN_EARLY_SHARED = 7;
       const MIN_EARLY_LIFT = 1.5;
@@ -516,12 +526,18 @@ export const computeCorrelations = (
         if (passesStrict) {
           strictCandidates.push(stat);
         } else {
-          // Early observation gate. Lift = observed / expected, where
-          // expected = aYes × bYes / sharedDays under the null
-          // hypothesis of independence. Lift ≥ 1.5 means the pair
-          // co-occurs at least 50 % more often than chance would
-          // predict — enough signal to surface, not yet enough to
-          // claim "correlation".
+          // Concordant = days both happened; discordant = days only
+          // one happened. Concordant ≥ discordant is the human-
+          // readable form of the test ("together more often than
+          // apart"). Equivalent algebraic check: 3*bothYes ≥ aYes+bYes.
+          const concordantDays = stat.counts.bothYes;
+          const discordantDays =
+            stat.counts.aYesBNo + stat.counts.aNoBYes;
+          const passesConcordance = concordantDays >= discordantDays;
+
+          // Lift kept as secondary check (catches edge cases where
+          // both events are common enough that concordance passes
+          // trivially despite chance overlap).
           const expectedBothYes =
             stat.sharedDays > 0 ? (aYes * bYes) / stat.sharedDays : 0;
           const lift =
@@ -533,6 +549,7 @@ export const computeCorrelations = (
           if (
             stat.counts.bothYes >= MIN_EARLY_BOTH_YES &&
             stat.sharedDays >= MIN_EARLY_SHARED &&
+            passesConcordance &&
             lift >= MIN_EARLY_LIFT
           ) {
             earlyCandidates.push(stat);
