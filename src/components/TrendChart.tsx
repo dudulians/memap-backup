@@ -187,6 +187,10 @@ const dayTickSuffix = (count: number, isRu: boolean): string =>
 
 export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps) => {
   const { t, i18n } = useTranslation();
+  // Used by the date-range tooltip + plural day-count formatter.
+  // Re-derived on every render — cheap, and stays in sync with the
+  // i18n language switcher without needing its own state.
+  const isRu = (i18n.language || "en").startsWith("ru");
   const [range, setRange] = useState<TimeRange>("30d");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // Period offset in WINDOWS (not days). 0 = current window ending today;
