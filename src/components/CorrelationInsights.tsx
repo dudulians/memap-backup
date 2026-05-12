@@ -158,11 +158,17 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
             };
 
             // EARLY-stage card — observation without correlation claim.
-            // Shorter, lighter card. 3 elements: the pair, the dot
-            // visualisation (bothYes count, capped at 5 visually), and
-            // the "🌱 Раннее наблюдение" stage badge. No conclusion,
-            // no "X times more", no facts expand — we genuinely don't
-            // have enough data to make a claim.
+            // Same visual container as emerging/stable (bg-muted/20 +
+            // border-border/50), so the section feels homogenous. The
+            // only differentiator is the stage badge (🌱 vs 🌿 vs 🌳).
+            // Earlier version used a lighter bg + category-coloured
+            // text — user feedback: cards looked ghostly and were hard
+            // to read against the wallpaper bg.
+            //
+            // Three elements: the pair (foreground text, readable),
+            // dots + co-occurrence count, stage badge + shared-days
+            // counter. No conclusion line — we genuinely don't have
+            // enough data to claim a pattern.
             if (c.stage === "early") {
               const dotCount = Math.min(c.counts.bothYes, 5);
               return (
@@ -182,27 +188,24 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                       : undefined
                   }
                   className={
-                    "p-3 rounded-2xl bg-muted/10 border border-border/40 space-y-2 transition-all" +
+                    "p-3 rounded-2xl bg-muted/20 border border-border/50 space-y-2.5 transition-all" +
                     (interactive
-                      ? " cursor-pointer hover:bg-muted/20 active:scale-[0.99]"
+                      ? " cursor-pointer hover:bg-muted/30 hover:border-border active:scale-[0.99]"
                       : "")
                   }
                 >
-                  {/* The two trackers, dot-separated, each in its own
-                      category colour. Reads as "X · Y" not as a claim. */}
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium truncate" style={{ color: `hsl(var(--${colorA}))` }}>
-                      {aTitle}
-                    </span>
-                    <span className="text-muted-foreground/60">·</span>
-                    <span className="font-medium truncate" style={{ color: `hsl(var(--${colorB}))` }}>
-                      {bTitle}
-                    </span>
-                  </div>
+                  {/* Pair header — foreground colour (full contrast),
+                      readable in any theme. Category info is conveyed
+                      via the dot colour below, not the title. */}
+                  <h4 className="font-semibold text-sm leading-snug text-foreground">
+                    <span>{aTitle}</span>
+                    <span className="text-muted-foreground/70 mx-1.5">·</span>
+                    <span>{bTitle}</span>
+                  </h4>
 
-                  {/* Dots + count of shared yes-yes days. Dots capped
-                      at 5 to keep visual compact; the text gives the
-                      exact number. */}
+                  {/* Dots + count of shared yes-yes days. Dots use
+                      tracker-A category colour as a subtle hue cue;
+                      capped at 5 visually, exact count in text. */}
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       {Array.from({ length: dotCount }).map((_, i) => (
@@ -218,12 +221,12 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                     </span>
                   </div>
 
-                  {/* Stage badge — minimal, no second-row hint. The
-                      label itself tells the user this is preliminary. */}
-                  <div className="flex items-center justify-between gap-2">
+                  {/* Stage badge + shared-days counter. Same row + same
+                      sizes as the badge row on emerging/stable cards
+                      to keep visual rhythm. */}
+                  <div className="flex items-center justify-between gap-2 pt-1">
                     <span
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10"
-                      style={{ color: "hsl(35 90% 35%)" }}
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-emerging/20 text-emerging"
                       title={t("correlations.stageEarlyHint")}
                     >
                       🌱 {t("correlations.stageEarly")}
