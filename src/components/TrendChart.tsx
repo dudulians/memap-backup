@@ -125,11 +125,65 @@ const bucketSize = (range: TimeRange) => {
   return 7;
 };
 
-const bucketLabel = (range: TimeRange, date: Date): string => {
-  if (range === "1y") return date.toLocaleDateString("en", { month: "short" });
-  if (range === "7d") return date.toLocaleDateString("en", { weekday: "short", day: "numeric" });
-  return date.toLocaleDateString("en", { month: "short", day: "numeric" });
+/**
+ * Short label for the X-axis tick. Locale-aware so Russian users see
+ * "5 мая" instead of "May 5". Kept short — only the bucket-end date
+ * fits on a tiny mobile X-axis tick.
+ */
+const bucketLabel = (range: TimeRange, date: Date, locale: string): string => {
+  if (range === "1y") return date.toLocaleDateString(locale, { month: "short" });
+  if (range === "7d") return date.toLocaleDateString(locale, { weekday: "short", day: "numeric" });
+  return date.toLocaleDateString(locale, { month: "short", day: "numeric" });
 };
+
+/**
+ * Rich label for the Tooltip title. For weekly buckets (30d, 90d)
+ * this is a range like "29 апр – 5 мая" preceded by "Неделя" so the
+ * user sees the bucket is a WEEK, not a single day — addresses the
+ * misleading "May 5" tooltip header on the aggregated chart.
+ * For monthly (1y) and daily (7d) buckets, falls back to the short
+ * label.
+ */
+const bucketTooltipTitle = (
+  range: TimeRange,
+  bucketStart: Date,
+  bucketEnd: Date,
+  locale: string,
+  isRu: boolean,
+): string => {
+  if (range === "1y") {
+    return bucketEnd.toLocaleDateString(locale, { month: "long", year: "numeric" });
+  }
+  if (range === "7d") {
+    return bucketEnd.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "short" });
+  }
+  // Weekly (30d, 90d) — show explicit date range so user knows it
+  // covers seven days, not one.
+  const start = bucketStart.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  const end = bucketEnd.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  return isRu ? `Неделя ${start} – ${end}` : `Week of ${start} – ${end}`;
+};
+
+/**
+ * Format a count of days with the correct plural suffix in the active
+ * language. Russian uses three plural forms (день / дня / дней) with
+ * the standard /100 + /10 modulo rules. English just s/no-s.
+ */
+const formatDayCount = (count: number, isRu: boolean): string => {
+  if (!isRu) return `${count} ${count === 1 ? "day" : "days"}`;
+  const m100 = count % 100;
+  const m10 = count % 10;
+  let word: string;
+  if (m100 >= 11 && m100 <= 14) word = "дней";
+  else if (m10 === 1) word = "день";
+  else if (m10 >= 2 && m10 <= 4) word = "дня";
+  else word = "дней";
+  return `${count} ${word}`;
+};
+
+/** Short tick suffix for Y-axis only — compact form. */
+const dayTickSuffix = (count: number, isRu: boolean): string =>
+  isRu ? `${count} дн` : `${count}d`;
 
 export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps) => {
   const { t, i18n } = useTranslation();
@@ -257,8 +311,12 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
       const bucketStart = new Date(bucketEnd);
       bucketStart.setDate(bucketEnd.getDate() - bucket + 1);
 
-      const label = bucketLabel(range, bucketEnd);
-      const point: Record<string, any> = { date: label };
+      // Both labels stored — short one on X-axis tick, rich one on
+      // the tooltip header. dateRange is what makes the bucket
+      // honest: "Неделя 29 апр – 5 мая" not just "5 мая".
+      const label = bucketLabel(range, bucketEnd, i18n.language);
+      const dateRange = bucketTooltipTitle(range, bucketStart, bucketEnd, i18n.language, isRu);
+      const point: Record<string, any> = { date: label, dateRange };
 
       for (const tracker of activeTrackers) {
         let count = 0;
@@ -277,7 +335,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
       data.push(point);
     }
     return data;
-  }, [range, days, bucket, entryMap, activeTrackers, windowEnd]);
+  }, [range, days, bucket, entryMap, activeTrackers, windowEnd, i18n.language, isRu]);
 
   // 7-day strips: list of date stamps + labels for the row headers.
   // Anchored at `windowEnd` (= today shifted by `offset` windows).
@@ -548,8 +606,8 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                   axisLine={false}
                   domain={[0, yMax]}
                   ticks={countTicks}
-                  tickFormatter={(v) => `${v}d`}
-                  width={32}
+                  tickFormatter={(v) => dayTickSuffix(v, isRu)}
+                  width={isRu ? 42 : 32}
                 />
                 <Tooltip
                   contentStyle={{
@@ -574,10 +632,18 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                   // Disable the tooltip's own slide animation. It made
                   // the box feel laggy on iOS when moving fast.
                   isAnimationActive={false}
+                  // Header — show the explicit date range stored on
+                  // each chart point (e.g. "Неделя 29 апр – 5 мая")
+                  // so the bucket is honest. Falls back to the short
+                  // X-axis label if dateRange is missing.
+                  labelFormatter={(label, payload) => {
+                    const richTitle = payload?.[0]?.payload?.dateRange;
+                    return richTitle ?? label;
+                  }}
                   formatter={(value: any, name: string) => {
                     const tracker = activeTrackers.find((t) => t.id === name);
                     if (!tracker || value === null || value === 0) return [null, null];
-                    return [`${value}d`, localizeTrackerTitle(tracker.title)];
+                    return [formatDayCount(value, isRu), localizeTrackerTitle(tracker.title)];
                   }}
                   filterNull
                 />
