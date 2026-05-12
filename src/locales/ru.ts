@@ -687,9 +687,11 @@ const ru: Translation = {
     naturalBMoreOftenWithA: "→ «{{b}}» бывает чаще в дни с «{{a}}»",
     naturalBLessOftenWithA: "→ «{{b}}» бывает реже в дни с «{{a}}»",
     // Maturity stages — 1.7.3+
+    stageFresh: "Свежее наблюдение",
     stageEarly: "Раннее наблюдение",
     stageEmerging: "Заметная связь",
     stageStable: "Устойчивый паттерн",
+    stageFreshHint: "Появилось в последние 3 недели. Понаблюдай — если будет повторяться, превратится в заметную связь.",
     stageEarlyHint: "Замечаем что часто встречаются вместе. Нужно больше дней чтобы говорить о связи.",
     // Headline for "early" cards — no correlation claim, just observation.
     // Includes both numerator (bothYes) and denominator (sharedDays)
@@ -699,6 +701,12 @@ const ru: Translation = {
     earlyObservation_one:  "Совпало {{count}} раз из {{total}} дней",
     earlyObservation_few:  "Совпало {{count}} раза из {{total}} дней",
     earlyObservation_many: "Совпало {{count}} раз из {{total}} дней",
+    // Headline for "fresh" cards — pattern surfaced ONLY in the
+    // recent 21-day window. Fixed framing ("за последние 3 недели")
+    // since the window is constant; only the count varies.
+    freshObservation_one:  "Совпало {{count}} раз за последние 3 недели",
+    freshObservation_few:  "Совпало {{count}} раза за последние 3 недели",
+    freshObservation_many: "Совпало {{count}} раз за последние 3 недели",
     // (coAbsenceNote string removed in 1.7+ — the parallel-absence
     // info is now visible directly in the expanded "Подробнее"
     // facts via the symmetric percentages.)

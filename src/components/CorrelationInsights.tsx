@@ -157,6 +157,60 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
               if (onSelectPair) onSelectPair([c.trackerA.id, c.trackerB.id]);
             };
 
+            // FRESH-stage card — pattern surfaced ONLY in the
+            // recent 21-day window, not on the full history. Same
+            // visual shell as the early card; differs only in badge
+            // (🆕 + fresh hint copy). The text framing uses a fixed
+            // "last 3 weeks" denominator since the analysis window
+            // is constant.
+            if (c.stage === "fresh") {
+              return (
+                <div
+                  key={idx}
+                  role={interactive ? "button" : undefined}
+                  tabIndex={interactive ? 0 : undefined}
+                  onClick={interactive ? handleTap : undefined}
+                  onKeyDown={
+                    interactive
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleTap();
+                          }
+                        }
+                      : undefined
+                  }
+                  className={
+                    "p-3 rounded-2xl bg-muted/20 border border-border/50 space-y-2.5 transition-all" +
+                    (interactive
+                      ? " cursor-pointer hover:bg-muted/30 hover:border-border active:scale-[0.99]"
+                      : "")
+                  }
+                >
+                  <h4 className="font-semibold text-sm leading-snug text-foreground">
+                    <span>{aTitle}</span>
+                    <span className="text-muted-foreground/70 mx-1.5">·</span>
+                    <span>{bTitle}</span>
+                  </h4>
+
+                  <p className="text-xs text-muted-foreground">
+                    {t("correlations.freshObservation", {
+                      count: c.counts.bothYes,
+                    })}
+                  </p>
+
+                  <div className="flex items-center pt-0.5">
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-primary/15 text-primary"
+                      title={t("correlations.stageFreshHint")}
+                    >
+                      🆕 {t("correlations.stageFresh")}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
             // EARLY-stage card — observation without correlation claim.
             // Same visual container as emerging/stable (bg-muted/20 +
             // border-border/50) so the section feels homogenous; the

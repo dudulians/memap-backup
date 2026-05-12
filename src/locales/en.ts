@@ -655,8 +655,10 @@ const en = {
     naturalBLessOftenWithA: "→ \"{{b}}\" happens less on days with \"{{a}}\"",
     // Maturity stages — 1.7.3+
     stageEarly: "Early observation",
+    stageFresh: "Recent observation",
     stageEmerging: "Notable link",
     stageStable: "Stable pattern",
+    stageFreshHint: "Showed up in the last 3 weeks. If it keeps happening, it'll become a notable link.",
     stageEarlyHint: "We notice they often show up together. More days needed before we'd call it a pattern.",
     // Headline for "early" cards — observation, not a claim. Includes
     // numerator (bothYes) and denominator (sharedDays) so the rate is
@@ -664,6 +666,10 @@ const en = {
     // fraction; "Together 5 days" had no scale).
     earlyObservation_one:  "Co-occurred {{count}} time out of {{total}} days",
     earlyObservation_other: "Co-occurred {{count}} times out of {{total}} days",
+    // Headline for "fresh" cards — pattern surfaced ONLY in the
+    // recent 21-day window. Fixed framing since the window is constant.
+    freshObservation_one:  "Co-occurred {{count}} time in the last 3 weeks",
+    freshObservation_other: "Co-occurred {{count}} times in the last 3 weeks",
     expected: "Expected",
     unexpected: "Unexpected",
     unexpectedHint: "Could be coincidence — needs more data to confirm",

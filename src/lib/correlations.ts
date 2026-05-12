@@ -185,16 +185,22 @@ export interface CorrelationResult {
     bothNo: number;  // A=no,  B=no
   };
   /** Maturity stage of this observation (1.7.3+):
-   *  - "early"    — preliminary co-occurrence noticed (≥3 bothYes days),
-   *                 but data too thin to claim a real pattern. UI shows
-   *                 dots + "we noticed this" framing, NO claim.
+   *  - "fresh"    — pattern surfaced ONLY on the recent 21-day window,
+   *                 NOT on the full history. Catches behavior changes
+   *                 (new relationship, new med, new job) that would
+   *                 otherwise be drowned out by older random data.
+   *                 Shown with "🆕 Свежее" badge, no claim.
+   *  - "early"    — preliminary co-occurrence noticed on full history
+   *                 (≥5 bothYes days, concordant ≥ discordant), but
+   *                 data too thin to claim a real pattern. UI shows
+   *                 a single observation line, no claim.
    *  - "emerging" — passes statistical filters, 7-14 shared days. UI
    *                 shows the standard conclusion + a "notable link" label.
    *  - "stable"   — passes filters AND ≥15 shared days. UI shows the full
    *                 card with expandable facts + "stable pattern" label.
    *  Lets us include "we see something forming" observations without
    *  promising a confirmed pattern. */
-  stage: "early" | "emerging" | "stable";
+  stage: "fresh" | "early" | "emerging" | "stable";
 }
 
 // Chi-square critical values for 1 degree of freedom:
@@ -442,6 +448,24 @@ export const computeCorrelations = (
   const dateMap = buildDateMap(entries);
   const out: CorrelationResult[] = [];
 
+  // Recent-window dateMap (last 21 days from today) for "fresh"
+  // detection. Pairs that don't surface on the full history but
+  // DO surface on this window indicate a recent behavior shift
+  // — e.g. new relationship dynamic, new medication, new job
+  // pattern. Without this second pass, those signals get washed
+  // out by 1-3 months of random background noise.
+  const FRESH_WINDOW_DAYS = 21;
+  const MIN_FRESH_BOTH_YES = 4; // relaxed from 5: short window
+  const MIN_FRESH_SHARED = 7;
+  const today = new Date();
+  const todayStr =
+    `${today.getFullYear()}-` +
+    `${String(today.getMonth() + 1).padStart(2, "0")}-` +
+    `${String(today.getDate()).padStart(2, "0")}`;
+  const freshCutoff = shiftDate(todayStr, -(FRESH_WINDOW_DAYS - 1));
+  const recentEntries = entries.filter((e) => e.date >= freshCutoff);
+  const recentDateMap = buildDateMap(recentEntries);
+
   // Sensitive opt-in flag — read once per call. When false (default),
   // pairs that include a sensitive template (intimacy/libido/ex) are
   // suppressed from the insights view. User can opt in via Settings.
@@ -545,7 +569,35 @@ export const computeCorrelations = (
         }
       }
 
-      if (strictCandidates.length === 0 && earlyCandidates.length === 0) continue;
+      // No full-history pattern surfaced — try the recent 21-day
+      // window for a "fresh" pattern (a behavior change that the
+      // older random data is washing out).
+      if (strictCandidates.length === 0 && earlyCandidates.length === 0) {
+        const freshStat = computePairLag(a, b, 0, recentDateMap);
+        if (!freshStat) continue;
+        const concordant = freshStat.counts.bothYes;
+        const discordant =
+          freshStat.counts.aYesBNo + freshStat.counts.aNoBYes;
+        if (
+          freshStat.counts.bothYes >= MIN_FRESH_BOTH_YES &&
+          freshStat.sharedDays >= MIN_FRESH_SHARED &&
+          concordant >= discordant
+        ) {
+          out.push({
+            trackerA: a,
+            trackerB: b,
+            lag: 0,
+            phi: freshStat.phi,
+            chiSquare: freshStat.chiSquare,
+            sharedDays: freshStat.sharedDays,
+            riskRatio: freshStat.riskRatio,
+            semanticVerdict: pairSemanticVerdict(a, b, freshStat.phi),
+            counts: freshStat.counts,
+            stage: "fresh",
+          });
+        }
+        continue;
+      }
 
       // Pick best lag from whichever tier is available, preferring strict.
       const usingStrict = strictCandidates.length > 0;
@@ -582,16 +634,17 @@ export const computeCorrelations = (
     }
   }
 
-  // Sort: stable first, emerging next, early last. Within each tier,
-  // sort by absolute phi with semantic-verdict tiebreaker (same logic
-  // as before for the strict tier; early tier sorts by bothYes count
-  // since phi may be noisy on tiny samples).
-  const stageRank = (s: "early" | "emerging" | "stable") =>
-    s === "stable" ? 0 : s === "emerging" ? 1 : 2;
+  // Sort: stable first, emerging next, fresh (recent pattern) above
+  // early so users notice new behavior changes, early last. Within
+  // each tier sort by absolute phi with semantic-verdict tiebreaker
+  // (strict tiers) or bothYes count (small-sample tiers where phi
+  // is noisy).
+  const stageRank = (s: "fresh" | "early" | "emerging" | "stable") =>
+    s === "stable" ? 0 : s === "emerging" ? 1 : s === "fresh" ? 2 : 3;
   out.sort((x, y) => {
     const rankDiff = stageRank(x.stage) - stageRank(y.stage);
     if (rankDiff !== 0) return rankDiff;
-    if (x.stage === "early") {
+    if (x.stage === "early" || x.stage === "fresh") {
       return y.counts.bothYes - x.counts.bothYes;
     }
     const bumpX = x.semanticVerdict === "expected" ? 0.02 : x.semanticVerdict === "unexpected" ? -0.02 : 0;
