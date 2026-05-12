@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,11 @@ import { getNotificationSettings, saveNotificationSettings, requestNotificationP
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { generateDevData } from "@/lib/devDataGenerator";
-import { generateDemoData } from "@/lib/demoDataGenerator";
+import {
+  generateDemoData,
+  DEMO_PACK_IDS,
+  type DemoPackId,
+} from "@/lib/demoDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -318,10 +322,27 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [devGenRunning, setDevGenRunning] = useState(false);
   // Marketing demo generator — replaces ALL trackers + entries with
   // a curated 8-tracker / 60-day script engineered to produce stable
-  // correlations + one fresh-window pattern. Used by the owner to
-  // grab screenshots / App-Store preview frames without waiting.
+  // correlations + one fresh-window pattern. Four themed packs;
+  // pendingDemoPack carries the choice from the button row through
+  // the confirmation dialog.
   const [demoGenDialogOpen, setDemoGenDialogOpen] = useState(false);
   const [demoGenRunning, setDemoGenRunning] = useState(false);
+  const [pendingDemoPack, setPendingDemoPack] = useState<DemoPackId | null>(null);
+  // "Demo mode" unlock — exposes the demo buttons in production
+  // builds where import.meta.env.DEV is false. Toggled by 7-tap on
+  // the version label in this same Settings sub-screen. Persisted
+  // in localStorage so the owner only needs to unlock once per
+  // install (re-tap 7 times to lock back).
+  const [demoUnlocked, setDemoUnlocked] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("memap_demo_unlocked") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [versionTapCount, setVersionTapCount] = useState(0);
+  const versionTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showDemoButtons = import.meta.env.DEV || demoUnlocked;
   const handleGenerateDevData = async () => {
     setDevGenRunning(true);
     try {
@@ -366,14 +387,22 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     }
   };
 
+  // Open the demo-data confirmation for the chosen pack. The
+  // generate handler reads `pendingDemoPack`.
+  const openDemoConfirm = (packId: DemoPackId) => {
+    setPendingDemoPack(packId);
+    setDemoGenDialogOpen(true);
+  };
+
   // Demo data — destructive. Wipes existing trackers + entries and
-  // replaces them with the curated 8-tracker / 60-day demo script
-  // (see demoDataGenerator.ts). Behind an explicit confirm because
-  // it nukes whatever the user had.
+  // replaces them with the curated pack-specific script (see
+  // demoDataGenerator.ts). Behind an explicit confirm because it
+  // nukes whatever the user had.
   const handleGenerateDemoData = async () => {
+    if (!pendingDemoPack) return;
     setDemoGenRunning(true);
     try {
-      const result = generateDemoData();
+      const result = generateDemoData(pendingDemoPack);
       // saveTrackers FIRST so the freshly persisted cycleStartDate is
       // in place by the time the entries-changed event listeners
       // re-pull entries.
@@ -398,7 +427,40 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     } finally {
       setDemoGenRunning(false);
       setDemoGenDialogOpen(false);
+      setPendingDemoPack(null);
     }
+  };
+
+  // Version-label tap detector. Seven taps within a 2-second
+  // window toggle the demo-mode unlock. Classic Apple-style
+  // hidden gesture so production builds don't expose demo
+  // buttons to App Store users but the owner can still trigger
+  // them from a TestFlight build for screenshots.
+  const handleVersionTap = () => {
+    if (versionTapTimer.current) clearTimeout(versionTapTimer.current);
+    const next = versionTapCount + 1;
+    if (next >= 7) {
+      const newState = !demoUnlocked;
+      try {
+        if (newState) localStorage.setItem("memap_demo_unlocked", "true");
+        else localStorage.removeItem("memap_demo_unlocked");
+      } catch {
+        /* ignore */
+      }
+      setDemoUnlocked(newState);
+      setVersionTapCount(0);
+      toast({
+        title: newState
+          ? t("settings.demoUnlockedTitle")
+          : t("settings.demoLockedTitle"),
+        description: newState
+          ? t("settings.demoUnlockedDesc")
+          : t("settings.demoLockedDesc"),
+      });
+      return;
+    }
+    setVersionTapCount(next);
+    versionTapTimer.current = setTimeout(() => setVersionTapCount(0), 2000);
   };
 
   const handleExportData = async () => {
@@ -1316,22 +1378,35 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </Button>
               )}
 
-              {/* Demo generator — owner-only marketing tool. REPLACES
-                  trackers + entries with a curated 8-tracker / 60-day
-                  script engineered to produce textbook correlations
-                  (stable + fresh) for App Store screenshots and
-                  preview recordings. DEV-only too, but uses a
-                  primary tint to distinguish it from the noisy
-                  random dev generator above. */}
-              {import.meta.env.DEV && (
-                <Button
-                  variant="outline"
-                  onClick={() => setDemoGenDialogOpen(true)}
-                  className="w-full justify-start border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {t("settings.demoDataButton")}
-                </Button>
+              {/* Demo packs — owner-only marketing tool. REPLACES
+                  trackers + entries with one of four themed packs,
+                  each engineered to surface non-obvious correlations
+                  for App Store screenshots / preview recordings.
+                  Visible when (DEV build) OR (demo-mode unlocked via
+                  7-tap on the version label below). */}
+              {showDemoButtons && (
+                <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {t("settings.demoSectionTitle")}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {t("settings.demoSectionDesc")}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {DEMO_PACK_IDS.map((packId) => (
+                      <Button
+                        key={packId}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDemoConfirm(packId)}
+                        className="justify-start border-primary/40 text-primary hover:bg-primary/10 hover:text-primary text-xs"
+                      >
+                        {t(`settings.demoPack_${packId.replace("-", "_")}`)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Privacy policy link — required by App Store / Play Store
@@ -1374,6 +1449,26 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   </div>
                 </div>
               </div>
+
+              {/* Version label at the very bottom. Also the secret
+                  tap target — 7 taps within 2 s toggle demo-mode
+                  unlock (exposes the demo-pack buttons in production
+                  builds where import.meta.env.DEV is false). The
+                  "Demo mode ON" pill only appears once unlocked, so
+                  App Store users see only the version. */}
+              <button
+                type="button"
+                onClick={handleVersionTap}
+                className="w-full text-center text-[11px] text-muted-foreground/60 pt-4 pb-2 select-none"
+              >
+                v1.7.3
+                {demoUnlocked && (
+                  <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[9px] font-medium">
+                    <Sparkles className="h-2.5 w-2.5" />
+                    {t("settings.demoModeOn")}
+                  </span>
+                )}
+              </button>
             </div>
             )}
           </div>
@@ -1401,14 +1496,16 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       </AlertDialog>
 
       {/* Demo-data confirmation. Destructive — wipes all trackers
-          and entries. The copy in the description makes that
-          explicit so a stray DEV-build tap doesn't kill real data. */}
+          and entries. Description carries the chosen pack name so
+          the user knows exactly what they're about to load. */}
       <AlertDialog open={demoGenDialogOpen} onOpenChange={setDemoGenDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("settings.demoDataConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("settings.demoDataConfirmDesc")}
+              {pendingDemoPack && t("settings.demoDataConfirmDescPack", {
+                pack: t(`settings.demoPack_${pendingDemoPack.replace("-", "_")}`),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

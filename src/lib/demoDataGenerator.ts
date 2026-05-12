@@ -1,35 +1,28 @@
-// Curated demo data generator — used for screenshots / app-store
-// previews / marketing recordings. Unlike devDataGenerator (which
-// works on the user's existing trackers with broad random biases),
-// this one:
-//   1. REPLACES the entire tracker + entry state with a fixed set
-//      of 8 curated questions. Same templates every run so the
-//      screenshots stay reproducible.
-//   2. Engineers per-day entries so a specific narrative of
-//      correlations surfaces in Insights — strong stable patterns,
-//      one moderate emerging pattern, plus one 🆕 "fresh" pattern
-//      that only appears in the last 21 days (to demo the
-//      recent-window detection).
+// Curated demo data generator — used for App Store screenshots /
+// preview recordings / marketing assets. Four themed packs, each
+// engineered to surface NON-OBVIOUS correlations that demonstrate
+// what the app catches. The "alcohol + headache" obvious pair was
+// the v1 demo; users already know that, so it doesn't sell the
+// product. These packs reveal patterns the user wouldn't have
+// noticed themselves — which is the actual value proposition.
 //
-// Layer 1 — Stable patterns (full 60 days):
-//   - argued-with-partner ↔ headache (same day, ~85 % concordant)
-//   - drank-alcohol → slept-enough (NEGATIVE, same day, ~80 % miss)
-//   - drank-alcohol → headache  (lag +1, ~70 % hangover)
-//   - exercised ↔ felt-happy   (same day, ~80 %)
-//   - exercised ↔ slept-enough (same day, ~75 %)
-//   - felt-anxious ↔ argued    (same day, ~60 %)
+// Each pack:
+//   - Picks 8 curated template ids
+//   - Engineers per-day entries so 4-5 STABLE patterns + 1-2
+//     EMERGING + 1 FRESH (last-21-days-only) surface in Insights
+//   - Includes at least one LAG-+1 or LAG--1 pattern to showcase
+//     the engine's "the day after / the day before" framing
 //
-// Layer 2 — Fresh pattern (last 21 days only):
-//   - outside-30min ↔ felt-happy (same day, ~85 %; first 39 days
-//                                  this pair is random and won't
-//                                  pass the full-history filter,
-//                                  so it surfaces only via the
-//                                  recent-window pass).
-//
-// Result on Patterns tab after running: 5-6 cards with mixed
-// 🌳 Stable / 🌿 Emerging / 🆕 Fresh badges, "Expected" semantic
-// verdicts, and graphs that read at a glance. Exactly the kind
-// of frame an App Store preview wants.
+// Packs:
+//   A — "Self-care" (parenting + boundaries) — yelling at kids
+//       traces back to skipping personal time
+//   B — "Quiet burnout" (work / boundaries) — saying yes when you
+//       meant no cascades into evening burnout + impulse spending
+//   C — "Body knows" (somatic / suppressed emotion) — suppressed
+//       boundaries surface as headache the next day
+//   D — "Behind the fight" (relationships) — arguments and
+//       drinking are SYMPTOMS, root is loneliness + comparison +
+//       bottled-up "no"s
 
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { LIFE_STREAMS } from "./lifeStreams";
@@ -43,30 +36,21 @@ import { uuid } from "./uuid";
 const NUM_DAYS = 60;
 const FRESH_WINDOW = 21;
 
-const DEMO_TEMPLATE_IDS = [
-  "argued-with-partner",
-  "headache",
-  "drank-alcohol",
-  "slept-enough",
-  "exercised",
-  "felt-anxious",
-  "felt-happy",
-  "outside-30min",
-] as const;
+export type DemoPackId = "self-care" | "burnout" | "body" | "behind-fight";
 
-type DemoId = (typeof DEMO_TEMPLATE_IDS)[number];
+interface DemoPack {
+  id: DemoPackId;
+  templateIds: string[];
+  // Build the engineered per-day series. Returns Map<templateId,
+  // boolean[]> where each array is length NUM_DAYS, dates[0]
+  // oldest, dates[N-1] today.
+  script: () => Map<string, boolean[]>;
+}
 
-// Walks LIFE_STREAMS to find the template by id and builds a fresh
-// Tracker object from it. Each demo run gets new UUIDs so we don't
-// collide with anything already in storage.
 const buildTrackerFromTemplate = (tplId: string): Tracker | null => {
   for (const stream of LIFE_STREAMS) {
     for (const tpl of stream.templates) {
       if (tpl.id === tplId) {
-        // Store title / questionText / advice already localised to
-        // the user's current language, the same way AddTrackerModal +
-        // starterGenerator do. Without this the screenshots would
-        // come out in English even when the UI is in Russian.
         return {
           id: uuid(),
           title: localizeTrackerTitleRaw(tpl.title),
@@ -98,81 +82,326 @@ const dateNDaysAgo = (n: number): string => {
 
 const clamp01 = (v: number) => Math.max(0.02, Math.min(0.98, v));
 
-// Engineer each tracker's 60-day series from a small set of latent
-// axes plus rule-based derivations. Returns a Map<templateId,
-// boolean[]> with dates[0] = oldest, dates[N-1] = today.
-const engineerScript = (): Map<DemoId, boolean[]> => {
-  const N = NUM_DAYS;
+// Bernoulli with bias. Used inline for readability inside the
+// per-pack engineerScript() functions.
+const r = (p: number): boolean => Math.random() < clamp01(p);
 
-  // Latent axes — independent per-day Bernoullis. Frequencies
-  // chosen so the resulting correlations have enough concordant
-  // days to clear the strict filter (chi-square, phi, occurrences).
-  const argued: boolean[] = [];
-  const drank: boolean[] = [];
-  const exercised: boolean[] = [];
-  const outside: boolean[] = [];
-  for (let i = 0; i < N; i++) {
-    argued.push(Math.random() < 14 / 60);    // ~14 argued days
-    drank.push(Math.random() < 16 / 60);     // ~16 drinking days
-    exercised.push(Math.random() < 26 / 60); // ~26 exercise days
-    outside.push(Math.random() < 24 / 60);   // ~24 outside-walk days
-  }
+// PACK A — Self-care for parents.
+// Insight: yelling at kid traces back to "I didn't take care of
+// myself first". Personal time + good sleep are protective.
+const packSelfCare: DemoPack = {
+  id: "self-care",
+  templateIds: [
+    "yelled-at-kid",
+    "ran-out-of-patience",
+    "felt-bad-parent",
+    "kept-morning-promise",   // ≈ "self-care morning routine"
+    "slept-enough",
+    "felt-fatigued",
+    "saw-friends",
+    "felt-happy",
+  ],
+  script: () => {
+    const N = NUM_DAYS;
+    const selfCare: boolean[] = [];  // kept-morning-promise
+    const sawFriends: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      selfCare.push(r(0.45));
+      sawFriends.push(r(0.32));
+    }
 
-  // Derived: headache. Same-day boost from argued (85 %), next-day
-  // boost from drinking the day before (70 %), small baseline (5 %).
-  const headache: boolean[] = [];
-  for (let i = 0; i < N; i++) {
-    let p = 0.05;
-    if (argued[i]) p += 0.85;
-    if (i > 0 && drank[i - 1]) p += 0.65;
-    headache.push(Math.random() < clamp01(p));
-  }
+    const slept: boolean[] = [];
+    for (let i = 0; i < N; i++) slept.push(r(selfCare[i] ? 0.85 : 0.5));
 
-  // Derived: slept-enough. Tanks when drinking same day (-0.6),
-  // boosts when exercise (+0.25), baseline 0.65.
-  const slept: boolean[] = [];
-  for (let i = 0; i < N; i++) {
-    let p = 0.65;
-    if (drank[i]) p -= 0.6;
-    if (exercised[i]) p += 0.25;
-    slept.push(Math.random() < clamp01(p));
-  }
+    const fatigued: boolean[] = [];
+    for (let i = 0; i < N; i++) fatigued.push(r(slept[i] ? 0.15 : 0.8));
 
-  // Derived: felt-happy. Baseline 0.45. Tanks on argued (-0.35).
-  // Boosts on exercise (+0.4). FRESH layer: in the last 21 days
-  // ONLY, going outside boosts happy by +0.5 — that's the pair
-  // we want surfacing as 🆕. In the first 39 days outside has no
-  // effect on happy, so the pair stays uncorrelated on the full
-  // window and only the recent-window pass picks it up.
-  const happy: boolean[] = [];
-  for (let i = 0; i < N; i++) {
-    let p = 0.45;
-    if (argued[i]) p -= 0.35;
-    if (exercised[i]) p += 0.4;
-    const inFreshWindow = i >= N - FRESH_WINDOW;
-    if (inFreshWindow && outside[i]) p += 0.5;
-    happy.push(Math.random() < clamp01(p));
-  }
+    const yelled: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.08;
+      if (!selfCare[i]) p += 0.55; // THE insight
+      if (fatigued[i]) p += 0.15;
+      yelled.push(r(p));
+    }
+    const ranOutPatience: boolean[] = [];
+    for (let i = 0; i < N; i++) ranOutPatience.push(r(yelled[i] ? 0.85 : 0.15));
+    const feltBadParent: boolean[] = [];
+    for (let i = 0; i < N; i++) feltBadParent.push(r(yelled[i] ? 0.7 : 0.05));
 
-  // Derived: felt-anxious. Baseline 0.18, boost on argued (+0.55).
-  const anxious: boolean[] = [];
-  for (let i = 0; i < N; i++) {
-    let p = 0.18;
-    if (argued[i]) p += 0.55;
-    anxious.push(Math.random() < clamp01(p));
-  }
+    // Happy: boosted by self-care AND by saw-friends in last 21 days
+    // only (the fresh-stage demo pair).
+    const happy: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.4;
+      if (selfCare[i]) p += 0.35;
+      if (yelled[i]) p -= 0.3;
+      if (i >= N - FRESH_WINDOW && sawFriends[i]) p += 0.45;
+      happy.push(r(p));
+    }
 
-  return new Map<DemoId, boolean[]>([
-    ["argued-with-partner", argued],
-    ["headache", headache],
-    ["drank-alcohol", drank],
-    ["slept-enough", slept],
-    ["exercised", exercised],
-    ["felt-anxious", anxious],
-    ["felt-happy", happy],
-    ["outside-30min", outside],
-  ]);
+    return new Map<string, boolean[]>([
+      ["yelled-at-kid", yelled],
+      ["ran-out-of-patience", ranOutPatience],
+      ["felt-bad-parent", feltBadParent],
+      ["kept-morning-promise", selfCare],
+      ["slept-enough", slept],
+      ["felt-fatigued", fatigued],
+      ["saw-friends", sawFriends],
+      ["felt-happy", happy],
+    ]);
+  },
 };
+
+// PACK B — Quiet burnout (work + boundaries).
+// Insight: saying yes when you meant no cascades into evening
+// burnout + next-day impulse spending. Recognition + creative
+// work are the antidote.
+const packBurnout: DemoPack = {
+  id: "burnout",
+  templateIds: [
+    "said-yes-when-meant-no",
+    "burned-out-after-work",
+    "compared-on-social",
+    "felt-useless",
+    "impulse-spending",
+    "got-recognition",
+    "did-creative-work",
+    "felt-fulfilled-at-work",
+  ],
+  script: () => {
+    const N = NUM_DAYS;
+    const saidYes: boolean[] = [];
+    const compared: boolean[] = [];
+    const gotRecognition: boolean[] = [];
+    const didCreative: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      saidYes.push(r(0.3));
+      compared.push(r(0.32));
+      gotRecognition.push(r(0.22));
+      didCreative.push(r(0.42));
+    }
+
+    const burnedOut: boolean[] = [];
+    for (let i = 0; i < N; i++) burnedOut.push(r(saidYes[i] ? 0.8 : 0.2));
+
+    const feltUseless: boolean[] = [];
+    for (let i = 0; i < N; i++) feltUseless.push(r(compared[i] ? 0.78 : 0.12));
+
+    // Lag +1: yesterday's burnout → today's impulse spending.
+    const impulse: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.12;
+      if (i > 0 && burnedOut[i - 1]) p += 0.55;
+      impulse.push(r(p));
+    }
+
+    // Fulfilled boosted by recognition, plus by creative-work in the
+    // recent window only (the fresh-stage pair).
+    const fulfilled: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.3;
+      if (gotRecognition[i]) p += 0.55;
+      if (i >= N - FRESH_WINDOW && didCreative[i]) p += 0.5;
+      fulfilled.push(r(p));
+    }
+
+    return new Map<string, boolean[]>([
+      ["said-yes-when-meant-no", saidYes],
+      ["burned-out-after-work", burnedOut],
+      ["compared-on-social", compared],
+      ["felt-useless", feltUseless],
+      ["impulse-spending", impulse],
+      ["got-recognition", gotRecognition],
+      ["did-creative-work", didCreative],
+      ["felt-fulfilled-at-work", fulfilled],
+    ]);
+  },
+};
+
+// PACK C — Body knows (somatic / suppressed emotion).
+// Insight: suppressed "no"s show up as headache + back pain the
+// next day. Anxiety + missed sunlight feed the loop.
+const packBody: DemoPack = {
+  id: "body",
+  templateIds: [
+    "headache",
+    "said-yes-when-meant-no",
+    "felt-anxious",
+    "back-or-neck-pain",
+    "ate-sweets",
+    "outside-30min",
+    "had-energy",
+    "slept-enough",
+  ],
+  script: () => {
+    const N = NUM_DAYS;
+    const saidYes: boolean[] = [];
+    const outside: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      saidYes.push(r(0.28));
+      outside.push(r(0.5));
+    }
+
+    const slept: boolean[] = [];
+    for (let i = 0; i < N; i++) slept.push(r(0.65));
+
+    // Anxious: high baseline, less when slept well, more when
+    // skipped sunlight (small effect).
+    const anxious: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.3;
+      if (!slept[i]) p += 0.2;
+      anxious.push(r(p));
+    }
+
+    // Headache: lag +1 from suppressed "no". When saidYes yesterday,
+    // 70 % headache today. Baseline 8 %.
+    const headache: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.08;
+      if (i > 0 && saidYes[i - 1]) p += 0.62;
+      headache.push(r(p));
+    }
+
+    // Back pain: same-day boost when anxious. Suppression also
+    // contributes.
+    const backPain: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.12;
+      if (anxious[i]) p += 0.5;
+      if (saidYes[i]) p += 0.2;
+      backPain.push(r(p));
+    }
+
+    // Sweets cravings: opposite of sleep + boosted by anxiety.
+    const sweets: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.3;
+      if (!slept[i]) p += 0.4;
+      if (anxious[i]) p += 0.15;
+      sweets.push(r(p));
+    }
+
+    // Energy: boosted by outside-30min, especially in last 21 days
+    // (fresh pair). Tanked by no-sleep.
+    const energy: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.4;
+      if (slept[i]) p += 0.25;
+      if (i >= N - FRESH_WINDOW && outside[i]) p += 0.45;
+      energy.push(r(p));
+    }
+
+    return new Map<string, boolean[]>([
+      ["headache", headache],
+      ["said-yes-when-meant-no", saidYes],
+      ["felt-anxious", anxious],
+      ["back-or-neck-pain", backPain],
+      ["ate-sweets", sweets],
+      ["outside-30min", outside],
+      ["had-energy", energy],
+      ["slept-enough", slept],
+    ]);
+  },
+};
+
+// PACK D — Behind the fight (relationships).
+// Insight: arguments + drinking aren't random — they trace to
+// loneliness + social comparison + bottled-up "no"s. Includes
+// lag --1 ("argument the day after a suppressed no") and lag +1
+// ("anxiety the morning after drinking") to showcase the engine's
+// lag awareness.
+const packBehindFight: DemoPack = {
+  id: "behind-fight",
+  templateIds: [
+    "argued-with-partner",
+    "drank-alcohol",
+    "said-yes-when-meant-no",
+    "compared-on-social",
+    "felt-lonely",
+    "called-parent",
+    "felt-anxious",
+    "slept-enough",
+  ],
+  script: () => {
+    const N = NUM_DAYS;
+    const saidYes: boolean[] = [];
+    const compared: boolean[] = [];
+    const calledParent: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      saidYes.push(r(0.27));
+      compared.push(r(0.3));
+      calledParent.push(r(0.35));
+    }
+
+    // Lonely: high when no parent call, low when parent call.
+    const lonely: boolean[] = [];
+    for (let i = 0; i < N; i++) lonely.push(r(calledParent[i] ? 0.15 : 0.55));
+
+    // Argued: lag +1 from yesterday's suppressed "no". So the engine
+    // catches "argued the day after said-yes-when-meant-no".
+    const argued: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.08;
+      if (i > 0 && saidYes[i - 1]) p += 0.65;
+      argued.push(r(p));
+    }
+
+    // Drank: lag +1 from social-compare (compared yesterday →
+    // drank today). Same-day boost from loneliness.
+    const drank: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.1;
+      if (i > 0 && compared[i - 1]) p += 0.55;
+      if (lonely[i]) p += 0.35;
+      drank.push(r(p));
+    }
+
+    // Anxious: lag +1 from drinking (hangxiety — morning after).
+    const anxious: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.18;
+      if (i > 0 && drank[i - 1]) p += 0.6;
+      anxious.push(r(p));
+    }
+
+    // Slept: hurt by argued same day, boosted by called-parent in
+    // last 21 days (the fresh-stage pair — social warmth → better
+    // sleep, emerging recently).
+    const slept: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.65;
+      if (argued[i]) p -= 0.45;
+      if (i >= N - FRESH_WINDOW && calledParent[i]) p += 0.3;
+      slept.push(r(p));
+    }
+
+    return new Map<string, boolean[]>([
+      ["argued-with-partner", argued],
+      ["drank-alcohol", drank],
+      ["said-yes-when-meant-no", saidYes],
+      ["compared-on-social", compared],
+      ["felt-lonely", lonely],
+      ["called-parent", calledParent],
+      ["felt-anxious", anxious],
+      ["slept-enough", slept],
+    ]);
+  },
+};
+
+const PACKS: Record<DemoPackId, DemoPack> = {
+  "self-care": packSelfCare,
+  burnout: packBurnout,
+  body: packBody,
+  "behind-fight": packBehindFight,
+};
+
+export const DEMO_PACK_IDS: DemoPackId[] = [
+  "self-care",
+  "burnout",
+  "body",
+  "behind-fight",
+];
 
 export interface DemoDataResult {
   newTrackers: Tracker[];
@@ -180,34 +409,37 @@ export interface DemoDataResult {
   trackerCount: number;
   daysCount: number;
   generatedCount: number;
+  pack: DemoPackId;
 }
 
 /**
- * Build the demo state. REPLACES the entire trackers + entries
- * payload — callers should pass the result straight to
- * saveTrackers + saveEntries. Existing data is wiped.
- *
- * Returns trackers with `cycleStartDate` pulled back to the
- * oldest generated date so Signals counts the demo window.
+ * Build the demo state for the chosen pack. REPLACES the entire
+ * trackers + entries payload — callers should pass the result
+ * straight to saveTrackers + saveEntries. Existing data is wiped.
  */
-export const generateDemoData = (): DemoDataResult => {
+export const generateDemoData = (packId: DemoPackId): DemoDataResult => {
+  const pack = PACKS[packId];
+  if (!pack) {
+    throw new Error(`Unknown demo pack: ${packId}`);
+  }
+
   const trackers: Tracker[] = [];
-  const idToTracker = new Map<DemoId, Tracker>();
-  for (const tplId of DEMO_TEMPLATE_IDS) {
+  const idToTracker = new Map<string, Tracker>();
+  for (const tplId of pack.templateIds) {
     const t = buildTrackerFromTemplate(tplId);
     if (!t) continue;
     trackers.push(t);
     idToTracker.set(tplId, t);
   }
 
-  // dates[0] = oldest (60 days ago), dates[N-1] = today.
+  // dates[0] = oldest, dates[N-1] = today.
   const dates: string[] = [];
   for (let i = NUM_DAYS - 1; i >= 0; i--) dates.push(dateNDaysAgo(i));
   const oldestDate = dates[0];
 
-  const script = engineerScript();
+  const script = pack.script();
   const entries: TrackerEntry[] = [];
-  for (const tplId of DEMO_TEMPLATE_IDS) {
+  for (const tplId of pack.templateIds) {
     const tracker = idToTracker.get(tplId);
     const series = script.get(tplId);
     if (!tracker || !series) continue;
@@ -233,5 +465,6 @@ export const generateDemoData = (): DemoDataResult => {
     trackerCount: newTrackers.length,
     daysCount: NUM_DAYS,
     generatedCount: entries.length,
+    pack: packId,
   };
 };
