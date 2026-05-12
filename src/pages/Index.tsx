@@ -261,11 +261,8 @@ const Index = () => {
               so TodayTab (which owns DailySession) can react. If the user
               is on Patterns/Notes the TodayTab is unmounted and won't hear
               the event, so first we swap to Cards then dispatch on the
-              next tick once TodayTab's listener has attached.
-              Positioning: -top-10 lifts the 64px button so ~40px sits
-              above the nav and ~24px overlaps it — a clear "floating"
-              look, not glued to the nav strip. */}
-          <div className="absolute left-1/2 -translate-x-1/2 -top-10 z-20">
+              next tick once TodayTab's listener has attached. */}
+          <div className="absolute left-1/2 -translate-x-1/2 -top-6 z-20">
             <button
               data-coachmark="play-button"
               onClick={() => {

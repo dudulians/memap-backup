@@ -1377,7 +1377,7 @@ export const TodayTab = () => {
         data-app-fab
         className="fixed right-4 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
         style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 5rem)",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 6.5rem)",
         }}
       >
         <Plus className="h-6 w-6" strokeWidth={2.25} />
