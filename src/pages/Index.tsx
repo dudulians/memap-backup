@@ -237,15 +237,17 @@ const Index = () => {
         )}
       </main>
 
-      {/* Floating back-to-top — sits above the bottom nav, flush right so
-          it never overlaps the center "+" button. Appears once the user
-          has scrolled past ~300px in any tab. */}
+      {/* Floating back-to-top — appears once the user has scrolled past
+          ~300px in any tab. Stacked above the right-aligned "+" FAB
+          (which sits at bottom 6.5rem + h-14, so its top is ~10rem)
+          so they don't overlap. On tabs without a "+" FAB the arrow
+          ends up a bit higher than strictly needed, which is fine. */}
       {showBackToTop && (
         <button
           onClick={scrollMainToTop}
           aria-label="Scroll to top"
           className="fixed right-4 z-20 h-11 w-11 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform animate-fade-in"
-          style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+          style={{ bottom: "calc(10.5rem + env(safe-area-inset-bottom, 0px))" }}
         >
           <ArrowUp className="h-5 w-5" />
         </button>
