@@ -692,10 +692,13 @@ const ru: Translation = {
     stageStable: "Устойчивый паттерн",
     stageEarlyHint: "Замечаем что часто встречаются вместе. Нужно больше дней чтобы говорить о связи.",
     // Headline for "early" cards — no correlation claim, just observation.
-    // "X дней вместе" = bothYes count. Uses smart plural via i18next.
-    earlyObservation_one:  "Вместе в {{count}} день",
-    earlyObservation_few:  "Вместе в {{count}} дня",
-    earlyObservation_many: "Вместе в {{count}} дней",
+    // Includes both numerator (bothYes) and denominator (sharedDays)
+    // so the rate is self-explanatory ("5 раз из 59 дней" reads
+    // instantly as a small fraction, vs. "Вместе 5 дней" which had
+    // no scale). Plural form is driven by {{count}} (the "раз" noun).
+    earlyObservation_one:  "Совпало {{count}} раз из {{total}} дней",
+    earlyObservation_few:  "Совпало {{count}} раза из {{total}} дней",
+    earlyObservation_many: "Совпало {{count}} раз из {{total}} дней",
     // (coAbsenceNote string removed in 1.7+ — the parallel-absence
     // info is now visible directly in the expanded "Подробнее"
     // facts via the symmetric percentages.)

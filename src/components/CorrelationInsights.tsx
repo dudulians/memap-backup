@@ -159,18 +159,17 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
 
             // EARLY-stage card — observation without correlation claim.
             // Same visual container as emerging/stable (bg-muted/20 +
-            // border-border/50), so the section feels homogenous. The
-            // only differentiator is the stage badge (🌱 vs 🌿 vs 🌳).
-            // Earlier version used a lighter bg + category-coloured
-            // text — user feedback: cards looked ghostly and were hard
-            // to read against the wallpaper bg.
+            // border-border/50) so the section feels homogenous; the
+            // only differentiator is the stage badge.
             //
-            // Three elements: the pair (foreground text, readable),
-            // dots + co-occurrence count, stage badge + shared-days
-            // counter. No conclusion line — we genuinely don't have
-            // enough data to claim a pattern.
+            // Layout (1.7.3+): pair header → single observation line
+            // ("Совпало 5 раз из 59 дней") → stage badge row. Dots
+            // were removed — they were decorative and confused new
+            // users ("what do these dots mean? why do they disappear
+            // later?"). The observation text already conveys the
+            // count and now also includes the denominator, so the
+            // rate is self-explanatory.
             if (c.stage === "early") {
-              const dotCount = Math.min(c.counts.bothYes, 5);
               return (
                 <div
                   key={idx}
@@ -194,45 +193,25 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                       : "")
                   }
                 >
-                  {/* Pair header — foreground colour (full contrast),
-                      readable in any theme. Category info is conveyed
-                      via the dot colour below, not the title. */}
                   <h4 className="font-semibold text-sm leading-snug text-foreground">
                     <span>{aTitle}</span>
                     <span className="text-muted-foreground/70 mx-1.5">·</span>
                     <span>{bTitle}</span>
                   </h4>
 
-                  {/* Dots + count of shared yes-yes days. Dots use
-                      tracker-A category colour as a subtle hue cue;
-                      capped at 5 visually, exact count in text. */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      {Array.from({ length: dotCount }).map((_, i) => (
-                        <span
-                          key={i}
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: `hsl(var(--${colorA}))` }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {t("correlations.earlyObservation", { count: c.counts.bothYes })}
-                    </span>
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {t("correlations.earlyObservation", {
+                      count: c.counts.bothYes,
+                      total: c.sharedDays,
+                    })}
+                  </p>
 
-                  {/* Stage badge + shared-days counter. Same row + same
-                      sizes as the badge row on emerging/stable cards
-                      to keep visual rhythm. */}
-                  <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center pt-0.5">
                     <span
                       className="text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 bg-emerging/20 text-emerging"
                       title={t("correlations.stageEarlyHint")}
                     >
                       🌱 {t("correlations.stageEarly")}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {t("correlations.sharedDays", { count: c.sharedDays })}
                     </span>
                   </div>
                 </div>

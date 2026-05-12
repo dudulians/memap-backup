@@ -485,8 +485,18 @@ export const computeCorrelations = (
       // the strict one if available.
       const strictCandidates: PairStats[] = [];
       const earlyCandidates: PairStats[] = [];
-      const MIN_EARLY_BOTH_YES = 3;
-      const MIN_EARLY_SHARED = 3;
+      // Early-tier gate (tightened in 1.7.3 after user feedback that
+      // pairs like "headache × stomach 5 days out of 59" surfaced as
+      // early patterns even when those 5 co-occurrences were
+      // essentially random chance):
+      //   - bothYes ≥ 5    (was 3 — 3 felt like coincidence, not a
+      //                     trend, even to non-statistical users)
+      //   - sharedDays ≥ 7 (was 3 — need at least a week of overlap)
+      //   - lift ≥ 1.5     (observed co-occurrences must be at least
+      //                     1.5× what independence would predict)
+      const MIN_EARLY_BOTH_YES = 5;
+      const MIN_EARLY_SHARED = 7;
+      const MIN_EARLY_LIFT = 1.5;
 
       for (const lag of [0, 1, -1] as Lag[]) {
         const stat = computePairLag(a, b, lag, dateMap);
@@ -505,14 +515,28 @@ export const computeCorrelations = (
 
         if (passesStrict) {
           strictCandidates.push(stat);
-        } else if (
-          // Early observation — at least MIN_EARLY co-occurrence days
-          // and a reasonable shared-day floor so we don't surface noise
-          // from a single coincidence.
-          stat.counts.bothYes >= MIN_EARLY_BOTH_YES &&
-          stat.sharedDays >= MIN_EARLY_SHARED
-        ) {
-          earlyCandidates.push(stat);
+        } else {
+          // Early observation gate. Lift = observed / expected, where
+          // expected = aYes × bYes / sharedDays under the null
+          // hypothesis of independence. Lift ≥ 1.5 means the pair
+          // co-occurs at least 50 % more often than chance would
+          // predict — enough signal to surface, not yet enough to
+          // claim "correlation".
+          const expectedBothYes =
+            stat.sharedDays > 0 ? (aYes * bYes) / stat.sharedDays : 0;
+          const lift =
+            expectedBothYes > 0
+              ? stat.counts.bothYes / expectedBothYes
+              : stat.counts.bothYes > 0
+              ? Infinity
+              : 0;
+          if (
+            stat.counts.bothYes >= MIN_EARLY_BOTH_YES &&
+            stat.sharedDays >= MIN_EARLY_SHARED &&
+            lift >= MIN_EARLY_LIFT
+          ) {
+            earlyCandidates.push(stat);
+          }
         }
       }
 

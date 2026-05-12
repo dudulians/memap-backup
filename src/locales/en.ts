@@ -658,9 +658,12 @@ const en = {
     stageEmerging: "Notable link",
     stageStable: "Stable pattern",
     stageEarlyHint: "We notice they often show up together. More days needed before we'd call it a pattern.",
-    // Headline for "early" cards — observation, not a claim.
-    earlyObservation_one:  "Together {{count}} day",
-    earlyObservation_other: "Together {{count}} days",
+    // Headline for "early" cards — observation, not a claim. Includes
+    // numerator (bothYes) and denominator (sharedDays) so the rate is
+    // self-explanatory ("5 times out of 59 days" reads as a small
+    // fraction; "Together 5 days" had no scale).
+    earlyObservation_one:  "Co-occurred {{count}} time out of {{total}} days",
+    earlyObservation_other: "Co-occurred {{count}} times out of {{total}} days",
     expected: "Expected",
     unexpected: "Unexpected",
     unexpectedHint: "Could be coincidence — needs more data to confirm",
