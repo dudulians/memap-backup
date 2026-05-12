@@ -485,28 +485,34 @@ export const computeCorrelations = (
       // the strict one if available.
       const strictCandidates: PairStats[] = [];
       const earlyCandidates: PairStats[] = [];
-      // Early-tier gate (1.7.3, revised after user feedback that
-      // pairs like "head × stomach 7 days of 59" surfaced as early
-      // patterns despite the remaining 52 days being "in disarray" —
-      // lift-based filter alone passed because individual base rates
-      // were low, but the user's intuition is that "7 together vs. 13
-      // apart" isn't a pattern):
+      // Early-tier gate (1.7.3, simplified to a single intuition
+      // filter after the lift-based version was found to reject
+      // genuine short-window patterns):
       //
-      //   - bothYes ≥ 5            (need at least 5 concrete co-occurrences)
-      //   - sharedDays ≥ 7         (at least a week of overlap)
-      //   - concordant ≥ discordant
-      //       (co-occurrences must outnumber "only one of them"
-      //        days; i.e. bothYes ≥ aYesBNo + aNoBYes. Simplifies
-      //        to bothYes ≥ (aYes + bYes) / 3. This is the
-      //        primary intuition filter — "the pair is together
-      //        more often than apart, among days where at least
-      //        one happened")
-      //   - lift ≥ 1.5             (kept as a secondary noise floor
-      //                             for cases where both events
-      //                             are common)
+      //   - bothYes ≥ 5             (need at least 5 concrete co-
+      //                              occurrences — fewer feels like
+      //                              coincidence)
+      //   - sharedDays ≥ 7          (at least a week of overlap)
+      //   - bothYes ≥ aYesBNo + aNoBYes
+      //       Concordant ≥ discordant: the pair happens together
+      //       more often than apart, among days where at least one
+      //       of them happened. Equivalent algebraic form:
+      //       3 × bothYes ≥ aYes + bYes.
+      //
+      //       Examples:
+      //         "7 of 12 days" with a=8, b=8 → 7 vs 2 → passes ✓
+      //         "7 of 59 days" with a=15, b=12 → 7 vs 13 → rejected ✓
+      //
+      //       Previous versions used a "lift ≥ 1.5" filter (observed
+      //       co-occurrences vs. independence prediction). That
+      //       worked for sparse rare-event data but incorrectly
+      //       rejected dense short-window patterns where both
+      //       events were common (random co-occurrence is already
+      //       high in that regime, so real signal looks small in
+      //       lift terms). Concordance alone captures the user's
+      //       intuition cleanly without that failure mode.
       const MIN_EARLY_BOTH_YES = 5;
       const MIN_EARLY_SHARED = 7;
-      const MIN_EARLY_LIFT = 1.5;
 
       for (const lag of [0, 1, -1] as Lag[]) {
         const stat = computePairLag(a, b, lag, dateMap);
@@ -526,31 +532,13 @@ export const computeCorrelations = (
         if (passesStrict) {
           strictCandidates.push(stat);
         } else {
-          // Concordant = days both happened; discordant = days only
-          // one happened. Concordant ≥ discordant is the human-
-          // readable form of the test ("together more often than
-          // apart"). Equivalent algebraic check: 3*bothYes ≥ aYes+bYes.
           const concordantDays = stat.counts.bothYes;
           const discordantDays =
             stat.counts.aYesBNo + stat.counts.aNoBYes;
-          const passesConcordance = concordantDays >= discordantDays;
-
-          // Lift kept as secondary check (catches edge cases where
-          // both events are common enough that concordance passes
-          // trivially despite chance overlap).
-          const expectedBothYes =
-            stat.sharedDays > 0 ? (aYes * bYes) / stat.sharedDays : 0;
-          const lift =
-            expectedBothYes > 0
-              ? stat.counts.bothYes / expectedBothYes
-              : stat.counts.bothYes > 0
-              ? Infinity
-              : 0;
           if (
             stat.counts.bothYes >= MIN_EARLY_BOTH_YES &&
             stat.sharedDays >= MIN_EARLY_SHARED &&
-            passesConcordance &&
-            lift >= MIN_EARLY_LIFT
+            concordantDays >= discordantDays
           ) {
             earlyCandidates.push(stat);
           }
