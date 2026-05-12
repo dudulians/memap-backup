@@ -15,9 +15,6 @@ import {
 import {
   computeCorrelations,
   isHighlySignificant,
-  lookupShortLabel,
-  trackerPolarity,
-  correlationFrame,
 } from "@/lib/correlations";
 import { markCorrelationSeen } from "@/lib/appRating";
 import { track } from "@/lib/analytics";
@@ -53,9 +50,6 @@ const formatRatioDisplay = (ratio: number, isRu: boolean): string => {
   return `в ${displayNum} ${word}`;
 };
 
-const capitalizeFirst = (s: string): string =>
-  s.length > 0 ? s[0].toUpperCase() + s.slice(1) : s;
-
 interface CorrelationInsightsProps {
   trackers: Tracker[];
   entries: TrackerEntry[];
@@ -72,9 +66,9 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
   // conversation starter not a diagnosis).
   const [explainerOpen, setExplainerOpen] = useState(false);
   // Per-card expand state for the "facts" detail block. Conclusion
-  // is shown up-top as the headline read; facts (% of days etc.)
-  // hide behind a "Подробнее" toggle so the card scans cleanly.
-  // Keyed by correlation index (re-built each render — fine for 5
+  // is the only thing always visible; facts (% of days etc.) hide
+  // behind a "Подробнее" toggle so the card scans cleanly. Keyed
+  // by correlation index (re-built each render — fine for 5
   // items max).
   const [expandedFacts, setExpandedFacts] = useState<Record<number, boolean>>({});
 
@@ -272,40 +266,6 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
               );
             }
 
-            // Polarity-aware framing. We pick a frame based on:
-            //   - polarity of A and B (good/bad/neutral, derived
-            //     from problemWhen and the neutral-template list)
-            //   - sign of phi (positive = together, negative = apart)
-            // Frame drives the HEADLINE wording. The conclusion line
-            // below stays the same regardless (just shows ratio
-            // direction). For pairs where either tracker is neutral
-            // OR shortLabel metadata is missing, headline falls back
-            // to the safe generic "Возможная связь".
-            const labelA = lookupShortLabel(c.trackerA.title);
-            const labelB = lookupShortLabel(c.trackerB.title);
-            const polA = trackerPolarity(c.trackerA);
-            const polB = trackerPolarity(c.trackerB);
-            const frame = correlationFrame(polA, polB, c.phi);
-            const haveBothLabels = labelA && labelB;
-
-            // Pick the frame-specific headline key, OR fall back to
-            // the generic label when we can't write a confident
-            // semantic frame.
-            let headline: string | null = null;
-            if (haveBothLabels && frame !== "fallback") {
-              const aLabel = capitalizeFirst(isRu ? labelA.ru : labelA.en);
-              const bLabel = isRu ? labelB.ru : labelB.en;
-              const key =
-                frame === "co-presence"
-                  ? "correlations.headlineCoPresence"
-                  : frame === "opposite"
-                    ? "correlations.headlineOpposite"
-                    : "correlations.headlineUnexpected";
-              headline = t(key, { a: aLabel, b: bLabel });
-            } else if (haveBothLabels) {
-              headline = t("correlations.headlinePossibleLink");
-            }
-
             const aYes = c.counts.bothYes + c.counts.aYesBNo;       // total days A=yes
             const aNo = c.counts.aNoBYes + c.counts.bothNo;          // total days A=no
             const bYesGivenAYes = c.counts.bothYes;                  // out of aYes
@@ -391,20 +351,15 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                     : "")
                 }
               >
-                {/* Headline — only when both trackers have curated
-                    shortLabels and a confident frame. Reads as a
-                    heading the user can scan in one second. */}
-                {headline && (
-                  <h4 className="font-semibold text-sm leading-snug">
-                    {headline}
-                  </h4>
-                )}
-
-                {/* CONCLUSION — the only thing always visible. The
-                    user asked (1.7+) to make the conclusion the
-                    main read and tuck everything else (chips, raw
-                    %, co-absence note) behind a "Подробнее" toggle.
-                    This is the headline read in one sentence.
+                {/* CONCLUSION — the only thing always visible.
+                    Conclusion line is the entire card read; chips,
+                    raw %, co-absence note hide behind "Подробнее".
+                    Headline was dropped (1.7.3): it was only
+                    present for the ~10 % of pairs whose templates
+                    had a curated shortLabel, and the conclusion
+                    line already conveys the same information
+                    ("Cried about 3 times more often on days with
+                    Headache") — the headline was redundant.
 
                     Key + params chosen above based on extremes /
                     gap size — see conclusionKey logic. */}
