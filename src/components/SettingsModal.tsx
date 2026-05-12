@@ -17,7 +17,7 @@ import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { getEntries, getTrackers, saveTrackers, saveEntries } from "@/lib/storage";
 import { generateDevData } from "@/lib/devDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -1196,6 +1196,33 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   {t("settings.dataPrivacyLock")}
                 </p>
               </div>
+
+              {/* Platform-specific automatic-backup info. iOS users get
+                  iCloud Backup for free (system-wide, ~daily when phone
+                  is charging + Wi-Fi + locked). Android users get the
+                  equivalent via Android Auto Backup → Google Drive
+                  (config in android/app/src/main/res/xml/backup_rules.xml).
+                  Either way no user action is needed — this panel just
+                  tells them that's the case so they don't feel they
+                  *have* to use the Backup button to be safe. The
+                  manual Backup button remains for power users who
+                  want a portable JSON file. */}
+              {Capacitor.getPlatform() === "ios" && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <Cloud className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {t("settings.dataAutoBackupIos")}
+                  </p>
+                </div>
+              )}
+              {Capacitor.getPlatform() === "android" && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
+                  <Cloud className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {t("settings.dataAutoBackupAndroid")}
+                  </p>
+                </div>
+              )}
 
               <Button
                 variant="outline"

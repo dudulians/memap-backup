@@ -220,6 +220,8 @@ const en = {
 
     dataPrivacyTitle: "Data & Privacy",
     dataPrivacyLock: "Your data lives only on this device — nothing is sent to a server or collected by us. Use Backup regularly to keep a safe copy, especially before changing devices.",
+    dataAutoBackupIos: "iCloud Backup saves your data automatically once a day — when your iPhone is charging, on Wi-Fi, and locked (it's on by default). When you switch devices, everything restores — no buttons needed.",
+    dataAutoBackupAndroid: "Android Auto Backup saves your data to Google Drive automatically (it's on by default). When you switch phones or reinstall, everything restores — no buttons needed.",
     backupFull: "Backup (full restore file)",
     restoreBackup: "Restore from backup",
     exportCsv: "Export as CSV (Excel)",
