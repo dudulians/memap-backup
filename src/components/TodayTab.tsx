@@ -1097,7 +1097,7 @@ export const TodayTab = () => {
                       make the question unambiguous. */}
                   {tracker.questionText && (
                     <p className="font-medium text-sm leading-snug line-clamp-2">
-                      {localizeTrackerQuestion(tracker.questionText)}
+                      {localizeTrackerQuestion(tracker.questionText, tracker.title)}
                     </p>
                   )}
                   <p className="text-[11px] text-muted-foreground/80 truncate mt-1">

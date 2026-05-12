@@ -96,7 +96,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       // form would be confusing — and saving without changes would lock that
       // English in. Prefer the localized text on load; the user can still edit.
       setFormData({
-        questionText: localizeTrackerQuestion(tracker.questionText),
+        questionText: localizeTrackerQuestion(tracker.questionText, tracker.title),
         answerType: tracker.answerType,
         periodDays: tracker.periodDays,
         threshold: tracker.threshold,

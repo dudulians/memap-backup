@@ -1,6 +1,7 @@
 import { LIFE_STREAMS, TRENDING_TEMPLATES_SOURCE } from "./lifeStreams";
 import { getLanguage } from "./i18n";
 import { polishRu, getPol } from "./genderPolish";
+import { matchTemplateIdByTitle } from "./relatedQuestions";
 
 /**
  * Display-time English → Russian mapping for tracker titles & question text.
@@ -460,8 +461,53 @@ const lookupRaw = (m: DirectionalMap, input: string): string => {
 export const localizeTrackerTitle = (title: string): string =>
   lookup(getMap().titles, title);
 
-export const localizeTrackerQuestion = (q: string): string =>
-  lookup(getMap().questions, q);
+/**
+ * Resolve the localized question text for a tracker.
+ *
+ * Two strategies, tried in order:
+ *
+ *   1. Direct EN↔RU lookup in the questions map (existing behaviour).
+ *      Works when the stored question matches a known canonical pair.
+ *
+ *   2. Title-based fallback (1.7.3+).  If the direct lookup did not
+ *      change the string AND a `titleHint` is provided, we resolve
+ *      the title to a template id via matchTemplateIdByTitle, find
+ *      that template in LIFE_STREAMS, and return its canonical
+ *      question text in the active language.
+ *
+ *      This catches the case where the user's stored question text
+ *      was created by a legacy onboarding version, a dev-data path,
+ *      or a manual edit — strings the static map doesn't know about
+ *      — but the title is still recognizable (e.g. "Headache" →
+ *      template id "headache" → canonical "Did you have a headache
+ *      today?" in EN or "Болела ли сегодня голова?" in RU).
+ *
+ *      Without this fallback, a tracker with English title and a
+ *      Russian-typo question would render its Russian text verbatim
+ *      in the English UI — the bug the user reported on 2026-05-12.
+ *
+ * titleHint is optional so existing call sites compile unchanged.
+ * Call sites that have the tracker object available should pass
+ * tracker.title to get the smarter behaviour.
+ */
+export const localizeTrackerQuestion = (q: string, titleHint?: string): string => {
+  const direct = lookup(getMap().questions, q);
+  if (direct !== q || !titleHint) return direct;
+
+  const tplId = matchTemplateIdByTitle(titleHint);
+  if (!tplId) return direct;
+
+  for (const stream of LIFE_STREAMS) {
+    for (const tpl of stream.templates) {
+      if (tpl.id !== tplId) continue;
+      const lang = getLanguage();
+      const canonical = lang === "ru" ? tpl.questionTextRu : tpl.questionText;
+      if (!canonical) return direct;
+      return lang === "ru" ? polishRu(canonical, getPol()) : canonical;
+    }
+  }
+  return direct;
+};
 
 export const localizeTrackerAdvice = (a: string): string =>
   lookup(getMap().advices, a);
@@ -547,6 +593,6 @@ export const localizeTracker = <T extends { title: string; questionText?: string
   return {
     ...tracker,
     title: localizeTrackerTitle(tracker.title),
-    ...(tracker.questionText ? { questionText: localizeTrackerQuestion(tracker.questionText) } : {}),
+    ...(tracker.questionText ? { questionText: localizeTrackerQuestion(tracker.questionText, tracker.title) } : {}),
   };
 };

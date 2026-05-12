@@ -539,7 +539,7 @@ const QuestionSwipeCard = ({ tracker, currentAnswer, onAnswer }: QuestionSwipeCa
               category) breadcrumb above keeps the context line
               available without competing for attention. */}
           <p className="text-lg font-medium leading-snug mb-5">
-            {localizeTrackerQuestion(tracker.questionText)}
+            {localizeTrackerQuestion(tracker.questionText, tracker.title)}
           </p>
 
           {/* Current answer indicator */}

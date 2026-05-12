@@ -450,7 +450,7 @@ export const PatternsTab = () => {
                       <h3 className="font-medium text-base">{localizeTrackerTitle(tracker.title)}</h3>
                       {tracker.questionText && (
                         <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                          {localizeTrackerQuestion(tracker.questionText)}
+                          {localizeTrackerQuestion(tracker.questionText, tracker.title)}
                         </p>
                       )}
                       <p className="text-xs uppercase tracking-wider mt-1.5" style={{ color: `hsl(var(--${categoryColor}))` }}>

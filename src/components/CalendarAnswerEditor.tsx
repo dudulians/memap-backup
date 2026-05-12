@@ -184,7 +184,7 @@ export const CalendarAnswerEditor = ({
                   itself (with its qualifiers) needs to read like a
                   headline. Same `text-lg font-medium leading-snug`
                   treatment as TrackerDetails. */}
-              <p className="text-lg font-medium leading-snug text-foreground">{localizeTrackerQuestion(tracker.questionText)}</p>
+              <p className="text-lg font-medium leading-snug text-foreground">{localizeTrackerQuestion(tracker.questionText, tracker.title)}</p>
             </div>
           </div>
 

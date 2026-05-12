@@ -275,7 +275,7 @@ export const SwipeableTrackerCard = ({
             <div className="flex-1 min-w-0">
               <h3 className={cn("font-medium mb-1 leading-snug", compact ? "text-sm" : "text-base")}>{localizeTrackerTitle(tracker.title)}</h3>
               <p className={cn("text-muted-foreground/80 leading-relaxed line-clamp-2", compact ? "text-xs" : "text-sm")}>
-                {localizeTrackerQuestion(tracker.questionText)}
+                {localizeTrackerQuestion(tracker.questionText, tracker.title)}
               </p>
             </div>
             {dragHandleProps && (

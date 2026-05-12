@@ -442,7 +442,7 @@ const SortableTrackerCard = ({
                 {tracker.category}
               </p>
               <p className="text-sm text-muted-foreground mt-2 font-playful line-clamp-2">
-                {localizeTrackerQuestion(tracker.questionText)}
+                {localizeTrackerQuestion(tracker.questionText, tracker.title)}
               </p>
             </div>
           </div>

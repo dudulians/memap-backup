@@ -1252,7 +1252,7 @@ export const DailySession = ({
                     {localizeTrackerTitle(currentQuestion.tracker.title)}
                   </p>
                   <p className="font-serif text-2xl sm:text-3xl font-medium leading-snug text-foreground">
-                    {localizeTrackerQuestion(currentQuestion.tracker.questionText)}
+                    {localizeTrackerQuestion(currentQuestion.tracker.questionText, currentQuestion.tracker.title)}
                   </p>
                 </div>
 

@@ -109,7 +109,7 @@ export const DuplicateTrackerDialog = ({
                   {localizeTrackerTheme(existingTracker)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2 font-playful break-words">
-                  {localizeTrackerQuestion(existingTracker.questionText)}
+                  {localizeTrackerQuestion(existingTracker.questionText, existingTracker.title)}
                 </p>
               </div>
             </div>
