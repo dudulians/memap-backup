@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   computeCorrelations,
-  phiStrengthLabel,
   isHighlySignificant,
   lookupShortLabel,
   trackerPolarity,
@@ -153,6 +152,90 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
             const aTitle = localizeTrackerTitle(c.trackerA.title);
             const bTitle = localizeTrackerTitle(c.trackerB.title);
 
+            const interactive = !!onSelectPair;
+            const handleTap = () => {
+              if (onSelectPair) onSelectPair([c.trackerA.id, c.trackerB.id]);
+            };
+
+            // EARLY-stage card — observation without correlation claim.
+            // Shorter, lighter card. 3 elements: the pair, the dot
+            // visualisation (bothYes count, capped at 5 visually), and
+            // the "🌱 Раннее наблюдение" stage badge. No conclusion,
+            // no "X times more", no facts expand — we genuinely don't
+            // have enough data to make a claim.
+            if (c.stage === "early") {
+              const dotCount = Math.min(c.counts.bothYes, 5);
+              return (
+                <div
+                  key={idx}
+                  role={interactive ? "button" : undefined}
+                  tabIndex={interactive ? 0 : undefined}
+                  onClick={interactive ? handleTap : undefined}
+                  onKeyDown={
+                    interactive
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleTap();
+                          }
+                        }
+                      : undefined
+                  }
+                  className={
+                    "p-3 rounded-2xl bg-muted/10 border border-border/40 space-y-2 transition-all" +
+                    (interactive
+                      ? " cursor-pointer hover:bg-muted/20 active:scale-[0.99]"
+                      : "")
+                  }
+                >
+                  {/* The two trackers, dot-separated, each in its own
+                      category colour. Reads as "X · Y" not as a claim. */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="font-medium truncate" style={{ color: `hsl(var(--${colorA}))` }}>
+                      {aTitle}
+                    </span>
+                    <span className="text-muted-foreground/60">·</span>
+                    <span className="font-medium truncate" style={{ color: `hsl(var(--${colorB}))` }}>
+                      {bTitle}
+                    </span>
+                  </div>
+
+                  {/* Dots + count of shared yes-yes days. Dots capped
+                      at 5 to keep visual compact; the text gives the
+                      exact number. */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      {Array.from({ length: dotCount }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: `hsl(var(--${colorA}))` }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {t("correlations.earlyObservation", { count: c.counts.bothYes })}
+                    </span>
+                  </div>
+
+                  {/* Stage badge — minimal, no second-row hint. The
+                      label itself tells the user this is preliminary. */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-500/10"
+                      style={{ color: "hsl(35 90% 35%)" }}
+                      title={t("correlations.stageEarlyHint")}
+                    >
+                      🌱 {t("correlations.stageEarly")}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t("correlations.sharedDays", { count: c.sharedDays })}
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
             // Polarity-aware framing. We pick a frame based on:
             //   - polarity of A and B (good/bad/neutral, derived
             //     from problemWhen and the neutral-template list)
@@ -196,16 +279,11 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
 
             const positive = c.phi > 0;
             // "Strong" pattern label requires BOTH strong phi AND a
-            // healthy sample size (≥30 shared days). With smaller
-            // samples a high phi can be a streak rather than a real
-            // pattern — so we down-cast strong → moderate for
-            // <30-day correlations. Otherwise the badge promises more
-            // certainty than the data deserves.
-            const rawStrength = phiStrengthLabel(c.phi);
-            const strengthLbl =
-              rawStrength === "strong" && c.sharedDays < 30
-                ? "moderate"
-                : rawStrength;
+            // strengthLbl (mild/moderate/strong) was the old visible
+            // label. Replaced by c.stage (early/emerging/stable) which
+            // takes sample size into account too. Kept the robust ✓
+            // marker — chi² < 0.01 within an already-confirmed pattern
+            // still means something.
             const robust = isHighlySignificant(c.chiSquare);
             const ratioStr = formatRatioDisplay(c.riskRatio, isRu);
 
@@ -253,11 +331,6 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                 : c.lag === 1
                   ? t("correlations.lagAPredictsB")
                   : t("correlations.lagBPredictsA");
-
-            const interactive = !!onSelectPair;
-            const handleTap = () => {
-              if (onSelectPair) onSelectPair([c.trackerA.id, c.trackerB.id]);
-            };
 
             return (
               <div
@@ -389,14 +462,21 @@ export const CorrelationInsights = ({ trackers, entries, onSelectPair }: Correla
                 {/* Bottom row: strength + sample size + open Trends */}
                 <div className="flex items-center justify-between gap-2 pt-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Stage badge — replaces the older mild/moderate/
+                        strong label. "Заметная связь" for emerging,
+                        "Устойчивый паттерн" for stable. The robust ✓
+                        marker stays — it signals chi² < 0.01 within
+                        an already-confirmed pattern. */}
                     <span
-                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                        positive
+                      className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                        c.stage === "stable"
                           ? "bg-balanced/20 text-balanced"
-                          : "bg-strong/20 text-strong"
+                          : "bg-emerging/20 text-emerging"
                       }`}
                     >
-                      {t(`correlations.${strengthLbl}`)}
+                      {c.stage === "stable" ? "🌳" : "🌿"}
+                      {" "}
+                      {t(c.stage === "stable" ? "correlations.stageStable" : "correlations.stageEmerging")}
                       {robust && " ✓"}
                     </span>
                     {/* Semantic verdict — only shown when we have an

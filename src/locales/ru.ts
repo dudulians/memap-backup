@@ -686,6 +686,16 @@ const ru: Translation = {
     naturalBAlwaysWithA: "→ «{{b}}» бывает всегда в дни с «{{a}}»",
     naturalBMoreOftenWithA: "→ «{{b}}» бывает чаще в дни с «{{a}}»",
     naturalBLessOftenWithA: "→ «{{b}}» бывает реже в дни с «{{a}}»",
+    // Maturity stages — 1.7.3+
+    stageEarly: "Раннее наблюдение",
+    stageEmerging: "Заметная связь",
+    stageStable: "Устойчивый паттерн",
+    stageEarlyHint: "Замечаем что часто встречаются вместе. Нужно больше дней чтобы говорить о связи.",
+    // Headline for "early" cards — no correlation claim, just observation.
+    // "X дней вместе" = bothYes count. Uses smart plural via i18next.
+    earlyObservation_one:  "Вместе в {{count}} день",
+    earlyObservation_few:  "Вместе в {{count}} дня",
+    earlyObservation_many: "Вместе в {{count}} дней",
     // (coAbsenceNote string removed in 1.7+ — the parallel-absence
     // info is now visible directly in the expanded "Подробнее"
     // facts via the symmetric percentages.)

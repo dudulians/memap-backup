@@ -184,6 +184,17 @@ export interface CorrelationResult {
     aNoBYes: number; // A=no,  B=yes
     bothNo: number;  // A=no,  B=no
   };
+  /** Maturity stage of this observation (1.7.3+):
+   *  - "early"    — preliminary co-occurrence noticed (≥3 bothYes days),
+   *                 but data too thin to claim a real pattern. UI shows
+   *                 dots + "we noticed this" framing, NO claim.
+   *  - "emerging" — passes statistical filters, 7-14 shared days. UI
+   *                 shows the standard conclusion + a "notable link" label.
+   *  - "stable"   — passes filters AND ≥15 shared days. UI shows the full
+   *                 card with expandable facts + "stable pattern" label.
+   *  Lets us include "we see something forming" observations without
+   *  promising a confirmed pattern. */
+  stage: "early" | "emerging" | "stable";
 }
 
 // Chi-square critical values for 1 degree of freedom:
@@ -464,32 +475,68 @@ export const computeCorrelations = (
       // Try all three lags. Pick the strongest *significant* one for
       // this pair — we only show one direction per pair to keep the UI
       // tight.
-      const candidates: PairStats[] = [];
+      // Two-pass collection (1.7.3+):
+      //   - STRICT candidates pass full stats filter → become "emerging"
+      //     (or "stable" later, based on sharedDays).
+      //   - EARLY candidates only need ≥3 co-occurrence days. They never
+      //     become "emerging" / "stable" — UI shows them as observations
+      //     without a correlation claim.
+      // We collect both, pick best lag for each tier separately, prefer
+      // the strict one if available.
+      const strictCandidates: PairStats[] = [];
+      const earlyCandidates: PairStats[] = [];
+      const MIN_EARLY_BOTH_YES = 3;
+      const MIN_EARLY_SHARED = 3;
+
       for (const lag of [0, 1, -1] as Lag[]) {
         const stat = computePairLag(a, b, lag, dateMap);
         if (!stat) continue;
-        if (stat.chiSquare < CHI2_P05) continue; // not significant
-        if (Math.abs(stat.phi) < minPhiForSample(stat.sharedDays)) continue;
-        // Minimum-occurrence guards.
+
+        // Strict filter — emerging / stable tier
         const aYes = stat.counts.bothYes + stat.counts.aYesBNo;
         const aNo = stat.counts.aNoBYes + stat.counts.bothNo;
         const bYes = stat.counts.bothYes + stat.counts.aNoBYes;
-        if (aYes < MIN_X_OCCURRENCES || aNo < MIN_X_OCCURRENCES) continue;
-        if (bYes < MIN_Y_OCCURRENCES) continue;
-        candidates.push(stat);
-      }
-      if (candidates.length === 0) continue;
+        const passesStrict =
+          stat.chiSquare >= CHI2_P05 &&
+          Math.abs(stat.phi) >= minPhiForSample(stat.sharedDays) &&
+          aYes >= MIN_X_OCCURRENCES &&
+          aNo >= MIN_X_OCCURRENCES &&
+          bYes >= MIN_Y_OCCURRENCES;
 
-      // Pick the lag with the strongest |phi| among the significant
-      // ones. A fairly even tie at lag 0 vs lag +1 means same-day is
-      // probably the real story (lag is just downstream noise) —
-      // bias toward lag 0 by adding a tiny tiebreaker.
+        if (passesStrict) {
+          strictCandidates.push(stat);
+        } else if (
+          // Early observation — at least MIN_EARLY co-occurrence days
+          // and a reasonable shared-day floor so we don't surface noise
+          // from a single coincidence.
+          stat.counts.bothYes >= MIN_EARLY_BOTH_YES &&
+          stat.sharedDays >= MIN_EARLY_SHARED
+        ) {
+          earlyCandidates.push(stat);
+        }
+      }
+
+      if (strictCandidates.length === 0 && earlyCandidates.length === 0) continue;
+
+      // Pick best lag from whichever tier is available, preferring strict.
+      const usingStrict = strictCandidates.length > 0;
+      const candidates = usingStrict ? strictCandidates : earlyCandidates;
       candidates.sort((x, y) => {
         const px = Math.abs(x.phi) + (x.lag === 0 ? 0.01 : 0);
         const py = Math.abs(y.phi) + (y.lag === 0 ? 0.01 : 0);
         return py - px;
       });
       const best = candidates[0];
+
+      // Stage assignment:
+      //   strict + ≥15 shared days → stable
+      //   strict + <15 shared days → emerging
+      //   otherwise (early tier)   → early
+      const stage: "early" | "emerging" | "stable" = usingStrict
+        ? best.sharedDays >= 15
+          ? "stable"
+          : "emerging"
+        : "early";
 
       out.push({
         trackerA: a,
@@ -501,16 +548,23 @@ export const computeCorrelations = (
         riskRatio: best.riskRatio,
         semanticVerdict: pairSemanticVerdict(a, b, best.phi),
         counts: best.counts,
+        stage,
       });
     }
   }
 
-  // Sort by absolute strength. Expected pairs get a small positive
-  // tiebreaker bump; unexpected pairs (template-matched but not in
-  // graph — i.e. likely coincidence) get a small NEGATIVE bump so
-  // they sink below other findings of similar strength. Unknown
-  // (custom-tracker) pairs are neutral — we have no info.
+  // Sort: stable first, emerging next, early last. Within each tier,
+  // sort by absolute phi with semantic-verdict tiebreaker (same logic
+  // as before for the strict tier; early tier sorts by bothYes count
+  // since phi may be noisy on tiny samples).
+  const stageRank = (s: "early" | "emerging" | "stable") =>
+    s === "stable" ? 0 : s === "emerging" ? 1 : 2;
   out.sort((x, y) => {
+    const rankDiff = stageRank(x.stage) - stageRank(y.stage);
+    if (rankDiff !== 0) return rankDiff;
+    if (x.stage === "early") {
+      return y.counts.bothYes - x.counts.bothYes;
+    }
     const bumpX = x.semanticVerdict === "expected" ? 0.02 : x.semanticVerdict === "unexpected" ? -0.02 : 0;
     const bumpY = y.semanticVerdict === "expected" ? 0.02 : y.semanticVerdict === "unexpected" ? -0.02 : 0;
     return Math.abs(y.phi) + bumpY - (Math.abs(x.phi) + bumpX);

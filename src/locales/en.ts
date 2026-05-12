@@ -653,6 +653,14 @@ const en = {
     naturalBAlwaysWithA: "→ \"{{b}}\" always happens on days with \"{{a}}\"",
     naturalBMoreOftenWithA: "→ \"{{b}}\" happens more on days with \"{{a}}\"",
     naturalBLessOftenWithA: "→ \"{{b}}\" happens less on days with \"{{a}}\"",
+    // Maturity stages — 1.7.3+
+    stageEarly: "Early observation",
+    stageEmerging: "Notable link",
+    stageStable: "Stable pattern",
+    stageEarlyHint: "We notice they often show up together. More days needed before we'd call it a pattern.",
+    // Headline for "early" cards — observation, not a claim.
+    earlyObservation_one:  "Together {{count}} day",
+    earlyObservation_other: "Together {{count}} days",
     expected: "Expected",
     unexpected: "Unexpected",
     unexpectedHint: "Could be coincidence — needs more data to confirm",
