@@ -36,15 +36,24 @@ import { uuid } from "./uuid";
 const NUM_DAYS = 60;
 const FRESH_WINDOW = 21;
 
-export type DemoPackId = "self-care" | "burnout" | "body" | "behind-fight";
+export type DemoPackId =
+  | "self-care"
+  | "burnout"
+  | "body"
+  | "behind-fight"
+  | "showcase";
 
 interface DemoPack {
   id: DemoPackId;
   templateIds: string[];
   // Build the engineered per-day series. Returns Map<templateId,
-  // boolean[]> where each array is length NUM_DAYS, dates[0]
-  // oldest, dates[N-1] today.
-  script: () => Map<string, boolean[]>;
+  // (boolean | undefined)[]> where each array is length NUM_DAYS,
+  // dates[0] oldest, dates[N-1] today. `undefined` means "no entry
+  // generated for this day" — used by the Showcase pack to make
+  // one tracker appear as a "newcomer" with limited history, so
+  // its correlations surface as 🌿 emerging (sharedDays < 15)
+  // instead of 🌳 stable.
+  script: () => Map<string, (boolean | undefined)[]>;
 }
 
 const buildTrackerFromTemplate = (tplId: string): Tracker | null => {
@@ -389,14 +398,128 @@ const packBehindFight: DemoPack = {
   },
 };
 
+// PACK E — Showcase. Engineered specifically for App Store screens
+// where we want ALL four maturity stages visible on one Patterns
+// screen:
+//   🌳 Stable — full-60-days strong correlations
+//   🌿 Emerging — one tracker is a "newcomer" with only the last 12
+//                 days of entries, so any pair involving it has
+//                 sharedDays = 12 < 15 → emerging (strict passes,
+//                 maturity capped by sample size).
+//   🆕 Fresh — pair that correlates ONLY in the last 21 days.
+//   🌱 Early — rare-event pair: aYes = 4 fails MIN_X_OCCURRENCES,
+//              so strict rejects, but concordance still passes
+//              (bothYes=4 > aYesBNo+aNoBYes=0).
+const packShowcase: DemoPack = {
+  id: "showcase",
+  templateIds: [
+    "felt-anxious",
+    "slept-enough",
+    "exercised",
+    "felt-happy",
+    "outside-30min",
+    "felt-fatigued",
+    "heard-bad-news",
+    "did-creative-work",
+  ],
+  script: () => {
+    const N = NUM_DAYS;
+    // Two latent axes: bad day + active day. Each tracker derives
+    // from these so the resulting correlations are clean and
+    // predictable.
+    const badDay: boolean[] = [];
+    const exercised: boolean[] = [];
+    const outside: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      badDay.push(r(0.35));
+      exercised.push(r(0.45));
+      outside.push(r(0.45));
+    }
+
+    // Rare event: heard-bad-news fires on exactly 4 fixed days
+    // spaced across the window. aYes = 4 < MIN_X_OCCURRENCES (5),
+    // so strict will reject any pair involving this tracker. But
+    // each event day forces anxious → concordance passes → 🌱 early.
+    const heardBadNewsDays = new Set([7, 22, 38, 51]);
+    const heardBadNews: boolean[] = [];
+    for (let i = 0; i < N; i++) heardBadNews.push(heardBadNewsDays.has(i));
+
+    // Anxious: high on badDay, forced on heard-bad-news days.
+    const anxious: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      if (heardBadNews[i]) {
+        anxious.push(true);
+        continue;
+      }
+      let p = 0.18;
+      if (badDay[i]) p += 0.55;
+      anxious.push(r(p));
+    }
+
+    // Slept-enough: anti-correlated with anxious + badDay.
+    const slept: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.7;
+      if (anxious[i]) p -= 0.45;
+      if (badDay[i]) p -= 0.15;
+      slept.push(r(p));
+    }
+
+    // Fatigued: opposite of slept.
+    const fatigued: boolean[] = [];
+    for (let i = 0; i < N; i++) fatigued.push(r(slept[i] ? 0.15 : 0.75));
+
+    // Happy: boosted by exercise. In the LAST 21 days only, also
+    // boosted by outside — that's the 🆕 fresh pair (full history
+    // wouldn't surface it; the recent-window pass will).
+    const happy: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.4;
+      if (exercised[i]) p += 0.45;
+      if (badDay[i]) p -= 0.3;
+      if (i >= N - FRESH_WINDOW && outside[i]) p += 0.4;
+      happy.push(r(p));
+    }
+
+    // 🌿 EMERGING tracker: did-creative-work has entries ONLY for
+    // the last 12 days. Any pair involving it has sharedDays = 12,
+    // so even a strong correlation lands as emerging (strict
+    // passes, but sample < 15). Strongly correlates with happy in
+    // those 12 days.
+    const creativeStart = N - 12;
+    const didCreative: (boolean | undefined)[] = [];
+    for (let i = 0; i < N; i++) {
+      if (i < creativeStart) {
+        didCreative.push(undefined);
+      } else {
+        // Heavily correlate with happy in the 12-day window
+        didCreative.push(happy[i] ? r(0.85) : r(0.15));
+      }
+    }
+
+    return new Map<string, (boolean | undefined)[]>([
+      ["felt-anxious", anxious],
+      ["slept-enough", slept],
+      ["exercised", exercised],
+      ["felt-happy", happy],
+      ["outside-30min", outside],
+      ["felt-fatigued", fatigued],
+      ["heard-bad-news", heardBadNews],
+      ["did-creative-work", didCreative],
+    ]);
+  },
+};
+
 const PACKS: Record<DemoPackId, DemoPack> = {
   "self-care": packSelfCare,
   burnout: packBurnout,
   body: packBody,
   "behind-fight": packBehindFight,
+  showcase: packShowcase,
 };
 
 export const DEMO_PACK_IDS: DemoPackId[] = [
+  "showcase",       // first — it's the "all features visible" one
   "self-care",
   "burnout",
   "body",
@@ -444,11 +567,17 @@ export const generateDemoData = (packId: DemoPackId): DemoDataResult => {
     const series = script.get(tplId);
     if (!tracker || !series) continue;
     for (let i = 0; i < NUM_DAYS; i++) {
+      const v = series[i];
+      // `undefined` means "newcomer tracker — no entry generated
+      // for this day". Used by the Showcase pack so one tracker
+      // has only the last 12 days of data → its correlations
+      // surface as 🌿 emerging.
+      if (v === undefined) continue;
       entries.push({
         id: uuid(),
         trackerId: tracker.id,
         date: dates[i],
-        value: series[i],
+        value: v,
       });
     }
   }

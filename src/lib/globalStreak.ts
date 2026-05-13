@@ -1,5 +1,15 @@
 import { TrackerEntry } from "@/types/tracker";
 
+// Local-date YYYY-MM-DD — matches how entries are written (the
+// rest of the app stores `e.date` in local time, not UTC). Using
+// toISOString() here meant the streak silently broke whenever
+// local date differed from UTC date — e.g. UAE (UTC+4) between
+// 00:00 and 04:00 local, every day, the streak was 0 because
+// mostRecentDate ("today, local") didn't equal todayStr ("today,
+// UTC" = yesterday local).
+const localDateStr = (d: Date): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 export interface GlobalStreakInfo {
   currentStreak: number;
   longestStreak: number;
@@ -30,11 +40,11 @@ export const calculateGlobalStreak = (
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = localDateStr(today);
 
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
+  const yesterdayStr = localDateStr(yesterday);
 
   const lastActiveDate = uniqueDates[0] || null;
   const totalActiveDays = uniqueDates.length;
