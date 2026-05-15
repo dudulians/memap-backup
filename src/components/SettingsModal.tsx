@@ -1263,7 +1263,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 variant="outline"
                 onClick={() => {
                   window.open(
-                    "https://dudulians.github.io/memap-backup/TERMS.html",
+                    "https://memap-tracker.netlify.app/TERMS.html",
                     "_blank",
                     "noopener,noreferrer",
                   );
@@ -1417,7 +1417,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 variant="outline"
                 onClick={() => {
                   window.open(
-                    "https://dudulians.github.io/memap-backup/PRIVACY_POLICY.html",
+                    "https://memap-tracker.netlify.app/PRIVACY_POLICY.html",
                     "_blank",
                     "noopener,noreferrer",
                   );
