@@ -53,6 +53,27 @@ export interface GeneratedStarter {
   adviceAboveThreshold: string; // localized
 }
 
+// Universal fallback pack — used by OnboardingTour when the interview
+// answers don't produce enough signal for a personalised pack. These 5
+// cover the broadest "do I sleep / move / connect / play / feel stressed"
+// questions that apply to almost everyone.
+// `titleKey` / `questionKey` are the i18n keys under
+// `onboarding.defaultStarters.*` (see locales/en.ts + ru.ts).
+export interface DefaultStarterMeta {
+  titleKey: string;
+  questionKey: string;
+  category: Tracker["category"];
+  problemWhen: ProblemWhen;
+}
+
+export const DEFAULT_STARTERS: DefaultStarterMeta[] = [
+  { titleKey: "sleepTitle",      questionKey: "sleepQ",      category: "Health",      problemWhen: "no"  },
+  { titleKey: "stressTitle",     questionKey: "stressQ",     category: "Emotions",    problemWhen: "yes" },
+  { titleKey: "moveTitle",       questionKey: "moveQ",       category: "Body",        problemWhen: "no"  },
+  { titleKey: "connectionTitle", questionKey: "connectionQ", category: "Connections", problemWhen: "no"  },
+  { titleKey: "joyTitle",        questionKey: "joyQ",        category: "Emotions",    problemWhen: "no"  },
+];
+
 // --- Internal: normalised template shape ----------------------------
 // Both LIFE_STREAMS templates and TEMPLATE_GROUPS templates collapse into
 // this shape, which is what scoring & output operate on. We always score

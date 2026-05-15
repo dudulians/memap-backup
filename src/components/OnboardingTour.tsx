@@ -26,6 +26,7 @@ import {
   generateStarterPack,
   hasMeaningfulInterviewSignal,
   GeneratedStarter,
+  DEFAULT_STARTERS,
 } from "@/lib/starterGenerator";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { track } from "@/lib/analytics";
