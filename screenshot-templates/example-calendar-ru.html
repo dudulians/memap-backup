@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>MeMap App Store Screenshot — Calendar (RU)</title>
+  <style>
+    /* iPhone 6.7" Pro Max screenshot: 1290 × 2796 px portrait.
+       App Store accepts PNG/JPEG in that exact size.
+
+       HOW TO EXPORT:
+       1. Open this file in Chrome / Edge / Safari
+       2. DevTools (F12) → Device toolbar (Ctrl+Shift+M)
+       3. Set custom size to 1290 × 2796
+       4. DevTools → ⋮ menu → "Capture full size screenshot"
+       Or — without DevTools — open in browser, scroll so the
+       canvas fills the viewport, then use a 1290×2796 viewport
+       extension. Final PNG → upload to App Store Connect.
+
+       Replace the <img> source with your actual app screenshot
+       (PNG/JPG you took from the iPhone). Suggested image size
+       for the slot: ~1050 × 1900 px portrait. */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 1290px;
+      height: 2796px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                   "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    /* Background — soft mint gradient inspired by the in-app theme. */
+    .canvas {
+      width: 1290px;
+      height: 2796px;
+      position: relative;
+      background:
+        radial-gradient(circle at 20% 10%, #d6f1e1 0%, transparent 50%),
+        radial-gradient(circle at 80% 90%, #fde6e9 0%, transparent 50%),
+        linear-gradient(180deg, #e8f6ed 0%, #f2efe7 100%);
+      overflow: hidden;
+    }
+
+    /* Top text block — headline + sub. */
+    .top {
+      position: absolute;
+      top: 130px;
+      left: 90px;
+      right: 90px;
+      text-align: center;
+    }
+    .headline {
+      font-size: 110px;
+      line-height: 1.05;
+      font-weight: 700;
+      color: #1a3a2a;
+      letter-spacing: -1.5px;
+      margin-bottom: 36px;
+    }
+    .sub {
+      font-size: 42px;
+      line-height: 1.35;
+      font-weight: 500;
+      color: rgba(26, 58, 42, 0.6);
+    }
+    .sub .dot { color: rgba(26, 58, 42, 0.3); margin: 0 14px; }
+
+    /* Phone frame — soft rounded card holding the actual screenshot. */
+    .phone-wrap {
+      position: absolute;
+      top: 750px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1050px;
+      aspect-ratio: 1 / 2.16; /* iPhone Pro Max display ratio */
+      border-radius: 80px;
+      background: #000;
+      padding: 14px;
+      box-shadow:
+        0 60px 120px rgba(26, 58, 42, 0.15),
+        0 25px 50px rgba(26, 58, 42, 0.1);
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      border-radius: 70px;
+      overflow: hidden;
+      background: #f5f9f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+
+    /* Placeholder shown when no screenshot is loaded. */
+    .placeholder {
+      text-align: center;
+      padding: 80px 60px;
+      color: rgba(26, 58, 42, 0.4);
+    }
+    .placeholder b {
+      display: block;
+      font-size: 44px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: rgba(26, 58, 42, 0.6);
+    }
+    .placeholder span {
+      display: block;
+      font-size: 28px;
+      line-height: 1.5;
+    }
+    .placeholder code {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 8px 14px;
+      background: rgba(26, 58, 42, 0.08);
+      border-radius: 12px;
+      font-family: "SF Mono", Menlo, Monaco, monospace;
+      font-size: 24px;
+      color: #1a3a2a;
+    }
+
+    /* Bottom branding watermark — subtle. */
+    .footer {
+      position: absolute;
+      bottom: 90px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 30px;
+      font-weight: 600;
+      color: rgba(26, 58, 42, 0.35);
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="top">
+      <h1 class="headline">
+        Твоя история —<br/>видна.
+      </h1>
+      <p class="sub">
+        Покажи врачу
+        <span class="dot">·</span>
+        обсуди с партнёром
+        <span class="dot">·</span>
+        следи сама
+      </p>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-screen">
+        <!-- Replace this <div> with: <img src="path/to/your/screenshot.png" alt="" /> -->
+        <div class="placeholder">
+          <b>Сюда ставь скрин Overview календарика</b>
+          <span>
+            (тот зелёно-розовый кружковой календарь из приложения).
+            <br/><br/>
+            Замени блок <code>&lt;div class="placeholder"&gt;</code>
+            на тег:
+            <br/>
+            <code>&lt;img src="calendar.png"&gt;</code>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">MeMap</div>
+  </div>
+</body>
+</html>
