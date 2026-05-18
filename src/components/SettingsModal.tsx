@@ -899,7 +899,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   </div>
 
                   {/* 2-col grid — five themes split 2 / 2 / 1. Switched
-                      from 3-col when Liquid + Terra were added (1.7.4):
+                      from 3-col when Liquid + Terra were added (1.7.5):
                       tighter cards fit better on phones than three
                       narrow ones with squashed labels. */}
                   <div className="grid grid-cols-2 gap-2">
@@ -1242,7 +1242,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 onClick={() => {
                   const subject = encodeURIComponent("MeMap support");
                   const body = encodeURIComponent(
-                    `\n\n\n---\nApp version: 1.7.4\nPlatform: ${Capacitor.getPlatform()}\nLanguage: ${getLanguage()}`,
+                    `\n\n\n---\nApp version: 1.7.5\nPlatform: ${Capacitor.getPlatform()}\nLanguage: ${getLanguage()}`,
                   );
                   window.open(
                     `mailto:memap.support@gmail.com?subject=${subject}&body=${body}`,
@@ -1461,7 +1461,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 onClick={handleVersionTap}
                 className="w-full text-center text-[11px] text-muted-foreground/60 pt-4 pb-2 select-none"
               >
-                v1.7.4
+                v1.7.5
                 {demoUnlocked && (
                   <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[9px] font-medium">
                     <Sparkles className="h-2.5 w-2.5" />
