@@ -239,6 +239,7 @@ const en = {
     demoSectionTitle: "Demo data for screenshots",
     demoSectionDesc: "Generates 8 questions + 60 days of engineered answers around the chosen theme. Replaces all your current data.",
     demoPack_showcase: "✨ All stages mix",
+    demoPack_relationship_reality: "💕 Relationship reality",
     demoPack_self_care: "🌸 Self-care first",
     demoPack_burnout: "💼 Quiet burnout",
     demoPack_body: "🧘 Body knows",

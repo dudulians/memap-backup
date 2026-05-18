@@ -247,6 +247,7 @@ const ru: Translation = {
     demoSectionTitle: "Демо для скринов",
     demoSectionDesc: "Сгенерирует 8 вопросов + 60 дней инженерных ответов под выбранную тему. Полностью заменит твои текущие данные.",
     demoPack_showcase: "✨ Все фичи разом",
+    demoPack_relationship_reality: "💕 Реальность отношений",
     demoPack_self_care: "🌸 Себе тоже надо",
     demoPack_burnout: "💼 Тихое выгорание",
     demoPack_body: "🧘 Тело знает",

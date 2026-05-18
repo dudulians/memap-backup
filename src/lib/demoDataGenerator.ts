@@ -41,6 +41,7 @@ export type DemoPackId =
   | "burnout"
   | "body"
   | "behind-fight"
+  | "relationship-reality"
   | "showcase";
 
 interface DemoPack {
@@ -398,6 +399,109 @@ const packBehindFight: DemoPack = {
   },
 };
 
+// PACK F — Relationship Reality. Specifically designed for the promo
+// video about tracking your partner's behavior alongside your own
+// feelings. Shows: how often he brings flowers vs raises voice (real
+// numbers vs memory), and which of his behaviors correlate with your
+// happy/sad/sleeping days. Uses the 4 new partner-* templates added
+// to lifeStreams.ts in 1.7.5.
+const packRelationshipReality: DemoPack = {
+  id: "relationship-reality",
+  templateIds: [
+    "partner-brought-flowers",
+    "partner-complimented-me",
+    "partner-raised-voice",
+    "partner-said-hurtful",
+    "felt-happy",
+    "slept-enough",
+    "felt-nauseous",
+    "cooked-myself",
+  ],
+  script: () => {
+    const N = NUM_DAYS;
+    // Latent axes: his "kind" days and his "harsh" days. Mostly
+    // exclusive (you don't usually get both flowers + yelling same
+    // day), with rare overlap.
+    const kindDay: boolean[] = [];
+    const harshDay: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      const k = Math.random() < 0.3;
+      const h = !k && Math.random() < 0.32;
+      kindDay.push(k);
+      harshDay.push(h);
+    }
+
+    // Partner positive behaviors — rare (flowers ~once a week if any)
+    // and clustered on kindDay.
+    const flowers: boolean[] = [];
+    const compliment: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      flowers.push(kindDay[i] && Math.random() < 0.4); // ~12% of all days, mostly on kind days
+      compliment.push(kindDay[i] ? Math.random() < 0.75 : Math.random() < 0.1);
+    }
+
+    // Partner negative behaviors — clustered on harshDay.
+    const raisedVoice: boolean[] = [];
+    const hurtful: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      raisedVoice.push(harshDay[i] && Math.random() < 0.7);
+      hurtful.push(harshDay[i] && Math.random() < 0.55);
+    }
+
+    // Your reactions — clearly tied to his behavior.
+    //   Happy: high on kind days (flowers/compliment), low on harsh days.
+    const happy: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.4;
+      if (flowers[i] || compliment[i]) p += 0.45;
+      if (raisedVoice[i] || hurtful[i]) p -= 0.45;
+      happy.push(r(p));
+    }
+
+    //   Slept enough: bad on harsh days (stress disrupts sleep), better
+    //   when kind (calm evening).
+    const slept: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.65;
+      if (raisedVoice[i] || hurtful[i]) p -= 0.45;
+      if (flowers[i] || compliment[i]) p += 0.15;
+      slept.push(r(p));
+    }
+
+    //   Nauseous: stress/anxiety somatic response — hits next day after
+    //   harsh evening (delayed). Lag +1 to demonstrate engine's
+    //   day-after detection.
+    const nauseous: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.05;
+      if (i > 0 && (raisedVoice[i - 1] || hurtful[i - 1])) p += 0.55;
+      nauseous.push(r(p));
+    }
+
+    //   Cooked something nice: happens when feeling appreciated/loved.
+    //   Strong same-day correlation with compliment, flowers.
+    const cooked: boolean[] = [];
+    for (let i = 0; i < N; i++) {
+      let p = 0.25;
+      if (flowers[i]) p += 0.55;
+      if (compliment[i]) p += 0.3;
+      if (raisedVoice[i] || hurtful[i]) p -= 0.2;
+      cooked.push(r(p));
+    }
+
+    return new Map<string, boolean[]>([
+      ["partner-brought-flowers", flowers],
+      ["partner-complimented-me", compliment],
+      ["partner-raised-voice", raisedVoice],
+      ["partner-said-hurtful", hurtful],
+      ["felt-happy", happy],
+      ["slept-enough", slept],
+      ["felt-nauseous", nauseous],
+      ["cooked-myself", cooked],
+    ]);
+  },
+};
+
 // PACK E — Showcase. Engineered specifically for App Store screens
 // where we want ALL four maturity stages visible on one Patterns
 // screen:
@@ -515,11 +619,13 @@ const PACKS: Record<DemoPackId, DemoPack> = {
   burnout: packBurnout,
   body: packBody,
   "behind-fight": packBehindFight,
+  "relationship-reality": packRelationshipReality,
   showcase: packShowcase,
 };
 
 export const DEMO_PACK_IDS: DemoPackId[] = [
-  "showcase",       // first — it's the "all features visible" one
+  "showcase",              // first — "all features visible" one
+  "relationship-reality",  // second — promo video pack
   "self-care",
   "burnout",
   "body",
