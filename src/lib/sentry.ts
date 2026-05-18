@@ -110,3 +110,30 @@ export const captureError = (
     // Best-effort — never let error reporting itself throw.
   }
 };
+
+/**
+ * Send a one-time INFO-level event on first install. Lets us prove
+ * the Sentry pipeline is wired up correctly even when no actual
+ * errors happen (otherwise the Issues dashboard sits empty forever
+ * showing the "Get Started" tutorial).
+ *
+ * Uses a localStorage flag so we only fire ONCE per install (and
+ * once per re-install if the user wipes data). At 5K free-tier
+ * events / month this costs ~30-50 events/month with our current
+ * user base — well within budget.
+ *
+ * The event shows up in Sentry as "App installation verified"
+ * (level: info) — does NOT appear in the Errors & Outages feed,
+ * only in the broader Issues filter when info-level is included.
+ */
+const SENTRY_INSTALL_VERIFIED_KEY = "memap_sentry_install_verified";
+export const sendInstallHeartbeat = (): void => {
+  if (import.meta.env.DEV) return;
+  try {
+    if (localStorage.getItem(SENTRY_INSTALL_VERIFIED_KEY)) return;
+    Sentry.captureMessage("App installation verified", "info");
+    localStorage.setItem(SENTRY_INSTALL_VERIFIED_KEY, "true");
+  } catch {
+    // Best-effort.
+  }
+};
