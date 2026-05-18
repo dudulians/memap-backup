@@ -37,6 +37,15 @@ export const initAnalytics = (): void => {
 
   try {
     mixpanel.init(MIXPANEL_TOKEN, {
+      // EU data residency. Our Mixpanel project lives on
+      // eu.mixpanel.com, so events MUST be sent to the EU API
+      // endpoint or they silently land in the wrong region and
+      // never appear in the dashboard. The fact that the project
+      // was created with EU residency from the start means there's
+      // no migration path — we have to point the SDK explicitly.
+      // Without this line, events go to the default api.mixpanel.com
+      // (US) and disappear.
+      api_host: "https://api-eu.mixpanel.com",
       // Don't auto-track pageviews — SPA, single page, would just
       // double-count app_opened
       track_pageview: false,
