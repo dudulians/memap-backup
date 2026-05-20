@@ -348,6 +348,7 @@ export const PatternsTab = () => {
           <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-transparent rounded-none gap-0">
             <TabsTrigger
               value="overview"
+              data-coachmark="patterns-overview-tab"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
             >
               <CalendarDays className="h-4 w-4" strokeWidth={1.75} />

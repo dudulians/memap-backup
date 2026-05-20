@@ -248,6 +248,17 @@ export const AddTrackerModal = ({
 }: AddTrackerModalProps) => {
   const { t } = useTranslation();
   const [mode, setMode] = useState<"templates" | "custom">("templates");
+
+  // Outbound notification: fire memap-custom-mode-entered whenever the
+  // user switches to the Custom tab. Index listens for this to launch
+  // the Period/Threshold mini-tour the FIRST time it happens. Index
+  // gates on its own seenKey so re-entries here are harmless no-ops.
+  useEffect(() => {
+    if (mode === "custom") {
+      window.dispatchEvent(new Event("memap-custom-mode-entered"));
+    }
+  }, [mode]);
+
   const [selectedTheme, setSelectedTheme] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -813,8 +824,18 @@ export const AddTrackerModal = ({
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as "templates" | "custom")} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="templates">{t("addTracker.useTemplate")}</TabsTrigger>
-            <TabsTrigger value="custom">{t("addTracker.createCustom")}</TabsTrigger>
+            <TabsTrigger
+              value="templates"
+              data-coachmark="add-tab-templates"
+            >
+              {t("addTracker.useTemplate")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="custom"
+              data-coachmark="add-tab-custom"
+            >
+              {t("addTracker.createCustom")}
+            </TabsTrigger>
           </TabsList>
 
           {/* Templates Tab */}
@@ -1296,7 +1317,7 @@ export const AddTrackerModal = ({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div data-coachmark="custom-field-period">
                   <Label htmlFor="periodDays">{t("addTracker.fieldPeriod")}</Label>
                   <Input
                     id="periodDays"
@@ -1312,7 +1333,7 @@ export const AddTrackerModal = ({
                   />
                   <p className="text-xs text-muted-foreground mt-1">{t("addTracker.fieldPeriodHelp")}</p>
                 </div>
-                <div>
+                <div data-coachmark="custom-field-threshold">
                   <Label htmlFor="threshold">{t("addTracker.fieldThreshold")}</Label>
                   <Input
                     id="threshold"

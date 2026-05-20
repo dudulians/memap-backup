@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -90,6 +90,46 @@ export const TodayTab = () => {
     () => getNotificationSettings().enabled
   );
 
+  // Drives the soft halo pulse on the floating "+" FAB. Fires ONLY on
+  // the user's first day if they haven't yet created their own
+  // tracker via the Add modal — encourages discovery without nagging.
+  // Once they create even one, or once we roll past day 1, the pulse
+  // stops forever. Computed reactively on entries/trackers changes.
+  const [shouldPulseFab, setShouldPulseFab] = useState(false);
+  useEffect(() => {
+    const compute = async () => {
+      try {
+        const flag =
+          localStorage.getItem("memap_added_own_tracker") === "true";
+        if (flag) {
+          setShouldPulseFab(false);
+          return;
+        }
+        const [entriesData, trackersData] = await Promise.all([
+          getEntries(),
+          getTrackers(),
+        ]);
+        const uniqueDates = new Set(entriesData.map((e) => e.date));
+        const hasStarters = trackersData.some((tr) => !tr.archived);
+        // First day = at most ONE unique answered date (today). After
+        // the user has answered on a second calendar day, the pulse is
+        // suppressed — they're past the "haven't discovered + yet"
+        // window and we don't want to nag forever.
+        setShouldPulseFab(hasStarters && uniqueDates.size <= 1);
+      } catch (err) {
+        console.error("[TodayTab] FAB pulse check failed:", err);
+        setShouldPulseFab(false);
+      }
+    };
+    compute();
+    window.addEventListener("memap-entries-changed", compute);
+    window.addEventListener("memap-trackers-changed", compute);
+    return () => {
+      window.removeEventListener("memap-entries-changed", compute);
+      window.removeEventListener("memap-trackers-changed", compute);
+    };
+  }, []);
+
   useEffect(() => {
     const sync = () => setIdeasDismissed(localStorage.getItem("memap_ideas_dismissed") === "true");
     window.addEventListener("memap-settings-changed", sync);
@@ -137,6 +177,19 @@ export const TodayTab = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Outbound notification: fire memap-add-modal-opened on the rising
+  // edge of addTrackerModalOpen so Index can lazily trigger the
+  // "+" mini-tour the first time the user reaches this surface.
+  // Ref-tracked so the event only fires on true closed→open
+  // transitions, not on the initial mount when both are false.
+  const wasAddTrackerOpenRef = useRef(false);
+  useEffect(() => {
+    if (addTrackerModalOpen && !wasAddTrackerOpenRef.current) {
+      window.dispatchEvent(new Event("memap-add-modal-opened"));
+    }
+    wasAddTrackerOpenRef.current = addTrackerModalOpen;
+  }, [addTrackerModalOpen]);
 
   // Auto-close any open swipe-reveal rows whenever a modal/sheet
   // opens on top — otherwise an open card peeks out behind the
@@ -436,10 +489,35 @@ export const TodayTab = () => {
     });
   };
 
+  // Shared helper: records the "user has created a tracker" flag and
+  // immediately silences the FAB pulse. Called from every path that
+  // results in a new tracker on the user's list:
+  //   • createTrackerDirectly (Daily Ideas carousel, duplicate-confirm
+  //     "create anyway")
+  //   • handleTrackerAdded — passed as onTrackerAdded callback to both
+  //     AddTrackerModal instances (FAB and header "+")
+  // Without this in the AddTrackerModal path the FAB kept pulsing
+  // even after the user successfully added a tracker — the modal
+  // saves via its own internal flow and only fires onTrackerAdded.
+  const markTrackerAdded = () => {
+    try {
+      localStorage.setItem("memap_added_own_tracker", "true");
+    } catch {
+      /* private mode — non-blocking */
+    }
+    setShouldPulseFab(false);
+  };
+
+  const handleTrackerAdded = () => {
+    markTrackerAdded();
+    loadData();
+  };
+
   const createTrackerDirectly = async (newTracker: Tracker) => {
     const updatedTrackers = [...trackers, newTracker];
     await saveTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
+    markTrackerAdded();
   };
 
   // Promote a play-round card to a regular tracker — drop the source
@@ -794,7 +872,7 @@ export const TodayTab = () => {
         <AddTrackerModal
           open={addTrackerModalOpen}
           onClose={() => setAddTrackerModalOpen(false)}
-          onTrackerAdded={loadData}
+          onTrackerAdded={handleTrackerAdded}
         />
       </div>
     );
@@ -1372,10 +1450,25 @@ export const TodayTab = () => {
           button already announces this action to screen readers. */}
       <button
         type="button"
-        onClick={() => setAddTrackerModalOpen(true)}
+        onClick={() => {
+          // Stop the discovery pulse as soon as the user TAPS the
+          // FAB, not only when they actually create a tracker — the
+          // pulse is a "you can add your own questions here" hint,
+          // and the tap itself proves the discovery has happened.
+          // Pulse never returns even if they back out of the modal
+          // without saving.
+          markTrackerAdded();
+          setAddTrackerModalOpen(true);
+        }}
         aria-label={t("common.addPattern")}
         data-app-fab
-        className="fixed right-4 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+        className={cn(
+          "fixed right-4 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform",
+          // First-day discovery nudge — wraps a primary-coloured halo
+          // around the FAB so the user notices the "+" without us
+          // having to drop a verbal hint on top of the UI.
+          shouldPulseFab && "nudge-pulse-halo",
+        )}
         style={{
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 6.5rem)",
         }}

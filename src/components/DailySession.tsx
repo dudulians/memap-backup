@@ -358,6 +358,20 @@ export const DailySession = ({
   const [deck, setDeck] = useState<SessionQuestion[]>(() => buildDeck());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
+  // Tracks whether the user has ever answered a swipe card on this
+  // device. Drives the first-card swipe hint — a gentle left/right
+  // wiggle on the card itself + two faint chevrons floating just
+  // outside its left and right edges. The hint shows ONLY on the
+  // very first card of the very first session, then never again.
+  // Persisted to localStorage so a reinstall keeps the user from
+  // seeing the wiggle a second time (they already learned).
+  const [firstSwipeSeen, setFirstSwipeSeen] = useState(() => {
+    try {
+      return localStorage.getItem("memap_first_swipe_seen") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [newPatternsAdded, setNewPatternsAdded] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | "down" | null>(null);
@@ -477,6 +491,21 @@ export const DailySession = ({
     playFeedbackSound(value ? "yes" : "no");
     triggerHaptic("medium");
     setAnsweredCount(prev => prev + 1);
+
+    // Latch the first-swipe-seen flag so the wiggle + chevron hint
+    // never appears again. Set regardless of whether the user
+    // answered via swipe gesture or by tapping the Yes/No buttons —
+    // the discovery has happened either way and the hint's job is
+    // done. Best-effort storage write; in-memory state ensures the
+    // next card render reflects the change even if storage fails.
+    if (!firstSwipeSeen) {
+      try {
+        localStorage.setItem("memap_first_swipe_seen", "true");
+      } catch {
+        /* private mode / quota exceeded — non-blocking */
+      }
+      setFirstSwipeSeen(true);
+    }
 
     // Kick off persistence in the background — never await it here,
     // so a failure or slow write can't lock the session.
@@ -1193,12 +1222,32 @@ export const DailySession = ({
           cleanly. */}
       <div
         data-vaul-no-drag
-        className="flex-1 flex items-stretch justify-center p-3 overflow-hidden"
+        className="flex-1 flex items-stretch justify-center p-3 overflow-hidden relative"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
       >
+        {/* First-card-ever swipe hint: faint monochrome chevrons just
+            outside the card's left/right edges. Sit on the outer
+            pointer container so they DON'T move with the card during
+            drag — they stay as fixed reference markers while the
+            card slides toward / away from them. Disappear forever
+            once the user has answered any card. */}
+        {!firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && (
+          <>
+            <ChevronLeft
+              aria-hidden="true"
+              className="ds-first-chev absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
+              strokeWidth={2}
+            />
+            <ChevronRight
+              aria-hidden="true"
+              className="ds-first-chev absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
+              strokeWidth={2}
+            />
+          </>
+        )}
         <div
           className={cn(
             "w-full max-w-lg flex",
@@ -1208,6 +1257,13 @@ export const DailySession = ({
             // 300 ms tween onto each step made the card visibly trail
             // the finger and "shake" on slow, thoughtful drags.
             (isAnimating || (dragX === 0 && dragY === 0)) && "transition-transform duration-300",
+            // Gentle one-shot wiggle for the very first card the user
+            // ever sees — left tilt, right tilt, settle. The animation
+            // is on transform; once the user starts dragging the inline
+            // transform on this same element supersedes (so wiggle +
+            // drag don't fight). The class is gated on the same
+            // condition as the chevrons above.
+            !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && "ds-first-wiggle",
             swipeDirection === "right" && "translate-x-[120%] rotate-12",
             swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
             swipeDirection === "down" && "translate-y-[120%] opacity-50",

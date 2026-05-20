@@ -1758,4 +1758,65 @@
       transform: scale(1.05);
     }
   }
+
+  /* First-ever DailySession card — gentle one-shot wiggle that hints
+     the card is swipeable. Plays 0.5 s after mount so the user has
+     time to register the card first; then a soft left-tilt → centre
+     → right-tilt → centre, one iteration. No colour, just motion.
+
+     `animation-fill-mode: both` keeps the keyframe-defined state
+     during the pre-delay so the card doesn't pop from "untransformed"
+     to "0%" when the animation starts. */
+  @keyframes dsFirstWiggle {
+    0%   { transform: translateX(0)    rotate(0); }
+    18%  { transform: translateX(-22px) rotate(-3deg); }
+    36%  { transform: translateX(0)    rotate(0); }
+    56%  { transform: translateX(22px)  rotate(3deg); }
+    74%  { transform: translateX(0)    rotate(0); }
+    100% { transform: translateX(0)    rotate(0); }
+  }
+  .ds-first-wiggle {
+    animation: dsFirstWiggle 1.8s cubic-bezier(0.45, 0, 0.55, 1) 0.5s 1 both;
+  }
+
+  /* Companion chevron pulse — the two faint ◂ ▸ glyphs sitting just
+     outside the card's left and right edges breathe in and out
+     gently so the eye catches them without screaming for attention.
+     Loops while the hint is visible (i.e. until the user answers
+     the first card and the React condition strips them from the
+     DOM). */
+  @keyframes dsFirstChev {
+    0%, 100% { opacity: 0.35; transform: translate(0, -50%) scale(1); }
+    50%      { opacity: 0.85; transform: translate(0, -50%) scale(1.12); }
+  }
+  .ds-first-chev {
+    animation: dsFirstChev 1.6s ease-in-out infinite;
+  }
+
+  /* Soft primary-coloured halo pulse for "attention here" nudges.
+     Applied to:
+       • the floating ▶ Play button when the user has unanswered
+         trackers for today (Index.tsx),
+       • the floating "+" FAB on day-one if the user hasn't created
+         their own tracker yet (TodayTab.tsx).
+     Same animation, two callsites — keeps the visual language
+     consistent so users learn to recognise "this button is the
+     suggested next action". The box-shadow expands outward and
+     fades, so the button itself doesn't move (no layout shift,
+     no nausea-inducing scale wobble). */
+  @keyframes nudgePulseHalo {
+    0%, 100% {
+      box-shadow:
+        0 0 0 0 hsl(var(--primary) / 0.55),
+        0 8px 16px -4px hsl(var(--primary) / 0.30);
+    }
+    50% {
+      box-shadow:
+        0 0 0 14px hsl(var(--primary) / 0),
+        0 8px 16px -4px hsl(var(--primary) / 0.30);
+    }
+  }
+  .nudge-pulse-halo {
+    animation: nudgePulseHalo 1.9s ease-out infinite;
+  }
 }

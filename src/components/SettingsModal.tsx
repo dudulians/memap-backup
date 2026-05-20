@@ -28,6 +28,7 @@ import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { resetTourSeen } from "@/components/OnboardingTour";
+import { resetCoachmarkSeen, resetTourKey } from "@/components/CoachmarkTour";
 import { getTheme, setTheme, AppTheme } from "@/lib/theme";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
@@ -1223,7 +1224,21 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
               <Button
                 variant="outline"
                 onClick={() => {
+                  // Wipe ALL tour / hint seen-flags so every guided
+                  // moment runs again from scratch — onboarding,
+                  // the main coachmark, the Patterns / Add-Tracker
+                  // / Custom mini-tours, and the small in-card
+                  // discovery nudges (swipe wiggle, FAB pulse).
+                  // Without this, "Show app tour" only re-ran the
+                  // onboarding interview but left every mini-tour
+                  // permanently dismissed.
                   resetTourSeen();
+                  resetCoachmarkSeen();
+                  resetTourKey("memap_patterns_tour_seen");
+                  resetTourKey("memap_add_tracker_tour_seen");
+                  resetTourKey("memap_custom_tour_seen");
+                  resetTourKey("memap_first_swipe_seen");
+                  resetTourKey("memap_added_own_tracker");
                   onStartTour?.();
                 }}
                 className="w-full justify-start"

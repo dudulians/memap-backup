@@ -6,6 +6,28 @@ import { cn } from "@/lib/utils";
 const COACHMARK_SEEN_KEY = "memap_coachmark_seen";
 
 /**
+ * Helper for any caller that wants to gate a separate mini-tour on its
+ * own localStorage flag (e.g. the Patterns sub-tab explainer that fires
+ * the first time a user opens the Patterns tab — see Index.tsx). The
+ * default tour uses COACHMARK_SEEN_KEY; secondary tours pass their own.
+ */
+export const hasSeenTourKey = (key: string): boolean => {
+  try {
+    return localStorage.getItem(key) === "true";
+  } catch {
+    return false;
+  }
+};
+
+export const resetTourKey = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+};
+
+/**
  * One step of the coachmark tour. Highlights a real UI element on the
  * page and shows a small bubble explaining what it does.
  *
@@ -54,6 +76,13 @@ interface CoachmarkTourProps {
    * target appears in the DOM.
    */
   onRequestTab?: (tab: "cards" | "patterns") => void;
+  /**
+   * Optional localStorage flag this tour writes on completion. Lets
+   * the component be reused for multiple independent mini-tours
+   * (default = the main coachmark; Patterns tour, Add-tracker tour
+   * etc. each pass their own key). Defaults to COACHMARK_SEEN_KEY.
+   */
+  seenKey?: string;
 }
 
 /**
@@ -80,7 +109,13 @@ const measure = (el: HTMLElement, padding: number): Rect => {
   };
 };
 
-export const CoachmarkTour = ({ open, steps, onClose, onRequestTab }: CoachmarkTourProps) => {
+export const CoachmarkTour = ({
+  open,
+  steps,
+  onClose,
+  onRequestTab,
+  seenKey = COACHMARK_SEEN_KEY,
+}: CoachmarkTourProps) => {
   const { t } = useTranslation();
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -165,10 +200,14 @@ export const CoachmarkTour = ({ open, steps, onClose, onRequestTab }: CoachmarkT
 
   const handleFinish = useCallback(() => {
     try {
-      localStorage.setItem(COACHMARK_SEEN_KEY, "true");
+      // Honour the caller-provided seenKey so a secondary mini-tour
+      // (e.g. Patterns sub-tab explainer) doesn't trample the main
+      // coachmark flag — each tour records its own completion under
+      // its own key.
+      localStorage.setItem(seenKey, "true");
     } catch { /* ignore */ }
     onClose();
-  }, [onClose]);
+  }, [onClose, seenKey]);
 
   if (!open || !step) return null;
 
