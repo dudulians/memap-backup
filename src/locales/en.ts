@@ -107,7 +107,7 @@ const en = {
       },
       understand: {
         title: "Make a big decision",
-        subtitle: "Leaving, kids, jobs, moves — see the pattern before you decide",
+        subtitle: "Having kids, switching jobs, moving, breaking up — see the pattern before you decide",
       },
       doctor: {
         title: "Show data to the doctor",
@@ -793,6 +793,27 @@ const en = {
     trendsBody: "A chart of your answers over time — watch how things shift day by day.",
     linksTitle: "Links",
     linksBody: "Correlations between questions — what tends to happen together. Like stress and poor sleep.",
+    // Patterns sub-tab walkthrough — fires the FIRST time the user opens
+    // the Patterns tab. The main coachmark already told them Patterns
+    // exists; these steps explain what each of the four sections does.
+    overviewTitle: "Calendar",
+    overviewBody: "Every day you answer becomes a coloured dot here — green when it was OK, red when it was a problem day.",
+    // Add-Tracker modal walkthrough — fires the FIRST time the user
+    // opens the "+" modal. Two short steps that point at the two
+    // ways to add a question: pick a library template, or write
+    // your own from scratch.
+    addTemplatesTitle: "Pick a template",
+    addTemplatesBody: "Browse ready-made questions grouped by topic — sleep, partner, mood, work, body and more.",
+    addCustomTitle: "Or write your own",
+    addCustomBody: "Switch here to write a YES/NO question that's specifically about you. Your own questions usually surface the strongest patterns.",
+    // Custom-question Period & Threshold explainer — fires the FIRST
+    // time the user enters the Custom tab. Two short steps that
+    // demystify the two numeric fields most users don't intuitively
+    // understand.
+    periodTitle: "Period",
+    periodBody: "How many days back MeMap looks when judging this question. 30 days is a good default.",
+    thresholdTitle: "Threshold",
+    thresholdBody: "How many problem days within the period before MeMap flags this as a signal. Lower = more sensitive.",
     settingsTitle: "Settings",
     settingsBody: "Language, theme, data backup, notifications — all here.",
   },
