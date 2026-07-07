@@ -1276,24 +1276,61 @@ const TEMPLATE_KEYWORDS: Array<[string, string[]]> = [
  * custom tracker like "Завтрак был полезным" that doesn't trigger
  * any of our keyword stems).
  */
-export const matchTemplateIdByTitle = (title: string): string | null => {
-  const norm = title.trim().toLowerCase();
-
-  // 1) Exact match against any template's localised title.
+// Memoisation for matchTemplateIdByTitle. The original ran a full
+// LIFE_STREAMS scan (193 templates × 2 localised strings) on every call,
+// and computeCorrelations calls it ~6× per tracker pair — an
+// O(trackers² × library) hot path that surfaced as multi-second iOS
+// "App Hang" freezes on data-heavy accounts.
+//
+// Two layers, both indexing the compile-time-constant LIFE_STREAMS (so
+// neither ever needs invalidation):
+//   - exactTitleIndex: normalised title/titleRu → id, built once, giving
+//     O(1) exact matches. Insertion order mirrors the old loop exactly
+//     (declaration order, title before titleRu, first match wins) so the
+//     resolved id is byte-for-byte identical to the scan it replaces.
+//   - matchCache: normalised title → resolved id, covering the keyword
+//     fallback too so repeat lookups of the same title are free.
+let exactTitleIndex: Map<string, string> | null = null;
+const getExactTitleIndex = (): Map<string, string> => {
+  if (exactTitleIndex) return exactTitleIndex;
+  const idx = new Map<string, string>();
   for (const stream of LIFE_STREAMS) {
     for (const tpl of stream.templates) {
-      if (tpl.title.toLowerCase() === norm) return tpl.id;
-      if (tpl.titleRu.toLowerCase() === norm) return tpl.id;
+      const en = tpl.title.toLowerCase();
+      const ru = tpl.titleRu.toLowerCase();
+      // First writer wins — reproduces the original loop's
+      // return-on-first-match, checking title before titleRu.
+      if (!idx.has(en)) idx.set(en, tpl.id);
+      if (!idx.has(ru)) idx.set(ru, tpl.id);
     }
   }
+  exactTitleIndex = idx;
+  return idx;
+};
+
+const matchCache = new Map<string, string | null>();
+
+export const matchTemplateIdByTitle = (title: string): string | null => {
+  const norm = title.trim().toLowerCase();
+  const cached = matchCache.get(norm);
+  if (cached !== undefined) return cached;
+
+  // 1) Exact match against any template's localised title.
+  let result = getExactTitleIndex().get(norm) ?? null;
 
   // 2) Keyword fallback — any keyword stem appears in the title?
   // First template wins (declaration order is intentional).
-  for (const [tplId, stems] of TEMPLATE_KEYWORDS) {
-    if (stems.some((stem) => norm.includes(stem.toLowerCase()))) return tplId;
+  if (result === null) {
+    for (const [tplId, stems] of TEMPLATE_KEYWORDS) {
+      if (stems.some((stem) => norm.includes(stem.toLowerCase()))) {
+        result = tplId;
+        break;
+      }
+    }
   }
 
-  return null;
+  matchCache.set(norm, result);
+  return result;
 };
 
 /**

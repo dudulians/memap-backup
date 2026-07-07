@@ -17,7 +17,36 @@
 
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { RELATED_QUESTIONS, matchTemplateIdByTitle } from "./relatedQuestions";
-import { LIFE_STREAMS } from "./lifeStreams";
+import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
+
+// One-time template-by-id index over the static library. The helpers
+// below (shortLabel / sensitive / cluster lookups) each used to walk all
+// of LIFE_STREAMS on every call, and computeCorrelations invokes them
+// once per tracker pair — so on a data-heavy account the correlation pass
+// re-scanned the 193-template library thousands of times synchronously on
+// the WebView's main thread (the iOS "App Hang" root cause). LIFE_STREAMS
+// is a compile-time constant, so this index is built once and never needs
+// invalidation.
+let templateIndex: Map<
+  string,
+  { template: LifeStreamTemplate; streamId: string }
+> | null = null;
+const getTemplateIndex = () => {
+  if (templateIndex) return templateIndex;
+  const idx = new Map<
+    string,
+    { template: LifeStreamTemplate; streamId: string }
+  >();
+  for (const stream of LIFE_STREAMS) {
+    for (const tpl of stream.templates) {
+      // First declaration wins, matching the original loops that
+      // returned on the first id hit.
+      if (!idx.has(tpl.id)) idx.set(tpl.id, { template: tpl, streamId: stream.id });
+    }
+  }
+  templateIndex = idx;
+  return idx;
+};
 
 // Look up a tracker title against the curated library and return its
 // shortLabel (RU + EN forms) if the matched template has metadata.
@@ -36,15 +65,11 @@ export const lookupShortLabel = (
 ): TrackerInsightLabel | null => {
   const id = matchTemplateIdByTitle(trackerTitle);
   if (!id) return null;
-  for (const stream of LIFE_STREAMS) {
-    for (const tpl of stream.templates) {
-      if (tpl.id === id) {
-        if (tpl.shortLabel && tpl.shortLabelRu) {
-          return { en: tpl.shortLabel, ru: tpl.shortLabelRu };
-        }
-        return null;
-      }
-    }
+  const entry = getTemplateIndex().get(id);
+  if (!entry) return null;
+  const tpl = entry.template;
+  if (tpl.shortLabel && tpl.shortLabelRu) {
+    return { en: tpl.shortLabel, ru: tpl.shortLabelRu };
   }
   return null;
 };
@@ -56,12 +81,8 @@ export const lookupShortLabel = (
 const isSensitiveTrackerTitle = (trackerTitle: string): boolean => {
   const id = matchTemplateIdByTitle(trackerTitle);
   if (!id) return false;
-  for (const stream of LIFE_STREAMS) {
-    for (const tpl of stream.templates) {
-      if (tpl.id === id) return tpl.sensitive === true;
-    }
-  }
-  return false;
+  const entry = getTemplateIndex().get(id);
+  return entry ? entry.template.sensitive === true : false;
 };
 
 const userOptedIntoSensitive = (): boolean => {
@@ -352,10 +373,8 @@ const computePairLag = (
 // when a custom tracker's saved cluster matches the library
 // template's cluster.
 const clusterIdForTemplateId = (tplId: string): string | null => {
-  for (const stream of LIFE_STREAMS) {
-    if (stream.templates.some((t) => t.id === tplId)) return stream.id;
-  }
-  return null;
+  const entry = getTemplateIndex().get(tplId);
+  return entry ? entry.streamId : null;
 };
 
 /** Three-way verdict on the (a, b) pair semantics:
