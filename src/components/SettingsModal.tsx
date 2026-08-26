@@ -24,6 +24,23 @@ import {
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
@@ -99,6 +116,63 @@ const getSessionSettings = (): SessionSettings => {
 
 const saveSessionSettings = (settings: SessionSettings) => {
   localStorage.setItem(SESSION_SETTINGS_KEY, JSON.stringify(settings));
+};
+
+// Row inside Settings → tracker management list. The GripVertical was pure
+// decoration until 1.7.7 — a real user support ticket flagged that the dots
+// invited a drag that did nothing. Now wired to dnd-kit so the drag actually
+// reorders and persists via sortIndex.
+interface SortableSettingsTrackerRowProps {
+  tracker: Tracker;
+  onToggle: (id: string) => void;
+}
+
+const SortableSettingsTrackerRow = ({ tracker, onToggle }: SortableSettingsTrackerRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tracker.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    zIndex: isDragging ? 10 : undefined,
+    position: "relative" as const,
+    // Prevent iOS text-selection + long-press callout while the finger
+    // is on the row waiting for drag to activate.
+    WebkitUserSelect: "none" as const,
+    WebkitTouchCallout: "none" as const,
+  };
+  const SIcon = getTrackerIcon(tracker.title, tracker.category);
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="flex items-center gap-3 p-2 rounded-xl bg-muted/30 select-none"
+    >
+      <button
+        {...listeners}
+        type="button"
+        className="touch-none cursor-grab active:cursor-grabbing p-1 -m-1 text-muted-foreground/50 hover:text-muted-foreground flex-shrink-0"
+        style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <SIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
+      <span className="flex-1 text-sm truncate">{localizeTrackerTitle(tracker.title)}</span>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onToggle(tracker.id)}
+        className="h-8 w-8"
+      >
+        {tracker.archived ? (
+          <EyeOff className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <Eye className="h-4 w-4 text-primary" />
+        )}
+      </Button>
+    </div>
+  );
 };
 
 export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps) => {
@@ -312,6 +386,32 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     );
     setTrackers(updatedTrackers);
     await saveTrackers(updatedTrackers);
+  };
+
+  // Sensors + drag-end handler for the trackers-in-settings list. Small
+  // pointer-distance activation so a straight tap on the grip does not
+  // accidentally start a drag.
+  const trackersDragSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleTrackersDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = trackers.findIndex((t) => t.id === active.id);
+    const newIndex = trackers.findIndex((t) => t.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(trackers, oldIndex, newIndex).map((t, i) => ({
+      ...t,
+      sortIndex: i,
+    }));
+    setTrackers(reordered);
+    await saveTrackers(reordered);
   };
 
   // Dev-only: generate 60 days of biased fake data for every active
@@ -1183,31 +1283,24 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
               </div>
 
               <div className="space-y-2">
-                {trackers.map(tracker => (
-                  <div
-                    key={tracker.id}
-                    className="flex items-center gap-3 p-2 rounded-xl bg-muted/30"
+                <DndContext
+                  sensors={trackersDragSensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleTrackersDragEnd}
+                >
+                  <SortableContext
+                    items={trackers.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-                    {(() => {
-                      const SIcon = getTrackerIcon(tracker.title, tracker.category);
-                      return <SIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />;
-                    })()}
-                    <span className="flex-1 text-sm truncate">{localizeTrackerTitle(tracker.title)}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleToggleTrackerActive(tracker.id)}
-                      className="h-8 w-8"
-                    >
-                      {tracker.archived ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-primary" />
-                      )}
-                    </Button>
-                  </div>
-                ))}
+                    {trackers.map(tracker => (
+                      <SortableSettingsTrackerRow
+                        key={tracker.id}
+                        tracker={tracker}
+                        onToggle={handleToggleTrackerActive}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
                 {trackers.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     {t("settings.noTrackersYet")}
