@@ -5,7 +5,7 @@ import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storag
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -1290,18 +1290,31 @@ export const TodayTab = () => {
                     )}
                   </div>
                 )}
-                <div className="space-y-2">
-                  {/* Plain list — swipe-reveal removed. Per-card
-                      Archive / Delete actions now live inside
-                      TrackerDetails (opens on card tap). Bulk
-                      Archive / Delete are still available via the
-                      "Изменить" button above (selection mode). */}
-                  {regularTrackers.map((tracker) => (
-                    <div key={tracker.id}>
-                      {renderTrackerCard(tracker, false)}
+                {/* Plain list — swipe-reveal removed. Per-card
+                    Archive / Delete actions now live inside
+                    TrackerDetails (opens on card tap). Bulk
+                    Archive / Delete are still available via the
+                    "Изменить" button above (selection mode).
+                    Drag-to-reorder via the small grip handle on the
+                    left of each row (added back in 1.7.6). */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={regularTrackers.map((t) => t.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {regularTrackers.map((tracker) => (
+                        <SortableTrackerRow key={tracker.id} tracker={tracker}>
+                          {renderTrackerCard(tracker, false)}
+                        </SortableTrackerRow>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               </div>
             )}
 
@@ -1487,6 +1500,58 @@ interface SortableSwipeCardProps {
   onOpenDetails: (tracker: Tracker) => void;
   onDelete?: (tracker: Tracker) => void;
 }
+
+// Lightweight sortable wrapper for the plain (non-swipe) tracker row on the
+// Cards home. Renders a small grip handle on the left plus whatever card
+// JSX is passed as children — keeps the current tap-to-open behaviour on
+// the card body and adds only drag-to-reorder via the handle.
+//
+// Restored in 1.7.6 after a user wrote in saying they couldn't rearrange
+// their questions. The dnd-kit infra was already in place (see handleDragEnd
+// and the sensors below); the plain render just wasn't wired to it.
+const SortableTrackerRow = ({
+  tracker,
+  children,
+}: {
+  tracker: Tracker;
+  children: React.ReactNode;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tracker.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+    zIndex: isDragging ? 10 : undefined,
+    position: "relative",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="flex items-stretch gap-1"
+    >
+      <button
+        {...listeners}
+        type="button"
+        className="touch-none cursor-grab active:cursor-grabbing self-center py-2 px-1 text-muted-foreground/40 hover:text-muted-foreground/80 flex-shrink-0"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+};
 
 const SortableSwipeCard = ({ tracker, selectedDateEntry, onAnswer, onOpenDetails, onDelete }: SortableSwipeCardProps) => {
   const {

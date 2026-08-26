@@ -17,10 +17,15 @@ const LEGACY_DAILY_NOTIFICATION_ID = 1;
 
 // Window of days we pre-schedule. Each day gets its own non-repeating
 // notification with a date-based id, so we can cancel any single day
-// (e.g. to skip "today" once it's already filled). 7 days is plenty —
-// the app re-runs the scheduler on every cold start, so the queue gets
-// topped up whenever the user actually opens it.
-const DAYS_AHEAD = 7;
+// (e.g. to skip "today" once it's already filled).
+//
+// Bumped from 7 to 60 in 1.7.6 to survive users who stop opening the
+// app for weeks. The queue is only refilled on cold start, so with a
+// 7-day window a lapsed user would silently stop receiving reminders
+// after a week — exactly the moment we most want to re-engage them.
+// 60 days is a generous safety net; iOS caps at 64 scheduled
+// notifications per app so we stay well under that.
+const DAYS_AHEAD = 60;
 
 // Encode a date as a 32-bit-safe integer id: YYYYMMDD.
 const dateToNotificationId = (date: Date): number =>

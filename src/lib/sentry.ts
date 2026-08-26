@@ -49,10 +49,10 @@ export const initSentry = (): void => {
 
         // Release version — pulls from the same source the app icon /
         // build uses (Android versionName, iOS MARKETING_VERSION).
-        // Currently 1.7.3. Sentry groups errors by release, so this
-        // is what makes the "this bug was introduced in v1.7.3"
-        // analytics work.
-        release: "memap@1.7.3",
+        // BUMP THIS on every release alongside the iOS/Android version
+        // numbers. Sentry groups errors by release, so this is what
+        // makes the "this bug was introduced in v1.7.6" analytics work.
+        release: "memap@1.7.6",
 
         // Free-tier-friendly sample rates (see file header for reasoning).
         tracesSampleRate: 0,
