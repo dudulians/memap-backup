@@ -1531,6 +1531,12 @@ const SortableTrackerRow = ({
     opacity: isDragging ? 0.5 : undefined,
     zIndex: isDragging ? 10 : undefined,
     position: "relative",
+    // Prevent iOS text-selection + long-press callout while the finger is
+    // on the row waiting for drag to activate. Without these, iOS Safari
+    // selects the question text and shows the Copy/Look Up popup during
+    // the ~8 px activation window, which fights the drag gesture.
+    WebkitUserSelect: "none",
+    WebkitTouchCallout: "none",
   };
 
   return (
@@ -1538,17 +1544,18 @@ const SortableTrackerRow = ({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="flex items-stretch gap-1"
+      className="flex items-stretch gap-1 select-none"
     >
+      <div className="flex-1 min-w-0">{children}</div>
       <button
         {...listeners}
         type="button"
-        className="touch-none cursor-grab active:cursor-grabbing self-center py-2 px-1 text-muted-foreground/40 hover:text-muted-foreground/80 flex-shrink-0"
+        className="touch-none select-none cursor-grab active:cursor-grabbing self-center py-2 px-1 text-muted-foreground/40 hover:text-muted-foreground/80 flex-shrink-0"
+        style={{ WebkitTouchCallout: "none", WebkitUserSelect: "none" }}
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-5 w-5" />
       </button>
-      <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
 };
