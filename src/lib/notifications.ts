@@ -4,7 +4,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
 import { getTrackers, getEntries } from "@/lib/storage";
-import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 const NOTIFICATION_ENABLED_KEY = "memap_notification_enabled";
 const NOTIFICATION_TIME_KEY = "memap_notification_time";
@@ -179,12 +179,30 @@ export const scheduleNotification = async (
   const now = new Date();
   const todayFilled = await isTodayFilled();
 
-  // Pull the lock-screen text in the user's CURRENT language at
-  // schedule time. iOS stores the literal string with the
-  // notification, so a later language switch needs another reschedule
-  // to update — that's why callers re-run this on memap-language-changed.
-  const title = i18n.t("notifications.dailyTitle");
-  const body = i18n.t("notifications.dailyBody");
+  // Pull active trackers so each day's notification can surface a
+  // specific question from the user's own list. Rotating through the
+  // trackers puts a real prompt on the lock screen — "Did you sleep
+  // well today?" pulls far harder than the generic "Time to check in"
+  // it replaces. Snapshot up-front so the loop stays pure.
+  //
+  // The 60-day queue is baked from THIS snapshot: a tracker added
+  // later won't appear in scheduled notifications until the next
+  // scheduleNotification() call (cold start, session complete, or a
+  // settings change). Acceptable tradeoff for keeping the pipeline
+  // simple — the queue is rebuilt often enough in practice.
+  const activeTrackers = (await getTrackers()).filter((t) => !t.archived);
+
+  // Language-sensitive fallback strings, resolved in the user's
+  // CURRENT UI language at schedule time. iOS stores the literal
+  // string with the notification, so a later language switch needs
+  // another reschedule to update — that's why callers re-run this on
+  // memap-language-changed.
+  const fallbackTitle = i18n.t("notifications.dailyTitle");
+  const fallbackBody = i18n.t("notifications.dailyBody");
+  // Short call-to-action for the body when the title carries the
+  // actual question. Lock-screen body copy is small; keep it tight
+  // ("Answer in one swipe" / "Ответь одним свайпом").
+  const promptBody = i18n.t("notifications.dailyPromptBody");
 
   type ScheduledNotification = {
     id: number;
@@ -206,10 +224,29 @@ export const scheduleNotification = async (
     // point reminding them to do something they've done.
     if (offset === 0 && todayFilled) continue;
 
+    // Rotate through active trackers so day N picks tracker N % length.
+    // Deterministic rotation (not random) so the sequence feels
+    // intentional and the same tracker doesn't repeat two days in a
+    // row when several are available.
+    let dayTitle = fallbackTitle;
+    let dayBody = fallbackBody;
+    if (activeTrackers.length > 0) {
+      const tracker = activeTrackers[offset % activeTrackers.length];
+      const rawQuestion = (tracker.questionText ?? "").trim();
+      const localizedQuestion = rawQuestion
+        ? localizeTrackerQuestion(rawQuestion, tracker.title)
+        : "";
+      // Question is what pulls attention on the lock screen. Fall back
+      // to the localized tracker title if the question is empty (older
+      // trackers were saved without one).
+      dayTitle = localizedQuestion || localizeTrackerTitle(tracker.title);
+      dayBody = promptBody;
+    }
+
     notifications.push({
       id: dateToNotificationId(fireAt),
-      title,
-      body,
+      title: dayTitle,
+      body: dayBody,
       schedule: { at: fireAt, allowWhileIdle: true },
     });
   }

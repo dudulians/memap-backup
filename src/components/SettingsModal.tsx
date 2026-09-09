@@ -22,7 +22,7 @@ import {
   type DemoPackId,
 } from "@/lib/demoDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, GripVertical, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";

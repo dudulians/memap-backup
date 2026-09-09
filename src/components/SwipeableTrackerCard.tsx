@@ -61,6 +61,11 @@ export const SwipeableTrackerCard = ({
   const [swipeX, setSwipeX] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const [showDeleteBar, setShowDeleteBar] = useState(false);
+  // Set to ±1 for a beat after a swipe commit so the card slides a bit
+  // further in the answer direction and dims, then springs back — the
+  // "flick and return" flourish that lets each answer feel physical
+  // rather than snapping to 0 without acknowledgement.
+  const [committingDirection, setCommittingDirection] = useState<-1 | 0 | 1>(0);
   const startX = useRef(0);
   const currentDx = useRef(0);
   // Pointer-down timestamp for flick-velocity detection. A short fast
@@ -164,8 +169,15 @@ export const SwipeableTrackerCard = ({
       // as the Settings diagnostic test, which the user confirmed
       // works on her device.
       if (isHapticEnabled()) haptics.medium();
+      // Kick off the flick-and-return flourish (see committingDirection
+      // declaration). The 220 ms timeout matches the transition duration
+      // set on the card, so the flourish is finished before the next
+      // interaction can begin.
+      const dir: -1 | 1 = dx > 0 ? 1 : -1;
+      setCommittingDirection(dir);
       if (dx > 0) onAnswer(tracker.id, true);
       else onAnswer(tracker.id, false);
+      window.setTimeout(() => setCommittingDirection(0), 220);
     }
   };
 
@@ -215,7 +227,26 @@ export const SwipeableTrackerCard = ({
       <Card
         ref={cardRef}
         style={{
-          transform: `translateX(${swipeX}px)`,
+          // Finger-follow + a small tilt so the card reads as a physical
+          // sheet being tipped, not a flat UI plate sliding. During the
+          // brief commit window (committingDirection !== 0) an extra
+          // 90 px in the answer direction, plus a slight opacity dip,
+          // completes the "flick" so the answer feels thrown, not clicked.
+          //
+          // Transition applies ONLY after release (isSwiping === false).
+          // During drag the card must follow the finger 1:1 — with the
+          // transition always on, every pointermove triggered a tween
+          // and the card visibly trailed the finger, forcing overshoot
+          // to commit a swipe.
+          //
+          // Easing is cubic-bezier(0.22, 1, 0.36, 1) — ease-out-expo, the
+          // Apple-clean deceleration curve. A springier bounce read as
+          // toy-like on a serious tracker in earlier tests.
+          transform: `translateX(${swipeX + committingDirection * 90}px) rotate(${(swipeX + committingDirection * 90) * 0.025}deg)`,
+          opacity: committingDirection !== 0 ? 0.78 : 1,
+          transition: !isSwiping
+            ? "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms cubic-bezier(0.22, 1, 0.36, 1)"
+            : undefined,
         }}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -230,14 +261,7 @@ export const SwipeableTrackerCard = ({
         }}
         className={cn(
           "card-premium animate-fade-in overflow-hidden select-none",
-          isDragging && "shadow-2xl opacity-50",
-          // Only animate the snap-back AFTER release — during active
-          // drag the card follows the finger 1:1. With the transition
-          // always on, every pointermove triggered a 200 ms tween, so
-          // the card visibly trailed the finger and the user had to
-          // overshoot (or arc diagonally) to "convince" the gesture
-          // it had crossed the threshold.
-          !isSwiping && "transition-transform duration-200"
+          isDragging && "shadow-2xl opacity-50"
         )}
       >
         {/* Swipe-capture zone — everything here reacts to horizontal drag.

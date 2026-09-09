@@ -285,6 +285,10 @@ const en = {
     // Lock-screen / system notification copy. Localized at schedule time.
     dailyTitle: "MeMap",
     dailyBody: "Time for today's check-in",
+    // Body copy used when the title carries a specific tracker
+    // question ("Did you sleep well today?"). Small on the lock
+    // screen so keep it short and action-oriented.
+    dailyPromptBody: "Answer in one swipe",
     thresholdTitle: "{{emoji}} Action signal reached",
     thresholdBody: "\"{{title}}\" hit {{threshold}} signals. Time to act.",
     thresholdBodyWithAction: "\"{{title}}\" — {{threshold}} signals. Your action: {{action}}",
