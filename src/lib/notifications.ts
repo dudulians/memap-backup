@@ -236,11 +236,21 @@ export const scheduleNotification = async (
       const localizedQuestion = rawQuestion
         ? localizeTrackerQuestion(rawQuestion, tracker.title)
         : "";
-      // Question is what pulls attention on the lock screen. Fall back
-      // to the localized tracker title if the question is empty (older
-      // trackers were saved without one).
-      dayTitle = localizedQuestion || localizeTrackerTitle(tracker.title);
-      dayBody = promptBody;
+      const localizedTitle = localizeTrackerTitle(tracker.title);
+      // Title carries the SHORT tracker label ("Работа" / "Sleep") so
+      // the lock-screen banner never truncates it — iOS caps titles
+      // at ~30 characters. Body carries the full question plus the
+      // "Answer in one swipe" nudge on the next line; iOS renders 2-4
+      // lines of body depending on style, so even the long questions
+      // read clean instead of ending in an ellipsis mid-word.
+      //
+      // Fallback: if the tracker was saved without a questionText
+      // (older records), the body degrades to just the prompt line;
+      // the title still tells the reader which tracker fired.
+      dayTitle = localizedTitle;
+      dayBody = localizedQuestion
+        ? `${localizedQuestion}\n${promptBody}`
+        : promptBody;
     }
 
     notifications.push({
