@@ -170,14 +170,14 @@ export const SwipeableTrackerCard = ({
       // works on her device.
       if (isHapticEnabled()) haptics.medium();
       // Kick off the flick-and-return flourish (see committingDirection
-      // declaration). The 220 ms timeout matches the transition duration
-      // set on the card, so the flourish is finished before the next
-      // interaction can begin.
+      // declaration). 280 ms hold lets the outward flight reach ~70%
+      // of its peak before the return starts — the earlier 220 ms
+      // felt cut short (the card barely moved before snapping back).
       const dir: -1 | 1 = dx > 0 ? 1 : -1;
       setCommittingDirection(dir);
       if (dx > 0) onAnswer(tracker.id, true);
       else onAnswer(tracker.id, false);
-      window.setTimeout(() => setCommittingDirection(0), 220);
+      window.setTimeout(() => setCommittingDirection(0), 280);
     }
   };
 
@@ -227,11 +227,13 @@ export const SwipeableTrackerCard = ({
       <Card
         ref={cardRef}
         style={{
-          // Finger-follow + a small tilt so the card reads as a physical
-          // sheet being tipped, not a flat UI plate sliding. During the
-          // brief commit window (committingDirection !== 0) an extra
-          // 90 px in the answer direction, plus a slight opacity dip,
-          // completes the "flick" so the answer feels thrown, not clicked.
+          // Finger-follow + a tilt so the card reads as a physical sheet
+          // being tipped, not a flat UI plate sliding. During the brief
+          // commit window (committingDirection !== 0) an extra 140 px in
+          // the answer direction, a scale-down to 0.94 and a fade to 0.55
+          // opacity together sell the "flick" — earlier gentler values
+          // (2° tilt, 90 px flick, 0.78 opacity) were too subtle to read
+          // on real devices in daily use.
           //
           // Transition applies ONLY after release (isSwiping === false).
           // During drag the card must follow the finger 1:1 — with the
@@ -242,10 +244,10 @@ export const SwipeableTrackerCard = ({
           // Easing is cubic-bezier(0.22, 1, 0.36, 1) — ease-out-expo, the
           // Apple-clean deceleration curve. A springier bounce read as
           // toy-like on a serious tracker in earlier tests.
-          transform: `translateX(${swipeX + committingDirection * 90}px) rotate(${(swipeX + committingDirection * 90) * 0.025}deg)`,
-          opacity: committingDirection !== 0 ? 0.78 : 1,
+          transform: `translateX(${swipeX + committingDirection * 140}px) rotate(${(swipeX + committingDirection * 140) * 0.05}deg) scale(${committingDirection !== 0 ? 0.94 : 1})`,
+          opacity: committingDirection !== 0 ? 0.55 : 1,
           transition: !isSwiping
-            ? "transform 350ms cubic-bezier(0.22, 1, 0.36, 1), opacity 350ms cubic-bezier(0.22, 1, 0.36, 1)"
+            ? "transform 400ms cubic-bezier(0.22, 1, 0.36, 1), opacity 400ms cubic-bezier(0.22, 1, 0.36, 1)"
             : undefined,
         }}
         onContextMenu={(e) => {
