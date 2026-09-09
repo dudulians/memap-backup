@@ -36,6 +36,12 @@ import {
   localizeTrackerQuestionRaw,
   localizeTrackerAdviceRaw,
 } from "@/lib/trackerLocalize";
+import {
+  requestNotificationPermissionDetailed,
+  getNotificationSettings,
+  saveNotificationSettings,
+  scheduleNotification,
+} from "@/lib/notifications";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -282,6 +288,25 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
     localStorage.setItem(TOUR_SEEN_KEY, "true");
     track("onboarding_completed");
     document.body.style.overflow = "";
+    // Auto-enable daily reminders on onboarding completion. The user
+    // just walked through setup and told us what matters — this is
+    // the moment of highest intent, so the iOS permission prompt lands
+    // in the right emotional context (much higher acceptance rate than
+    // a banner tap discovered later). On denial we silently skip; the
+    // Cards-screen banner is still there as a second chance and
+    // Settings still exposes the toggle. Fire-and-forget so onboarding
+    // closes even if the permission dialog is still on screen.
+    requestNotificationPermissionDetailed()
+      .then((result) => {
+        if (!result.granted) return;
+        const current = getNotificationSettings();
+        const next = { ...current, enabled: true };
+        saveNotificationSettings(next);
+        return scheduleNotification(next);
+      })
+      .catch(() => {
+        // Best-effort — notification setup must never block onboarding.
+      });
     onClose();
   }, [onClose]);
 

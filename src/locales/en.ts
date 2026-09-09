@@ -287,8 +287,11 @@ const en = {
     dailyBody: "Time for today's check-in",
     // Body copy used when the title carries a specific tracker
     // question ("Did you sleep well today?"). Small on the lock
-    // screen so keep it short and action-oriented.
-    dailyPromptBody: "Answer in one swipe",
+    // screen so keep it short and action-oriented. "Tap" not "swipe"
+    // — swipe on a lock-screen notification means dismiss/interact
+    // with the notification itself; tap opens the app straight into
+    // the daily session (App.tsx handles the deep-link).
+    dailyPromptBody: "Tap to answer",
     thresholdTitle: "{{emoji}} Action signal reached",
     thresholdBody: "\"{{title}}\" hit {{threshold}} signals. Time to act.",
     thresholdBodyWithAction: "\"{{title}}\" — {{threshold}} signals. Your action: {{action}}",
