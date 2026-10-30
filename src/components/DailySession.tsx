@@ -739,7 +739,7 @@ export const DailySession = ({
     // hearts and one warm line instead of a streak celebration.
     const hardDay = !!echo && echo.counts.todayValue === true && selectedDate === todayLocal();
 
-    // Action rows for the Done screen. Each row = icon, title, subtitle,
+    // Action rows for the Done screen. Each row = icon, title (1.8.0: no subtitle),
     // chevron. Clean tappable list — much more attention-grabbing than
     // a stack of mismatched-style buttons. The "play random" row invites
     // the user to keep going if they want.
@@ -777,7 +777,6 @@ export const DailySession = ({
       key: string;
       icon: typeof BarChart3;
       title: string;
-      subtitle: string;
       onClick: () => void;
       tone?: "primary" | "default";
     };
@@ -791,7 +790,6 @@ export const DailySession = ({
         key: "review-play",
         icon: Shuffle,
         title: t("dailySession.rowReviewPlayTitle"),
-        subtitle: t("dailySession.rowReviewPlaySubtitle"),
         onClick: () => {
           onComplete();
           setTimeout(() => {
@@ -806,7 +804,6 @@ export const DailySession = ({
           key: "another-round",
           icon: Shuffle,
           title: t("dailySession.rowAnotherRoundTitle"),
-          subtitle: t("dailySession.rowAnotherRoundSubtitle"),
           onClick: onPlayRandom,
         });
       }
@@ -814,7 +811,6 @@ export const DailySession = ({
         key: "note",
         icon: Pencil,
         title: t("dailySession.rowNoteTitle"),
-        subtitle: t("dailySession.rowNoteSubtitle"),
         onClick: () => {
           onComplete();
           setTimeout(() => {
@@ -828,7 +824,6 @@ export const DailySession = ({
         key: "overview",
         icon: Home,
         title: t("dailySession.rowOverviewTitle"),
-        subtitle: t("dailySession.rowOverviewSubtitle"),
         onClick: onComplete,
       });
     } else {
@@ -837,7 +832,6 @@ export const DailySession = ({
           key: "patterns",
           icon: BarChart3,
           title: t("dailySession.rowPatternsTitle"),
-          subtitle: t("dailySession.rowPatternsSubtitle"),
           onClick: onGoToPatterns,
           tone: "primary",
         });
@@ -847,7 +841,6 @@ export const DailySession = ({
           key: "past-dates",
           icon: CalendarDays,
           title: t("dailySession.rowPastDatesTitle"),
-          subtitle: t("dailySession.rowPastDatesSubtitle"),
           // No onClick — the row is wrapped in a Popover below so the
           // user can pick any past date, not just yesterday.
           onClick: () => { /* opened via Popover */ },
@@ -866,7 +859,6 @@ export const DailySession = ({
           key: "random-round",
           icon: Shuffle,
           title: t("dailySession.rowRandomRoundTitle"),
-          subtitle: t("dailySession.rowRandomRoundSubtitle"),
           onClick: onPlayRandom,
         });
       }
@@ -874,7 +866,6 @@ export const DailySession = ({
         key: "note",
         icon: Pencil,
         title: t("dailySession.rowNoteTitle"),
-        subtitle: t("dailySession.rowNoteSubtitle"),
         onClick: () => {
           // Tag the source so Notes back returns to the play session
           // instead of dropping the user on Cards.
@@ -893,7 +884,6 @@ export const DailySession = ({
         title: onGoToPatterns
           ? t("dailySession.rowOverviewTitle")
           : t("dailySession.backToToday"),
-        subtitle: t("dailySession.rowOverviewSubtitle"),
         onClick: onComplete,
       });
     }
@@ -1020,8 +1010,7 @@ export const DailySession = ({
                           <Icon className="h-5 w-5" strokeWidth={1.75} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={cn("text-sm font-medium", primary && "text-primary")}>{row.title}</p>
-                          <p className="text-[11px] text-muted-foreground truncate">{row.subtitle}</p>
+                          <p className={cn("text-base font-semibold", primary && "text-primary")}>{row.title}</p>
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       </button>
@@ -1092,11 +1081,8 @@ export const DailySession = ({
                     <Icon className="h-5 w-5" strokeWidth={1.75} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm font-medium", primary && "text-primary")}>
+                    <p className={cn("text-base font-semibold", primary && "text-primary")}>
                       {row.title}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {row.subtitle}
                     </p>
                   </div>
                   <ChevronRight className={cn("h-4 w-4 flex-shrink-0", primary ? "text-primary" : "text-muted-foreground/40")} />

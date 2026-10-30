@@ -354,6 +354,7 @@ const ru: Translation = {
     notifBannerTitle: "Не теряй ритм",
     notifBannerTitleStart: "Начни с привычки 30 секунд в день",
     notifBannerBody: "Лёгкое напоминание раз в день — чтобы привычка закрепилась.",
+    notifBannerShort: "Напоминать вечером?",
     notifBannerEnable: "Включить",
     notifBannerEnabled: "Напоминания включены. Время можно поменять в Настройках.",
     notifBannerDismiss: "Скрыть",

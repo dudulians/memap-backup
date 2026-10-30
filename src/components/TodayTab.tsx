@@ -40,7 +40,6 @@ import {
 
 import { SwipeableTrackerCard } from "./SwipeableTrackerCard";
 import { calculateStreak, isStreakMilestone } from "@/lib/streaks";
-import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { isToday, format } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
 import { getLanguage } from "@/lib/i18n";
@@ -882,7 +881,6 @@ export const TodayTab = () => {
     );
   }
 
-  const globalStreak = calculateGlobalStreak(entries);
   const selectedDateObj = new Date(selectedDate + "T00:00:00");
   const isSelectedDateToday = isToday(selectedDateObj);
 
@@ -980,41 +978,25 @@ export const TodayTab = () => {
           user hasn't dismissed it, and there are answers on at least two
           days (so it never stacks on top of a brand-new Today). */}
       {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && (
-        <div className="card-premium p-3 flex items-start gap-3 animate-fade-in">
-          <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
-            <Bell className="h-4 w-4" strokeWidth={1.75} />
-          </div>
-          <div className="flex-1 min-w-0">
-            {/* Conditional title (1.7.2): showing "Don't lose your
-                streak" when the user HAS no streak yet (streak<3)
-                is logically wrong — they have nothing to lose.
-                Switch to a softer "build a daily habit" framing
-                pre-streak. The "real" don't-lose-streak banner
-                only appears once they're past day 3. */}
-            <p className="text-sm font-medium leading-snug">
-              {globalStreak.currentStreak >= 3
-                ? t("today.notifBannerTitle")
-                : t("today.notifBannerTitleStart")}
-            </p>
-            <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-              {t("today.notifBannerBody")}
-            </p>
-            <div className="flex items-center gap-1.5 mt-2">
-              <Button
-                size="sm"
-                onClick={handleEnableNotifs}
-                className="rounded-full h-7 px-3 text-xs"
-              >
-                {t("today.notifBannerEnable")}
-              </Button>
-              <button
-                onClick={handleDismissNotifBanner}
-                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors px-2 py-1"
-              >
-                {t("today.notifBannerDismiss")}
-              </button>
-            </div>
-          </div>
+        <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
+          <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
+          {/* One short line (1.8.0): the title and the sentence under it
+              were two ways of saying "turn on the reminder". */}
+          <p className="flex-1 min-w-0 text-base font-semibold leading-snug">{t("today.notifBannerShort")}</p>
+          <Button
+            size="sm"
+            onClick={handleEnableNotifs}
+            className="rounded-full h-9 px-4 text-[15px] font-semibold"
+          >
+            {t("today.notifBannerEnable")}
+          </Button>
+          <button
+            onClick={handleDismissNotifBanner}
+            aria-label={t("today.notifBannerDismiss")}
+            className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 

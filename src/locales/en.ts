@@ -343,6 +343,7 @@ const en = {
     notifBannerTitle: "Don't lose your streak",
     notifBannerTitleStart: "Build the 30-second daily habit",
     notifBannerBody: "A small daily nudge so the routine sticks.",
+    notifBannerShort: "Remind me in the evening?",
     notifBannerEnable: "Turn on",
     notifBannerEnabled: "Reminders on. You can change the time in Settings.",
     notifBannerDismiss: "Dismiss",
