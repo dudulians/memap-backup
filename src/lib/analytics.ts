@@ -62,6 +62,11 @@ export const initAnalytics = (): void => {
       // Don't log to console in prod (would spam DevTools when user
       // opens it for any reason)
       debug: false,
+      // No country/city lookup from the request IP. Without this
+      // Mixpanel geolocates every event, which is why the App Store
+      // privacy label had to list "Location" even though the app
+      // has no location code at all.
+      ip: false,
     });
     initialised = true;
   } catch (err) {
@@ -126,4 +131,14 @@ export type AnalyticsEvent =
   | "theme_changed"
   | "rating_prompt_shown"
   | "data_exported"
-  | "data_imported";
+  | "data_imported"
+  // 1.8.0 "doors" funnel. `door_selected` → `first_entry_logged` →
+  // `hero_logged` / `echo_shown` answers "does the first minute work?"
+  | "door_selected"
+  | "first_entry_logged"
+  | "hero_logged"
+  | "echo_shown"
+  // Return from background. app_opened only fires on a cold start,
+  // so without this most real returns were invisible in retention.
+  | "app_foregrounded"
+  | "rate_app_tapped";

@@ -10,7 +10,20 @@ export const getTheme = (): AppTheme => {
   if (stored === "terra") return "terra";
   if (stored === "pop") return "pop";
   if (stored === "hush") return "hush";
-  return "aurora-light"; // default for new & unset users
+  // Unset theme. Since 1.8.0 new installs open in dark aurora, the
+  // same look as the store page, Instagram and the mockups. People who
+  // already finished onboarding before 1.8.0 and never picked a theme
+  // keep the light one they've been seeing, so nobody's app flips
+  // colour after an update.
+  if (localStorage.getItem("memap_tour_seen") === "true") return "aurora-light";
+  return "aurora";
+};
+
+// Called when onboarding finishes. Freezes the default for this
+// install so getTheme() stops depending on the tour flag.
+export const persistDefaultTheme = (): void => {
+  if (localStorage.getItem(THEME_KEY)) return;
+  localStorage.setItem(THEME_KEY, getTheme());
 };
 
 // Internal: track theme switches for product analytics. Defined as a

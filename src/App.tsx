@@ -108,9 +108,25 @@ const App = () => {
     setUserProperty("theme", getTheme());
     setUserProperty("language", getLanguage());
 
+    // Returns from background. iOS keeps the WebView alive for hours,
+    // so most "I opened MeMap again" moments never hit app_opened.
+    // visibilitychange fires in the Capacitor WebView on resume, no
+    // extra native plugin needed. Throttled to one event per 10 min so
+    // a quick switch to Messages and back doesn't count as a return.
+    let lastForegroundAt = Date.now();
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastForegroundAt < 10 * 60 * 1000) return;
+      lastForegroundAt = now;
+      track("app_foregrounded");
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     // App Store / Play Store rating prompt — checks all gates (5+ tracked
-    // days AND seen a correlation AND not asked in 120 days) and asks
-    // only if eligible. Safe to call on every cold start: internal logic
+    // days, or 3 with a seen correlation, and not asked in 120 days) and
+    // asks only if eligible. The main call site is the evening done
+    // screen in DailySession; this one is the fallback. Safe to call on every cold start: internal logic
     // gates everything. Native OS itself further rate-limits to ~3/year.
     //
     // Defer by 2 seconds so the prompt doesn't pop up over the splash /
@@ -123,6 +139,7 @@ const App = () => {
     return () => {
       window.removeEventListener("memap-language-changed", refreshSchedule);
       window.removeEventListener("memap-entries-changed", refreshSchedule);
+      document.removeEventListener("visibilitychange", onVisibility);
       notifSubPromise?.then((sub) => sub?.remove()).catch(() => {});
       window.clearTimeout(ratingTimer);
     };

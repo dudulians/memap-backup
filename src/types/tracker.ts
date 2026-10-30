@@ -47,4 +47,8 @@ export interface TrackerEntry {
   date: string; // YYYY-MM-DD
   value: boolean;
   note?: string;
+  // Reason chips from a door entry ("money", "shortSleep"…), stored as
+  // stable ids and localized at display time. Optional: evening
+  // swipes don't set it, and the correlation engine ignores it.
+  tags?: string[];
 }

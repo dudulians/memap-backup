@@ -28,6 +28,8 @@ import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
+import { DoorHero } from "./DoorHero";
+import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
   getNotificationSettings,
@@ -960,11 +962,12 @@ export const TodayTab = () => {
                 </span>
               </span>
             </div>
+          ) : globalStreak.currentStreak === 0 ? (
+            // Day 0: no chip. "0 days in a row" was the first thing a
+            // brand-new user saw (design review, Oct 27).
+            <span />
           ) : (
-            // Days 0–2: muted version of the same chip. Always
-            // shows the count (including "0") so it reads as a
-            // single visual that stays put, not a placeholder
-            // that morphs.
+            // Days 1–2: muted version of the same chip.
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/30 border-border/40">
               <Flame
                 className="h-3.5 w-3.5 text-muted-foreground"
@@ -980,42 +983,62 @@ export const TodayTab = () => {
               </span>
             </div>
           )}
-          <div className="flex items-center gap-1.5">
-            {/* Always-accessible Random Play — opens the session in play
-                mode straight away, no need to wait for the Done screen. */}
-            <button
-              data-coachmark="shuffle-button"
-              onClick={() => {
-                setPlayMode(true);
-                setPlayRoundNonce((n) => n + 1);
-                setDailySessionOpen(true);
-              }}
-              aria-label={t("today.playRandomAria")}
-              className="h-8 w-8 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
-              title={t("today.playRandom")}
-            >
-              <Shuffle className="h-4 w-4" />
-            </button>
-            <button
-              data-coachmark="notes-link"
-              onClick={() => window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }))}
-              className="text-xs px-3 py-1.5 rounded-full bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {t("common.notesLink")}
-            </button>
-            <Button
-              data-coachmark="add-button"
-              size="sm"
-              onClick={() => setAddTrackerModalOpen(true)}
-              className="rounded-full px-3 h-8"
-              aria-label={t("common.addPattern")}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              {t("today.addNew")}
-            </Button>
-          </div>
+          {/* One secondary action here. Random play lives on the evening
+              done screen ("Open 10 new questions"), notes have their own
+              tab, so the shuffle and "My notes" pills are gone (1.8.0). */}
+          <Button
+            data-coachmark="add-button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              markTrackerAdded();
+              setAddTrackerModalOpen(true);
+            }}
+            className="rounded-full px-3 h-8 bg-transparent border-foreground/20"
+            aria-label={t("common.addPattern")}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {t("today.addNew")}
+          </Button>
         </div>
       </div>
+
+      {/* Door hero (1.8.0): count, "Log a fight" and the echo line.
+          Renders nothing for people who didn't come in through a door. */}
+      <DoorHero trackers={trackers} entries={entries} />
+
+      {/* Tonight (1.8.0): the ONE main action on Today. Replaced the
+          "Ideas of the day" carousel, the floating "+" and the unlabeled
+          Play in the tab bar, which competed for the same thumb (design
+          review, Oct 27). Adding questions stays as the small header button. */}
+      {(() => {
+        const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+        const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
+        if (active.length === 0) return null;
+        const left = active.filter((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === todayIso)).length;
+        if (left === 0) {
+          return (
+            <p className="text-center text-[15px] text-muted-foreground animate-fade-in">{t("today.tonightDone")}</p>
+          );
+        }
+        return (
+          <div className="animate-fade-in">
+            <Button
+              onClick={() => {
+                haptics.medium();
+                setSelectedDate(todayIso);
+                setDailySessionOpen(true);
+              }}
+              className="w-full h-[54px] rounded-full text-[17px] font-semibold"
+            >
+              {t("today.answerTonight", { count: left })}
+            </Button>
+            <p className="mt-2 text-center text-[13px] text-muted-foreground">
+              {t("today.answerTonightTime", { sec: Math.max(10, left * 5) })}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Notif opt-in banner — shown only when reminders are off and
           the user hasn't dismissed the prompt. Tucked between the
@@ -1056,69 +1079,6 @@ export const TodayTab = () => {
                 {t("today.notifBannerDismiss")}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Ideas of the Day Banner */}
-      {randomIdeas.length > 0 && !ideasDismissed && (
-        <div className="space-y-3 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">{t("today.ideasOfTheDay")}</p>
-            <button
-              onClick={handleDismissIdeas}
-              className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-              aria-label={t("today.hideIdeas")}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="relative px-1">
-            <Carousel
-              opts={{
-                align: "center",
-                loop: true,
-                skipSnaps: false,
-                dragFree: false,
-              }}
-              className="w-full"
-            >
-              {/* Card width 88vw clamped to a sensible upper bound
-                  on tablets — shows ONE full card with a small peek
-                  of the next so the swipe affordance is visible.
-                  Was basis-[270px] which caused mid-word clipping
-                  on the right edge of the second card on iPhone. */}
-              <CarouselContent className="-ml-3">
-                {randomIdeas.map((idea: any, index) => (
-                  <CarouselItem key={idea.id} className="pl-3 basis-[88%] sm:basis-[320px]">
-                    <Card
-                      className="h-[115px] flex flex-col transition-all duration-200 hover:shadow-lg hover:-translate-y-1 bg-muted/30 border-muted/50 shadow-sm"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
-                      <CardContent className="p-3.5 flex flex-col h-full">
-                        <div className="flex items-start gap-2.5 mb-auto">
-                          <Lightbulb className="h-4 w-4 flex-shrink-0 mt-0.5 text-muted-foreground" strokeWidth={1.75} />
-                          <p className="text-xs font-medium leading-relaxed line-clamp-3 flex-1 text-muted-foreground">
-                            {idea.questionText}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleAddIdea(idea)}
-                          className="w-full text-xs rounded-full h-7 mt-2 bg-background/50 hover:bg-background border-muted-foreground/20 hover:border-muted-foreground/40"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          {t("today.addToMyMap")}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-0 -translate-x-1/2 top-1/2 -translate-y-1/2 h-8 w-8" />
-              <CarouselNext className="right-0 translate-x-1/2 top-1/2 -translate-y-1/2 h-8 w-8" />
-            </Carousel>
           </div>
         </div>
       )}
@@ -1453,41 +1413,6 @@ export const TodayTab = () => {
         }}
       />
 
-      {/* Floating Action Button — pinned bottom-right, always
-          visible. The top "+ Новый вопрос" in the header is good
-          for first-impression discovery, but as the tracker list
-          grows the user has to scroll all the way back to access
-          it. The FAB removes that friction. Tucked above the
-          bottom tab bar via safe-area-aware bottom offset.
-          aria-hidden on the duplicate label since the header
-          button already announces this action to screen readers. */}
-      <button
-        type="button"
-        onClick={() => {
-          // Stop the discovery pulse as soon as the user TAPS the
-          // FAB, not only when they actually create a tracker — the
-          // pulse is a "you can add your own questions here" hint,
-          // and the tap itself proves the discovery has happened.
-          // Pulse never returns even if they back out of the modal
-          // without saving.
-          markTrackerAdded();
-          setAddTrackerModalOpen(true);
-        }}
-        aria-label={t("common.addPattern")}
-        data-app-fab
-        className={cn(
-          "fixed right-4 z-30 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-transform",
-          // First-day discovery nudge — wraps a primary-coloured halo
-          // around the FAB so the user notices the "+" without us
-          // having to drop a verbal hint on top of the UI.
-          shouldPulseFab && "nudge-pulse-halo",
-        )}
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 6.5rem)",
-        }}
-      >
-        <Plus className="h-6 w-6" strokeWidth={2.25} />
-      </button>
     </div>
   );
 };

@@ -8,9 +8,6 @@ import {
   ArrowLeft,
   Languages,
   Sparkles,
-  Repeat,
-  Brain,
-  Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tracker } from "@/types/tracker";
@@ -42,6 +39,9 @@ import {
   saveNotificationSettings,
   scheduleNotification,
 } from "@/lib/notifications";
+import { persistDefaultTheme } from "@/lib/theme";
+import { getDoor, DoorId } from "@/lib/doors";
+import { DoorPickerScreen, DoorFlow, AddressPolRow } from "./DoorOnboarding";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -253,30 +253,29 @@ interface OnboardingTourProps {
 }
 
 // Steps. Language (-1) appears only for users who haven't picked a
-// language yet. 0..4 are the personalisation interview + StackReveal
-// stub. (Step 5 / FirstSwipe lands in Part C.)
-//   -1 Language -> 0 AboutYou -> 1 Focus -> 2 Context -> 3 Goal
-//   -> 4 StackReveal (stub)  [-> 5 FirstSwipe — TODO Part C]
-type Step = -1 | 0 | 1 | 2 | 3 | 4;
-const TOTAL_STEPS = 5;
+// language yet. Since 1.8.0 everyone then lands on the door picker
+// (-3). A door runs its own short flow (-4, DoorOnboarding.tsx);
+// "Something else" continues into a short interview.
+//   -1 Language -> -3 Doors -> -4 Door flow (first entry, context, logged)
+//                          \-> 1 Focus -> 2 Context -> 4 StackReveal
+// The gender (0) and goal (3) screens were cut in 1.8.0; Russian users
+// get the optional "он / она" row on the pack screen instead. Negative
+// steps are not counted in the interview's progress dots.
+type Step = -4 | -3 | -1 | 1 | 2 | 4;
+const INTERVIEW_STEPS = [1, 2, 4] as const;
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   const { t } = useTranslation();
-  const [step, setStep] = useState<Step>(() => (hasExplicitLanguage() ? 0 : -1));
+  const [step, setStep] = useState<Step>(() => (hasExplicitLanguage() ? -3 : -1));
   const [answers, setAnswers] = useState<InterviewAnswers>(() => readInterview());
+  const [doorId, setDoorId] = useState<DoorId | null>(null);
+  const door = doorId ? getDoor(doorId) : undefined;
 
   useEffect(() => {
     if (open) {
-      // Step flow:
-      //   -1 = Language picker (only on first install)
-      //   -2 = Welcome / mission intro (always shown after language is set)
-      //    0 = About you (gender) — first counted interview step
-      //  1-4 = Focus / Context / Goal / Stack reveal
-      // Welcome step intentionally uses a negative number so the progress
-      // dots (gated on `step >= 0`) skip it — it's an intro, not a
-      // collected answer.
-      setStep(hasExplicitLanguage() ? -2 : -1);
+      setStep(hasExplicitLanguage() ? -3 : -1);
       setAnswers(readInterview());
+      setDoorId(null);
       document.body.style.overflow = "hidden";
     }
     return () => {
@@ -284,10 +283,28 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
     };
   }, [open]);
 
-  const finish = useCallback(() => {
+  // `door` path: the user already made a first entry, so the coach
+  // tour over Home and the "Ideas of the day" strip are skipped (the
+  // design review counted 12 stops before a first answer).
+  // `reminders: false` = they switched the evening reminder off on the
+  // Logged screen, so no permission prompt.
+  const finish = useCallback((opts?: { door?: boolean; reminders?: boolean }) => {
+    persistDefaultTheme();
+    if (opts?.door) {
+      try {
+        localStorage.setItem("memap_coachmark_seen", "true");
+        localStorage.setItem("memap_ideas_dismissed", "true");
+      } catch {
+        // ignore
+      }
+    }
     localStorage.setItem(TOUR_SEEN_KEY, "true");
-    track("onboarding_completed");
+    track("onboarding_completed", { path: opts?.door ? "door" : "interview" });
     document.body.style.overflow = "";
+    if (opts?.reminders === false) {
+      onClose();
+      return;
+    }
     // Auto-enable daily reminders on onboarding completion. The user
     // just walked through setup and told us what matters — this is
     // the moment of highest intent, so the iOS permission prompt lands
@@ -360,7 +377,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
         <div className="absolute top-0 left-0 right-0 z-20 pt-safe">
           <div className="flex items-center justify-between px-5 pt-4 pb-2">
             <div className="flex gap-1.5">
-              {Array.from({ length: TOTAL_STEPS }, (_, i) => i).map((i) => (
+              {INTERVIEW_STEPS.map((i) => (
                 <div
                   key={i}
                   className={cn(
@@ -387,23 +404,41 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
         </div>
       )}
 
-      <div className="relative z-10 h-full w-full overflow-y-auto">
-        <div className="min-h-full flex items-center justify-center px-5 py-8">
-          {step === -1 && <LanguagePickerScreen onNext={() => setStep(-2)} />}
-          {step === -2 && <WelcomeScreen onNext={() => setStep(0)} />}
-          {step === 0 && (
-            <AboutYouScreen
-              answers={answers}
-              onPatch={patchAnswers}
-              onNext={() => setStep(1)}
-              onSkipStep={() => setStep(1)}
+      {/* Door screens are top-aligned with the CTA pinned low, like
+          the mockups, so they skip the centered wrapper below. */}
+      {(step === -3 || step === -4) && (
+        <div className="relative z-10 h-full w-full overflow-y-auto">
+          {step === -3 && (
+            <DoorPickerScreen
+              onPick={(id) => {
+                if (id === "own") {
+                  setStep(1);
+                  return;
+                }
+                setDoorId(id);
+                setStep(-4);
+              }}
             />
           )}
+          {step === -4 && door && (
+            <DoorFlow
+              door={door}
+              onBack={() => setStep(-3)}
+              onFinish={({ reminders }) => finish({ door: true, reminders })}
+            />
+          )}
+        </div>
+      )}
+
+      {step !== -3 && step !== -4 && (
+      <div className="relative z-10 h-full w-full overflow-y-auto">
+        <div className="min-h-full flex items-center justify-center px-5 py-8">
+          {step === -1 && <LanguagePickerScreen onNext={() => setStep(-3)} />}
           {step === 1 && (
             <FocusScreen
               answers={answers}
               onPatch={patchAnswers}
-              onBack={() => setStep(0)}
+              onBack={() => setStep(-3)}
               onNext={() => setStep(2)}
               onSkipStep={() => setStep(2)}
             />
@@ -413,15 +448,6 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
               answers={answers}
               onPatch={patchAnswers}
               onBack={() => setStep(1)}
-              onNext={() => setStep(3)}
-              onSkipStep={() => setStep(3)}
-            />
-          )}
-          {step === 3 && (
-            <GoalScreen
-              answers={answers}
-              onPatch={patchAnswers}
-              onBack={() => setStep(2)}
               onNext={() => setStep(4)}
               onSkipStep={() => setStep(4)}
             />
@@ -429,13 +455,13 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
           {step === 4 && (
             <StackRevealScreen
               answers={answers}
-              onBack={() => setStep(3)}
-              onFinish={finish}
+              onBack={() => setStep(2)}
+              onFinish={() => finish()}
             />
           )}
-          {/* TODO Part C: step === 5 && <FirstSwipeScreen … /> */}
         </div>
       </div>
+      )}
     </div>
   );
 };
@@ -627,104 +653,6 @@ const LanguagePickerScreen = ({ onNext }: { onNext: () => void }) => {
   );
 };
 
-// --- Screen -2: Welcome / mission ------------------------------------
-// Sits between Language pick and About-you. NOT counted in progress dots
-// (those gate on step >= 0). Pure intro — names the product positioning
-// in 5 sentences so the user knows what they signed up for before
-// answering interview questions.
-
-const WelcomeScreen = ({ onNext }: { onNext: () => void }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="w-full max-w-md mx-auto flex flex-col items-center animate-fade-in">
-      <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
-        <Brain className="h-6 w-6" strokeWidth={1.75} />
-      </div>
-
-      <h1 className="font-serif text-2xl font-medium text-center mb-2">
-        {t("onboarding.welcome.title")}
-      </h1>
-
-      {/* Tagline-first layout (1.7.2): the slogan is the brand
-          promise — putting it ABOVE the explanation gives it the
-          weight it deserves. Was buried after a long body
-          paragraph. body2 is reserved for future use, currently
-          empty — render conditionally to avoid an empty <p>. */}
-      <div className="space-y-3 max-w-[340px] mb-6 text-center">
-        <p className="font-serif text-xl font-medium text-foreground leading-snug">
-          {t("onboarding.welcome.tagline")}
-        </p>
-        <p className="text-sm text-foreground/80 leading-relaxed">
-          {t("onboarding.welcome.body1")}
-        </p>
-        {t("onboarding.welcome.body2") && (
-          <p className="text-sm text-foreground/80 leading-relaxed">
-            {t("onboarding.welcome.body2")}
-          </p>
-        )}
-      </div>
-
-      <Button
-        size="lg"
-        onClick={onNext}
-        data-onb-interactive
-        className="rounded-full px-8 shadow-lg shadow-primary/20"
-      >
-        {t("onboarding.welcome.cta")}
-        <ArrowRight className="h-4 w-4 ml-1.5" />
-      </Button>
-    </div>
-  );
-};
-
-// --- Screen 0: About You --------------------------------------------
-
-const POL_OPTIONS: Pol[] = ["male", "female", "neutral"];
-const AGE_OPTIONS: AgeRange[] = ["18-25", "26-35", "36-45", "46-55", "55+"];
-
-const AboutYouScreen = ({
-  answers,
-  onPatch,
-  onNext,
-  onSkipStep,
-}: {
-  answers: InterviewAnswers;
-  onPatch: (patch: Partial<InterviewAnswers>) => void;
-  onNext: () => void;
-  onSkipStep: () => void;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <div className="w-full max-w-md mx-auto flex flex-col animate-fade-in">
-      <h2 className="font-serif text-2xl font-medium text-center mb-2">
-        {t("onboarding.aboutYou.title")}
-      </h2>
-      <p className="text-sm text-muted-foreground text-center mb-6">
-        {t("onboarding.aboutYou.subtitle")}
-      </p>
-
-      <div className="flex flex-wrap justify-center gap-2 mb-3">
-        {POL_OPTIONS.map((p) => (
-          <Chip
-            key={p}
-            selected={answers.pol === p}
-            onClick={() => onPatch({ pol: p })}
-          >
-            {t(`onboarding.aboutYou.${p}`)}
-          </Chip>
-        ))}
-      </div>
-
-      {/* Age question removed in 1.6 — was a +1 weak nudge in scoring,
-          adding friction to onboarding for almost no tailoring value.
-          The pol (gender) question stays because Russian verb gender
-          actually depends on it (polishRu uses pol at display time). */}
-
-      <NavRow onSkip={onSkipStep} onNext={onNext} />
-    </div>
-  );
-};
-
 // --- Screen 1: Focus ------------------------------------------------
 
 const FOCUS_OPTIONS: FocusArea[] = [
@@ -869,96 +797,6 @@ const ContextScreen = ({
                 </Chip>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      <NavRow onBack={onBack} onSkip={onSkipStep} onNext={onNext} />
-    </div>
-  );
-};
-
-// --- Screen 3: Goal -------------------------------------------------
-
-const GOAL_OPTIONS: { id: Goal; icon: typeof Sparkles }[] = [
-  { id: "patterns", icon: Sparkles },
-  { id: "habit", icon: Repeat },
-  { id: "understand", icon: Brain },
-  { id: "doctor", icon: Stethoscope },
-];
-
-const GoalScreen = ({
-  answers,
-  onPatch,
-  onBack,
-  onNext,
-  onSkipStep,
-}: {
-  answers: InterviewAnswers;
-  onPatch: (patch: Partial<InterviewAnswers>) => void;
-  onBack: () => void;
-  onNext: () => void;
-  onSkipStep: () => void;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <div className="w-full max-w-md mx-auto flex flex-col animate-fade-in">
-      <h2 className="font-serif text-2xl font-medium text-center mb-2">
-        {t("onboarding.goal.title")}
-      </h2>
-      <p className="text-sm text-muted-foreground text-center mb-6">
-        {t("onboarding.goal.subtitle")}
-      </p>
-
-      <div className="space-y-2 mb-3">
-        {GOAL_OPTIONS.map((opt) => {
-          const Icon = opt.icon;
-          const current = answers.goal ?? [];
-          const isSelected = current.includes(opt.id);
-          const toggle = () => {
-            const next = isSelected
-              ? current.filter((g) => g !== opt.id)
-              : [...current, opt.id];
-            onPatch({ goal: next });
-          };
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={toggle}
-              data-onb-interactive
-              style={{ touchAction: "manipulation" }}
-              className={cn(
-                "w-full text-left rounded-2xl p-3 flex items-start gap-3 transition-all border",
-                isSelected
-                  ? "bg-primary/10 border-primary/40 shadow-sm"
-                  : "bg-card border-border/50 hover:border-border"
-              )}
-            >
-              <div
-                className={cn(
-                  "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors",
-                  isSelected
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted/60 text-muted-foreground"
-                )}
-              >
-                <Icon className="h-4.5 w-4.5" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium">
-                  {t(`onboarding.goal.${opt.id}.title`)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                  {t(`onboarding.goal.${opt.id}.subtitle`)}
-                </div>
-              </div>
-              {isSelected && (
-                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
-                  <Check className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
-                </div>
-              )}
-            </button>
           );
         })}
       </div>
@@ -1126,6 +964,7 @@ const StackRevealScreen = ({
           );
         })}
       </div>
+      <AddressPolRow className="max-w-[360px] mb-5" />
       {currentPack.length === 0 && (
         <p className="text-xs text-muted-foreground text-center mb-3 max-w-[300px]">
           {t("onboarding.stackReveal.allRemoved")}
@@ -1199,6 +1038,9 @@ export const shouldShowTour = (): boolean => {
 };
 
 export const resetTourSeen = () => {
+  // Freeze the current theme first: an unset theme depends on the tour
+  // flag (see getTheme), and replaying the tour must not recolour the app.
+  persistDefaultTheme();
   localStorage.removeItem(TOUR_SEEN_KEY);
   // Also forget the explicit-language flag so a replayed tour starts from
   // the language picker, same as a brand-new install. The active language

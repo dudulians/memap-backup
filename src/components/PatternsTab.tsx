@@ -7,13 +7,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
-import { Lightbulb, AlertTriangle, ChevronRight, CalendarDays, Target, LineChart, GitCompare } from "lucide-react";
+import { Lightbulb, AlertTriangle, ChevronRight, CalendarDays, Target } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
-import { TrendChart } from "./TrendChart";
-import { CorrelationInsights } from "./CorrelationInsights";
+import { FindingsView } from "./FindingsView";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerDetails } from "./TrackerDetails";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
@@ -47,14 +46,18 @@ export const PatternsTab = () => {
 
   // Section tab: persisted across session reloads so the user lands back where
   // they were, not on the first tab every time.
-  const SECTIONS = ["overview", "signals", "trends", "links"] as const;
+  // 1.8.0: three tabs, Findings first (plain-sentence links), then the
+  // calendar ("overview") and limits ("signals"). The old Trends chart
+  // and engineer-worded Links tab are gone; a stored "trends"/"links"
+  // from an older version lands on Findings.
+  const SECTIONS = ["findings", "overview", "signals"] as const;
   type Section = typeof SECTIONS[number];
   const [section, setSection] = useState<Section>(() => {
     try {
       const stored = localStorage.getItem("memap_patterns_section") as Section | null;
       if (stored && SECTIONS.includes(stored)) return stored;
     } catch { /* ignore */ }
-    return "overview";
+    return "findings";
   });
   const handleSectionChange = (value: string) => {
     if (!SECTIONS.includes(value as Section)) return;
@@ -66,16 +69,6 @@ export const PatternsTab = () => {
     window.dispatchEvent(new Event("memap-scroll-main-top"));
   };
 
-  // When user taps a correlation card on the Connections tab, we hop to
-  // the Trends tab with the pair pre-selected. The array reference is
-  // fresh every tap (never reused) so TrendChart's useEffect-based
-  // pre-filter re-applies even when the same pair is tapped again after
-  // the user manually fiddled with the legend.
-  const [trendsPrefilter, setTrendsPrefilter] = useState<string[] | undefined>(undefined);
-  const handleSelectCorrelationPair = (ids: [string, string]) => {
-    setTrendsPrefilter([...ids]);
-    handleSectionChange("trends");
-  };
 
   // Embla swipe-between-sections was removed. With all four heavy
   // sections (Calendar, tracker list, chart, correlations) mounted
@@ -108,7 +101,7 @@ export const PatternsTab = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const next = (e as CustomEvent).detail?.section as string | undefined;
-      if (next === "overview" || next === "signals" || next === "trends" || next === "links") {
+      if (next === "findings" || next === "overview" || next === "signals") {
         setSection(next);
         try { localStorage.setItem("memap_patterns_section", next); } catch { /* ignore */ }
       }
@@ -345,30 +338,27 @@ export const PatternsTab = () => {
               Trends moved up to 2nd position per user request — for
               her, the day-by-day visual story is more frequently
               checked than the at-a-time signals snapshot. */}
-          <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-transparent rounded-none gap-0">
+          <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-0">
             <TabsTrigger
-              value="overview"
-              data-coachmark="patterns-overview-tab"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
+              value="findings"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
             >
-              <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[10px] font-medium">{t("patterns.tabOverview")}</span>
+              <Lightbulb className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[11px] font-medium">{t("patterns.tabFindings")}</span>
             </TabsTrigger>
             <TabsTrigger
-              value="trends"
-              data-coachmark="patterns-trends-tab"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
+              value="overview"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
             >
-              <LineChart className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[10px] font-medium">{t("patterns.tabTrends")}</span>
+              <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
+              <span className="text-[11px] font-medium">{t("patterns.tabCalendar")}</span>
             </TabsTrigger>
             <TabsTrigger
               value="signals"
-              data-coachmark="patterns-signals-tab"
               className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
             >
               <Target className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[10px] font-medium">{t("patterns.tabSignals")}</span>
+              <span className="text-[11px] font-medium">{t("patterns.tabLimits")}</span>
               {strongCount > 0 && (
                 <span className={cn(
                   "absolute top-0 right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center",
@@ -377,14 +367,6 @@ export const PatternsTab = () => {
                   {strongCount}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger
-              value="links"
-              data-coachmark="patterns-links-tab"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground"
-            >
-              <GitCompare className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[10px] font-medium">{t("patterns.tabLinks")}</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -395,6 +377,10 @@ export const PatternsTab = () => {
           switch. Each section gets its own animate-fade-in for a
           subtle entrance without the carousel-mounting cost. */}
       <div className="mt-4">
+        {section === "findings" && (
+          <FindingsView trackers={trackers} entries={entries} onSeeDays={() => handleSectionChange("overview")} />
+        )}
+
         {section === "overview" && (
           <div className="animate-fade-in">
             <OverviewCard
@@ -550,27 +536,6 @@ export const PatternsTab = () => {
           </div>
         )}
 
-        {/* --- TRENDS: dual-series chart over time ------------------- */}
-        {section === "trends" && (
-          <div className="animate-fade-in">
-            <TrendChart
-              trackers={trackers}
-              entries={entries}
-              prefilterIds={trendsPrefilter}
-            />
-          </div>
-        )}
-
-        {/* --- LINKS: dependency / correlation insights ------------- */}
-        {section === "links" && (
-          <div className="animate-fade-in">
-            <CorrelationInsights
-              trackers={trackers}
-              entries={entries}
-              onSelectPair={handleSelectCorrelationPair}
-            />
-          </div>
-        )}
       </div>
 
       {/* Disclaimer removed from Patterns in 1.7.2 — was shown on

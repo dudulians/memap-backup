@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -24,7 +23,12 @@ import { track } from "@/lib/analytics";
 import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
-import { Flame } from "lucide-react";
+import { Flame, Clock } from "lucide-react";
+import { maybeRequestRating } from "@/lib/appRating";
+import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/doors";
+import { echoLine, factLine } from "@/lib/echo";
+import maluCheer from "@/assets/malu/malu-cheer.webp";
+import maluHeart from "@/assets/malu/malu-heart.webp";
 
 interface DailySessionProps {
   trackers: Tracker[];
@@ -381,10 +385,18 @@ export const DailySession = ({
   // answer, last skip, disable-recs). Single source of truth for
   // session-completion side-effects.
   useEffect(() => {
-    if (completed) {
-      haptics.success();
-      track("daily_session_completed");
-    }
+    if (!completed) return;
+    haptics.success();
+    track("daily_session_completed");
+    if (playMode) return;
+    // Best moment to ask for a rating: the evening is closed and the
+    // echo card below just showed a fact. Delay so the done screen is
+    // on screen first; maybeRequestRating does its own gating.
+    const timer = window.setTimeout(() => {
+      void maybeRequestRating();
+    }, 1500);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completed]);
   // The custom sheet-drag state used to live here — it's gone now
   // because the whole session is wrapped in our vaul-based
@@ -712,6 +724,21 @@ export const DailySession = ({
     // finished a session, give them the up-to-date number as reward.
     const streak = calculateGlobalStreak(entries);
 
+    // Door echo (1.8.0): one counted fact about the door question, so
+    // every evening ends with something learned, not just a streak.
+    const doorState = playMode ? null : getDoorState();
+    const echoDoor = doorState ? getDoor(doorState.id) : undefined;
+    const echo =
+      doorState && echoDoor && trackers.some((tr) => tr.id === doorState.trackerId && !tr.archived)
+        ? {
+            counts: doorCounts(doorState, entries),
+            fact: strongestContextFact(doorState, trackers, entries),
+          }
+        : null;
+    // The door thing happened today (a fight, a migraine…): Malu with
+    // hearts and one warm line instead of a streak celebration.
+    const hardDay = !!echo && echo.counts.todayValue === true && selectedDate === todayLocal();
+
     // Action rows for the Done screen. Each row = icon, title, subtitle,
     // chevron. Clean tappable list — much more attention-grabbing than
     // a stack of mismatched-style buttons. The "play random" row invites
@@ -886,11 +913,27 @@ export const DailySession = ({
         ariaTitle="Session complete"
       >
         <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 gap-6 animate-fade-in" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
-          {/* Hero moment — confetti emoji + the streak number as the
-              centerpiece. Big serif numeral grabs attention. */}
+          {/* Hero moment — Malu (1.8.0, was a 🎉 emoji) + the streak
+              number. On a hard day she shows hearts and the streak gives
+              way to one kind line: no celebrating the evening a fight
+              was logged. The PNG has air around the lamb, hence the
+              negative margins. */}
           <div className="flex flex-col items-center text-center space-y-3">
-            <div className="text-5xl">🎉</div>
-            {streak.currentStreak > 0 && (
+            <img
+              src={hardDay ? maluHeart : maluCheer}
+              alt=""
+              aria-hidden="true"
+              className="h-[160px] w-[160px] -mt-4 -mb-6"
+            />
+            {hardDay && echoDoor ? (
+              <div className="flex flex-col items-center">
+                {/* "Hard day." would judge a drink, so that door gets only the thanks. */}
+                {echoDoor.id !== "drinking" && (
+                  <p className="text-[22px] font-bold tracking-tight">{t("doors.hardDayTitle")}</p>
+                )}
+                <p className="mt-1 text-base text-muted-foreground">{t("doors.hardDayBody")}</p>
+              </div>
+            ) : streak.currentStreak > 0 && (
               <div className="flex flex-col items-center">
                 <div className="font-serif text-7xl font-medium tabular-nums leading-none text-foreground">
                   {streak.currentStreak}
@@ -905,6 +948,7 @@ export const DailySession = ({
                 </div>
               </div>
             )}
+            {!hardDay && (
             <p className="text-sm text-muted-foreground max-w-xs pt-1">
               {playMode
                 ? (answeredCount === 1
@@ -926,6 +970,7 @@ export const DailySession = ({
                     : t("dailySession.answeredMany", { count: answeredCount }))
                 : t("dailySession.seeYouTomorrow")}
             </p>
+            )}
             {newPatternsAdded > 0 && (
               <p className="text-xs text-primary">
                 {newPatternsAdded === 1
@@ -934,6 +979,14 @@ export const DailySession = ({
               </p>
             )}
           </div>
+
+          {echo && echoDoor && (
+            <EchoCard
+              doorId={echoDoor.id}
+              line={echoLine(t, echoDoor, echo.counts)}
+              fact={echo.fact ? factLine(t, echo.fact) : null}
+            />
+          )}
 
           {/* Action list — vertical, each row touchable. Primary action
               gets a tinted background; rest are clean rows. */}
@@ -1072,10 +1125,11 @@ export const DailySession = ({
   }
 
   const categoryColor = getCategoryColor(currentQuestion.tracker.category);
-  // When "yes" is the problem signal → Yes = red/strong, No = green/balanced. Flip otherwise.
-  const yesIsSignificant = currentQuestion.tracker.problemWhen === "yes";
-  const yesColorClass = yesIsSignificant ? "strong" : "balanced";
-  const noColorClass = yesIsSignificant ? "balanced" : "strong";
+  // Yes / No are the same calm buttons (1.8.0). Colouring them by which
+  // answer is "the problem" read as right / wrong answers (design review,
+  // Oct 27): the evening question is for honesty, not a test.
+  const answerButton =
+    "h-16 rounded-[20px] border-[1.5px] border-foreground/25 bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground text-[19px] font-semibold";
 
   return (
     // Deck mode wrapped in BottomSheet with Apple-Music-style
@@ -1145,8 +1199,12 @@ export const DailySession = ({
             )}
           </div>
           <div className="text-center">
-            <p className="text-sm font-medium">
-              {t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
+            <p className="text-[17px] font-bold">
+              {t("dailySession.tonight")}
+              <span className="font-medium text-muted-foreground">
+                {" · "}
+                {t("dailySession.countOf", { current: currentIndex + 1, total: totalQuestions })}
+              </span>
             </p>
             {selectedDate !== todayLocal() && (
               <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -1195,11 +1253,9 @@ export const DailySession = ({
             </div>
           );
         })()}
-      </div>
-
-      {/* Progress bar */}
-      <div className="px-4 py-2 flex-shrink-0">
-        <Progress value={progress} className="h-1.5" />
+        {onDateChange && (
+          <p className="text-center text-xs text-muted-foreground">{t("dailySession.missedDayHint")}</p>
+        )}
       </div>
 
       {/* Card area — pointer handlers attached HERE only, not on the
@@ -1302,21 +1358,13 @@ export const DailySession = ({
                   )}
                 </div>
 
-                {/* Question — fills the card vertically, big serif type */}
-                <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
-                    {localizeTrackerTitle(currentQuestion.tracker.title)}
-                  </p>
-                  <p className="font-serif text-2xl sm:text-3xl font-medium leading-snug text-foreground">
+                {/* Question — fills the card, big and plain. The tracker
+                    title used to sit above it in caps; it mostly repeated
+                    the question, so it's gone (title stays in the list). */}
+                <div className="flex-1 flex flex-col justify-center px-1">
+                  <p className="text-[30px] font-bold leading-[1.14] tracking-tight text-foreground [text-wrap:balance]">
                     {localizeTrackerQuestion(currentQuestion.tracker.questionText, currentQuestion.tracker.title)}
                   </p>
-                </div>
-
-                {/* Subtle swipe hints — minimalist, faded */}
-                <div className="flex items-center justify-between text-[10px] text-muted-foreground/60 pt-2 flex-shrink-0">
-                  <span>← {t("common.no")}</span>
-                  <span>{t("dailySession.skipHint")}</span>
-                  <span>{t("common.yes")} →</span>
                 </div>
               </CardContent>
             </Card>
@@ -1333,55 +1381,76 @@ export const DailySession = ({
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
       >
         <div className="grid grid-cols-2 gap-3">
-          <Button
-            onClick={() => handleAnswer(false)}
-            disabled={isAnimating}
-            className={cn(
-              "rounded-full border-2 h-10",
-              noColorClass === "strong"
-                ? "bg-transparent border-strong/50 hover:bg-strong/10 text-strong"
-                : "bg-transparent border-balanced/60 hover:bg-balanced/10 text-balanced"
-            )}
-          >
+          <Button onClick={() => handleAnswer(false)} disabled={isAnimating} className={answerButton}>
             {t("common.no")}
           </Button>
-          <Button
-            onClick={() => handleAnswer(true)}
-            disabled={isAnimating}
-            className={cn(
-              "rounded-full border-2 h-10",
-              yesColorClass === "strong"
-                ? "bg-transparent border-strong/50 hover:bg-strong/10 text-strong"
-                : "bg-transparent border-balanced/60 hover:bg-balanced/10 text-balanced"
-            )}
-          >
+          <Button onClick={() => handleAnswer(true)} disabled={isAnimating} className={answerButton}>
             {t("common.yes")}
           </Button>
         </div>
-        {/* Skip + Close inline at the bottom — both are tiny text
-            links so they don't compete with No/Yes for attention, but
-            they live near the user's thumb so dismissing the session
-            doesn't require reaching to the very top of the screen. */}
-        <div className="flex items-center justify-center gap-5 mt-2">
+        {/* One quiet line: swipe works too, and Skip. Close is the X at
+            the top of the sheet, so there's no second Close here. */}
+        <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
+          {t("dailySession.orSwipe")}
+          {" · "}
           <button
             type="button"
             onClick={handleSkip}
             disabled={isAnimating}
-            className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+            className="underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
           >
-            {t("dailySession.skipQuestion")}
+            {t("common.skip")}
           </button>
-          <span className="text-muted-foreground/30 text-[11px]">·</span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-          >
-            {t("common.close")}
-          </button>
+        </p>
+        {/* Progress: one short bar per question, filled as you go. */}
+        <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
+          {Array.from({ length: Math.min(totalQuestions, 12) }, (_, i) => (
+            <span
+              key={i}
+              className={cn(
+                "h-1 rounded-full transition-colors",
+                totalQuestions > 8 ? "w-4" : "w-7",
+                i < Math.round((progress / 100) * Math.min(totalQuestions, 12)) ? "bg-primary" : "bg-foreground/20",
+              )}
+            />
+          ))}
         </div>
       </div>
       </div>
     </BottomSheet>
+  );
+};
+
+// "So far" card on the evening done screen for door users. Counts and
+// facts only; the amber label keeps it honest until the correlation
+// engine has enough days to say anything real.
+const EchoCard = ({
+  doorId,
+  line,
+  fact,
+}: {
+  doorId: string;
+  line: string;
+  fact: string | null;
+}) => {
+  const { t } = useTranslation();
+  useEffect(() => {
+    track("echo_shown", { door: doorId, kind: fact ? "fact" : "count", surface: "evening" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="w-full max-w-sm rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-[18px] py-5">
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{t("doors.echo.soFar")}</p>
+      <p className="mt-2.5 text-[22px] leading-tight font-bold tracking-tight">{line}</p>
+      {fact && (
+        <>
+          <p className="mt-2.5 text-lg leading-snug">{fact}</p>
+          <span className="mt-3.5 inline-flex items-center gap-2 h-[30px] px-3 rounded-full border border-emerging/70 text-emerging text-[13px] font-semibold">
+            <Clock className="h-3.5 w-3.5" strokeWidth={2.4} />
+            {t("doors.echo.early")}
+          </span>
+        </>
+      )}
+    </div>
   );
 };

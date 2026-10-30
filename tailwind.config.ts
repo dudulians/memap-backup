@@ -147,7 +147,9 @@ export default {
       },
       fontFamily: {
         sans: ['DM Sans', 'sans-serif'],
-        serif: ['Fraunces', 'Georgia', 'serif'],
+        // One typeface (1.8.0): `font-serif` used to be Fraunces; it now maps to
+        // DM Sans so every existing heading follows without touching markup.
+        serif: ['DM Sans', 'sans-serif'],
         playful: ['Nunito', 'DM Sans', 'sans-serif']
       },
       keyframes: {

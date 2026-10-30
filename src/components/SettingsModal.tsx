@@ -22,7 +22,7 @@ import {
   type DemoPackId,
 } from "@/lib/demoDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
+import { Bell, Trash2, Flame, Download, ListChecks, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -35,6 +35,7 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
 import { track } from "@/lib/analytics";
+import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 
 interface SettingsModalProps {
@@ -899,123 +900,32 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     </p>
                   </div>
 
-                  {/* 2-col grid — five themes split 2 / 2 / 1. Switched
-                      from 3-col when Liquid + Terra were added (1.7.5):
-                      tighter cards fit better on phones than three
-                      narrow ones with squashed labels. */}
+                  {/* Two themes (1.8.0): dark, the look of the store and
+                      Instagram, and light. Seven used to be offered; the
+                      other five still render for anyone who picked one
+                      earlier, until they tap one of these two. */}
                   <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => handleThemeChange("classic")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "classic"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themeClassic")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themeClassicDesc")}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleThemeChange("aurora-light")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "aurora-light"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Sun className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themeAuroraLight")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themeAuroraLightDesc")}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleThemeChange("aurora")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "aurora"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themeAuroraDark")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themeAuroraDarkDesc")}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleThemeChange("liquid")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "liquid"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Droplets className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themeLiquid")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themeLiquidDesc")}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleThemeChange("terra")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "terra"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Leaf className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themeTerra")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themeTerraDesc")}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleThemeChange("pop")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "pop"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themePop")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themePopDesc")}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => handleThemeChange("hush")}
-                      className={`flex flex-col items-start gap-1.5 rounded-xl border p-2.5 text-left transition-all ${
-                        theme === "hush"
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                          : "border-border/50 hover:border-border bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Wind className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium">{t("settings.themeHush")}</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground leading-snug">
-                        {t("settings.themeHushDesc")}
-                      </span>
-                    </button>
+                    {([
+                      { id: "aurora", icon: Sparkles, label: t("settings.themeDark"), desc: t("settings.themeDarkDesc") },
+                      { id: "aurora-light", icon: Sun, label: t("settings.themeLight"), desc: t("settings.themeLightDesc") },
+                    ] as const).map(({ id, icon: Icon, label, desc }) => (
+                      <button
+                        key={id}
+                        onClick={() => handleThemeChange(id)}
+                        aria-pressed={theme === id}
+                        className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all ${
+                          theme === id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                            : "border-border/50 hover:border-border bg-muted/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm font-medium">{label}</span>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground leading-snug">{desc}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1252,6 +1162,24 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 <HelpCircle className="h-4 w-4 mr-2" />
                 {t("settings.showAppTour")}
               </Button>
+
+              {/* Rate MeMap (1.8.0). Opens the App Store review page
+                  directly, so unlike the native prompt it always works
+                  when someone wants to leave a rating. iOS only while
+                  Android isn't public. */}
+              {Capacitor.getPlatform() !== "android" && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    track("rate_app_tapped");
+                    window.open(APP_STORE_REVIEW_URL, "_blank", "noopener,noreferrer");
+                  }}
+                  className="w-full justify-start"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  {t("settings.rateApp")}
+                </Button>
+              )}
 
               {/* Contact / support email. Opens the user's default
                   mail client pre-filled with subject + diagnostic
