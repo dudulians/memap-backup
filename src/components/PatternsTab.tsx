@@ -3,22 +3,17 @@ import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { clearThresholdNotification } from "@/lib/notifications";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
-import { Lightbulb, AlertTriangle, ChevronRight, CalendarDays, Target } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
 import { FindingsView } from "./FindingsView";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { TrackerDetails } from "./TrackerDetails";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
-import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion, localizeTrackerTheme } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { getDoorState, isoLocal } from "@/lib/doors";
 
 export const PatternsTab = () => {
   const { t } = useTranslation();
@@ -27,12 +22,9 @@ export const PatternsTab = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  // For tracker details sheet
-  const [selectedTrackerForDetails, setSelectedTrackerForDetails] = useState<Tracker | null>(null);
-  const [selectedTrackerIndex, setSelectedTrackerIndex] = useState<number>(0);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  // Day picked on the calendar (its notes show under the month)
   const [selectedDate, setSelectedDate] = useState(() => 
-    new Date().toISOString().split("T")[0]
+    isoLocal(new Date())
   );
 
   // For reflection sheet
@@ -154,24 +146,6 @@ export const PatternsTab = () => {
     return { answerDays, significantDays, status, windowStart, windowEnd: today };
   };
 
-  const handleOpenTrackerDetails = (tracker: Tracker) => {
-    const index = trackers.findIndex(t => t.id === tracker.id);
-    setSelectedTrackerForDetails(tracker);
-    setSelectedTrackerIndex(index >= 0 ? index : 0);
-    setSheetOpen(true);
-  };
-
-  const handleNavigateTracker = (direction: "prev" | "next") => {
-    let newIndex = selectedTrackerIndex;
-    if (direction === "prev" && selectedTrackerIndex > 0) {
-      newIndex = selectedTrackerIndex - 1;
-    } else if (direction === "next" && selectedTrackerIndex < trackers.length - 1) {
-      newIndex = selectedTrackerIndex + 1;
-    }
-    setSelectedTrackerIndex(newIndex);
-    setSelectedTrackerForDetails(trackers[newIndex]);
-  };
-
   // Handle day click to open answer editor
   const handleDayEdit = (tracker: Tracker, date: string, existingEntry?: TrackerEntry) => {
     setEditingTracker(tracker);
@@ -217,43 +191,11 @@ export const PatternsTab = () => {
     }
   };
 
-  // Handle bulk answer for multiple dates
-  const handleBulkAnswer = async (trackerId: string, dates: string[], value: boolean | null) => {
-    let updatedEntries = [...entries];
-    
-    for (const date of dates) {
-      const existingIndex = updatedEntries.findIndex(
-        (e) => e.trackerId === trackerId && e.date === date
-      );
-
-      if (value === null) {
-        // Clear the answer
-        if (existingIndex !== -1) {
-          updatedEntries = updatedEntries.filter((_, i) => i !== existingIndex);
-        }
-      } else if (existingIndex !== -1) {
-        // Update existing
-        updatedEntries[existingIndex] = { ...updatedEntries[existingIndex], value };
-      } else {
-        // Add new
-        updatedEntries.push({
-          id: uuid(),
-          trackerId,
-          date,
-          value,
-        });
-      }
-    }
-    
-    setEntries(updatedEntries);
-    await saveEntries(updatedEntries);
-  };
-
   const handleStartNewCycle = async (
     tracker: Tracker,
     stats: { significantDays: number; answerDays: number }
   ) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = isoLocal(new Date());
 
     const cycleStart = tracker.cycleStartDate
       ?? tracker.createdAt.split("T")[0];
@@ -341,29 +283,23 @@ export const PatternsTab = () => {
           <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-0">
             <TabsTrigger
               value="findings"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
-              <Lightbulb className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[11px] font-medium">{t("patterns.tabFindings")}</span>
+              {t("patterns.tabFindings")}
             </TabsTrigger>
             <TabsTrigger
               value="overview"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
-              <CalendarDays className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[11px] font-medium">{t("patterns.tabCalendar")}</span>
+              {t("patterns.tabCalendar")}
             </TabsTrigger>
             <TabsTrigger
               value="signals"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:font-semibold flex flex-col gap-0.5 py-2 h-auto text-muted-foreground data-[state=active]:text-foreground relative"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
-              <Target className="h-4 w-4" strokeWidth={1.75} />
-              <span className="text-[11px] font-medium">{t("patterns.tabLimits")}</span>
+              {t("patterns.tabLimits")}
               {strongCount > 0 && (
-                <span className={cn(
-                  "absolute top-0 right-1 h-4 min-w-4 px-1 rounded-full text-[9px] font-semibold flex items-center justify-center",
-                  "bg-strong text-strong-foreground"
-                )}>
+                <span className="absolute top-1.5 right-2 h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center bg-strong text-strong-foreground">
                   {strongCount}
                 </span>
               )}
@@ -388,154 +324,76 @@ export const PatternsTab = () => {
               entries={entries}
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
-              onTrackerSelect={handleOpenTrackerDetails}
               onDayEdit={handleDayEdit}
-              onBulkAnswer={handleBulkAnswer}
             />
           </div>
         )}
 
-        {/* --- SIGNALS: the pattern/action cards, strong first ------ */}
-        {section === "signals" && (
-          <div className="animate-fade-in">
-            <div className="space-y-4">
-        {sortedTrackers.map((tracker) => {
-          const stats = getTrackerStats(tracker);
-          const categoryColor = getCategoryColor(tracker.category);
-          const Icon = getTrackerIcon(tracker.title, tracker.category);
-
-          const thresholdPct = Math.min(
-            Math.round((stats.significantDays / tracker.threshold) * 100),
-            100
-          );
-          const daysLeft = Math.max(tracker.threshold - stats.significantDays, 0);
-          const barGradient =
-            thresholdPct >= 80
-              ? "linear-gradient(90deg, hsl(var(--emerging)), hsl(var(--strong)))"
-              : thresholdPct >= 50
-              ? "linear-gradient(90deg, hsl(var(--balanced)), hsl(var(--emerging)))"
-              : `linear-gradient(90deg, hsl(var(--${categoryColor})), hsl(var(--${categoryColor}-secondary)))`;
-
+        {/* --- LIMITS (1.8.0): one row per question, "7 / 8" and a bar.
+            The question text, theme, badges and advice paragraphs are
+            gone; a crossed row turns rose and offers "What now?", which
+            opens the same reflection sheet (advice + new cycle). */}
+        {section === "signals" && (() => {
+          const live = sortedTrackers.filter((tr) => !tr.archived);
+          // Door questions go by their door name ("Fights with my partner").
+          const door = getDoorState();
+          const doorName = new Map<string, string>();
+          if (door) {
+            doorName.set(door.trackerId, t(`doors.${door.id}.name`));
+            for (const x of door.extra ?? []) doorName.set(x.trackerId, t(`doors.${x.id}.name`));
+          }
+          const periods = live.map((tr) => tr.periodDays);
+          const common = periods.sort((a, b) => periods.filter((p) => p === b).length - periods.filter((p) => p === a).length)[0];
           return (
-            <Card
-              key={tracker.id}
-              className="card-premium breathing-space animate-fade-in cursor-pointer active:scale-[0.99] transition-transform"
-              onClick={() => setReflectionSheetTracker(tracker)}
-            >
-              <div className="space-y-4">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div
-                      data-tracker-icon
-                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: `hsl(var(--${categoryColor}) / 0.22)` }}
-                    >
-                      <Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: "hsl(var(--foreground))" }} />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-medium text-base">{localizeTrackerTitle(tracker.title)}</h3>
-                      {tracker.questionText && (
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                          {localizeTrackerQuestion(tracker.questionText, tracker.title)}
-                        </p>
+            <div className="animate-fade-in">
+              {common && <p className="mx-1 mb-3 text-[17px] text-muted-foreground">{t("patterns.limitsWindow", { count: common })}</p>}
+              <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] overflow-hidden">
+                {live.map((tracker, i) => {
+                  const stats = getTrackerStats(tracker);
+                  const crossed = stats.significantDays >= tracker.threshold;
+                  const pct = Math.min(100, Math.round((stats.significantDays / Math.max(1, tracker.threshold)) * 100));
+                  const sub = [
+                    tracker.problemWhen === "no" ? t("patterns.countsNo") : null,
+                    tracker.periodDays !== common ? t("patterns.limitsWindowShort", { count: tracker.periodDays }) : null,
+                  ].filter(Boolean).join(" · ");
+                  return (
+                    <button
+                      key={tracker.id}
+                      type="button"
+                      onClick={() => setReflectionSheetTracker(tracker)}
+                      className={cn(
+                        "block w-full text-left px-[18px] py-[18px]",
+                        i > 0 && "border-t border-foreground/[0.08]",
+                        crossed && "bg-strong/[0.12]",
                       )}
-                      <p className="text-xs uppercase tracking-wider mt-1.5" style={{ color: `hsl(var(--${categoryColor}))` }}>
-                        {localizeTrackerTheme(tracker)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {/* "Stable" badge dropped in 1.7.2 — without
-                        context it read as "is stable good or bad?".
-                        Strong-pattern and emerging stay because
-                        those have actionable meaning. The
-                        progress-bar below still color-codes the
-                        balanced state for at-a-glance scanning. */}
-                    {stats.status !== "balanced" && (
-                      <Badge
-                        variant="secondary"
-                        className={`
-                          ${stats.status === "emerging" ? "bg-emerging/20 text-emerging border-emerging/30" : ""}
-                          ${stats.status === "strong" ? "bg-strong/20 text-strong border-strong/30" : ""}
-                          text-xs font-medium rounded-full px-3
-                        `}
-                      >
-                        {stats.status === "strong" && t("patterns.strongPattern")}
-                        {stats.status === "emerging" && t("patterns.emerging")}
-                      </Badge>
-                    )}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
-                  </div>
-                </div>
-
-                {/* Threshold meter */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>
-                      <span className="font-serif text-base font-medium tabular-nums text-foreground">{stats.significantDays}</span>
-                      <span className="mx-1 text-muted-foreground/60">/</span>
-                      <span className="tabular-nums">{tracker.threshold}</span>
-                      {" "}{t("patterns.significantDays")}
-                    </span>
-                    {daysLeft > 0
-                      ? <span>{t("patterns.moreToAction", { count: daysLeft })}</span>
-                      : <span className="font-medium" style={{ color: "hsl(var(--strong))" }}>{t("patterns.actionReached")}</span>
-                    }
-                  </div>
-                  <div className="w-full h-2.5 bg-muted/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full transition-all duration-700 ease-out rounded-full"
-                      style={{ width: `${thresholdPct}%`, background: barGradient }}
-                    />
-                  </div>
-                </div>
-
-                {/* Reflection block */}
-                {stats.status === "strong" && (
-                  <div
-                    className="rounded-2xl p-4 space-y-2"
-                    style={{
-                      background: "hsl(var(--strong) / 0.06)",
-                      border: "1px solid hsl(var(--strong) / 0.2)",
-                    }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(var(--strong))" }} />
-                      <p className="text-xs font-semibold tracking-wide uppercase" style={{ color: "hsl(var(--strong))" }}>
-                        {t("patterns.reflectionSuggested")}
-                      </p>
-                    </div>
-                    <p className="text-sm leading-relaxed text-foreground/80">
-                      {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
-                    </p>
-                  </div>
-                )}
-
-                {stats.status === "emerging" && (
-                  <div
-                    className="rounded-2xl p-3 flex items-center gap-2"
-                    style={{
-                      background: "hsl(var(--emerging) / 0.06)",
-                      border: "1px solid hsl(var(--emerging) / 0.2)",
-                    }}
-                  >
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(var(--emerging))" }} />
-                    <p className="text-xs" style={{ color: "hsl(var(--emerging))" }}>
-                      {daysLeft === 1
-                        ? t("patterns.patternBuildingOne")
-                        : t("patterns.patternBuildingMany", { count: daysLeft })}
-                    </p>
-                  </div>
-                )}
+                    >
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 text-lg font-semibold leading-snug">{doorName.get(tracker.id) ?? localizeTrackerTitle(tracker.title)}</span>
+                        <span className="shrink-0 tabular-nums">
+                          <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{stats.significantDays}</span>
+                          <span className="text-[17px] text-muted-foreground"> / {tracker.threshold}</span>
+                        </span>
+                      </div>
+                      {sub && <p className="mt-0.5 text-sm text-muted-foreground">{sub}</p>}
+                      <div className="mt-3 h-2 rounded-full bg-foreground/10 overflow-hidden">
+                        <div
+                          className={cn("h-full rounded-full transition-all duration-700 ease-out", crossed ? "bg-strong" : "bg-primary")}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      {crossed && (
+                        <span className="mt-3 inline-flex items-center gap-1 text-base font-semibold text-strong">
+                          {t("patterns.whatNow")}
+                          <ChevronRight className="h-4 w-4" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-            </Card>
-          );
-        })}
             </div>
-          </div>
-        )}
-
+          );
+        })()}
       </div>
 
       {/* Disclaimer removed from Patterns in 1.7.2 — was shown on
@@ -544,31 +402,6 @@ export const PatternsTab = () => {
           disclaimer now lives once in Settings → Help, and the
           correlations-specific disclaimer remains inside the
           Correlation Insights "(i)" explainer modal. */}
-
-      {/* Bottom Sheet for Tracker Details. Header is hidden visually
-          (sr-only) since TrackerDetails already renders its own
-          title + stats + actions inside the body. */}
-      <BottomSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        className="h-[80vh]"
-        ariaTitle={selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : "Tracker details"}
-      >
-        {/* Body opts out of vaul drag so internal scroll is unimpeded.
-            Dismiss-by-drag still works from the pill / top region. */}
-        <div className="flex-1 overflow-y-auto">
-          {selectedTrackerForDetails && (
-            <TrackerDetails
-              tracker={selectedTrackerForDetails}
-              trackers={trackers}
-              currentIndex={selectedTrackerIndex}
-              onNavigateTracker={handleNavigateTracker}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
-          )}
-        </div>
-      </BottomSheet>
 
       {/* Calendar Answer Editor */}
       {editingTracker && (

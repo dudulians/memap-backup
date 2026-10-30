@@ -188,45 +188,28 @@ export const CalendarAnswerEditor = ({
             </div>
           </div>
 
-          {/* Yes/No buttons */}
+          {/* Yes/No buttons. Neutral: the chosen answer is just white,
+              same rule as the evening card (rose/mint read as wrong/right).
+              The "tap or swipe" hint under them is gone (1.8.0). */}
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => handleSave(false)}
-              disabled={saving}
-              className={cn(
-                "h-14 rounded-xl text-base font-medium transition-all border",
-                selectedValue === false
-                  ? yesIsSignificant
-                    ? "bg-balanced/20 border-balanced text-balanced"
-                    : "bg-strong/20 border-strong text-strong"
-                  : "border-border hover:bg-muted/50"
-              )}
-            >
-              <X className="h-5 w-5 mr-2" />
-              {t("common.no")}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              className={cn(
-                "h-14 rounded-xl text-base font-medium transition-all border",
-                selectedValue === true
-                  ? yesIsSignificant
-                    ? "bg-strong/20 border-strong text-strong"
-                    : "bg-balanced/20 border-balanced text-balanced"
-                  : "border-border hover:bg-muted/50"
-              )}
-            >
-              <Check className="h-5 w-5 mr-2" />
-              {t("common.yes")}
-            </Button>
+            {[false, true].map((v) => (
+              <Button
+                key={String(v)}
+                variant="ghost"
+                onClick={() => handleSave(v)}
+                disabled={saving}
+                aria-pressed={selectedValue === v}
+                className={cn(
+                  "h-14 rounded-2xl text-[17px] transition-all border-[1.5px]",
+                  selectedValue === v
+                    ? "border-foreground bg-foreground/15 font-bold"
+                    : "border-foreground/[0.18] bg-foreground/[0.05] font-medium hover:bg-foreground/10"
+                )}
+              >
+                {v ? t("common.yes") : t("common.no")}
+              </Button>
+            ))}
           </div>
-
-          <p className="text-xs text-center text-muted-foreground">
-            {t("calendarEditor.tapOrSwipe")}
-          </p>
 
           {/* Clear-answer affordance — only visible when this day
               already has an entry AND the parent wired up onClear.
@@ -250,10 +233,12 @@ export const CalendarAnswerEditor = ({
 
           {/* Notes section */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <StickyNote className="h-3 w-3" />
-              {t("calendarEditor.notesForDay")}
-            </p>
+            {notes.length > 0 && (
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <StickyNote className="h-3 w-3" />
+                {t("calendarEditor.notesForDay")}
+              </p>
+            )}
 
             {/* Existing notes */}
             {notes.length > 0 && (
@@ -267,12 +252,6 @@ export const CalendarAnswerEditor = ({
                   </div>
                 ))}
               </div>
-            )}
-
-            {notes.length === 0 && !showNoteInput && (
-              <p className="text-xs text-muted-foreground text-center py-1">
-                {t("calendarEditor.noNotesYet")}
-              </p>
             )}
 
             {/* Prominent Add note button — full width, visible */}

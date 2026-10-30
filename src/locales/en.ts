@@ -401,6 +401,12 @@ const en = {
     tabFindings: "Findings",
     tabCalendar: "Calendar",
     tabLimits: "Limits",
+    limitsWindow_one: "Last {{count}} day",
+    limitsWindow_other: "Last {{count}} days",
+    limitsWindowShort_one: "{{count}} day",
+    limitsWindowShort_other: "{{count}} days",
+    countsNo: "counts the No days",
+    whatNow: "What now?",
     findStrongest: "Strongest so far",
     findAfter: "“{{b}}” came more often the day after “{{a}}”.",
     findAfterLess: "“{{b}}” came less often the day after “{{a}}”.",
@@ -646,6 +652,7 @@ const en = {
   },
 
   reflection: {
+    details: "Details",
     observationWindow: "Observation window",
     resetWindow: "Reset",
     from: "From",
@@ -778,6 +785,12 @@ const en = {
     openInNotes: "Open in Notes →",
     prevPattern: "Previous pattern",
     nextPattern: "Next pattern",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    daysYes_one: "day with Yes",
+    daysYes_other: "days with Yes",
+    daysNo_one: "day with No",
+    daysNo_other: "days with No",
   },
 
   weekly: {

@@ -3,14 +3,14 @@ import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
-import { Lightbulb, RefreshCw, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
+import { getDoorState } from "@/lib/doors";
 
 interface ReflectionSheetProps {
   open: boolean;
@@ -67,7 +67,7 @@ export const ReflectionSheet = ({
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const fmt = (d: Date) => format(d, "d MMM", { locale: dateLocale });
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [customStartStr, setCustomStartStr] = useState<string | null>(null);
   const [customEndStr, setCustomEndStr] = useState<string | null>(null);
@@ -94,7 +94,7 @@ export const ReflectionSheet = ({
       setCustomEndStr(null);
       setOpenCalendar(null);
       setConfirming(false);
-      setHistoryOpen(false);
+      setDetailsOpen(false);
     }
   }, [open]);
 
@@ -130,12 +130,13 @@ export const ReflectionSheet = ({
     Math.round((stats.significantDays / tracker.threshold) * 100),
     100
   );
-  const barGradient =
-    thresholdPct >= 100
-      ? "linear-gradient(90deg, hsl(var(--emerging)), hsl(var(--strong)))"
-      : thresholdPct >= 50
-      ? "linear-gradient(90deg, hsl(var(--balanced)), hsl(var(--emerging)))"
-      : "linear-gradient(90deg, hsl(var(--balanced)), hsl(var(--balanced)))";
+  const crossed = stats.significantDays >= tracker.threshold;
+  // Door questions go by their door name, same as on Limits.
+  const title = (() => {
+    const door = getDoorState();
+    const id = door?.trackerId === tracker.id ? door.id : door?.extra?.find((x) => x.trackerId === tracker.id)?.id;
+    return id ? t(`doors.${id}.name`) : localizeTrackerTitle(tracker.title);
+  })();
 
   const shiftStart = (days: number) => {
     const next = addDays(windowStart, days);
@@ -157,238 +158,189 @@ export const ReflectionSheet = ({
     onStartNewCycle(tracker, stats);
   };
 
+  // 1.8.0: what you need first — the count, the advice, one button.
+  // The observation window and past cycles moved under "Details".
   return (
     <BottomSheet
       open={open}
       onOpenChange={(o) => { if (!o) { setConfirming(false); onClose(); } }}
       className="h-[80vh]"
-      ariaTitle={localizeTrackerTitle(tracker.title)}
+      ariaTitle={title}
     >
-      <div className="px-6 pt-3 pb-4 flex-shrink-0">
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          {(() => {
-            const RIcon = getTrackerIcon(tracker.title, tracker.category);
-            return <RIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />;
-          })()}
-          {localizeTrackerTitle(tracker.title)}
-        </h2>
+      <div className="px-6 pt-3 pb-2 flex-shrink-0">
+        <h2 className="text-[21px] font-bold tracking-tight pr-10">{title}</h2>
       </div>
 
       {/* Body opts out of vaul drag so internal scroll is unimpeded.
           Dismiss-by-drag still works from the pill / top header. */}
       <div className="flex-1 overflow-y-auto px-6 space-y-5 pb-8">
-
-          {/* Observation window block */}
-          <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/30">
-
-            {/* Sliding date header */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{t("reflection.observationWindow")}</span>
-                {isCustom && (
-                  <button
-                    onClick={() => { setCustomStartStr(null); setCustomEndStr(null); }}
-                    className="flex items-center gap-1 text-primary hover:underline"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    {t("reflection.resetWindow")}
-                  </button>
-                )}
-              </div>
-
-              {/* From row */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-8">{t("reflection.from")}</span>
-                <button
-                  onClick={() => shiftStart(-1)}
-                  className="p-1 rounded-full hover:bg-muted/60 transition-colors"
-                  aria-label={t("reflection.earlier")}
-                >
-                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                </button>
-
-                <button
-                  onClick={() => setOpenCalendar(openCalendar === "start" ? null : "start")}
-                  className={cn(
-                    "text-sm font-semibold px-2 py-0.5 rounded-full transition-colors hover:bg-muted/60",
-                    customStartStr && customStartStr !== fmtInput(defaultStart)
-                      ? "bg-primary/10 text-primary"
-                      : openCalendar === "start" ? "bg-muted/60" : "text-foreground"
-                  )}
-                >
-                  {fmt(windowStart)}
-                </button>
-
-                <button
-                  onClick={() => shiftStart(1)}
-                  disabled={addDays(windowStart, 1) >= windowEnd}
-                  className="p-1 rounded-full hover:bg-muted/60 transition-colors disabled:opacity-30"
-                  aria-label={t("reflection.later")}
-                >
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-
-              {/* To row */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-8">{t("reflection.to")}</span>
-                <button
-                  onClick={() => shiftEnd(-1)}
-                  disabled={subDays(windowEnd, 1) <= windowStart}
-                  className="p-1 rounded-full hover:bg-muted/60 transition-colors disabled:opacity-30"
-                  aria-label={t("reflection.earlier")}
-                >
-                  <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-                </button>
-
-                <button
-                  onClick={() => setOpenCalendar(openCalendar === "end" ? null : "end")}
-                  className={cn(
-                    "text-sm font-semibold px-2 py-0.5 rounded-full transition-colors hover:bg-muted/60",
-                    customEndStr && customEndStr !== fmtInput(today)
-                      ? "bg-primary/10 text-primary"
-                      : openCalendar === "end" ? "bg-muted/60" : "text-foreground"
-                  )}
-                >
-                  {fmt(windowEnd)} {format(windowEnd, "yyyy")}
-                </button>
-
-                <button
-                  onClick={() => shiftEnd(1)}
-                  disabled={windowEnd >= today}
-                  className="p-1 rounded-full hover:bg-muted/60 transition-colors disabled:opacity-30"
-                  aria-label={t("reflection.later")}
-                >
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
-
-            {/* Inline calendar */}
-            {openCalendar === "start" && (
-              <div className="animate-fade-in">
-                <Calendar
-                  mode="single"
-                  selected={windowStart}
-                  defaultMonth={windowStart}
-                  onSelect={(date) => {
-                    if (date) setCustomStartStr(fmtInput(date));
-                    setOpenCalendar(null);
-                  }}
-                  disabled={(date) => date >= windowEnd}
-                  className="rounded-xl border border-border/30 bg-background"
-                />
-              </div>
-            )}
-            {openCalendar === "end" && (
-              <div className="animate-fade-in">
-                <Calendar
-                  mode="single"
-                  selected={windowEnd}
-                  defaultMonth={windowEnd}
-                  onSelect={(date) => {
-                    if (date) setCustomEndStr(fmtInput(date));
-                    setOpenCalendar(null);
-                  }}
-                  disabled={(date) => date <= windowStart || date > today}
-                  className="rounded-xl border border-border/30 bg-background"
-                />
-              </div>
-            )}
-
-            {/* Progress */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{t("reflection.significantDaysOf", { done: stats.significantDays, total: tracker.threshold })}</span>
-                <span>{t("reflection.logged", { count: stats.answerDays })}</span>
-              </div>
-              <div className="w-full h-2.5 bg-muted/40 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${thresholdPct}%`, background: barGradient }}
-                />
-              </div>
-              <p className={cn(
-                "text-[11px] text-right font-medium",
-                thresholdPct >= 100 ? "text-strong" : "text-muted-foreground"
-              )}>
-                {thresholdPct >= 100
-                  ? t("reflection.actionReached")
-                  : t("reflection.moreToAction", { count: tracker.threshold - stats.significantDays })}
-              </p>
-            </div>
-          </div>
-
-          {/* Reflection text */}
-          {stats.status === "strong" && (
+        <div>
+          <p className="tabular-nums">
+            <span className={cn("text-[44px] leading-none font-bold tracking-tight", crossed && "text-strong")}>{stats.significantDays}</span>
+            <span className="text-[22px] text-muted-foreground"> / {tracker.threshold}</span>
+          </p>
+          <div className="mt-3 h-2.5 rounded-full bg-foreground/10 overflow-hidden">
             <div
-              className="rounded-2xl p-4 space-y-2"
-              style={{ background: "hsl(var(--strong) / 0.06)", border: "1px solid hsl(var(--strong) / 0.2)" }}
-            >
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(var(--strong))" }} />
-                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "hsl(var(--strong))" }}>
-                  {t("reflection.reflection")}
-                </p>
-              </div>
-              <p className="text-sm leading-relaxed text-foreground/80">
-                {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
-              </p>
-            </div>
-          )}
-
-          {/* Start new cycle */}
-          <div className="space-y-2">
-            {confirming ? (
-              <div className="space-y-2 p-4 rounded-2xl border border-border/60 bg-muted/20 animate-fade-in">
-                <p className="text-sm font-medium">{t("reflection.confirmTitle")}</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {t("reflection.confirmDesc", { count: stats.significantDays })}
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <Button variant="ghost" size="sm" className="flex-1 rounded-full" onClick={() => setConfirming(false)}>
-                    {t("common.cancel")}
-                  </Button>
-                  <Button size="sm" className="flex-1 rounded-full bg-strong text-white hover:bg-strong/90" onClick={handleStartNewCycle}>
-                    {t("reflection.yesStartFresh")}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button variant="outline" className="w-full rounded-xl gap-2" onClick={handleStartNewCycle}>
-                <RefreshCw className="h-4 w-4" />
-                {t("reflection.startNewCycle")}
-              </Button>
-            )}
-            <p className="text-[10px] text-center text-muted-foreground">
-              {t("reflection.cycleHelp")}
-            </p>
+              className={cn("h-full rounded-full transition-all duration-300", crossed ? "bg-strong" : "bg-primary")}
+              style={{ width: `${thresholdPct}%` }}
+            />
           </div>
+        </div>
 
-          {/* History */}
-          {cycles.length > 0 && (
-            <div className="space-y-3">
-              <button
-                onClick={() => setHistoryOpen(!historyOpen)}
-                className="w-full flex items-center justify-between text-sm font-medium py-1"
-              >
-                <span>{t("reflection.pastCycles", { count: cycles.length })}</span>
-                {historyOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
-              {historyOpen && (
-                <div className="space-y-2 animate-fade-in">
+        {/* The advice is the answer to "What now?" */}
+        {crossed && tracker.adviceAboveThreshold && (
+          <p className="rounded-2xl bg-strong/[0.1] border border-strong/25 p-4 text-[17px] leading-snug">
+            {localizeTrackerAdvice(tracker.adviceAboveThreshold)}
+          </p>
+        )}
+
+        {/* Start new cycle */}
+        {confirming ? (
+          <div className="space-y-2 p-4 rounded-2xl border border-border/60 bg-muted/20 animate-fade-in">
+            <p className="text-base font-semibold">{t("reflection.confirmTitle")}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {t("reflection.confirmDesc", { count: stats.significantDays })}
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button variant="ghost" className="flex-1 h-11 rounded-full" onClick={() => setConfirming(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button className="flex-1 h-11 rounded-full bg-strong text-strong-foreground hover:bg-strong/90" onClick={handleStartNewCycle}>
+                {t("reflection.yesStartFresh")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button variant="outline" className="w-full h-12 rounded-full gap-2 text-base bg-transparent border-foreground/20" onClick={handleStartNewCycle}>
+            <RefreshCw className="h-4 w-4" />
+            {t("reflection.startNewCycle")}
+          </Button>
+        )}
+
+        {/* Details: the window you count in, and past cycles */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((v) => !v)}
+            aria-expanded={detailsOpen}
+            className="w-full flex items-center justify-between py-2 text-base font-semibold text-muted-foreground"
+          >
+            {t("reflection.details")}
+            <ChevronDown className={cn("h-5 w-5 transition-transform", detailsOpen && "rotate-180")} />
+          </button>
+          {detailsOpen && (
+            <div className="mt-2 space-y-4 animate-fade-in">
+              <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/30">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t("reflection.observationWindow")}</span>
+                  {isCustom && (
+                    <button
+                      onClick={() => { setCustomStartStr(null); setCustomEndStr(null); }}
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {t("reflection.resetWindow")}
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground w-10">{t("reflection.from")}</span>
+                  <button onClick={() => shiftStart(-1)} className="p-1 rounded-full hover:bg-muted/60" aria-label={t("reflection.earlier")}>
+                    <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => setOpenCalendar(openCalendar === "start" ? null : "start")}
+                    className={cn(
+                      "text-sm font-semibold px-2 py-0.5 rounded-full transition-colors hover:bg-muted/60",
+                      customStartStr && customStartStr !== fmtInput(defaultStart)
+                        ? "bg-primary/10 text-primary"
+                        : openCalendar === "start" ? "bg-muted/60" : "text-foreground"
+                    )}
+                  >
+                    {fmt(windowStart)}
+                  </button>
+                  <button
+                    onClick={() => shiftStart(1)}
+                    disabled={addDays(windowStart, 1) >= windowEnd}
+                    className="p-1 rounded-full hover:bg-muted/60 disabled:opacity-30"
+                    aria-label={t("reflection.later")}
+                  >
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground w-10">{t("reflection.to")}</span>
+                  <button
+                    onClick={() => shiftEnd(-1)}
+                    disabled={subDays(windowEnd, 1) <= windowStart}
+                    className="p-1 rounded-full hover:bg-muted/60 disabled:opacity-30"
+                    aria-label={t("reflection.earlier")}
+                  >
+                    <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <button
+                    onClick={() => setOpenCalendar(openCalendar === "end" ? null : "end")}
+                    className={cn(
+                      "text-sm font-semibold px-2 py-0.5 rounded-full transition-colors hover:bg-muted/60",
+                      customEndStr && customEndStr !== fmtInput(today)
+                        ? "bg-primary/10 text-primary"
+                        : openCalendar === "end" ? "bg-muted/60" : "text-foreground"
+                    )}
+                  >
+                    {fmt(windowEnd)} {format(windowEnd, "yyyy")}
+                  </button>
+                  <button
+                    onClick={() => shiftEnd(1)}
+                    disabled={windowEnd >= today}
+                    className="p-1 rounded-full hover:bg-muted/60 disabled:opacity-30"
+                    aria-label={t("reflection.later")}
+                  >
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+
+                {openCalendar === "start" && (
+                  <Calendar
+                    mode="single"
+                    selected={windowStart}
+                    defaultMonth={windowStart}
+                    onSelect={(date) => {
+                      if (date) setCustomStartStr(fmtInput(date));
+                      setOpenCalendar(null);
+                    }}
+                    disabled={(date) => date >= windowEnd}
+                    className="rounded-xl border border-border/30 bg-background animate-fade-in"
+                  />
+                )}
+                {openCalendar === "end" && (
+                  <Calendar
+                    mode="single"
+                    selected={windowEnd}
+                    defaultMonth={windowEnd}
+                    onSelect={(date) => {
+                      if (date) setCustomEndStr(fmtInput(date));
+                      setOpenCalendar(null);
+                    }}
+                    disabled={(date) => date <= windowStart || date > today}
+                    className="rounded-xl border border-border/30 bg-background animate-fade-in"
+                  />
+                )}
+
+                <p className="text-sm text-muted-foreground">{t("reflection.logged", { count: stats.answerDays })}</p>
+              </div>
+
+              {cycles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">{t("reflection.pastCycles", { count: cycles.length })}</p>
                   {[...cycles].reverse().map(c => <CycleCard key={c.id} cycle={c} />)}
                 </div>
               )}
             </div>
           )}
-
-          {cycles.length === 0 && (
-            <p className="text-xs text-center text-muted-foreground py-2">
-              {t("reflection.noPastCycles")}
-            </p>
-          )}
         </div>
+      </div>
     </BottomSheet>
   );
 };
