@@ -10,9 +10,10 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerQuestion, localizeTrackerAdvice, localizeTrackerTitle, localizeGroupTitle } from "@/lib/trackerLocalize";
-import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
-import { Check, X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getDoorState } from "@/lib/doors";
 
 // Same mapping as AddTrackerModal — when user picks a Theme
 // (cluster), we derive the structural Tracker.category for stats
@@ -86,6 +87,8 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
   const [periodDaysRaw, setPeriodDaysRaw] = useState<string>("30");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Theme and advice fold under "More settings" (1.8.0).
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (tracker) {
@@ -111,6 +114,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       setPeriodDaysRaw(String(tracker.periodDays));
       setThresholdRaw(String(tracker.threshold));
       setErrors({});
+      setMoreOpen(false);
     }
   }, [tracker]);
 
@@ -160,91 +164,79 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
     }
   };
 
-  // Tracker icon for the header — matches the visual language of
-  // ReflectionSheet / TrackerDetails so all tracker-scoped sheets feel
-  // like one family.
-  const TIcon = tracker ? getTrackerIcon(tracker.title, tracker.category) : null;
+  // Door questions go by their door name, same as everywhere else.
+  const name = (() => {
+    if (!tracker) return t("trackerSettings.title");
+    const door = getDoorState();
+    const id = door?.trackerId === tracker.id ? door.id : door?.extra?.find((x) => x.trackerId === tracker.id)?.id;
+    return id ? t(`doors.${id}.name`) : localizeTrackerTitle(tracker.title);
+  })();
 
+  // 1.8.0: the question, "Yes is Good / Bad" and the limit as one
+  // sentence; theme and advice under "More settings". The help lines
+  // under every field are gone.
   return (
     <BottomSheet
       open={open}
       onOpenChange={(o) => { if (!o) onClose(); }}
       className="h-[92vh] flex flex-col"
-      ariaTitle={tracker ? localizeTrackerTitle(tracker.title) : t("trackerSettings.title")}
+      ariaTitle={name}
     >
-      {/* Sticky header — gives the sheet a clear identity (which tracker
-          is being edited) without competing with the global X button
-          provided by BottomSheet. */}
-      <div className="px-6 pt-3 pb-4 flex-shrink-0 border-b border-border/30">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          {t("trackerSettings.title")}
-        </p>
-        {tracker && (
-          <h2 className="flex items-center gap-2 mt-1 text-lg font-semibold pr-10">
-            {TIcon && <TIcon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />}
-            <span className="truncate">{localizeTrackerTitle(tracker.title)}</span>
-          </h2>
-        )}
+      <div className="px-6 pt-3 pb-3 flex-shrink-0">
+        <h2 className="text-[21px] font-bold tracking-tight pr-10 truncate">{name}</h2>
       </div>
 
-      {/* Scrollable body — same paddings and section rhythm as
-          ReflectionSheet / SettingsModal sub-screens.
-          `overscroll-y-contain` kills the iOS rubber-band overscroll
-          inside the body. Without it, pulling down on a scrolled
-          form gives an elastic "pull-to-refresh"-style bounce that
-          fights with vaul's drag-to-close gesture from the handle.
-          With `overscroll-contain` the body just stops at scrollTop=0
-          / bottom — no bounce, no fake pull-to-refresh feel — and
-          vaul cleanly takes over the gesture. */}
-      <div className="flex-1 overflow-y-auto overscroll-y-contain px-6 py-5 space-y-6">
-        {/* Question Text */}
+      {/* `overscroll-y-contain` stops the iOS rubber-band inside the
+          body, which otherwise fights vaul's drag-to-close. */}
+      <div className="flex-1 overflow-y-auto overscroll-y-contain px-6 py-3 space-y-7">
         <div className="space-y-2">
-          <Label htmlFor="questionText">{t("trackerSettings.questionText")}</Label>
           <Textarea
             id="questionText"
+            aria-label={t("trackerSettings.questionText")}
             placeholder={t("trackerSettings.questionTextPh")}
             value={formData.questionText}
             onChange={(e) => setFormData({ ...formData, questionText: e.target.value })}
-            rows={3}
-            className={errors.questionText ? "border-destructive" : ""}
+            rows={2}
+            className={cn("rounded-2xl text-[17px] leading-snug", errors.questionText && "border-destructive")}
           />
           {errors.questionText && (
-            <p className="text-xs text-destructive">{errors.questionText}</p>
+            <p className="text-sm text-destructive">{errors.questionText}</p>
           )}
-          <p className="text-xs text-muted-foreground">
-            {t("trackerSettings.questionHelp")}
-          </p>
         </div>
 
-        {/* Answer Type */}
-        {/* Тип ответа field removed in 1.7+ — only boolean (Да/Нет)
-            is currently supported, so the dropdown showed a single
-            disabled option. The user pointed out it was clutter.
-            If we ever add scale/count/note answer types, restore. */}
-
-        {/* Period + Threshold */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="periodDays">{t("addTracker.fieldPeriod")}</Label>
-            <Input
-              id="periodDays"
-              type="number"
-              min={1}
-              value={periodDaysRaw}
-              onChange={(e) => {
-                setPeriodDaysRaw(e.target.value);
-                const n = parseInt(e.target.value);
-                if (!isNaN(n) && n >= 1) setFormData({ ...formData, periodDays: n });
-              }}
-              className={errors.periodDays ? "border-destructive" : ""}
-            />
-            <p className="text-xs text-muted-foreground">{t("addTracker.fieldPeriodHelp")}</p>
+        {/* "Yes" is… Good / Bad. Good → the signal is a No day. */}
+        <div>
+          <p className="text-[19px] font-semibold">{t("addTracker.yesIs")}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            {([["good", "no"], ["bad", "yes"]] as const).map(([key, problemWhen]) => {
+              const on = formData.problemWhen === problemWhen;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, problemWhen })}
+                  aria-pressed={on}
+                  className={cn(
+                    "h-[52px] rounded-2xl border-[1.5px] text-[17px] transition-colors",
+                    on ? "border-foreground bg-foreground/15 font-bold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
+                  )}
+                >
+                  {t(`addTracker.${key}`)}
+                </button>
+              );
+            })}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="threshold">{t("addTracker.fieldThreshold")}</Label>
+        </div>
+
+        {/* The limit as one sentence: "[8] days with Yes in [30] days" */}
+        <div>
+          <p className="text-[19px] font-semibold">{t("addTracker.limit")}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-base">
             <Input
               id="threshold"
               type="number"
+              inputMode="numeric"
+              aria-label={t("addTracker.fieldThreshold")}
               min={1}
               value={thresholdRaw}
               onChange={(e) => {
@@ -252,139 +244,99 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 const n = parseInt(e.target.value);
                 if (!isNaN(n) && n >= 1) setFormData({ ...formData, threshold: n });
               }}
-              className={errors.threshold ? "border-destructive" : ""}
+              className={cn("w-[68px] h-11 rounded-xl text-center text-base", errors.threshold && "border-destructive")}
             />
-            {errors.threshold && <p className="text-xs text-destructive">{errors.threshold}</p>}
-            <p className="text-xs text-muted-foreground">{t("addTracker.fieldThresholdHelp")}</p>
+            <span>
+              {t("addTracker.limitDaysWith", {
+                count: formData.threshold,
+                answer: formData.problemWhen === "yes" ? t("common.yes") : t("common.no"),
+              })}
+            </span>
+            <Input
+              id="periodDays"
+              type="number"
+              inputMode="numeric"
+              aria-label={t("addTracker.fieldPeriod")}
+              min={1}
+              value={periodDaysRaw}
+              onChange={(e) => {
+                setPeriodDaysRaw(e.target.value);
+                const n = parseInt(e.target.value);
+                if (!isNaN(n) && n >= 1) setFormData({ ...formData, periodDays: n });
+              }}
+              className={cn("w-[68px] h-11 rounded-xl text-center text-base", errors.periodDays && "border-destructive")}
+            />
+            <span>{t("addTracker.limitDays", { count: formData.periodDays })}</span>
           </div>
+          {errors.threshold && <p className="mt-2 text-sm text-destructive">{errors.threshold}</p>}
         </div>
 
-        {/* Polarity — visual Yes/No colour toggle. Same component
-            as the Custom-form in AddTrackerModal (1.7+). Selected
-            button is GREEN (good answer); unselected is RED (signal).
-            problemWhen wiring inverted: tap "Да" → problemWhen="no"
-            since the SIGNAL fires on the No answer. */}
-        <div className="space-y-2">
-          <Label>{t("addTracker.fieldConcern")}</Label>
-          <p className="text-xs text-muted-foreground">
-            {t("addTracker.fieldConcernDesc")}
-          </p>
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            {(["yes", "no"] as const).map((answerKey) => {
-              const isGood =
-                (answerKey === "yes" && formData.problemWhen === "no") ||
-                (answerKey === "no" && formData.problemWhen === "yes");
-              return (
-                <button
-                  key={answerKey}
-                  type="button"
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      problemWhen: answerKey === "yes" ? "no" : "yes",
-                    })
-                  }
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-medium transition-all"
-                  style={
-                    isGood
-                      ? {
-                          borderColor: "hsl(var(--balanced))",
-                          background: "hsl(var(--balanced) / 0.12)",
-                          color: "hsl(var(--balanced))",
-                        }
-                      : {
-                          borderColor: "hsl(var(--strong) / 0.4)",
-                          background: "hsl(var(--strong) / 0.06)",
-                          color: "hsl(var(--strong))",
-                        }
-                  }
-                >
-                  {isGood ? (
-                    <Check className="h-4 w-4" strokeWidth={2.5} />
-                  ) : (
-                    <X className="h-4 w-4" strokeWidth={2.5} />
-                  )}
-                  {answerKey === "yes" ? t("common.yes") : t("common.no")}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Theme (cluster) — replaces the old "Категория (Поток
-            жизни)" dropdown. User picks a life-area theme; we
-            derive Tracker.category for color/stats from a fixed
-            map. Same UX as the Custom form in AddTrackerModal. */}
-        <div className="space-y-2">
-          <Label htmlFor="cluster">{t("trackerSettings.categoryLabel")}</Label>
-          <Select
-            value={formData.cluster ?? ""}
-            onValueChange={(value) => {
-              const derivedCategory = CLUSTER_TO_CATEGORY[value] ?? formData.category;
-              setFormData({ ...formData, cluster: value, category: derivedCategory });
-            }}
+        <div>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            aria-expanded={moreOpen}
+            className="flex items-center gap-1.5 text-base font-semibold text-muted-foreground"
           >
-            <SelectTrigger id="cluster" className="bg-background">
-              <SelectValue placeholder={t("addTracker.themePlaceholder")} />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              {LIFE_STREAMS.map((stream) => (
-                <SelectItem key={stream.id} value={stream.id}>
-                  {localizeGroupTitle(stream.title)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {t("trackerSettings.categoryHelp")}
-          </p>
-        </div>
+            {t("addTracker.moreSettings")}
+            <ChevronDown className={cn("h-5 w-5 transition-transform", moreOpen && "rotate-180")} />
+          </button>
+          {moreOpen && (
+            <div className="mt-4 space-y-5 animate-fade-in">
+              {/* Theme (cluster): category is derived from it */}
+              <div className="space-y-1.5">
+                <Label htmlFor="cluster">{t("trackerSettings.categoryLabel")}</Label>
+                <Select
+                  value={formData.cluster ?? ""}
+                  onValueChange={(value) => {
+                    const derivedCategory = CLUSTER_TO_CATEGORY[value] ?? formData.category;
+                    setFormData({ ...formData, cluster: value, category: derivedCategory });
+                  }}
+                >
+                  <SelectTrigger id="cluster" className="h-12 rounded-xl text-base bg-background">
+                    <SelectValue placeholder={t("addTracker.themePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    {LIFE_STREAMS.map((stream) => (
+                      <SelectItem key={stream.id} value={stream.id}>
+                        {localizeGroupTitle(stream.title)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-        {/* Advice / Reflection */}
-        <div className="space-y-2">
-          <Label htmlFor="adviceAboveThreshold">{t("trackerSettings.adviceLabel")}</Label>
-          <Textarea
-            id="adviceAboveThreshold"
-            placeholder={t("trackerSettings.advicePh")}
-            value={formData.adviceAboveThreshold}
-            onChange={(e) => setFormData({ ...formData, adviceAboveThreshold: e.target.value })}
-            rows={3}
-            className={errors.adviceAboveThreshold ? "border-destructive" : ""}
-          />
-          {errors.adviceAboveThreshold && (
-            <p className="text-xs text-destructive">{errors.adviceAboveThreshold}</p>
+              <div className="space-y-1.5">
+                <Label htmlFor="adviceAboveThreshold">{t("addTracker.fieldAdvice")}</Label>
+                <Textarea
+                  id="adviceAboveThreshold"
+                  placeholder={t("trackerSettings.advicePh")}
+                  value={formData.adviceAboveThreshold}
+                  onChange={(e) => setFormData({ ...formData, adviceAboveThreshold: e.target.value })}
+                  rows={3}
+                  className={cn("rounded-xl text-base", errors.adviceAboveThreshold && "border-destructive")}
+                />
+                {errors.adviceAboveThreshold && (
+                  <p className="text-sm text-destructive">{errors.adviceAboveThreshold}</p>
+                )}
+              </div>
+            </div>
           )}
-          <p className="text-xs text-muted-foreground">
-            {t("trackerSettings.adviceHelp")}
-          </p>
         </div>
       </div>
 
-      {/* Sticky footer — actions always reachable, safe-area aware so
-          the Save button never sits on the iOS home indicator. */}
+      {/* Footer: safe-area aware so Save never sits on the home indicator */}
       <div
-        className="flex-shrink-0 px-6 pt-3 border-t border-border/30 bg-background"
+        className="flex-shrink-0 px-6 pt-3 bg-background"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
       >
-        <div className="flex gap-3 justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onClose}
-            disabled={saving}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving || !periodDaysRaw || !thresholdRaw}
-            style={{
-              background: 'linear-gradient(135deg, hsl(var(--curious)), hsl(var(--fun)))'
-            }}
-          >
-            {saving ? t("common.saving") : t("trackerSettings.saveChanges")}
-          </Button>
-        </div>
+        <Button
+          onClick={handleSave}
+          disabled={saving || !periodDaysRaw || !thresholdRaw}
+          className="w-full h-[54px] rounded-full text-[17px] font-semibold"
+        >
+          {saving ? t("common.saving") : t("common.save")}
+        </Button>
       </div>
     </BottomSheet>
   );

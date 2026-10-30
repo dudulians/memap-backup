@@ -7,11 +7,6 @@ import { CalendarDays, TrendingUp, NotebookPen, Settings, ArrowUp } from "lucide
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
-import {
-  CoachmarkTour,
-  hasSeenTourKey,
-  type CoachmarkStep,
-} from "@/components/CoachmarkTour";
 import { applyTheme, getTheme } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 
@@ -27,36 +22,6 @@ const Index = () => {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [tourOpen, setTourOpen] = useState(false);
-  // Custom-question mini-tour — fires the FIRST time the user switches
-  // to the "Custom" tab inside the Add-Tracker modal. Spotlights the
-  // Period and Threshold inputs with brief plain-language explanations
-  // since these two numeric fields are the most confusing part of the
-  // custom flow for non-technical users.
-  const [customTourOpen, setCustomTourOpen] = useState(false);
-  const CUSTOM_TOUR_SEEN_KEY = "memap_custom_tour_seen";
-
-  // Custom-question mini-tour steps. Targets the two numeric input
-  // wrappers (Period + Threshold) inside the Custom tab of the
-  // Add-Tracker modal. Same z-index pattern as the Add-Tracker tour.
-  const customTourSteps: CoachmarkStep[] = [
-    {
-      id: "custom-tour-period",
-      targetSelector: "[data-coachmark='custom-field-period']",
-      titleKey: "coachmark.periodTitle",
-      bodyKey: "coachmark.periodBody",
-      placement: "bottom",
-      padding: 6,
-    },
-    {
-      id: "custom-tour-threshold",
-      targetSelector: "[data-coachmark='custom-field-threshold']",
-      titleKey: "coachmark.thresholdTitle",
-      bodyKey: "coachmark.thresholdBody",
-      placement: "bottom",
-      padding: 6,
-    },
-  ];
-
   useEffect(() => {
     applyTheme(getTheme());
     if (shouldShowTour()) {
@@ -66,22 +31,6 @@ const Index = () => {
     // No auto-open of the evening session on cold launch: it surprised
     // people. Today shows one "Answer tonight's N" button instead.
   }, []);
-
-  // First-time Custom-tab activation inside the "+" modal → launch
-  // the Period/Threshold mini-tour. AddTrackerModal dispatches
-  // memap-custom-mode-entered on every Custom-tab switch; we gate on
-  // the seenKey so it fires AT MOST once. Slight delay lets the
-  // form fields render after the tab switch animation.
-  useEffect(() => {
-    const handler = () => {
-      if (hasSeenTourKey(CUSTOM_TOUR_SEEN_KEY)) return;
-      if (tourOpen) return;
-      setTimeout(() => setCustomTourOpen(true), 400);
-    };
-    window.addEventListener("memap-custom-mode-entered", handler);
-    return () =>
-      window.removeEventListener("memap-custom-mode-entered", handler);
-  }, [tourOpen]);
 
   // Listen for tab-switch events dispatched by deep components (e.g. the
   // DailySession completion screen's "see my patterns" button).
@@ -303,16 +252,6 @@ const Index = () => {
         }}
       />
 
-      {/* Custom-question mini-tour. Fires the first time the user
-          switches to the Custom tab and explains the Period /
-          Threshold numeric inputs that most non-technical users
-          can't intuitively decode. */}
-      <CoachmarkTour
-        open={customTourOpen}
-        steps={customTourSteps}
-        onClose={() => setCustomTourOpen(false)}
-        seenKey={CUSTOM_TOUR_SEEN_KEY}
-      />
     </div>
   );
 };

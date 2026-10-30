@@ -10,7 +10,6 @@ import {
   localizeTrackerQuestionRaw,
   localizeTrackerAdviceRaw,
   localizeGroupTitle,
-  localizeGroupDescription,
   localizeTrackerTheme,
 } from "@/lib/trackerLocalize";
 import { Button } from "@/components/ui/button";
@@ -18,41 +17,17 @@ import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getCategoryColor } from "@/lib/categoryHelpers";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
-import {
-  Search,
-  Plus,
-  X,
-  Check,
-  ArrowUp,
-  // Cluster icons — replace the emoji that came from lifeStreams.ts.
-  // Emoji rendered inconsistently across iOS / Android / web (some
-  // fonts box-drew, some had off-baseline alignment, the family
-  // composite ⚭ glyph collapsed on certain installs). Lucide is
-  // already the icon system everywhere else in the app, so this
-  // unifies look-and-feel.
-  Heart,
-  Users,
-  HeartPulse,
-  Wine,
-  Sun,
-  Compass,
-  Globe,
-  Building,
-  Folder,
-  ChevronDown,
-} from "lucide-react";
+import { Search, Plus, X, Check, ArrowUp, ArrowLeft, ChevronDown } from "lucide-react";
 import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { toast } from "@/hooks/use-toast";
 import { uuid } from "@/lib/uuid";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface AddTrackerModalProps {
   open: boolean;
@@ -60,20 +35,6 @@ interface AddTrackerModalProps {
   onTrackerAdded: () => void;
   onNavigateToTracker?: (tracker: Tracker) => void;
 }
-
-// Cluster id → Lucide icon component. Single source of truth for the
-// visual identity of each cluster in this modal. If a future cluster
-// id isn't here, falls back to a generic Folder icon.
-const CLUSTER_ICONS: Record<string, typeof Heart> = {
-  partner: Heart,
-  parenting: Users,
-  health: HeartPulse,
-  habits: Wine,
-  state: Sun,
-  "big-decisions": Compass,
-  "external-events": Building,
-  expat: Globe,
-};
 
 // Cluster id → underlying Tracker.category. Used by the Custom-tracker
 // form: when the user picks a Theme (cluster), we derive the structural
@@ -107,8 +68,7 @@ const CLUSTER_TO_CATEGORY: Record<string, Tracker["category"]> = {
  */
 const TAP_SLOP_PX = 10;
 
-const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void }) => {
-  const { t } = useTranslation();
+const AddTemplateButton = ({ label, onAdd, added }: { label: string; onAdd: () => void; added?: boolean }) => {
   const firedRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
   const resetSoon = () => {
@@ -144,19 +104,21 @@ const AddTemplateButton = ({ label, onAdd }: { label: string; onAdd: () => void 
     resetSoon();
   };
   return (
-    <Button
+    <button
       type="button"
-      size="sm"
       onPointerDown={handleDown}
-      onPointerUp={fire}
-      onClick={fire}
+      onPointerUp={added ? undefined : fire}
+      onClick={added ? undefined : fire}
+      disabled={added}
       style={{ touchAction: "manipulation" }}
-      className="flex-shrink-0 h-9 rounded-full shadow-sm gap-1 px-3"
+      className={cn(
+        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center border transition-colors",
+        added ? "border-primary bg-primary text-primary-foreground" : "border-foreground/[0.22] bg-foreground/[0.06] active:scale-95",
+      )}
       aria-label={label}
     >
-      <Plus className="h-4 w-4" />
-      {t("addTracker.add")}
-    </Button>
+      {added ? <Check className="h-[18px] w-[18px]" strokeWidth={2.8} /> : <Plus className="h-[18px] w-[18px]" strokeWidth={2.6} />}
+    </button>
   );
 };
 
@@ -249,19 +211,14 @@ export const AddTrackerModal = ({
   const { t } = useTranslation();
   const [mode, setMode] = useState<"templates" | "custom">("templates");
 
-  // Outbound notification: fire memap-custom-mode-entered whenever the
-  // user switches to the Custom tab. Index listens for this to launch
-  // the Period/Threshold mini-tour the FIRST time it happens. Index
-  // gates on its own seenKey so re-entries here are harmless no-ops.
-  useEffect(() => {
-    if (mode === "custom") {
-      window.dispatchEvent(new Event("memap-custom-mode-entered"));
-    }
-  }, [mode]);
+  // "More settings" on the own-question form (name, theme, limit,
+  // advice). Folded by default: one field and Good/Bad is enough.
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Library rows added in this visit, so their "+" turns into a tick.
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
   const [selectedTheme, setSelectedTheme] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateTracker, setDuplicateTracker] = useState<Tracker | null>(null);
   const [duplicateIsArchived, setDuplicateIsArchived] = useState(false);
@@ -308,6 +265,9 @@ export const AddTrackerModal = ({
   useEffect(() => {
     if (!open) {
       setExpandedFull({});
+      setMode("templates");
+      setMoreOpen(false);
+      setAddedIds(new Set());
       setTitleAutocompleteOpen(false);
       setQuestionAutocompleteOpen(false);
     }
@@ -460,7 +420,6 @@ export const AddTrackerModal = ({
     const trackers = await getTrackers();
     await saveTrackers([...trackers, newTracker]);
     setSearchQuery("");
-    setSearchOpen(false);
 
     // Analytics — we track whether it was a library template
     // (cluster set) or a custom user-typed tracker (cluster null).
@@ -528,7 +487,7 @@ export const AddTrackerModal = ({
       setDuplicateTracker(dup.tracker);
       setDuplicateIsArchived(dup.isArchived);
       setDuplicateDialogOpen(true);
-      return;
+      return false;
     }
 
     // No duplicate - create directly
@@ -548,6 +507,7 @@ export const AddTrackerModal = ({
     };
 
     await createTrackerDirectly(newTracker);
+    return true;
   };
 
   // Custom-tab autocomplete: user clicked a library suggestion → mirror
@@ -589,13 +549,18 @@ export const AddTrackerModal = ({
 
   const handleCustomSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const question = formData.questionText.trim();
+    if (!question) return;
+    // The name defaults to the question without "?" (More settings can change it).
+    const title = formData.title.trim() || question.replace(/[?？]+$/, "").slice(0, 60);
+    const data = { ...formData, title, questionText: question };
 
     // Check for duplicates
-    const dup = await checkForDuplicate(formData.title, formData.category);
+    const dup = await checkForDuplicate(data.title, data.category);
 
     if (dup) {
       const newTracker: Tracker = {
-        ...formData,
+        ...data,
         id: uuid(),
         answerType: "boolean",
         createdAt: new Date().toISOString(),
@@ -610,7 +575,7 @@ export const AddTrackerModal = ({
 
     // No duplicate - create directly
     const newTracker: Tracker = {
-      ...formData,
+      ...data,
       id: uuid(),
       answerType: "boolean",
       createdAt: new Date().toISOString(),
@@ -638,6 +603,7 @@ export const AddTrackerModal = ({
     });
     setPeriodDaysRaw("30");
     setThresholdRaw("10");
+    setMoreOpen(false);
     onTrackerAdded();
     // Custom-tracker creation is an explicit form submission, so close
     // the modal afterwards. Template additions keep the modal open.
@@ -791,7 +757,7 @@ export const AddTrackerModal = ({
           transition: dragY ? "none" : "transform 0.25s ease",
         }}
       >
-        {/* Drag handle + header */}
+        {/* Drag handle */}
         <div
           onPointerDown={handleHandlePointerDown}
           onPointerMove={handleHandlePointerMove}
@@ -799,658 +765,345 @@ export const AddTrackerModal = ({
           onPointerCancel={handleHandlePointerEnd}
           className="flex flex-col items-center pt-2 pb-1 cursor-grab active:cursor-grabbing select-none touch-none"
         >
-          <div className="w-10 h-1.5 rounded-full bg-muted-foreground/30 mb-2" />
+          <div className="w-10 h-1.5 rounded-full bg-muted-foreground/30" />
         </div>
-        <div className="flex items-center justify-between px-5 pb-3 border-b border-border/40 sticky top-0 bg-background/95 backdrop-blur-md z-10">
-          <h2 className="text-lg font-semibold">{t("addTracker.title")}</h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-9 w-9" aria-label={t("common.close")}>
+        <div className="flex items-center gap-2 px-5 pt-1 pb-3">
+          {mode === "custom" && (
+            <Button variant="ghost" size="icon" onClick={() => setMode("templates")} className="-ml-2 rounded-full h-10 w-10" aria-label={t("common.back")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <h2 className="flex-1 text-[24px] font-bold tracking-tight">
+            {mode === "custom" ? t("addTracker.ownTitle") : t("addTracker.title")}
+          </h2>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10" aria-label={t("common.close")}>
             <X className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Extra top padding (pt-6) so the Шаблон/Свой tabs sit
-            comfortably below the sticky header. Was pt-4 — visually
-            felt tight, the header's border looked like it was clipping
-            the tab pills. */}
-        {/* `overflow-x-hidden` is critical — without it, anything in the
-            scroll body that overflows horizontally (long titles in
-            cards, accordion triggers with not-quite-shrunk content,
-            etc.) lets the user pan the entire modal sideways and
-            half of the layout slides off-screen. The user reported
-            exactly this after the 1.6 accordion redesign. With
-            overflow-x-hidden any internal overflow gets quietly
-            clipped instead of dragging the whole modal sideways. */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 pt-6 pb-4 relative">
+        {/* `overflow-x-hidden` is critical: any row that overflows
+            horizontally would otherwise let the whole sheet pan sideways. */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 pb-4 relative">
 
-        <Tabs value={mode} onValueChange={(v) => setMode(v as "templates" | "custom")} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger
-              value="templates"
-              data-coachmark="add-tab-templates"
-            >
-              {t("addTracker.useTemplate")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="custom"
-              data-coachmark="add-tab-custom"
-            >
-              {t("addTracker.createCustom")}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Templates Tab */}
-          <TabsContent value="templates" className="space-y-6 mt-0">
-            {/* Theme Dropdown */}
-            <div className="space-y-2">
-              <Label htmlFor="theme-select">{t("addTracker.selectTheme")}</Label>
-              <Select value={selectedTheme} onValueChange={setSelectedTheme}>
-                <SelectTrigger id="theme-select" className="w-full">
-                  <SelectValue placeholder={t("addTracker.chooseTheme")} />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  <SelectItem value="all">{t("addTracker.allThemes")}</SelectItem>
-                  {visibleGroups.map(group => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {localizeGroupTitle(group.title)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {mode === "templates" ? (
+          <div className="space-y-4">
+            {/* Search: results replace the list below */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+              <Input
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                placeholder={t("addTracker.search")}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-12 pl-12 rounded-2xl text-base bg-foreground/[0.06] border-foreground/[0.14]"
+              />
             </div>
 
-            {/* Search Input with Dropdown */}
-            <div className="space-y-2">
-              <Label htmlFor="search-templates">{t("addTracker.searchTemplates")}</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
-                <Input
-                  id="search-templates"
-                  type="text"
-                  inputMode="text"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  placeholder={t("addTracker.searchPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setSearchOpen(true);
-                  }}
-                  onFocus={() => setSearchOpen(true)}
-                  onBlur={() => {
-                    // Delay closing to allow click on dropdown items
-                    setTimeout(() => setSearchOpen(false), 200);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              
-              {/* Dropdown results */}
-              {searchOpen && (
-                <div className="absolute left-0 right-0 mt-1 bg-background border rounded-xl shadow-lg z-50 max-h-[280px] overflow-y-auto">
-                  {dropdownTemplates.length === 0 ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                      {t("addTracker.noTemplatesFound")}
-                    </div>
-                  ) : (
-                    <div className="py-1">
-                      {dropdownTemplates.slice(0, 10).map((template) => {
-                        const categoryColor = getCategoryColor(template.category);
-                        return (
-                          <button
-                            key={template.id}
-                            type="button"
-                            // Tap suggestion → preview/edit (switch to
-                            // Custom tab pre-filled), not instant-add.
-                            // 1.7+ matches the same behavior as
-                            // accordion card body taps.
-                            onClick={() => {
-                              handleAutocompletePick(template);
-                              setMode("custom");
-                              setSearchOpen(false);
-                              setSearchQuery("");
-                            }}
-                            className="w-full flex items-start justify-between gap-3 px-3 py-2.5 hover:bg-accent cursor-pointer text-left"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm leading-snug line-clamp-2">
-                                {localizeTrackerQuestion(template.questionText)}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
-                                {localizeTrackerTitle(template.title)}
-                              </p>
-                            </div>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs flex-shrink-0"
-                              style={{ 
-                                backgroundColor: `hsl(var(--${categoryColor}) / 0.1)`,
-                                color: `hsl(var(--${categoryColor}))`
-                              }}
-                            >
-                              {localizeTrackerTheme(template)}
-                            </Badge>
-                          </button>
-                        );
-                      })}
-                      {dropdownTemplates.length > 10 && (
-                        <p className="text-xs text-muted-foreground text-center py-2">
-                          {t("addTracker.moreResults", { count: dropdownTemplates.length - 10 })}
-                        </p>
+            {/* Theme chips */}
+            {!searchQuery.trim() && (
+              <div className="-mx-5 px-5 flex gap-2 overflow-x-auto scrollbar-hide">
+                {[{ id: "all", title: "" }, ...visibleGroups].map((group) => {
+                  const on = selectedTheme === group.id;
+                  return (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => setSelectedTheme(group.id)}
+                      aria-pressed={on}
+                      className={cn(
+                        "shrink-0 h-[42px] px-[18px] rounded-full border text-base whitespace-nowrap transition-colors",
+                        on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
                       )}
-                    </div>
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                {t("addTracker.searchTypeHint")}
-              </p>
-            </div>
-
-            {/* Templates Display - Suggested Ideas */}
-            <div className="space-y-4">
-              <div className="pt-4 mt-4">
-                <h3 className="font-semibold text-base mb-1">{t("addTracker.suggestedIdeas")}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("addTracker.suggestedIdeasDesc")}
-                </p>
+                    >
+                      {group.id === "all" ? t("addTracker.all") : localizeGroupTitle(group.title)}
+                    </button>
+                  );
+                })}
               </div>
-              
-              {searchQuery.trim() && filteredTemplates ? (
-                // Search Results (Flat List)
-                <>
-                  <div>
-                    <h3 className="font-semibold text-base">{t("addTracker.searchResults")}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {filteredTemplates.length === 1
-                        ? t("addTracker.templatesFoundOne")
-                        : t("addTracker.templatesFoundMany", { count: filteredTemplates.length })}
-                    </p>
-                  </div>
-                  {filteredTemplates.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">
-                      {t("addTracker.noMatchHint")}
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {filteredTemplates.map((template) => {
-                        const categoryColor = getCategoryColor(template.category);
-                        return (
-                          <Card
-                            key={template.id}
-                            // Tap on card body → preview/edit (switch
-                            // to Custom tab pre-filled). Mirrors the
-                            // accordion behavior: body = preview,
-                            // "+" button = instant-add.
-                            onClick={() => {
-                              handleAutocompletePick(template);
-                              setMode("custom");
-                              setSearchQuery("");
-                            }}
-                            className="hover:bg-accent/30 transition-colors overflow-hidden cursor-pointer"
-                            style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: '3px' }}
-                          >
-                            <CardHeader className="pb-2">
-                              <div className="flex items-start justify-between gap-2">
-                                {/* Question prominent — same hierarchy
-                                    as Today and TrackerDetails */}
-                                <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-sm font-medium leading-snug break-words">
-                                    {localizeTrackerQuestion(template.questionText)}
-                                  </CardTitle>
-                                  <p className="text-[11px] text-muted-foreground/80 truncate mt-1">
-                                    {localizeTrackerTitle(template.title)}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs flex-shrink-0"
-                                  style={{
-                                    backgroundColor: `hsl(var(--${categoryColor}) / 0.1)`,
-                                    color: `hsl(var(--${categoryColor}))`
-                                  }}
-                                >
-                                  {localizeTrackerTheme(template)}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pb-3">
-                              <div className="flex items-center justify-end gap-3">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={(e) => { e.stopPropagation(); handleTemplateSelect(template); }}
-                                  style={{ touchAction: "manipulation" }}
-                                  className="flex-shrink-0 h-9 rounded-full shadow-sm gap-1 px-3"
-                                  aria-label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                  {t("addTracker.add")}
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              ) : (
-                // Accordion Display — clusters collapsed by default
-                // (except the first one) so the user sees the full
-                // catalog structure at a glance and only expands what
-                // interests them. Was a flat dump of every group +
-                // every template — overwhelming once the library
-                // grows beyond a few dozen.
-                //
-                // The first cluster is open by default so the user
-                // immediately sees REAL templates (not just a list
-                // of section headers), which proves "yes there's
-                // content inside, tap to explore the rest."
-                //
-                // Cluster icons come from LIFE_STREAMS (the canonical
-                // source); we look them up by group.id to keep the
-                // visual identity consistent with rest of the app.
-                <Accordion
-                  type="multiple"
-                  defaultValue={[]}
-                  className="space-y-2"
-                >
-                  {filteredGroups.map((group) => {
-                    const ClusterIcon = CLUSTER_ICONS[group.id] ?? Folder;
-                    // Stream lookup gives us cluster.color for tinting
-                    // the Lucide icon — keeps each cluster visually
-                    // distinct without falling back to emoji noise.
-                    const stream = LIFE_STREAMS.find((s) => s.id === group.id);
-                    const clusterColor = stream?.color ?? "muted";
-                    const visibleTemplates = filterSensitive(group.templates);
-                    const featured = visibleTemplates.filter((t) => t.featured);
-                    const rest = visibleTemplates.filter((t) => !t.featured);
-                    // If a cluster has no featured templates marked
-                    // (defensive — shouldn't happen for the 7 canonical
-                    // clusters, but matters for any custom groups added
-                    // later), fall back to "show all" so we never
-                    // collapse into emptiness.
-                    const isExpanded = expandedFull[group.id] === true;
-                    const startList = featured.length === 0
-                      ? visibleTemplates
-                      : (isExpanded ? visibleTemplates : featured);
-                    const moreCount = visibleTemplates.length - featured.length;
-                    const showMoreButton =
-                      featured.length > 0 && !isExpanded && moreCount > 0;
-                    return (
-                      <AccordionItem
-                        key={group.id}
-                        value={group.id}
-                        className="border border-border/40 rounded-2xl bg-card/30 overflow-hidden"
+            )}
+
+            {/* Rows: short name + "+". Tap the name to look before adding
+                (opens it in the own-question form, pre-filled). */}
+            {(() => {
+              const rows = searchQuery.trim()
+                ? (filteredTemplates ?? [])
+                : selectedTheme === "all"
+                  ? filteredGroups.flatMap((g) => {
+                      const list = filterSensitive(g.templates);
+                      const featured = list.filter((x) => x.featured);
+                      return featured.length ? featured : list.slice(0, 3);
+                    })
+                  : filteredGroups.flatMap((g) => filterSensitive(g.templates));
+              if (rows.length === 0) {
+                return <p className="py-8 text-center text-base text-muted-foreground">{t("addTracker.nothingFound")}</p>;
+              }
+              return (
+                <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] overflow-hidden">
+                  {rows.map((template, i) => (
+                    <div
+                      key={template.id}
+                      className={cn("flex items-center gap-3 pl-4 pr-3 py-3", i > 0 && "border-t border-foreground/[0.08]")}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleAutocompletePick(template);
+                          setMoreOpen(true);
+                          setMode("custom");
+                          setSearchQuery("");
+                        }}
+                        className="flex-1 min-w-0 text-left text-base font-medium leading-snug"
                       >
-                        <AccordionTrigger className="hover:no-underline py-3 px-4 gap-2">
-                          {/* Header row: icon + title/desc + count badge.
-                              Layout reworked to fix the v1.7.0 bug where
-                              the count badge floated mid-row and text
-                              clipped mid-word. min-w-0 + truncate on the
-                              text column lets it shrink cleanly; the
-                              badge is its own flex-shrink-0 column on
-                              the right so it never collides. */}
-                          <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                            <span
-                              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center"
-                              style={{ backgroundColor: `hsl(var(--${clusterColor}) / 0.12)` }}
-                            >
-                              <ClusterIcon
-                                className="h-[18px] w-[18px]"
-                                style={{ color: `hsl(var(--${clusterColor}))` }}
-                                strokeWidth={2}
-                              />
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-sm leading-snug break-words">
-                                {localizeGroupTitle(group.title)}
-                              </h3>
-                              {/* line-clamp-2 lets the description wrap
-                                  to 2 lines instead of truncating mid-
-                                  word. break-words handles long single
-                                  words gracefully. Was: `truncate` —
-                                  fixed in 1.7.0 after user reported
-                                  cluster descriptions being cut as
-                                  "просто кажется..." */}
-                              <p className="text-xs text-muted-foreground leading-snug line-clamp-2 break-words mt-0.5">
-                                {localizeGroupDescription(group.description)}
-                              </p>
-                            </div>
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] flex-shrink-0 bg-muted/60 text-muted-foreground font-medium px-2 h-5 rounded-full"
-                            >
-                              {visibleTemplates.length}
-                            </Badge>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="pt-0 pb-3 px-4">
-                          <div className="space-y-2">
-                            {startList.map((template) => {
-                              const categoryColor = getCategoryColor(template.category);
-                              return (
-                                <Card
-                                  key={template.id}
-                                  // Tap on card body → opens "preview /
-                                  // edit before add" — switches to the
-                                  // Custom tab pre-filled with this
-                                  // template's data so user can review
-                                  // all fields (period, threshold,
-                                  // polarity, advice) before adding.
-                                  // The "+" button on the right keeps
-                                  // the fast-path: instant add. Built
-                                  // in 1.7 after user asked for
-                                  // template details before commit.
-                                  onClick={() => {
-                                    handleAutocompletePick(template);
-                                    setMode("custom");
-                                  }}
-                                  className="hover:bg-accent/30 transition-colors overflow-hidden cursor-pointer"
-                                  style={{ borderLeftColor: `hsl(var(--${categoryColor}))`, borderLeftWidth: "3px" }}
-                                >
-                                  <CardContent className="p-3">
-                                    <div className="flex items-start justify-between gap-3">
-                                      <div className="flex-1 min-w-0">
-                                        {/* Question prominent, title
-                                            secondary — matches the
-                                            hierarchy used on Today /
-                                            TrackerDetails / Calendar
-                                            editor (1.7+). User scans
-                                            the question to know what
-                                            she'd answer; title is just
-                                            the short ID under it. */}
-                                        <p className="font-medium text-sm leading-snug line-clamp-2 break-words">
-                                          {localizeTrackerQuestion(template.questionText)}
-                                        </p>
-                                        <p className="text-[11px] text-muted-foreground/80 leading-snug truncate mt-1">
-                                          {localizeTrackerTitle(template.title)}
-                                        </p>
-                                      </div>
-                                      <AddTemplateButton
-                                        label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
-                                        onAdd={() => handleTemplateSelect(template)}
-                                      />
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                            {showMoreButton && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedFull((prev) => ({ ...prev, [group.id]: true }))
-                                }
-                                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-muted/30 hover:bg-muted/50 text-xs font-medium text-primary transition-colors"
-                              >
-                                {t("addTracker.showAllInCluster", { count: moreCount })}
-                                <ChevronDown className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              )}
-            </div>
-          </TabsContent>
+                        {localizeTrackerTitle(template.title)}
+                      </button>
+                      <AddTemplateButton
+                        label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
+                        added={addedIds.has(template.id)}
+                        onAdd={async () => {
+                          const created = await handleTemplateSelect(template);
+                          if (created) setAddedIds((prev) => new Set(prev).add(template.id));
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
-          {/* Custom Tracker Tab */}
-          <TabsContent value="custom" className="space-y-4 mt-0">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-base">{t("addTracker.customHeader")}</h3>
-              <p className="text-sm text-muted-foreground">
-                {t("addTracker.customDesc")}
-              </p>
+            <div className="sticky bottom-0 -mx-5 px-5 pt-3 pb-1 bg-background/95 backdrop-blur-sm">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setFormData({
+                    title: "",
+                    questionText: "",
+                    category: "Curious",
+                    subcategory: undefined,
+                    cluster: undefined,
+                    periodDays: 30,
+                    threshold: 10,
+                    problemWhen: "yes",
+                    adviceAboveThreshold: "",
+                  });
+                  setPeriodDaysRaw("30");
+                  setThresholdRaw("10");
+                  setMoreOpen(false);
+                  setMode("custom");
+                }}
+                className="w-full h-[52px] rounded-full text-[16px] font-semibold bg-transparent border-foreground/20"
+              >
+                {t("addTracker.writeOwn")}
+              </Button>
             </div>
-            <form onSubmit={handleCustomSubmit} className="space-y-4">
-              {/* Question is the PRIMARY field of the custom form
-                  (1.7+). Question is what the user actually answers
-                  daily, what shows on Today/TrackerDetails as the
-                  visual anchor — so it should be where creation
-                  flow leads. Title is secondary, asked second.
-                  Both fields support library autocomplete, so user
-                  can pick a matching template from either side. */}
-              <div className="relative">
-                <Label htmlFor="questionText">{t("addTracker.fieldQuestion")}</Label>
-                <Input
-                  id="questionText"
-                  placeholder={t("addTracker.fieldQuestionPh")}
-                  value={formData.questionText}
-                  onChange={(e) => {
-                    setFormData({ ...formData, questionText: e.target.value });
-                    setQuestionAutocompleteOpen(true);
-                    setTitleAutocompleteOpen(false);
-                  }}
-                  onFocus={() => {
-                    setQuestionAutocompleteOpen(true);
-                    setTitleAutocompleteOpen(false);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setQuestionAutocompleteOpen(false), 200);
-                  }}
-                  autoComplete="off"
-                  required
-                />
-                {questionAutocompleteOpen &&
-                  customQuestionSuggestions.length > 0 && (
-                    <AutocompleteDropdown
-                      headerLabel={t("addTracker.autocompleteHeader")}
-                      suggestions={customQuestionSuggestions}
-                      onPick={handleAutocompletePick}
-                      t={t}
-                    />
-                  )}
-              </div>
-
-              {/* Title — short label for charts, correlations, lists.
-                  Also has autocomplete so the user can lock onto a
-                  template by typing the title-form. Less prominent
-                  than the question field above. */}
-              <div className="relative">
-                <Label htmlFor="title">{t("addTracker.fieldTitle")}</Label>
-                <Input
-                  id="title"
-                  placeholder={t("addTracker.fieldTitlePh")}
-                  value={formData.title}
-                  onChange={(e) => {
-                    setFormData({ ...formData, title: e.target.value });
-                    setTitleAutocompleteOpen(true);
-                    setQuestionAutocompleteOpen(false);
-                  }}
-                  onFocus={() => {
-                    setTitleAutocompleteOpen(true);
-                    setQuestionAutocompleteOpen(false);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => setTitleAutocompleteOpen(false), 200);
-                  }}
-                  autoComplete="off"
-                  required
-                />
-                {titleAutocompleteOpen && customTitleSuggestions.length > 0 && (
+          </div>
+        ) : (
+          <form onSubmit={handleCustomSubmit} className="flex flex-col gap-6 min-h-full">
+            {/* The question is the only required field. Typing shows
+                matching library questions; picking one fills everything. */}
+            <div className="relative">
+              <Input
+                id="questionText"
+                aria-label={t("addTracker.fieldQuestion")}
+                placeholder={t("addTracker.fieldQuestionPh")}
+                value={formData.questionText}
+                onChange={(e) => {
+                  setFormData({ ...formData, questionText: e.target.value });
+                  setQuestionAutocompleteOpen(true);
+                  setTitleAutocompleteOpen(false);
+                }}
+                onFocus={() => {
+                  setQuestionAutocompleteOpen(true);
+                  setTitleAutocompleteOpen(false);
+                }}
+                onBlur={() => {
+                  setTimeout(() => setQuestionAutocompleteOpen(false), 200);
+                }}
+                autoComplete="off"
+                required
+                className="h-14 rounded-2xl text-[17px] bg-foreground/[0.06] border-foreground/[0.14]"
+              />
+              {questionAutocompleteOpen &&
+                customQuestionSuggestions.length > 0 && (
                   <AutocompleteDropdown
                     headerLabel={t("addTracker.autocompleteHeader")}
-                    suggestions={customTitleSuggestions}
+                    suggestions={customQuestionSuggestions}
                     onPick={handleAutocompletePick}
                     t={t}
                   />
                 )}
-              </div>
+            </div>
 
-              {/* Theme picker — replaces the old "Category" dropdown
-                  in 1.7+. Reasoning: the underlying Tracker.category
-                  enum (Emotions/Body/Connections/...) is structural
-                  metadata for color/grouping, not something the user
-                  thinks about. They DO think about "where in my
-                  life is this question" — partner, parenting, work,
-                  habits. So we ask for THEME (cluster), and derive
-                  category from it via CLUSTER_TO_CATEGORY map.
-                  Bonus: storing the cluster on the tracker lets
-                  correlations.ts give a softer "expected" verdict
-                  for custom × library pairs in the same cluster. */}
-              <div>
-                <Label htmlFor="cluster">{t("addTracker.fieldTheme")}</Label>
-                <Select
-                  value={formData.cluster ?? ""}
-                  onValueChange={(value) => {
-                    const derivedCategory = CLUSTER_TO_CATEGORY[value] ?? "Curious";
-                    setFormData({ ...formData, cluster: value, category: derivedCategory });
-                  }}
-                >
-                  <SelectTrigger id="cluster">
-                    <SelectValue placeholder={t("addTracker.themePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    {visibleGroups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {localizeGroupTitle(group.title)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* "Yes" is… Good / Bad. Good → the signal is a No day
+                (problemWhen "no"); Bad → the signal is a Yes day. */}
+            <div>
+              <p className="text-[19px] font-semibold">{t("addTracker.yesIs")}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                {([["good", "no"], ["bad", "yes"]] as const).map(([key, problemWhen]) => {
+                  const on = formData.problemWhen === problemWhen;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, problemWhen })}
+                      aria-pressed={on}
+                      className={cn(
+                        "h-[52px] rounded-2xl border-[1.5px] text-[17px] transition-colors",
+                        on ? "border-foreground bg-foreground/15 font-bold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
+                      )}
+                    >
+                      {t(`addTracker.${key}`)}
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div data-coachmark="custom-field-period">
-                  <Label htmlFor="periodDays">{t("addTracker.fieldPeriod")}</Label>
-                  <Input
-                    id="periodDays"
-                    type="number"
-                    placeholder="30"
-                    value={periodDaysRaw}
-                    onChange={(e) => {
-                      setPeriodDaysRaw(e.target.value);
-                      const n = parseInt(e.target.value);
-                      if (!isNaN(n) && n >= 1) setFormData({ ...formData, periodDays: n });
-                    }}
-                    min={1}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">{t("addTracker.fieldPeriodHelp")}</p>
+            {/* More settings: name, theme, limit, advice */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setMoreOpen((v) => !v)}
+                aria-expanded={moreOpen}
+                className="flex items-center gap-1.5 text-base font-semibold text-muted-foreground"
+              >
+                {t("addTracker.moreSettings")}
+                <ChevronDown className={cn("h-5 w-5 transition-transform", moreOpen && "rotate-180")} />
+              </button>
+              {moreOpen && (
+                <div className="mt-4 space-y-5 animate-fade-in">
+                  <div className="relative">
+                    <Label htmlFor="title">{t("addTracker.fieldTitle")}</Label>
+                    <Input
+                      id="title"
+                      placeholder={formData.questionText.trim().replace(/[?？]+$/, "") || t("addTracker.fieldTitlePh")}
+                      value={formData.title}
+                      onChange={(e) => {
+                        setFormData({ ...formData, title: e.target.value });
+                        setTitleAutocompleteOpen(true);
+                        setQuestionAutocompleteOpen(false);
+                      }}
+                      onFocus={() => {
+                        setTitleAutocompleteOpen(true);
+                        setQuestionAutocompleteOpen(false);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setTitleAutocompleteOpen(false), 200);
+                      }}
+                      autoComplete="off"
+                      className="mt-1.5 h-12 rounded-xl text-base"
+                    />
+                    {titleAutocompleteOpen && customTitleSuggestions.length > 0 && (
+                      <AutocompleteDropdown
+                        headerLabel={t("addTracker.autocompleteHeader")}
+                        suggestions={customTitleSuggestions}
+                        onPick={handleAutocompletePick}
+                        t={t}
+                      />
+                    )}
+                  </div>
+
+                  {/* Theme (cluster): category is derived from it, and
+                      correlations use the cluster for softer verdicts. */}
+                  <div>
+                    <Label htmlFor="cluster">{t("addTracker.fieldTheme")}</Label>
+                    <Select
+                      value={formData.cluster ?? ""}
+                      onValueChange={(value) => {
+                        const derivedCategory = CLUSTER_TO_CATEGORY[value] ?? "Curious";
+                        setFormData({ ...formData, cluster: value, category: derivedCategory });
+                      }}
+                    >
+                      <SelectTrigger id="cluster" className="mt-1.5 h-12 rounded-xl text-base">
+                        <SelectValue placeholder={t("addTracker.themePlaceholder")} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {visibleGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {localizeGroupTitle(group.title)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* The limit as one sentence with two numbers in it:
+                      "Limit: [10] days with Yes in [30] days". Replaces the
+                      two labelled fields and the coach tour explaining them. */}
+                  <div>
+                    <Label>{t("addTracker.limit")}</Label>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-2 text-base">
+                      <Input
+                        id="threshold"
+                        type="number"
+                        inputMode="numeric"
+                        aria-label={t("addTracker.fieldThreshold")}
+                        value={thresholdRaw}
+                        onChange={(e) => {
+                          setThresholdRaw(e.target.value);
+                          const n = parseInt(e.target.value);
+                          if (!isNaN(n) && n >= 1) setFormData({ ...formData, threshold: n });
+                        }}
+                        min={1}
+                        className="w-[68px] h-11 rounded-xl text-center text-base"
+                      />
+                      <span>
+                        {t("addTracker.limitDaysWith", {
+                          count: formData.threshold,
+                          answer: formData.problemWhen === "yes" ? t("common.yes") : t("common.no"),
+                        })}
+                      </span>
+                      <Input
+                        id="periodDays"
+                        type="number"
+                        inputMode="numeric"
+                        aria-label={t("addTracker.fieldPeriod")}
+                        value={periodDaysRaw}
+                        onChange={(e) => {
+                          setPeriodDaysRaw(e.target.value);
+                          const n = parseInt(e.target.value);
+                          if (!isNaN(n) && n >= 1) setFormData({ ...formData, periodDays: n });
+                        }}
+                        min={1}
+                        className="w-[68px] h-11 rounded-xl text-center text-base"
+                      />
+                      <span>{t("addTracker.limitDays", { count: formData.periodDays })}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="adviceAboveThreshold">{t("addTracker.fieldAdvice")}</Label>
+                    <Textarea
+                      id="adviceAboveThreshold"
+                      placeholder={t("addTracker.fieldAdvicePh")}
+                      value={formData.adviceAboveThreshold}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          adviceAboveThreshold: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="mt-1.5 rounded-xl text-base"
+                    />
+                  </div>
                 </div>
-                <div data-coachmark="custom-field-threshold">
-                  <Label htmlFor="threshold">{t("addTracker.fieldThreshold")}</Label>
-                  <Input
-                    id="threshold"
-                    type="number"
-                    placeholder="10"
-                    value={thresholdRaw}
-                    onChange={(e) => {
-                      setThresholdRaw(e.target.value);
-                      const n = parseInt(e.target.value);
-                      if (!isNaN(n) && n >= 1) setFormData({ ...formData, threshold: n });
-                    }}
-                    min={1}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">{t("addTracker.fieldThresholdHelp")}</p>
-                </div>
-              </div>
+              )}
+            </div>
 
-              {/* Polarity toggle — visual two-button control. The
-                  selected button is GREEN (good answer); the other
-                  is RED (the signal answer). Tap either to swap.
-                  Cleaner than radio + descriptions; no "сигнал когда"
-                  jargon, just colour-coded answer choice.
-                  Wiring inversion: tapping "Да" (= Yes is good)
-                  sets problemWhen="no" since the SIGNAL fires on
-                  the No answer. Vice versa for "Нет". */}
-              <div className="space-y-2">
-                <Label>{t("addTracker.fieldConcern")}</Label>
-                <p className="text-xs text-muted-foreground">
-                  {t("addTracker.fieldConcernDesc")}
-                </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  {(["yes", "no"] as const).map((answerKey) => {
-                    const isGood =
-                      (answerKey === "yes" && formData.problemWhen === "no") ||
-                      (answerKey === "no" && formData.problemWhen === "yes");
-                    return (
-                      <button
-                        key={answerKey}
-                        type="button"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            // "Yes is good" → signal on No → problemWhen="no"
-                            // "No is good" → signal on Yes → problemWhen="yes"
-                            problemWhen: answerKey === "yes" ? "no" : "yes",
-                          })
-                        }
-                        className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-medium transition-all"
-                        style={
-                          isGood
-                            ? {
-                                borderColor: "hsl(var(--balanced))",
-                                background: "hsl(var(--balanced) / 0.12)",
-                                color: "hsl(var(--balanced))",
-                              }
-                            : {
-                                borderColor: "hsl(var(--strong) / 0.4)",
-                                background: "hsl(var(--strong) / 0.06)",
-                                color: "hsl(var(--strong))",
-                              }
-                        }
-                      >
-                        {isGood ? (
-                          <Check className="h-4 w-4" strokeWidth={2.5} />
-                        ) : (
-                          <X className="h-4 w-4" strokeWidth={2.5} />
-                        )}
-                        {answerKey === "yes" ? t("common.yes") : t("common.no")}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="adviceAboveThreshold">
-                  {t("addTracker.fieldAdvice")}
-                </Label>
-                <Textarea
-                  id="adviceAboveThreshold"
-                  placeholder={t("addTracker.fieldAdvicePh")}
-                  value={formData.adviceAboveThreshold}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      adviceAboveThreshold: e.target.value,
-                    })
-                  }
-                  required
-                  rows={3}
-                />
-              </div>
-
-              {/* Sticky action row — primary "Добавить", secondary
-                  "Отмена". Both pinned to the bottom of the form
-                  so the user can submit without scrolling further.
-                  "Добавить" wording is universal: works whether
-                  the form was filled by hand OR pre-populated from
-                  a library template tap (1.7+ "preview before add"
-                  flow). Was: "Создать свой вопрос" — misleading
-                  when arriving from a template preview. */}
-              <div className="sticky bottom-0 -mx-1 px-1 pt-3 pb-1 bg-background/95 backdrop-blur-sm flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={onClose}
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button type="submit" className="flex-[2] shadow-lg">
-                  {t("addTracker.add")}
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-        </Tabs>
+            <div className="flex-1" />
+            <div className="sticky bottom-0 -mx-5 px-5 pt-3 pb-1 bg-background/95 backdrop-blur-sm">
+              <Button type="submit" disabled={!formData.questionText.trim()} className="w-full h-[54px] rounded-full text-[17px] font-semibold">
+                {t("addTracker.add")}
+              </Button>
+            </div>
+          </form>
+        )}
         </div>
         {/* end scroll area */}
 

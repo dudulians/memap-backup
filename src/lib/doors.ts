@@ -184,7 +184,6 @@ export const findTemplate = (
  */
 export const ensureTemplates = async (templateIds: string[]): Promise<string[]> => {
   const existing = await getTrackers();
-  const today = isoLocal(new Date());
   const now = new Date().toISOString();
   const next = [...existing];
   let changed = false;
@@ -217,7 +216,8 @@ export const ensureTemplates = async (templateIds: string[]): Promise<string[]> 
       adviceAboveThreshold: localizeTrackerAdviceRaw(template.adviceAboveThreshold),
       createdAt: now,
       sortIndex: next.length,
-      cycleStartDate: today,
+      // No cycleStartDate: the limit counts the last periodDays, like
+      // library questions, so a backdated first entry counts too.
     };
     next.push(tracker);
     changed = true;
@@ -253,7 +253,6 @@ export const addOwnTracker = async (question: string): Promise<string> => {
     adviceAboveThreshold: "",
     createdAt: new Date().toISOString(),
     sortIndex: existing.length,
-    cycleStartDate: isoLocal(new Date()),
   };
   await saveTrackers([...existing, tracker]);
   return tracker.id;
