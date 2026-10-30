@@ -5,7 +5,7 @@ import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storag
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical, ChevronDown } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -28,7 +28,7 @@ import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
-import { DoorHero } from "./DoorHero";
+import { DoorHero, TrialWeek } from "./DoorHero";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
@@ -150,6 +150,7 @@ export const TodayTab = () => {
   // Play trackers stay outside this mode — they have their own
   // ✓/× per-card buttons + "Удалить все игровые" action.
   const [selectionMode, setSelectionMode] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [selectedTrackerIds, setSelectedTrackerIds] = useState<Set<string>>(new Set());
   const [selectedTrackerForDetails, setSelectedTrackerForDetails] = useState<Tracker | null>(null);
   const [selectedTrackerIndex, setSelectedTrackerIndex] = useState<number>(0);
@@ -234,6 +235,7 @@ export const TodayTab = () => {
       setDailySessionOpen(true);
     };
     const scrollToPlay = () => {
+      setListOpen(true);
       // Wait a tick so trackers have re-rendered after a play round.
       setTimeout(() => {
         const el = document.getElementById("play-round-section");
@@ -936,81 +938,18 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Header row: streak chip + action buttons. From 3 days the
-          chip uses the orange-gradient flame; below that it stays
-          muted, but still shows the count so the user sees their
-          streak ticking up from day 1. The earlier "Answer today
-          to start your streak" placeholder copy was dropped in
-          1.7.3 — it read as preachy, the count alone is cleaner. */}
-      <div className="animate-fade-in space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          {globalStreak.currentStreak >= 3 ? (
-            <div
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-gradient-to-br from-orange-500/15 to-orange-600/5 border-orange-500/20"
-            >
-              <Flame
-                className="h-3.5 w-3.5 text-orange-500"
-                strokeWidth={2}
-                fill="currentColor"
-              />
-              <span className="text-xs font-medium text-foreground">
-                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
-                <span className="text-muted-foreground ml-1">
-                  {globalStreak.currentStreak === 1
-                    ? t("today.streakDaysOne")
-                    : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
-                </span>
-              </span>
-            </div>
-          ) : globalStreak.currentStreak === 0 ? (
-            // Day 0: no chip. "0 days in a row" was the first thing a
-            // brand-new user saw (design review, Oct 27).
-            <span />
-          ) : (
-            // Days 1–2: muted version of the same chip.
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-muted/30 border-border/40">
-              <Flame
-                className="h-3.5 w-3.5 text-muted-foreground"
-                strokeWidth={2}
-              />
-              <span className="text-xs font-medium text-muted-foreground">
-                <span className="font-serif text-sm font-semibold tabular-nums">{globalStreak.currentStreak}</span>
-                <span className="ml-1">
-                  {globalStreak.currentStreak === 1
-                    ? t("today.streakDaysOne")
-                    : t("today.streakDaysMany", { count: globalStreak.currentStreak })}
-                </span>
-              </span>
-            </div>
-          )}
-          {/* One secondary action here. Random play lives on the evening
-              done screen ("Open 10 new questions"), notes have their own
-              tab, so the shuffle and "My notes" pills are gone (1.8.0). */}
-          <Button
-            data-coachmark="add-button"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              markTrackerAdded();
-              setAddTrackerModalOpen(true);
-            }}
-            className="rounded-full px-3 h-8 bg-transparent border-foreground/20"
-            aria-label={t("common.addPattern")}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            {t("today.addNew")}
-          </Button>
-        </div>
-      </div>
-
-      {/* Door hero (1.8.0): count, "Log a fight" and the echo line.
-          Renders nothing for people who didn't come in through a door. */}
+      {/* Door hero (1.8.0): this week's count per door with a small "+".
+          Renders nothing for people who didn't come in through a door.
+          The streak chip and "Add question" that sat above it are gone:
+          the streak shows at the end of the evening, adding lives in
+          "My questions" below (design rule: one main button per screen). */}
       <DoorHero trackers={trackers} entries={entries} />
+      <TrialWeek entries={entries} />
 
       {/* Tonight (1.8.0): the ONE main action on Today. Replaced the
           "Ideas of the day" carousel, the floating "+" and the unlabeled
           Play in the tab bar, which competed for the same thumb (design
-          review, Oct 27). Adding questions stays as the small header button. */}
+          review, Oct 27). */}
       {(() => {
         const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
         const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
@@ -1033,18 +972,14 @@ export const TodayTab = () => {
             >
               {t("today.answerTonight", { count: left })}
             </Button>
-            <p className="mt-2 text-center text-[13px] text-muted-foreground">
-              {t("today.answerTonightTime", { sec: Math.max(10, left * 5) })}
-            </p>
           </div>
         );
       })()}
 
-      {/* Notif opt-in banner — shown only when reminders are off and
-          the user hasn't dismissed the prompt. Tucked between the
-          header and Ideas of the Day so it gets noticed without
-          dominating the page. */}
-      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && (
+      {/* Notif opt-in banner — shown only when reminders are off, the
+          user hasn't dismissed it, and there are answers on at least two
+          days (so it never stacks on top of a brand-new Today). */}
+      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && (
         <div className="card-premium p-3 flex items-start gap-3 animate-fade-in">
           <div className="h-9 w-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center flex-shrink-0 mt-0.5">
             <Bell className="h-4 w-4" strokeWidth={1.75} />
@@ -1191,9 +1126,25 @@ export const TodayTab = () => {
           );
         };
 
+        const listShown = listOpen || selectionMode;
         return (
           <>
-            {regularTrackers.length > 0 && (
+            {/* "My questions": the list is folded by default (1.8.0) so
+                Today is just the count and tonight's button. Opening it
+                shows the old list (drag, edit, bulk) plus Add question. */}
+            {regularTrackers.length + playTrackers.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setListOpen((v) => !v)}
+                aria-expanded={listShown}
+                className="w-full flex items-center gap-3 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-4 py-4 text-left"
+              >
+                <span className="flex-1 text-[17px] font-semibold">{t("today.myQuestions")}</span>
+                <span className="text-[16px] text-muted-foreground tabular-nums">{regularTrackers.length + playTrackers.length}</span>
+                <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", listShown && "rotate-180")} />
+              </button>
+            )}
+            {listShown && regularTrackers.length > 0 && (
               <div data-coachmark="cards-list" className="space-y-3 animate-fade-in">
                 {/* Selection-mode header. When OFF, show a small "Изменить"
                     action so the user can enter bulk-edit mode. When ON,
@@ -1278,7 +1229,7 @@ export const TodayTab = () => {
               </div>
             )}
 
-            {playTrackers.length > 0 && (
+            {listShown && playTrackers.length > 0 && (
               <div id="play-round-section" className="space-y-3 animate-fade-in scroll-mt-20">
                 <div className="space-y-3">
                   <div>
@@ -1318,6 +1269,20 @@ export const TodayTab = () => {
                   {playTrackers.map((tracker) => renderTrackerCard(tracker, true))}
                 </div>
               </div>
+            )}
+            {(listShown || regularTrackers.length + playTrackers.length === 0) && (
+              <Button
+                data-coachmark="add-button"
+                variant="outline"
+                onClick={() => {
+                  markTrackerAdded();
+                  setAddTrackerModalOpen(true);
+                }}
+                className="w-full h-[52px] rounded-full text-[16px] font-semibold bg-transparent border-foreground/20"
+              >
+                <Plus className="h-5 w-5 mr-1.5" />
+                {t("today.addNew")}
+              </Button>
             )}
           </>
         );

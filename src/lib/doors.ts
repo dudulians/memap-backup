@@ -8,7 +8,7 @@
 // `TrackerEntry.tags` (reason chips) and the door state below, which
 // the Today hero and the echo lines read.
 import type { LucideIcon } from "lucide-react";
-import { Heart, Activity, Wine, Smile } from "lucide-react";
+import { Heart, Activity, Wine, Smile, CloudRain } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, saveTrackers, getEntries, saveEntries } from "./storage";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
@@ -19,10 +19,14 @@ import {
 } from "./trackerLocalize";
 import { uuid } from "./uuid";
 
-export type DoorId = "fights" | "migraine" | "drinking" | "kid";
+export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid";
 
 export interface Door {
   id: DoorId;
+  /** "event" doors log a thing that happened (a fight, a migraine) and
+   *  ask "when was the last one?". "state" doors (mood) are about how the
+   *  whole day felt, so onboarding asks "how did today feel?" instead. */
+  kind: "event" | "state";
   /** Library template for the main "did it happen" question. */
   mainTemplateId: string;
   /** Three library templates asked about the same day. Each must have
@@ -38,6 +42,7 @@ export interface Door {
 export const DOORS: Door[] = [
   {
     id: "fights",
+    kind: "event",
     mainTemplateId: "argued-with-partner",
     contextTemplateIds: ["slept-enough", "drank-alcohol", "felt-fatigued"],
     reasons: ["money", "chores", "kids", "tiredness", "family", "jealousy", "phones", "dontRemember"],
@@ -45,7 +50,19 @@ export const DOORS: Door[] = [
     iconClass: "text-strong",
   },
   {
+    id: "mood",
+    kind: "state",
+    // Main = a low day. Anxiety is the first context question and is
+    // answered by the same "how did today feel?" tap (see FEELINGS).
+    mainTemplateId: "felt-depressed",
+    contextTemplateIds: ["felt-anxious", "slept-enough", "outside-30min"],
+    reasons: ["work", "sleep", "someoneClose", "money", "health", "loneliness", "news", "nothingInParticular"],
+    icon: CloudRain,
+    iconClass: "text-[hsl(258_100%_86%)]",
+  },
+  {
     id: "migraine",
+    kind: "event",
     mainTemplateId: "migraine",
     contextTemplateIds: ["slept-enough", "felt-anxious", "ate-by-2pm"],
     reasons: ["shortSleep", "stress", "skippedMeal", "alcohol", "period", "brightLight", "fight", "dontKnow"],
@@ -54,6 +71,7 @@ export const DOORS: Door[] = [
   },
   {
     id: "drinking",
+    kind: "event",
     mainTemplateId: "drank-alcohol",
     contextTemplateIds: ["slept-enough", "felt-anxious", "felt-lonely"],
     reasons: ["stress", "boredom", "company", "celebration", "loneliness", "habit", "tiredness"],
@@ -62,6 +80,7 @@ export const DOORS: Door[] = [
   },
   {
     id: "kid",
+    kind: "event",
     mainTemplateId: "yelled-at-kid",
     contextTemplateIds: ["slept-enough", "felt-fatigued", "felt-anxious"],
     reasons: ["tiredness", "rushing", "bedtime", "homework", "siblings", "screens", "notListening", "dontKnow"],
@@ -71,6 +90,25 @@ export const DOORS: Door[] = [
 ];
 
 export const getDoor = (id: DoorId): Door | undefined => DOORS.find((d) => d.id === id);
+
+// "How did today feel?" for the mood door. Each answer sets the main
+// question (a low day) and the anxiety context question in one tap.
+export type Feeling = "good" | "okay" | "low" | "anxious";
+export const FEELINGS: Feeling[] = ["good", "okay", "low", "anxious"];
+export const feelingAnswers = (f: Feeling) => ({ low: f === "low", anxious: f === "anxious" });
+
+/** Context questions for the "And around it?" screen when several doors
+ *  were picked: union in door order, no repeats, at most four. Templates
+ *  in `skip` were already answered on the first-entry screen. */
+export const contextFor = (doors: Door[], skip: string[] = [], max = 4): string[] => {
+  const out: string[] = [];
+  for (const d of doors) {
+    for (const id of d.contextTemplateIds) {
+      if (!out.includes(id) && !skip.includes(id)) out.push(id);
+    }
+  }
+  return out.slice(0, max);
+};
 
 // --- Dates (local, not UTC) ------------------------------------------
 
@@ -100,6 +138,9 @@ export interface DoorState {
   contextTrackerIds: string[];
   /** YYYY-MM-DD, the day onboarding finished. */
   startedAt: string;
+  /** Other doors picked at the same time. They get their questions and
+   *  a row with "+" on Today, but no first entry in onboarding. */
+  extra?: { id: DoorId; trackerId: string }[];
 }
 
 export const getDoorState = (): DoorState | null => {
@@ -136,14 +177,12 @@ export const findTemplate = (
 };
 
 /**
- * Make sure the door's four trackers exist and return their ids. A
- * tracker the user already has (same localized title, e.g. on a
- * replayed tour) is reused instead of duplicated; an archived one is
- * brought back.
+ * Make sure a tracker exists for each library template id and return
+ * the ids in the same order. A tracker the user already has (same
+ * localized title, e.g. on a replayed tour) is reused instead of
+ * duplicated; an archived one is brought back.
  */
-export const ensureDoorTrackers = async (
-  door: Door,
-): Promise<{ trackerId: string; contextTrackerIds: string[] }> => {
+export const ensureTemplates = async (templateIds: string[]): Promise<string[]> => {
   const existing = await getTrackers();
   const today = isoLocal(new Date());
   const now = new Date().toISOString();
@@ -185,10 +224,39 @@ export const ensureDoorTrackers = async (
     return tracker.id;
   };
 
-  const trackerId = ensure(door.mainTemplateId, 0);
-  const contextTrackerIds = door.contextTemplateIds.map((id, i) => ensure(id, i + 1));
+  const ids = templateIds.map((id, i) => ensure(id, i));
   if (changed) await saveTrackers(next);
+  return ids;
+};
+
+/** The door's main tracker plus its three context trackers. */
+export const ensureDoorTrackers = async (
+  door: Door,
+): Promise<{ trackerId: string; contextTrackerIds: string[] }> => {
+  const [trackerId, ...contextTrackerIds] = await ensureTemplates([door.mainTemplateId, ...door.contextTemplateIds]);
   return { trackerId, contextTrackerIds };
+};
+
+/** A question the user typed themselves ("Did my dog limp today?"). */
+export const addOwnTracker = async (question: string): Promise<string> => {
+  const existing = await getTrackers();
+  const text = question.trim();
+  const tracker: Tracker = {
+    id: `${Date.now()}-own`,
+    title: text.replace(/[?？]+$/, "").slice(0, 60),
+    category: "Curious",
+    questionText: text,
+    answerType: "boolean",
+    periodDays: 30,
+    threshold: 10,
+    problemWhen: "yes",
+    adviceAboveThreshold: "",
+    createdAt: new Date().toISOString(),
+    sortIndex: existing.length,
+    cycleStartDate: isoLocal(new Date()),
+  };
+  await saveTrackers([...existing, tracker]);
+  return tracker.id;
 };
 
 // --- Entries ------------------------------------------------------------
@@ -215,16 +283,18 @@ const upsert = (
   return [...entries, entry];
 };
 
-/** Log "it happened" for the main door question, with reason chips.
- *  Context answers are keyed by tracker id. */
+/** Log the main door question (default "it happened"), with reason
+ *  chips. The mood door passes `value: false` on a good day. Context
+ *  answers are keyed by tracker id. */
 export const logDoorEntry = async (args: {
   trackerId: string;
   date: string;
   tags: string[];
+  value?: boolean;
   context?: Record<string, boolean | undefined>;
 }): Promise<void> => {
   let entries = await getEntries();
-  entries = upsert(entries, args.trackerId, args.date, true, args.tags);
+  entries = upsert(entries, args.trackerId, args.date, args.value ?? true, args.tags);
   for (const [trackerId, value] of Object.entries(args.context ?? {})) {
     if (typeof value === "boolean") entries = upsert(entries, trackerId, args.date, value);
   }
