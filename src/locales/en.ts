@@ -219,6 +219,9 @@ const en = {
 
     helpTitle: "Help",
     showAppTour: "Show app tour",
+    eveningReminder: "Evening reminder",
+    theme: "Theme",
+    more: "More",
     rateApp: "Rate MeMap",
     contactSupport: "Contact support",
     termsOfService: "Terms of Service",

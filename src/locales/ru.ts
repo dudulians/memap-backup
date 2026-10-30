@@ -227,6 +227,9 @@ const ru: Translation = {
 
     helpTitle: "Помощь",
     showAppTour: "Посмотреть, как работает приложение",
+    eveningReminder: "Вечернее напоминание",
+    theme: "Тема",
+    more: "Ещё",
     rateApp: "Оценить MeMap",
     contactSupport: "Связаться с поддержкой",
     termsOfService: "Условия использования",

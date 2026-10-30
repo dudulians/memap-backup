@@ -136,7 +136,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     | "soundHaptics"
     | "trackers"
     | "help"
-    | "data";
+    | "data"
+    | "more";
   const [screen, setScreen] = useState<SettingsScreen>("main");
   // Reset to main when the sheet closes — next time the user opens
   // Settings they should land on the main list, not the deep view
@@ -710,7 +711,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           {screen !== "main" && (
             <button
               type="button"
-              onClick={() => setScreen("main")}
+              onClick={() => setScreen(screen === "soundHaptics" || screen === "help" || screen === "data" ? "more" : "main")}
               className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 -ml-1 px-2 py-1 -my-1 rounded-md min-h-[40px] active:bg-primary/10 transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -730,6 +731,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             {screen === "trackers" && t("settings.trackersTitle")}
             {screen === "help" && t("settings.helpTitle")}
             {screen === "data" && t("settings.dataPrivacyTitle")}
+            {screen === "more" && t("settings.more")}
           </h2>
         </div>
 
@@ -746,72 +748,109 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     Cards screen header, no reason to duplicate it inside
                     Settings. Settings is now purely a navigation list. */}
 
-                {/* Category list — Apple iOS Settings style. Each row
-                    shows the current value on the right so the user
-                    doesn't have to drill in just to read state. */}
+                {/* 1.8.0: what people actually change sits on the first
+                    screen with its control right in the row (reminder
+                    switch, Dark | Light). The rest is one tap away under
+                    "More". Canvas "MeMap: новая версия", page 12. */}
                 {(() => {
-                  const langLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.label ?? "";
-                  const polLabel = t(`gender.${currentPol}`);
-                  const themeLabel = theme === "aurora"
-                    ? t("settings.themeAuroraDark")
-                    : theme === "aurora-light"
-                      ? t("settings.themeAuroraLight")
-                      : theme === "liquid"
-                        ? t("settings.themeLiquid")
-                        : theme === "terra"
-                          ? t("settings.themeTerra")
-                          : theme === "pop"
-                            ? t("settings.themePop")
-                            : theme === "hush"
-                              ? t("settings.themeHush")
-                              : t("settings.themeClassic");
-                  const notifLabel = notificationSettings.enabled
-                    ? notificationSettings.time
-                    : t("common.off", { defaultValue: "Off" });
+                  const langLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.native ?? "";
                   const activeTrackerCount = trackers.filter((tr) => !tr.archived).length;
-
-                  type Row = {
-                    key: SettingsScreen;
-                    icon: typeof Languages;
-                    label: string;
-                    value?: string;
-                  };
-                  const rows: Row[] = [
-                    { key: "language", icon: Languages, label: t("language.settingsLabel"), value: langLabel },
-                    { key: "gender", icon: User, label: t("gender.settingsLabel"), value: polLabel },
-                    { key: "appearance", icon: Palette, label: t("settings.appearance"), value: themeLabel },
-                    { key: "notifications", icon: Bell, label: t("settings.dailyRemindersTitle"), value: notifLabel },
-                    { key: "soundHaptics", icon: Volume2, label: t("settings.soundAndHaptics") },
-                    { key: "trackers", icon: ListChecks, label: t("settings.trackersTitle"), value: t("settings.trackersCount", { count: activeTrackerCount }) },
-                    { key: "help", icon: HelpCircle, label: t("settings.helpTitle") },
-                    { key: "data", icon: Database, label: t("settings.dataPrivacyTitle") },
-                  ];
+                  const row = "w-full flex items-center gap-3 px-4 min-h-[60px] text-left";
+                  const nav = (key: SettingsScreen, label: string, value?: string) => (
+                    <button key={key} type="button" onClick={() => setScreen(key)} className={cn(row, "active:bg-muted/60 transition-colors")}>
+                      <span className="flex-1 text-[17px] font-medium">{label}</span>
+                      {value && <span className="text-[16px] text-muted-foreground truncate max-w-[45%]">{value}</span>}
+                      <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                    </button>
+                  );
                   return (
-                    <div className="rounded-2xl border border-border/40 overflow-hidden divide-y divide-border/40">
-                      {rows.map((row) => {
-                        const Icon = row.icon;
-                        return (
-                          <button
-                            key={row.key}
-                            type="button"
-                            onClick={() => setScreen(row.key)}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 active:bg-muted/60 transition-colors text-left"
-                          >
-                            <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                            <span className="flex-1 text-sm font-medium">{row.label}</span>
-                            {row.value && (
-                              <span className="text-xs text-muted-foreground truncate max-w-[40%]">
-                                {row.value}
-                              </span>
-                            )}
-                            <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0" />
+                    <>
+                      <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                        <div className={row}>
+                          <button type="button" onClick={() => setScreen("notifications")} className="flex-1 min-w-0 text-left text-[17px] font-medium">
+                            {t("settings.eveningReminder")}
                           </button>
-                        );
-                      })}
-                    </div>
+                          {notificationSettings.enabled && (
+                            <button type="button" onClick={() => setScreen("notifications")} className="text-[16px] text-muted-foreground tabular-nums">
+                              {notificationSettings.time}
+                            </button>
+                          )}
+                          <Switch
+                            checked={notificationSettings.enabled}
+                            onCheckedChange={handleNotificationToggle}
+                            aria-label={t("settings.eveningReminder")}
+                          />
+                        </div>
+                        <div className={row}>
+                          <span className="flex-1 text-[17px] font-medium">{t("settings.theme")}</span>
+                          <div className="flex rounded-full bg-foreground/[0.08] p-1">
+                            {([
+                              ["aurora", t("settings.themeDark")],
+                              ["aurora-light", t("settings.themeLight")],
+                            ] as const).map(([id, label]) => (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => handleThemeChange(id)}
+                                aria-pressed={theme === id}
+                                className={cn(
+                                  "h-9 px-4 rounded-full text-[15px] font-semibold transition-colors",
+                                  theme === id ? "bg-foreground text-background" : "text-muted-foreground",
+                                )}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {nav("trackers", t("today.myQuestions"), String(activeTrackerCount))}
+                        {nav("language", t("language.settingsLabel"), langLabel)}
+                        {/* Address form only matters for Russian copy */}
+                        {currentLang === "ru" && nav("gender", t("gender.settingsLabel"), t(`gender.${currentPol}`))}
+                      </div>
+
+                      <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                        {Capacitor.getPlatform() !== "android" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              track("rate_app_tapped");
+                              window.open(APP_STORE_REVIEW_URL, "_blank", "noopener,noreferrer");
+                            }}
+                            className={cn(row, "active:bg-muted/60 transition-colors")}
+                          >
+                            <span className="flex-1 text-[17px] font-medium">{t("settings.rateApp")}</span>
+                            <Star className="h-5 w-5 text-muted-foreground/60" />
+                          </button>
+                        )}
+                        {nav("more", t("settings.more"))}
+                      </div>
+                    </>
                   );
                 })()}
               </>
+            )}
+
+            {/* === MORE SUB-SCREEN === */}
+            {screen === "more" && (
+              <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                {([
+                  ["soundHaptics", Volume2, t("settings.soundAndHaptics")],
+                  ["help", HelpCircle, t("settings.helpTitle")],
+                  ["data", Database, t("settings.dataPrivacyTitle")],
+                ] as const).map(([key, Icon, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setScreen(key)}
+                    className="w-full flex items-center gap-3 px-4 min-h-[60px] text-left active:bg-muted/60 transition-colors"
+                  >
+                    <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                    <span className="flex-1 text-[17px] font-medium">{label}</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                  </button>
+                ))}
+              </div>
             )}
 
             {/* === LANGUAGE SUB-SCREEN === */}
@@ -1162,24 +1201,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 <HelpCircle className="h-4 w-4 mr-2" />
                 {t("settings.showAppTour")}
               </Button>
-
-              {/* Rate MeMap (1.8.0). Opens the App Store review page
-                  directly, so unlike the native prompt it always works
-                  when someone wants to leave a rating. iOS only while
-                  Android isn't public. */}
-              {Capacitor.getPlatform() !== "android" && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    track("rate_app_tapped");
-                    window.open(APP_STORE_REVIEW_URL, "_blank", "noopener,noreferrer");
-                  }}
-                  className="w-full justify-start"
-                >
-                  <Star className="h-4 w-4 mr-2" />
-                  {t("settings.rateApp")}
-                </Button>
-              )}
 
               {/* Contact / support email. Opens the user's default
                   mail client pre-filled with subject + diagnostic
