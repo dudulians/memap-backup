@@ -19,6 +19,27 @@ export const getTheme = (): AppTheme => {
   return "aurora";
 };
 
+// 1.8.0 offers only dark and light. Anyone who picked one of the five
+// older themes keeps it, and Settings shows it as a third option, so
+// trying dark or light isn't a one-way door. Remembered the first time
+// it's read while still active.
+const LEGACY_THEME_KEY = "memap_legacy_theme";
+const LEGACY_THEMES: AppTheme[] = ["classic", "liquid", "terra", "pop", "hush"];
+
+export const getLegacyTheme = (): AppTheme | null => {
+  try {
+    const current = getTheme();
+    if (LEGACY_THEMES.includes(current)) {
+      localStorage.setItem(LEGACY_THEME_KEY, current);
+      return current;
+    }
+    const saved = localStorage.getItem(LEGACY_THEME_KEY) as AppTheme | null;
+    return saved && LEGACY_THEMES.includes(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+};
+
 // Called when onboarding finishes. Freezes the default for this
 // install so getTheme() stops depending on the tour flag.
 export const persistDefaultTheme = (): void => {

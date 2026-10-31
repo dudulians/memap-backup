@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { resetTourSeen } from "@/components/OnboardingTour";
 import { resetCoachmarkSeen, resetTourKey } from "@/components/CoachmarkTour";
-import { getTheme, setTheme, AppTheme } from "@/lib/theme";
+import { getTheme, setTheme, getLegacyTheme, AppTheme } from "@/lib/theme";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -784,17 +784,30 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         <div className={row}>
                           <span className="flex-1 text-[17px] font-medium">{t("settings.theme")}</span>
                           <div className="flex rounded-full bg-foreground/[0.08] p-1">
-                            {([
-                              ["aurora", t("settings.themeDark")],
-                              ["aurora-light", t("settings.themeLight")],
-                            ] as const).map(([id, label]) => (
+                            {(() => {
+                              // An older theme someone already uses stays as a third option.
+                              const legacy = getLegacyTheme();
+                              const legacyLabel: Partial<Record<AppTheme, string>> = {
+                                classic: t("settings.themeClassic"),
+                                liquid: t("settings.themeLiquid"),
+                                terra: t("settings.themeTerra"),
+                                pop: t("settings.themePop"),
+                                hush: t("settings.themeHush"),
+                              };
+                              const options: [AppTheme, string][] = [
+                                ["aurora", t("settings.themeDark")],
+                                ["aurora-light", t("settings.themeLight")],
+                              ];
+                              if (legacy && legacyLabel[legacy]) options.push([legacy, legacyLabel[legacy]!]);
+                              return options;
+                            })().map(([id, label]) => (
                               <button
                                 key={id}
                                 type="button"
                                 onClick={() => handleThemeChange(id)}
                                 aria-pressed={theme === id}
                                 className={cn(
-                                  "h-9 px-4 rounded-full text-[15px] font-semibold transition-colors",
+                                  "h-9 px-3.5 rounded-full text-[15px] font-semibold transition-colors whitespace-nowrap",
                                   theme === id ? "bg-foreground text-background" : "text-muted-foreground",
                                 )}
                               >
