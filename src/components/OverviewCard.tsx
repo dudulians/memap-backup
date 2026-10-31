@@ -1,13 +1,15 @@
 // Calendar (Patterns → Calendar), 1.8.0: question chips on top, one big
 // count for the month ("7 fights", "12 days with No"), and the month as
-// big day circles. Tap a day to change its answer. The Year view, the
-// Multi bulk-select and the colour legend are gone (design rule: people
-// who hate reading). Canvas "MeMap: новая версия", page 12, RestCalendar.
+// big day circles. Tap a day to change its answer. Canvas "MeMap: новая
+// версия", page 12, RestCalendar. Aurora UX (Oct 31 2026, her call) brings
+// two things back from 1.7.9: the Year view and "Select several days"
+// (one answer for many days at once).
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes } from "@/lib/notes";
-import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture } from "date-fns";
+import { Check, ChevronLeft, ChevronRight, FileText, ListChecks } from "lucide-react";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
@@ -22,6 +24,8 @@ interface OverviewCardProps {
   selectedDate: string;
   onDateSelect: (date: string) => void;
   onDayEdit?: (tracker: Tracker, date: string, existingEntry?: TrackerEntry) => void;
+  /** "Select several days": one answer (null = clear) for all picked days. */
+  onBulkAnswer?: (trackerId: string, dates: string[], value: boolean | null) => void;
 }
 
 // 2024-01-01 was a Monday: seven days from it give localized weekday
@@ -34,6 +38,7 @@ export const OverviewCard = ({
   selectedDate,
   onDateSelect,
   onDayEdit,
+  onBulkAnswer,
 }: OverviewCardProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -57,6 +62,9 @@ export const OverviewCard = ({
     return i >= 0 ? i : 0;
   });
   const [displayMonth, setDisplayMonth] = useState(() => new Date());
+  const [view, setView] = useState<"month" | "year">("month");
+  const [multi, setMulti] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [notes, setNotes] = useState<Note[]>([]);
 
   const reloadNotes = () => getNotes().then(setNotes);
@@ -167,6 +175,38 @@ export const OverviewCard = ({
     [calendarDays],
   );
 
+  // Year view: the last 12 months as small squares, oldest first.
+  const yearData = useMemo(() => {
+    if (!activeTracker) return [];
+    return Array.from({ length: 12 }, (_, k) => {
+      const monthDate = subMonths(today, 11 - k);
+      const calStart = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
+      const calEnd = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
+      const days: { dateStr: string; show: boolean; status: "balanced" | "significant" | "untracked" }[] = [];
+      for (let cur = calStart; cur <= calEnd; cur = addDays(cur, 1)) {
+        const dateStr = format(cur, "yyyy-MM-dd");
+        const entry = entryMap.get(dateStr);
+        const sig = entry ? (activeTracker.problemWhen === "yes" ? entry.value === true : entry.value === false) : false;
+        days.push({ dateStr, show: isSameMonth(cur, monthDate) && !isFuture(cur), status: !entry ? "untracked" : sig ? "significant" : "balanced" });
+      }
+      const label = format(monthDate, "LLL", { locale: dateLocale });
+      return { monthDate, label: label.charAt(0).toUpperCase() + label.slice(1), days };
+    });
+  }, [today, entryMap, activeTracker, dateLocale]);
+
+  // A new question starts with nothing picked.
+  useEffect(() => {
+    setPicked(new Set());
+  }, [activeTrackerIndex]);
+
+  // The first picked day brings the Yes/No panel into view (it sits
+  // under the month, often behind the tab bar).
+  const panelRef = useRef<HTMLDivElement>(null);
+  const hasPicked = picked.size > 0;
+  useEffect(() => {
+    if (hasPicked) panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [hasPicked]);
+
   // Keep the active chip in view.
   useEffect(() => {
     const container = chipsContainerRef.current;
@@ -224,15 +264,40 @@ export const OverviewCard = ({
       node.removeEventListener("touchend", onEnd);
       node.removeEventListener("touchcancel", onEnd);
     };
-  }, [trackers.length]);
+  }, [trackers.length, view]);
 
   const canGoNextMonth = startOfMonth(addMonths(displayMonth, 1)) <= startOfMonth(today);
 
   const handleDayClick = (day: typeof calendarDays[0]) => {
     if (day.isFutureDate || !day.isCurrentMonth) return;
+    if (multi) {
+      haptics.tap();
+      setPicked((prev) => {
+        const next = new Set(prev);
+        if (next.has(day.dateStr)) next.delete(day.dateStr);
+        else next.add(day.dateStr);
+        return next;
+      });
+      return;
+    }
     // The answer editor has its own haptics on save.
     onDateSelect(day.dateStr);
     if (onDayEdit && activeTracker) onDayEdit(activeTracker, day.dateStr, entryMap.get(day.dateStr));
+  };
+
+  const answerPicked = (value: boolean | null) => {
+    if (!picked.size || !onBulkAnswer || !activeTracker) return;
+    if (value === true) haptics.success();
+    else if (value === false) haptics.medium();
+    else haptics.tap();
+    onBulkAnswer(activeTracker.id, Array.from(picked), value);
+    setPicked(new Set());
+  };
+
+  const toggleMulti = () => {
+    haptics.tap();
+    setMulti((on) => !on);
+    setPicked(new Set());
   };
 
   if (!activeTracker) return null;
@@ -275,9 +340,70 @@ export const OverviewCard = ({
         })}
       </div>
 
+      {/* Month or year. */}
+      <div className="mt-4 flex justify-center">
+        <div className="inline-grid grid-cols-2 gap-1 rounded-full bg-foreground/[0.06] p-1">
+          {(["month", "year"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => { haptics.tap(); setView(v); setMulti(false); setPicked(new Set()); }}
+              className={cn(
+                "h-11 min-w-[104px] rounded-full px-5 text-[15px] font-semibold transition-colors",
+                view === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground",
+              )}
+            >
+              {t(`overview.${v}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === "year" && (
+        <div className="animate-fade-in">
+          <p className="mt-5 text-center text-[15px] font-semibold text-muted-foreground">
+            {getYear(yearData[0]?.monthDate ?? today) === getYear(today)
+              ? getYear(today)
+              : `${getYear(yearData[0].monthDate)}–${getYear(today)}`}
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-4">
+            {yearData.map(({ monthDate, label, days }) => (
+              <button
+                key={label + getYear(monthDate)}
+                type="button"
+                onClick={() => { haptics.tap(); setDisplayMonth(monthDate); setView("month"); }}
+                className="block self-start rounded-2xl p-1.5 text-left active:scale-[0.98] transition-transform"
+              >
+                <span className="block text-center text-[15px] font-semibold">{label}</span>
+                <span className="mt-1.5 grid grid-cols-7 gap-[2px]">
+                  {days.map((d) => (
+                    <span
+                      key={d.dateStr}
+                      className={cn(
+                        "block aspect-square rounded-[3px]",
+                        !d.show && "bg-transparent",
+                        d.show && d.status === "significant" && "bg-strong",
+                        d.show && d.status === "balanced" && "bg-balanced/60",
+                        d.show && d.status === "untracked" && "bg-foreground/[0.08]",
+                      )}
+                    />
+                  ))}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-5 text-[15px] text-muted-foreground">
+            <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[3px] bg-strong" />{t("overview.significant")}</span>
+            <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[3px] bg-balanced/60" />{t("overview.balanced")}</span>
+          </div>
+        </div>
+      )}
+
+      {view === "month" && (
       <div ref={swipeAreaRef} style={{ touchAction: "pan-y" }}>
         {/* Month + the one number that matters */}
-        <div className="mt-5 flex items-center gap-1">
+        <div className="mt-4 flex items-center gap-1">
           <button
             type="button"
             onClick={() => { haptics.tap(); setDisplayMonth((prev) => subMonths(prev, 1)); }}
@@ -317,17 +443,24 @@ export const OverviewCard = ({
                   type="button"
                   onClick={() => handleDayClick(day)}
                   disabled={day.isFutureDate}
+                  aria-pressed={multi ? picked.has(day.dateStr) : undefined}
                   className={cn(
-                    "relative h-[38px] w-[38px] rounded-full flex items-center justify-center text-sm font-semibold tabular-nums box-border transition-colors",
+                    "relative h-[38px] w-[38px] rounded-full flex items-center justify-center text-sm font-semibold tabular-nums box-border transition-all",
                     day.isFutureDate && "text-muted-foreground/40",
                     !day.isFutureDate && day.status === "significant" && "bg-strong text-strong-foreground",
                     !day.isFutureDate && day.status === "balanced" && "bg-balanced/35",
                     !day.isFutureDate && day.status === "untracked" && !day.isToday && "text-muted-foreground",
                     day.isToday && day.status === "untracked" && "border-2 border-dashed border-primary/70",
-                    day.isSelected && !day.isToday && "ring-2 ring-foreground/70",
+                    !multi && day.isSelected && !day.isToday && "ring-2 ring-foreground/70",
+                    multi && picked.has(day.dateStr) && "ring-[2.5px] ring-foreground ring-offset-2 ring-offset-background scale-90",
                   )}
                 >
                   {format(day.date, "d")}
+                  {multi && picked.has(day.dateStr) && (
+                    <span className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-foreground text-background flex items-center justify-center">
+                      <Check className="h-3 w-3" strokeWidth={3.5} />
+                    </span>
+                  )}
                   {noteDatesSet.has(day.dateStr) && (
                     <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-[1.5px] bg-foreground/60 rounded-full" />
                   )}
@@ -338,7 +471,60 @@ export const OverviewCard = ({
             </div>
           ))}
         </div>
+
+        {/* Select several days: one answer for many days at once. */}
+        {onBulkAnswer && !multi && (
+          <div className="mt-4 flex justify-center">
+            <Button
+              variant="outline"
+              onClick={toggleMulti}
+              className="h-11 rounded-full px-5 text-[15px] font-semibold bg-transparent border-foreground/20"
+            >
+              <ListChecks className="h-[18px] w-[18px] mr-2" strokeWidth={2.2} />
+              {t("overview.pickSeveral")}
+            </Button>
+          </div>
+        )}
+        {multi && (
+          <div
+            ref={panelRef}
+            className="mt-4 scroll-mb-28 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-4 py-4 animate-fade-in"
+          >
+            <p className="text-center text-[17px] font-semibold">
+              {picked.size === 0
+                ? t("overview.multiHint")
+                : picked.size === 1
+                  ? t("overview.datesSelectedOne")
+                  : t("overview.datesSelectedMany", { count: picked.size })}
+            </p>
+            {picked.size > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2.5">
+                <Button
+                  variant="outline"
+                  onClick={() => answerPicked(false)}
+                  className="h-[52px] rounded-full text-[17px] font-semibold bg-transparent border-foreground/20"
+                >
+                  {t("common.no")}
+                </Button>
+                <Button onClick={() => answerPicked(true)} className="h-[52px] rounded-full text-[17px] font-semibold">
+                  {t("common.yes")}
+                </Button>
+              </div>
+            )}
+            <div className="mt-2 flex justify-center gap-2">
+              {picked.size > 0 && (
+                <button type="button" onClick={() => answerPicked(null)} className="h-11 px-4 text-[15px] font-semibold text-muted-foreground">
+                  {t("common.clear")}
+                </button>
+              )}
+              <button type="button" onClick={toggleMulti} className="h-11 px-4 text-[15px] font-semibold text-primary">
+                {t("common.done")}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+      )}
 
       {/* Notes slot for the selected date. Fixed height whenever ANY
           question has a note on this date, so switching questions can't

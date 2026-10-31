@@ -434,6 +434,7 @@ const en = {
     // 1.8.0 Findings tab: one plain sentence per link
     tabFindings: "Findings",
     tabCalendar: "Calendar",
+    tabCharts: "Charts",
     tabLimits: "Limits",
     limitsWindow_one: "Last {{count}} day",
     limitsWindow_other: "Last {{count}} days",
@@ -741,6 +742,10 @@ const en = {
     shiftBack: "Previous period",
     shiftForward: "Next period",
     resetToToday: "Back to current period",
+    range7d: "7 days",
+    range30d: "30 days",
+    range90d: "90 days",
+    range1y: "Year",
   },
 
   correlations: {
@@ -825,6 +830,8 @@ const en = {
     noPatternsDesc: "Start by adding your first question to see your patterns here.",
     startTracking: "Start tracking",
     multi: "Multi",
+    multiHint: "Tap the days",
+    pickSeveral: "Select several days",
     datesSelectedOne: "1 date selected",
     datesSelectedMany: "{{count}} dates selected",
     balanced: "Balanced",

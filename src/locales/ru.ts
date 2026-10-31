@@ -455,6 +455,7 @@ const ru: Translation = {
   patterns: {
     tabFindings: "Находки",
     tabCalendar: "Календарь",
+    tabCharts: "Графики",
     tabLimits: "Пороги",
     limitsWindow_one: "За {{count}} день",
     limitsWindow_few: "За {{count}} дня",
@@ -774,6 +775,10 @@ const ru: Translation = {
     shiftBack: "Предыдущий период",
     shiftForward: "Следующий период",
     resetToToday: "К текущему периоду",
+    range7d: "7 дней",
+    range30d: "30 дней",
+    range90d: "90 дней",
+    range1y: "Год",
   },
 
   correlations: {
@@ -886,6 +891,8 @@ const ru: Translation = {
     noPatternsDesc: "Добавь первый вопрос, чтобы видеть свои наблюдения здесь.",
     startTracking: "Начать отслеживать",
     multi: "Выбрать несколько",
+    multiHint: "Нажми на дни",
+    pickSeveral: "Выбрать несколько дней",
     datesSelectedOne: "Выбрана 1 дата",
     datesSelectedMany: "Выбрано дат: {{count}}",
     balanced: "Спокойно",

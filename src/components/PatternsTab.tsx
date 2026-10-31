@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
 import { FindingsView } from "./FindingsView";
+import { TrendChart } from "./TrendChart";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
@@ -38,11 +39,12 @@ export const PatternsTab = () => {
 
   // Section tab: persisted across session reloads so the user lands back where
   // they were, not on the first tab every time.
-  // 1.8.0: three tabs, Findings first (plain-sentence links), then the
-  // calendar ("overview") and limits ("signals"). The old Trends chart
-  // and engineer-worded Links tab are gone; a stored "trends"/"links"
-  // from an older version lands on Findings.
-  const SECTIONS = ["findings", "overview", "signals"] as const;
+  // 1.8.0: Findings first (plain-sentence links), then the calendar
+  // ("overview") and limits ("signals"). Aurora UX (Oct 31 2026, her
+  // ask: "мне нравились графики") brings the line charts back as a
+  // fourth tab, "trends", so a stored "trends" opens it again. A stored
+  // "links" (the old engineer-worded tab) still lands on Findings.
+  const SECTIONS = ["findings", "overview", "trends", "signals"] as const;
   type Section = typeof SECTIONS[number];
   const [section, setSection] = useState<Section>(() => {
     try {
@@ -93,7 +95,7 @@ export const PatternsTab = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const next = (e as CustomEvent).detail?.section as string | undefined;
-      if (next === "findings" || next === "overview" || next === "signals") {
+      if (next === "findings" || next === "overview" || next === "trends" || next === "signals") {
         setSection(next);
         try { localStorage.setItem("memap_patterns_section", next); } catch { /* ignore */ }
       }
@@ -191,6 +193,23 @@ export const PatternsTab = () => {
     }
   };
 
+  // "Select several days" on the calendar: one answer for all picked
+  // days at once (null = clear them). Back from 1.7.9.
+  const handleBulkAnswer = async (trackerId: string, dates: string[], value: boolean | null) => {
+    const picked = new Set(dates);
+    let updatedEntries = entries.filter((e) => !(e.trackerId === trackerId && picked.has(e.date) && value === null));
+    if (value !== null) {
+      updatedEntries = updatedEntries.map((e) => (e.trackerId === trackerId && picked.has(e.date) ? { ...e, value } : e));
+      for (const date of dates) {
+        if (!updatedEntries.some((e) => e.trackerId === trackerId && e.date === date)) {
+          updatedEntries.push({ id: uuid(), trackerId, date, value });
+        }
+      }
+    }
+    setEntries(updatedEntries);
+    await saveEntries(updatedEntries);
+  };
+
   const handleStartNewCycle = async (
     tracker: Tracker,
     stats: { significantDays: number; answerDays: number }
@@ -280,26 +299,32 @@ export const PatternsTab = () => {
               Trends moved up to 2nd position per user request — for
               her, the day-by-day visual story is more frequently
               checked than the at-a-time signals snapshot. */}
-          <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-0">
+          <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-transparent rounded-none gap-0">
             <TabsTrigger
               value="findings"
-              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] px-1 text-[15px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
               {t("patterns.tabFindings")}
             </TabsTrigger>
             <TabsTrigger
               value="overview"
-              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] px-1 text-[15px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
               {t("patterns.tabCalendar")}
             </TabsTrigger>
             <TabsTrigger
+              value="trends"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] px-1 text-[15px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+            >
+              {t("patterns.tabCharts")}
+            </TabsTrigger>
+            <TabsTrigger
               value="signals"
-              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+              className="relative rounded-none border-b-2 border-transparent h-[46px] px-1 text-[15px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
               {t("patterns.tabLimits")}
               {strongCount > 0 && (
-                <span className="absolute top-1.5 right-2 h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center bg-strong text-strong-foreground">
+                <span className="absolute top-1 right-0 h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center bg-strong text-strong-foreground">
                   {strongCount}
                 </span>
               )}
@@ -325,7 +350,15 @@ export const PatternsTab = () => {
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
               onDayEdit={handleDayEdit}
+              onBulkAnswer={handleBulkAnswer}
             />
+          </div>
+        )}
+
+        {/* --- CHARTS: the line chart over time, back from 1.7.9. */}
+        {section === "trends" && (
+          <div className="animate-fade-in">
+            <TrendChart trackers={trackers} entries={entries} roomy />
           </div>
         )}
 

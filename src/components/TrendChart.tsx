@@ -30,6 +30,13 @@ interface TrendChartProps {
    * works even after the user manually fiddled with filters.
    */
   prefilterIds?: string[];
+  /**
+   * New screens (Aurora UX, Oct 2026): no tiny uppercase title (the
+   * Charts tab is the heading), localized range buttons ("30 дней", not
+   * "30d") big enough to tap, readable chip and footer text, and the
+   * 1.8.0 card. Classic leaves it off and keeps its old look.
+   */
+  roomy?: boolean;
 }
 
 type TimeRange = "7d" | "30d" | "90d" | "1y";
@@ -185,7 +192,7 @@ const formatDayCount = (count: number, isRu: boolean): string => {
 const dayTickSuffix = (count: number, isRu: boolean): string =>
   isRu ? `${count} дн` : `${count}d`;
 
-export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps) => {
+export const TrendChart = ({ trackers, entries, prefilterIds, roomy = false }: TrendChartProps) => {
   const { t, i18n } = useTranslation();
   // Used by the date-range tooltip + plural day-count formatter.
   // Re-derived on every render — cheap, and stays in sync with the
@@ -393,10 +400,34 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
   }, [windowStart, windowEnd, dateLocale]);
 
   return (
-    <Card className="card-premium breathing-space animate-fade-in">
+    <Card
+      className={cn(
+        "animate-fade-in",
+        roomy ? "rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] shadow-none p-4" : "card-premium breathing-space",
+      )}
+    >
       <div className="space-y-4">
+        {/* Range, roomy: four equal buttons with words, no title. */}
+        {roomy && (
+          <div className="grid grid-cols-4 gap-1 rounded-full bg-foreground/[0.06] p-1">
+            {(["7d", "30d", "90d", "1y"] as TimeRange[]).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                aria-pressed={range === r}
+                className={cn(
+                  "h-11 rounded-full text-[15px] font-semibold transition-colors",
+                  range === r ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground",
+                )}
+              >
+                {t(`trendChart.range${r}`)}
+              </button>
+            ))}
+          </div>
+        )}
         {/* Header */}
-        <div className="flex items-center justify-between">
+        {!roomy && <div className="flex items-center justify-between">
           <h3 className="font-medium text-sm tracking-wide uppercase text-muted-foreground">
             {t("trendChart.title")}
           </h3>
@@ -413,7 +444,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
               </Button>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* Date-range navigation row — left arrow shifts back one
             window, right arrow shifts forward (disabled at offset 0
@@ -424,7 +455,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
           <button
             type="button"
             onClick={() => setOffset((o) => o + 1)}
-            className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors"
+            className={cn("rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors", roomy ? "h-11 w-11" : "h-7 w-7")}
             aria-label={t("trendChart.shiftBack")}
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={2} />
@@ -433,7 +464,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
             type="button"
             onClick={() => setOffset(0)}
             disabled={offset === 0}
-            className="text-xs text-foreground/80 tabular-nums px-2 py-1 rounded-md hover:bg-muted/50 disabled:opacity-100 disabled:cursor-default transition-colors min-w-[140px] text-center"
+            className={cn("text-foreground/80 tabular-nums px-2 py-1 rounded-md hover:bg-muted/50 disabled:opacity-100 disabled:cursor-default transition-colors min-w-[140px] text-center", roomy ? "text-[15px] font-semibold" : "text-xs")}
             aria-label={t("trendChart.resetToToday")}
           >
             {dateRangeLabel}
@@ -442,7 +473,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
             type="button"
             onClick={() => setOffset((o) => Math.max(0, o - 1))}
             disabled={offset === 0}
-            className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-30 disabled:cursor-default"
+            className={cn("rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-30 disabled:cursor-default", roomy ? "h-11 w-11" : "h-7 w-7")}
             aria-label={t("trendChart.shiftForward")}
           >
             <ChevronRight className="h-4 w-4" strokeWidth={2} />
@@ -450,11 +481,12 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
         </div>
 
         {/* Tracker legend chips */}
-        <div className="flex flex-wrap gap-2 pb-1">
+        {/* Roomy: one scrolling row, so the chart stays on screen. */}
+        <div className={cn("flex gap-2 pb-1", roomy ? "-mx-4 px-4 overflow-x-auto scrollbar-hide" : "flex-wrap")}>
           {selectedIds.size > 0 && (
             <button
               onClick={() => setSelectedIds(new Set())}
-              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground hover:bg-muted transition-all"
+              className={cn("shrink-0 rounded-full font-medium bg-muted/50 text-muted-foreground hover:bg-muted transition-all", roomy ? "h-10 px-4 text-[15px]" : "px-3 py-1.5 text-xs")}
             >
               {t("trendChart.showAll")}
             </button>
@@ -466,7 +498,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
               <button
                 key={t.id}
                 onClick={() => toggleTracker(t.id)}
-                className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                className={cn("shrink-0 flex items-center gap-2 rounded-full font-medium transition-all", roomy ? "h-10 px-3.5 text-[15px]" : "px-3 py-1.5 text-xs")}
                 style={
                   isActive
                     ? { backgroundColor: `${color}18`, color, border: `1px solid ${color}44` }
@@ -481,9 +513,9 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                 </span>
                 {(() => {
                   const LIcon = getTrackerIcon(t.title, t.category);
-                  return <LIcon className="h-3 w-3" strokeWidth={1.75} />;
+                  return <LIcon className={roomy ? "h-4 w-4" : "h-3 w-3"} strokeWidth={1.75} />;
                 })()}
-                <span className="truncate max-w-[80px]">{localizeTrackerTitle(t.title)}</span>
+                <span className={cn("truncate", roomy ? "max-w-[220px]" : "max-w-[80px]")}>{localizeTrackerTitle(t.title)}</span>
               </button>
             );
           })}
@@ -493,7 +525,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
             lanes), recharts LineChart for aggregated 30d/90d/1y. */}
         {range === "7d" ? (
           visibleTrackers.length === 0 ? (
-            <div className="py-10 text-center text-xs text-muted-foreground">
+            <div className={cn("py-10 text-center text-muted-foreground", roomy ? "text-[15px]" : "text-xs")}>
               {t("trendChart.noTrackers")}
             </div>
           ) : (
@@ -504,13 +536,13 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                 return (
                   <div key={tracker.id} className="flex items-center gap-2">
                     {/* Row label: tracker icon + title */}
-                    <div className="w-[70px] shrink-0 flex items-center gap-1.5">
+                    <div className={cn("shrink-0 flex items-center gap-1.5", roomy ? "w-[104px]" : "w-[70px]")}>
                       <Icon
                         className="h-3.5 w-3.5 shrink-0"
                         strokeWidth={1.75}
                         style={{ color }}
                       />
-                      <span className="text-[11px] truncate text-foreground/80">
+                      <span className={cn("truncate text-foreground/80", roomy ? "text-[14px] font-medium" : "text-[11px]")}>
                         {localizeTrackerTitle(tracker.title)}
                       </span>
                     </div>
@@ -559,17 +591,17 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                   context). User asked for actual dates instead of
                   just weekday letters; both are now visible. */}
               <div className="flex items-center gap-2 pt-1.5">
-                <div className="w-[70px] shrink-0" />
+                <div className={cn("shrink-0", roomy ? "w-[104px]" : "w-[70px]")} />
                 <div className="grid grid-cols-7 gap-1 flex-1">
                   {sevenDays.map((day) => (
                     <div
                       key={day.dateStr}
                       className="flex flex-col items-center leading-tight"
                     >
-                      <span className="text-[11px] font-semibold text-foreground/80 tabular-nums">
+                      <span className={cn("font-semibold text-foreground/80 tabular-nums", roomy ? "text-[14px]" : "text-[11px]")}>
                         {day.dayNumber}
                       </span>
-                      <span className="text-[9px] text-muted-foreground/80 lowercase">
+                      <span className={cn("text-muted-foreground/80 lowercase", roomy ? "text-[12px]" : "text-[9px]")}>
                         {day.weekday}
                       </span>
                     </div>
@@ -599,13 +631,13 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.4} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 10, fill: "#94a3b8" }}
+                  tick={{ fontSize: roomy ? 12 : 10, fill: "#94a3b8" }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: roomy ? 12 : 10 }}
                   tickLine={false}
                   axisLine={false}
                   domain={[0, yMax]}
@@ -672,7 +704,7 @@ export const TrendChart = ({ trackers, entries, prefilterIds }: TrendChartProps)
           </div>
         )}
 
-        <p className="text-[10px] text-center text-muted-foreground">
+        <p className={cn("text-center text-muted-foreground", roomy ? "text-[15px] leading-snug" : "text-[10px]")}>
           {range === "7d"
             ? t("trendChart.footerStrips")
             : range === "1y"
