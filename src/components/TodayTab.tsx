@@ -29,7 +29,8 @@ import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
-import { DoorHero, TrialWeek } from "./DoorHero";
+import { DoorQuickLog } from "./DoorHero";
+import { EveningPath } from "./EveningPath";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
@@ -150,7 +151,9 @@ export const TodayTab = () => {
   // Play trackers stay outside this mode — they have their own
   // ✓/× per-card buttons + "Удалить все игровые" action.
   const [selectionMode, setSelectionMode] = useState(false);
-  const [listOpen, setListOpen] = useState(false);
+  // Open by default (her ask: "я бы не сворачивала вопросы, чтоб главный
+  // экран не был пустым"). The arrow still folds it.
+  const [listOpen, setListOpen] = useState(true);
   const [selectedTrackerIds, setSelectedTrackerIds] = useState<Set<string>>(new Set());
   const [selectedTrackerForDetails, setSelectedTrackerForDetails] = useState<Tracker | null>(null);
   const [selectedTrackerIndex, setSelectedTrackerIndex] = useState<number>(0);
@@ -937,43 +940,23 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Door hero (1.8.0): this week's count per door with a small "+".
-          Renders nothing for people who didn't come in through a door.
-          The streak chip and "Add question" that sat above it are gone:
-          the streak shows at the end of the evening, adding lives in
-          "My questions" below (design rule: one main button per screen). */}
-      <DoorHero trackers={trackers} entries={entries} />
-      <TrialWeek entries={entries} />
-
-      {/* Tonight (1.8.0): the ONE main action on Today. Replaced the
-          "Ideas of the day" carousel, the floating "+" and the unlabeled
-          Play in the tab bar, which competed for the same thumb (design
-          review, Oct 27). */}
-      {(() => {
-        const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
-        const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
-        if (active.length === 0) return null;
-        const left = active.filter((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === todayIso)).length;
-        if (left === 0) {
-          return (
-            <p className="text-center text-[15px] text-muted-foreground animate-fade-in">{t("today.tonightDone")}</p>
-          );
-        }
-        return (
-          <div className="animate-fade-in">
-            <Button
-              onClick={() => {
-                haptics.medium();
-                setSelectedDate(todayIso);
-                setDailySessionOpen(true);
-              }}
-              className="w-full h-[54px] rounded-full text-[17px] font-semibold"
-            >
-              {t("today.answerTonight", { count: left })}
-            </Button>
-          </div>
-        );
-      })()}
+      {/* The path of evenings (Aurora UX step 1, Oct 31 2026): replaces
+          the "Last 7 days" door card, the trial week card and the lone
+          "Answer tonight's N" button. Tonight's stop starts the evening;
+          the seventh stop opens the report in Patterns. */}
+      <EveningPath
+        trackers={trackers}
+        entries={entries}
+        onStartTonight={() => {
+          const d = new Date();
+          setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+          setDailySessionOpen(true);
+        }}
+        onOpenReport={() => {
+          try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
+          window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }));
+        }}
+      />
 
       {/* Missed yesterday (1.8.0, from phone testing: "couldn't find how
           to answer for past days"). Shown only to someone who was already
@@ -1026,6 +1009,10 @@ export const TodayTab = () => {
           </button>
         </div>
       )}
+
+      {/* Log a fight or a migraine the moment it happens (was the "+" on
+          the old door card). */}
+      <DoorQuickLog trackers={trackers} />
 
       {/* Tracker list — Cards mode. Split into regular cards and
           "Play round" cards (created by random-play mode). Play cards

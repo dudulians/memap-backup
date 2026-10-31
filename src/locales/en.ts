@@ -319,6 +319,32 @@ const en = {
     unknownDesc: "Something went wrong. Please try again.",
   },
 
+  // Aurora UX step 1: the path of evenings on Today.
+  path: {
+    streak_one: "day in a row",
+    streak_other: "days in a row",
+    evenings_one: "evening",
+    evenings_other: "evenings",
+    weekLabel: "Week {{n}} · {{k}} of 7 evenings",
+    week0: "Find your patterns",
+    week1: "What comes before",
+    week2: "What helps",
+    week3: "Keep going",
+    lastReport: "Last week's report",
+    tonight: "Tonight",
+    questions_one: "{{count}} question",
+    questions_other: "{{count}} questions",
+    firstReport: "First report",
+    weekReport: "Week report",
+    inEvenings_one: "in {{count}} evening",
+    inEvenings_other: "in {{count}} evenings",
+    tonightUnlocks: "Tonight opens it",
+    reportReady: "Report ready",
+    openReport: "Open",
+    doneTonight: "Evening saved. See you tomorrow.",
+    logNow: "Happened just now?",
+  },
+
   today: {
     titleToday: "Today's session",
     titleDate: "Session for {{date}}",

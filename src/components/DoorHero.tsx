@@ -199,6 +199,63 @@ export const DoorHero = ({
   );
 };
 
+// Aurora UX step 1: the week card above is gone from Today (the path of
+// evenings took its place), but logging a fight or a migraine the moment
+// it happens stays: one "+" chip per event door, same sheet as before.
+export const DoorQuickLog = ({ trackers }: { trackers: Tracker[] }) => {
+  const { t } = useTranslation();
+  const [state, setState] = useState<DoorState | null>(() => getDoorState());
+  const [logging, setLogging] = useState<{ door: Door; trackerId: string } | null>(null);
+
+  useEffect(() => {
+    const sync = () => setState(getDoorState());
+    window.addEventListener("memap-door-changed", sync);
+    return () => window.removeEventListener("memap-door-changed", sync);
+  }, []);
+
+  const rows = useMemo(() => {
+    if (!state) return [];
+    const all = [{ id: state.id, trackerId: state.trackerId }, ...(state.extra ?? [])];
+    return all
+      .map((item) => ({ door: getDoor(item.id), trackerId: item.trackerId }))
+      .filter((r): r is { door: Door; trackerId: string } => !!r.door && r.door.kind === "event" && trackers.some((tr) => tr.id === r.trackerId && !tr.archived));
+  }, [state, trackers]);
+
+  if (rows.length === 0) return null;
+  return (
+    <section aria-label={t("path.logNow")} className="animate-fade-in">
+      <p className="mb-2 text-[15px] font-semibold text-muted-foreground">{t("path.logNow")}</p>
+      <div className="flex flex-wrap gap-2">
+        {rows.map((row) => (
+          <button
+            key={row.door.id}
+            type="button"
+            onClick={() => setLogging(row)}
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-foreground/[0.14] bg-card/80 px-4 text-[15px] font-semibold shadow-sm active:scale-95 transition-transform"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.8} />
+            {t(`doors.${row.door.id}.chip`)}
+          </button>
+        ))}
+      </div>
+      <LogSheet
+        open={!!logging}
+        onOpenChange={(open) => !open && setLogging(null)}
+        title={logging ? t(`doors.${logging.door.id}.logTitle`) : ""}
+        reasonsTitle={logging ? t(`doors.${logging.door.id}.reasonsTitle`) : ""}
+        reasons={logging?.door.reasons ?? []}
+        onSave={async (offset, tags) => {
+          if (!logging) return;
+          await logDoorEntry({ trackerId: logging.trackerId, date: daysAgoIso(offset), tags });
+          haptics.success();
+          track("hero_logged", { door: logging.door.id, offset, reasons: tags.length, from: "quicklog" });
+          setLogging(null);
+        }}
+      />
+    </section>
+  );
+};
+
 // "Just curious" path: a one-week try with three questions. The card
 // counts the days (a box per day, filled once anything was answered)
 // and on day 7 sends you to Patterns. Gone a week after that.
