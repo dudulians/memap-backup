@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
+import { TrendChart } from "./TrendChart";
 import { FindingsView } from "./FindingsView";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
@@ -42,11 +43,11 @@ export const PatternsTab = () => {
 
   // Section tab: persisted across session reloads so the user lands back where
   // they were, not on the first tab every time.
-  // 1.8.0: three tabs, Findings first (plain-sentence links), then the
-  // calendar ("overview") and limits ("signals"). The old Trends chart
-  // and engineer-worded Links tab are gone; a stored "trends"/"links"
-  // from an older version lands on Findings.
-  const SECTIONS = ["findings", "overview", "signals"] as const;
+  // 1.8.0: Findings first (plain-sentence links), then the calendar
+  // ("overview") and limits ("signals"). The engineer-worded Links tab
+  // is gone; a stored "links" lands on Findings. 1.9: the line charts
+  // ("trends") are back, her call (Oct 31: "мне нравились графики").
+  const SECTIONS = ["findings", "overview", "trends", "signals"] as const;
   type Section = typeof SECTIONS[number];
   const [section, setSection] = useState<Section>(() => {
     try {
@@ -97,7 +98,7 @@ export const PatternsTab = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const next = (e as CustomEvent).detail?.section as string | undefined;
-      if (next === "findings" || next === "overview" || next === "signals") {
+      if (next === "findings" || next === "overview" || next === "trends" || next === "signals") {
         setSection(next);
         try { localStorage.setItem("memap_patterns_section", next); } catch { /* ignore */ }
       }
@@ -195,6 +196,24 @@ export const PatternsTab = () => {
     }
   };
 
+  // "Pick several" on the calendar: one answer (or clear) for many days.
+  const handleBulkAnswer = async (trackerId: string, dates: string[], value: boolean | null) => {
+    const picked = new Set(dates);
+    const rest = entries.filter((e) => !(e.trackerId === trackerId && picked.has(e.date)));
+    const updatedEntries =
+      value === null
+        ? rest
+        : [
+            ...rest,
+            ...dates.map((date) => {
+              const old = entries.find((e) => e.trackerId === trackerId && e.date === date);
+              return old ? { ...old, value } : { id: uuid(), trackerId, date, value };
+            }),
+          ];
+    setEntries(updatedEntries);
+    await saveEntries(updatedEntries);
+  };
+
   const handleStartNewCycle = async (
     tracker: Tracker,
     stats: { significantDays: number; answerDays: number }
@@ -263,6 +282,8 @@ export const PatternsTab = () => {
   });
 
   const strongCount = trackers.filter((t) => getTrackerStats(t).status === "strong").length;
+  const TAB =
+    "relative rounded-[12px] h-11 px-1 text-[15px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1";
 
   return (
     <div className="space-y-3">
@@ -284,22 +305,25 @@ export const PatternsTab = () => {
               Trends moved up to 2nd position per user request — for
               her, the day-by-day visual story is more frequently
               checked than the at-a-time signals snapshot. */}
-          <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-2">
+          <TabsList className="w-full grid grid-cols-4 h-auto p-0 bg-transparent rounded-none gap-1.5">
             <TabsTrigger
               value="findings"
-              className="relative rounded-[12px] h-11 text-[17px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1"
+              className={TAB}
             >
               {t("patterns.tabFindings")}
             </TabsTrigger>
             <TabsTrigger
               value="overview"
-              className="relative rounded-[12px] h-11 text-[17px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1"
+              className={TAB}
             >
               {t("patterns.tabCalendar")}
             </TabsTrigger>
+            <TabsTrigger value="trends" className={TAB}>
+              {t("patterns.tabCharts")}
+            </TabsTrigger>
             <TabsTrigger
               value="signals"
-              className="relative rounded-[12px] h-11 text-[17px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1"
+              className={TAB}
             >
               {t("patterns.tabLimits")}
               {strongCount > 0 && (
@@ -329,7 +353,14 @@ export const PatternsTab = () => {
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
               onDayEdit={handleDayEdit}
+              onBulkAnswer={handleBulkAnswer}
             />
+          </div>
+        )}
+
+        {section === "trends" && (
+          <div className="animate-fade-in">
+            <div className="mw-trend"><TrendChart trackers={trackers} entries={entries} /></div>
           </div>
         )}
 

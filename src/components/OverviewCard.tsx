@@ -1,8 +1,9 @@
 // Calendar (Patterns → Calendar), 1.8.0: question chips on top, one big
 // count for the month ("7 fights", "12 days with No"), and the month as
-// big day circles. Tap a day to change its answer. The Year view, the
-// Multi bulk-select and the colour legend are gone (design rule: people
-// who hate reading). Canvas "MeMap: новая версия", page 12, RestCalendar.
+// big day circles. Tap a day to change its answer. Canvas "MeMap: новая
+// версия", page 12, RestCalendar. 1.9 brings back two things from 1.7.9
+// (her call, Oct 31): the Year view and "Pick several" (one answer for
+// many days at once).
 import { useState, useRef, useMemo, useEffect } from "react";
 import { MoodLegend, moodOf } from "./mw/DayMark";
 import { Glyph } from "./mw/Glyph";
@@ -12,7 +13,7 @@ import type { DoorId } from "@/lib/doors";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes } from "@/lib/notes";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
@@ -27,6 +28,8 @@ interface OverviewCardProps {
   selectedDate: string;
   onDateSelect: (date: string) => void;
   onDayEdit?: (tracker: Tracker, date: string, existingEntry?: TrackerEntry) => void;
+  /** "Pick several": one answer (null = clear) for all picked days. */
+  onBulkAnswer?: (trackerId: string, dates: string[], value: boolean | null) => void;
 }
 
 // 2024-01-01 was a Monday: seven days from it give localized weekday
@@ -39,6 +42,7 @@ export const OverviewCard = ({
   selectedDate,
   onDateSelect,
   onDayEdit,
+  onBulkAnswer,
 }: OverviewCardProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -62,6 +66,9 @@ export const OverviewCard = ({
     return i >= 0 ? i : 0;
   });
   const [displayMonth, setDisplayMonth] = useState(() => new Date());
+  const [view, setView] = useState<"month" | "year">("month");
+  const [multi, setMulti] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(() => new Set());
   const [notes, setNotes] = useState<Note[]>([]);
 
   const reloadNotes = () => getNotes().then(setNotes);
@@ -172,6 +179,36 @@ export const OverviewCard = ({
     [calendarDays],
   );
 
+  // Year view: the last 12 months as small squares, oldest first.
+  const yearData = useMemo(() => {
+    if (!activeTracker) return [];
+    return Array.from({ length: 12 }, (_, k) => {
+      const monthDate = subMonths(today, 11 - k);
+      const calStart = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
+      const calEnd = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
+      const days: { dateStr: string; inMonth: boolean; future: boolean; value?: boolean }[] = [];
+      for (let cur = calStart; cur <= calEnd; cur = addDays(cur, 1)) {
+        const dateStr = format(cur, "yyyy-MM-dd");
+        days.push({ dateStr, inMonth: isSameMonth(cur, monthDate), future: isFuture(cur), value: entryMap.get(dateStr)?.value });
+      }
+      const label = format(monthDate, "LLL", { locale: dateLocale });
+      return { monthDate, label: label.charAt(0).toUpperCase() + label.slice(1), days };
+    });
+  }, [today, entryMap, activeTracker, dateLocale]);
+
+  // A new question starts with nothing picked.
+  useEffect(() => {
+    setPicked(new Set());
+  }, [activeTrackerIndex]);
+
+  // The first picked day brings the Yes/No panel into view (it sits
+  // under the month, often behind the tab bar).
+  const panelRef = useRef<HTMLDivElement>(null);
+  const hasPicked = picked.size > 0;
+  useEffect(() => {
+    if (hasPicked) panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [hasPicked]);
+
   // Keep the active chip in view.
   useEffect(() => {
     const container = chipsContainerRef.current;
@@ -229,15 +266,40 @@ export const OverviewCard = ({
       node.removeEventListener("touchend", onEnd);
       node.removeEventListener("touchcancel", onEnd);
     };
-  }, [trackers.length]);
+  }, [trackers.length, view]);
 
   const canGoNextMonth = startOfMonth(addMonths(displayMonth, 1)) <= startOfMonth(today);
 
   const handleDayClick = (day: typeof calendarDays[0]) => {
     if (day.isFutureDate || !day.isCurrentMonth) return;
+    if (multi) {
+      haptics.tap();
+      setPicked((prev) => {
+        const next = new Set(prev);
+        if (next.has(day.dateStr)) next.delete(day.dateStr);
+        else next.add(day.dateStr);
+        return next;
+      });
+      return;
+    }
     // The answer editor has its own haptics on save.
     onDateSelect(day.dateStr);
     if (onDayEdit && activeTracker) onDayEdit(activeTracker, day.dateStr, entryMap.get(day.dateStr));
+  };
+
+  const answerPicked = (value: boolean | null) => {
+    if (!picked.size || !onBulkAnswer || !activeTracker) return;
+    if (value === true) haptics.success();
+    else if (value === false) haptics.medium();
+    else haptics.tap();
+    onBulkAnswer(activeTracker.id, Array.from(picked), value);
+    setPicked(new Set());
+  };
+
+  const toggleMulti = () => {
+    haptics.tap();
+    setMulti((on) => !on);
+    setPicked(new Set());
   };
 
   if (!activeTracker) return null;
@@ -278,9 +340,63 @@ export const OverviewCard = ({
         })}
       </div>
 
+      {/* Month or year. */}
+      <div className="mt-4 flex justify-center gap-2">
+        {(["month", "year"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={view === v}
+            onClick={() => { haptics.tap(); setView(v); setMulti(false); setPicked(new Set()); }}
+            className="mw-chip min-w-[96px] justify-center"
+          >
+            {t(`overview.${v}`)}
+          </button>
+        ))}
+      </div>
+
+      {view === "year" && (
+        <div className="animate-fade-in">
+          <p className="mt-4 text-center mw-display text-[21px]">
+            {getYear(yearData[0]?.monthDate ?? today) === getYear(today)
+              ? getYear(today)
+              : `${getYear(yearData[0].monthDate)}–${getYear(today)}`}
+          </p>
+          <div className="mt-4 grid grid-cols-3 gap-x-3 gap-y-4">
+            {yearData.map(({ monthDate, label, days }) => (
+              <button
+                key={label + getYear(monthDate)}
+                type="button"
+                onClick={() => { haptics.tap(); setDisplayMonth(monthDate); setView("month"); }}
+                className="block self-start text-left active:scale-[0.98] transition-transform"
+              >
+                <span className="block text-center text-[15px] font-semibold text-muted-foreground">{label}</span>
+                <span className="mt-1 grid grid-cols-7 gap-[2px]">
+                  {days.map((d) =>
+                    !d.inMonth || d.future ? (
+                      <span key={d.dateStr} className="block aspect-square" />
+                    ) : (
+                      <span
+                        key={d.dateStr}
+                        className="mw-cell !rounded-[2px]"
+                        data-mood={moodOf(activeTracker, d.value)}
+                      >
+                        {d.value === true && <span className="h-1 w-1 rounded-full bg-foreground/60" />}
+                      </span>
+                    ),
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+          <MoodLegend className="mt-4" />
+        </div>
+      )}
+
+      {view === "month" && (
       <div ref={swipeAreaRef} style={{ touchAction: "pan-y" }}>
         {/* Month + the one number that matters */}
-        <div className="mt-5 flex items-center gap-1">
+        <div className="mt-4 flex items-center gap-1">
           <button
             type="button"
             onClick={() => { haptics.tap(); setDisplayMonth((prev) => subMonths(prev, 1)); }}
@@ -323,9 +439,11 @@ export const OverviewCard = ({
                   data-today={day.isToday}
                   data-future={day.isFutureDate}
                   data-mood={day.isFutureDate ? undefined : moodOf(activeTracker, entryMap.get(day.dateStr)?.value)}
+                  aria-pressed={multi ? picked.has(day.dateStr) : undefined}
                   className={cn(
-                    "mw-cell !items-start !justify-start p-1 tabular-nums",
-                    day.isSelected && !day.isToday && "!shadow-[inset_0_0_0_2px_hsl(var(--foreground)/0.6)]",
+                    "mw-cell !items-start !justify-start p-1 tabular-nums transition-transform",
+                    !multi && day.isSelected && !day.isToday && "!shadow-[inset_0_0_0_2px_hsl(var(--foreground)/0.6)]",
+                    multi && picked.has(day.dateStr) && "!shadow-[0_0_0_3px_hsl(var(--foreground))] scale-[0.9] z-[2]",
                   )}
                 >
                   <span className="relative z-[1] text-[13px] leading-none">{format(day.date, "d")}</span>
@@ -344,6 +462,11 @@ export const OverviewCard = ({
                   {noteDatesSet.has(day.dateStr) && (
                     <span className="absolute left-1 bottom-1"><Glyph kind="pencil" size={13} strokeWidth={2.4} /></span>
                   )}
+                  {multi && picked.has(day.dateStr) && (
+                    <span className="absolute -top-2 -right-2 z-[3] h-6 w-6 rounded-full bg-foreground text-background flex items-center justify-center">
+                      <Glyph kind="check" size={15} strokeWidth={3} />
+                    </span>
+                  )}
                 </button>
               ) : (
                 <span className="block aspect-square" />
@@ -351,8 +474,53 @@ export const OverviewCard = ({
             </div>
           ))}
         </div>
+        {/* Pick several: one answer for many days at once. */}
+        {onBulkAnswer && !multi && (
+          <div className="mt-3 flex justify-center">
+            <button type="button" onClick={toggleMulti} className="mw-link">
+              <Glyph kind="check" size={18} />
+              {t("overview.pickSeveral")}
+            </button>
+          </div>
+        )}
+        {multi && (
+          <div ref={panelRef} className="mt-4 mw-sheet px-4 py-3.5 scroll-mb-28 animate-fade-in">
+            <p className="text-center mw-display text-[19px]">
+              {picked.size === 0
+                ? t("overview.multiHint")
+                : picked.size === 1
+                  ? t("overview.datesSelectedOne")
+                  : t("overview.datesSelectedMany", { count: picked.size })}
+            </p>
+            {picked.size > 0 && (
+              <>
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                  <button type="button" onClick={() => answerPicked(false)} className="mw-chip justify-center !min-h-[52px]">
+                    <PencilCurl size={20} />
+                    {t("common.no")}
+                  </button>
+                  <button type="button" onClick={() => answerPicked(true)} className="mw-chip justify-center !min-h-[52px]">
+                    <TopicIcon kind={activeKind} size={28} />
+                    {t("common.yes")}
+                  </button>
+                </div>
+              </>
+            )}
+            <div className="mt-1 flex justify-center gap-2">
+              {picked.size > 0 && (
+                <button type="button" onClick={() => answerPicked(null)} className="mw-link">
+                  {t("common.clear")}
+                </button>
+              )}
+              <button type="button" onClick={toggleMulti} className="mw-link">
+                {t("common.done")}
+              </button>
+            </div>
+          </div>
+        )}
         <MoodLegend className="mt-3" />
       </div>
+      )}
 
       {/* Notes slot for the selected date. Fixed height whenever ANY
           question has a note on this date, so switching questions can't

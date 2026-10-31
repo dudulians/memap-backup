@@ -544,3 +544,10 @@ html[data-theme="malu-night"],
 @media (prefers-reduced-motion: reduce) {
   .mw-drop, .mw-jitter { animation: none; }
 }
+
+/* Charts tab (1.9): the shared TrendChart cuts question names at 80px,
+   which at this font size leaves "Ссорилс…". Give them room here only;
+   classic keeps its own look. */
+.mw-trend .max-w-\[80px\] {
+  max-width: 240px;
+}

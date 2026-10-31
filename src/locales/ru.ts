@@ -421,6 +421,7 @@ const ru: Translation = {
   patterns: {
     tabFindings: "Находки",
     tabCalendar: "Календарь",
+    tabCharts: "Графики",
     tabLimits: "Пороги",
     limitsWindow_one: "За {{count}} день",
     limitsWindow_few: "За {{count}} дня",
@@ -852,6 +853,8 @@ const ru: Translation = {
     noPatternsDesc: "Добавь первый вопрос, чтобы видеть свои наблюдения здесь.",
     startTracking: "Начать отслеживать",
     multi: "Выбрать несколько",
+    multiHint: "Нажми на дни",
+    pickSeveral: "Выбрать несколько",
     datesSelectedOne: "Выбрана 1 дата",
     datesSelectedMany: "Выбрано дат: {{count}}",
     balanced: "Спокойно",
