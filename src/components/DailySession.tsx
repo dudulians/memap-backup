@@ -27,8 +27,14 @@ import { Flame, Clock } from "lucide-react";
 import { maybeRequestRating } from "@/lib/appRating";
 import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/doors";
 import { echoLine, factLine } from "@/lib/echo";
-import maluCheer from "@/assets/malu/malu-cheer.webp";
-import maluHeart from "@/assets/malu/malu-heart.webp";
+import { Malu } from "./mw/Malu";
+import { Glyph } from "./mw/Glyph";
+import { PencilCurl, TopicIcon, tapeVar, topicKind } from "./mw/TopicIcon";
+import { tilt } from "./mw/WeekMap";
+import { eveningDates, maluStory, RECALL_KEY } from "./mw/TodayTop";
+import { FINDINGS_AFTER } from "@/lib/weekMap";
+import { findTemplate } from "@/lib/doors";
+import { localizeTrackerTitleRaw } from "@/lib/trackerLocalize";
 
 interface DailySessionProps {
   trackers: Tracker[];
@@ -69,7 +75,26 @@ interface SessionQuestion {
   existingAnswer?: boolean;
   isNew?: boolean;
   templateId?: string;
+  /** Mood door (1.9): "how did today feel?" with four faces answers
+   *  this card (a low day) and the anxiety question (this id) at once. */
+  feelings?: string;
 }
+
+type Feeling = "good" | "okay" | "low" | "anxious";
+const FEELINGS: Feeling[] = ["good", "okay", "low", "anxious"];
+
+/** Ids of the mood door's two questions, if the mood door is in use. */
+const moodPair = (trackers: Tracker[]): { low: string; anxious: string } | null => {
+  const state = getDoorState();
+  if (!state) return null;
+  const moodId = state.id === "mood" ? state.trackerId : state.extra?.find((x) => x.id === "mood")?.trackerId;
+  if (!moodId) return null;
+  const tpl = findTemplate("felt-anxious");
+  if (!tpl) return null;
+  const title = localizeTrackerTitleRaw(tpl.template.title).trim().toLowerCase();
+  const anxious = trackers.find((tr) => !tr.archived && tr.title.trim().toLowerCase() === title);
+  return anxious ? { low: moodId, anxious: anxious.id } : null;
+};
 
 // Session settings from localStorage
 const getSessionSettings = () => {
@@ -347,6 +372,17 @@ export const DailySession = ({
       })
       .filter(q => q.existingAnswer === undefined);
 
+    const pair = moodPair(trackers);
+    if (pair) {
+      const low = unansweredQuestions.find((q) => q.tracker.id === pair.low);
+      const anxious = unansweredQuestions.find((q) => q.tracker.id === pair.anxious);
+      if (low && anxious) {
+        return unansweredQuestions
+          .filter((q) => q !== anxious)
+          .map((q) => (q === low ? { ...q, feelings: pair.anxious } : q));
+      }
+    }
+
     // Auto-injected "new suggestion" cards have been removed. The user
     // gets new ideas only via:
     //   a) the "Idea of the day" carousel on the Cards screen (with an
@@ -453,7 +489,10 @@ export const DailySession = ({
   // saved we ask the parent to delete the entry — that way "go back"
   // really erases the action instead of just navigating to the card
   // (which would leave the saved Yes/No silently in storage).
-  const answeredHistory = useRef<Array<{ trackerId: string; saved: boolean }>>([]);
+  const answeredHistory = useRef<Array<{ trackerId: string; saved: boolean; also?: string }>>([]);
+  // What tonight's page looks like so far: one square per card, a
+  // sticker for "yes", a pencil curl for "no", empty for skipped.
+  const [stamps, setStamps] = useState<Record<string, boolean | null>>({});
 
   // Record the date the moment a suggestion card is first shown
   useEffect(() => {
@@ -498,6 +537,7 @@ export const DailySession = ({
       trackerId: currentQuestion.tracker.id,
       saved: true,
     });
+    setStamps((prev) => ({ ...prev, [currentQuestion.tracker.id]: value }));
 
     // Play sound and haptic
     playFeedbackSound(value ? "yes" : "no");
@@ -579,6 +619,7 @@ export const DailySession = ({
       trackerId: currentQuestion.tracker.id,
       saved: false,
     });
+    setStamps((prev) => ({ ...prev, [currentQuestion.tracker.id]: null }));
 
     // Play sound and haptic
     playFeedbackSound("skip");
@@ -603,7 +644,43 @@ export const DailySession = ({
     }, 200);
   };
 
+  const handleFeeling = (f: Feeling) => {
+    if (isAnimatingRef.current || !currentQuestion?.feelings) return;
+    const anxiousId = currentQuestion.feelings;
+    const lowId = currentQuestion.tracker.id;
+    isAnimatingRef.current = true;
+    setIsAnimating(true);
+    setSwipeDirection(f === "good" || f === "okay" ? "left" : "right");
+    answeredHistory.current.push({ trackerId: lowId, saved: true, also: anxiousId });
+    setStamps((prev) => ({ ...prev, [lowId]: f === "low" || f === "anxious" }));
+    playFeedbackSound(f === "good" || f === "okay" ? "no" : "yes");
+    triggerHaptic("medium");
+    setAnsweredCount((prev) => prev + 1);
+    (async () => {
+      try {
+        await onAnswer(lowId, f === "low");
+        await onAnswer(anxiousId, f === "anxious");
+      } catch (err) {
+        console.error("DailySession: feeling save failed", err);
+      }
+    })();
+    setTimeout(() => {
+      if (currentIndex < totalQuestions - 1) setCurrentIndex((prev) => prev + 1);
+      else setCompleted(true);
+      setSwipeDirection(null);
+      setIsAnimating(false);
+      isAnimatingRef.current = false;
+      setDragX(0);
+      setDragY(0);
+      currentDx.current = 0;
+      currentDy.current = 0;
+    }, 300);
+  };
+
   const triggerConfetti = () => {
+    // Malu's world (1.9): the day's stickers are the celebration, and
+    // a fight or a drink is never something to throw confetti at.
+    if (document.documentElement.dataset.theme?.startsWith("malu")) return;
     confetti({
       particleCount: 150,
       spread: 100,
@@ -888,88 +965,102 @@ export const DailySession = ({
       });
     }
 
+    // Malu's world (1.9): the end of the evening pays back in three
+    // beats instead of "see you tomorrow": tonight's page of stickers,
+    // Malu (and her own little evening), how far the first report is.
+    const isToday = selectedDate === todayLocal();
+    const dayLabel = isToday
+      ? t("dailySession.tonight")
+      : (() => {
+          const d = format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale });
+          return d.charAt(0).toUpperCase() + d.slice(1);
+        })();
+    const dayStamps = trackers
+      .filter((tr) => !tr.archived && tr.source !== "play")
+      .map((tr) => {
+        const e = entries.find((x) => x.trackerId === tr.id && x.date === selectedDate);
+        const local = stamps[tr.id];
+        const value = local !== undefined ? local : e?.value;
+        const hit = value === undefined || value === null ? null : tr.problemWhen === "yes" ? value : !value;
+        return { tr, hit };
+      })
+      .filter((x) => x.hit !== null);
+    const evenings = eveningDates(trackers, entries);
+    let recalled = false;
+    try {
+      recalled = localStorage.getItem(RECALL_KEY) === "true";
+    } catch {
+      // no storage
+    }
+    const road = Math.min(FINDINGS_AFTER, evenings.length + (recalled ? 1 : 0));
+    const primaryRow = rows.find((r) => r.key === "overview");
+    const linkRows = rows.filter((r) => r.key !== "overview" && r.key !== "past-dates");
+    const story = isToday && !playMode ? maluStory(t, selectedDate) : "";
+
     return (
-      // Done state — wrapped in BottomSheet with Apple-Music-style
-      // presentation (scaleBackground + 95vh) so the sheet sits as a
-      // visible "card on top of the app" rather than a generic panel.
-      // The sliver of background still showing at the top + the
-      // shrunk-down app underneath give the user a clear "I'm in the
-      // app, on this screen" cue.
       <BottomSheet
         open
         onOpenChange={(o) => { if (!o) onClose(); }}
-        className="h-[95vh] flex flex-col p-0"
+        className="h-[95vh] flex flex-col p-0 mw-night mw-room"
         scaleBackground
         ariaTitle="Session complete"
       >
-        <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-6 gap-6 animate-fade-in" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
-          {/* Hero moment — Malu (1.8.0, was a 🎉 emoji) + the streak
-              number. On a hard day she shows hearts and the streak gives
-              way to one kind line: no celebrating the evening a fight
-              was logged. The PNG has air around the lamb, hence the
-              negative margins. */}
-          <div className="flex flex-col items-center text-center space-y-3">
-            <img
-              src={hardDay ? maluHeart : maluCheer}
-              alt=""
-              aria-hidden="true"
-              className="h-[160px] w-[160px] -mt-4 -mb-6"
-            />
-            {hardDay && echoDoor ? (
-              <div className="flex flex-col items-center">
-                {/* "Hard day." would judge a drink, so that door gets only the thanks. */}
-                {echoDoor.id !== "drinking" && (
-                  <p className="text-[22px] font-bold tracking-tight">{t("doors.hardDayTitle")}</p>
-                )}
-                <p className="mt-1 text-base text-muted-foreground">{t("doors.hardDayBody")}</p>
+        <div className="flex-1 overflow-y-auto flex flex-col items-center px-5 pt-5 gap-5 animate-fade-in" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}>
+          {/* 1. Tonight's page */}
+          {!playMode && dayStamps.length > 0 && (
+            <div className="mw-taped w-full max-w-sm px-4 pt-5 pb-4" style={{ ["--tape" as string]: "var(--tape-mood)" }}>
+              <p className="mw-display text-[20px]">{dayLabel}</p>
+              <div className="mt-3 grid grid-cols-6 gap-1.5">
+                {dayStamps.map(({ tr, hit }, i) => {
+                  const kind = topicKind(tr.title, doorState?.trackerId === tr.id ? doorState.id : doorState?.extra?.find((x) => x.trackerId === tr.id)?.id);
+                  return (
+                    <div key={tr.id} className="mw-cell">
+                      {hit ? (
+                        <TopicIcon
+                          kind={kind}
+                          size={38}
+                          sticker
+                          className="absolute mw-slap"
+                          style={{ ["--r" as string]: `${tilt(tr.id + selectedDate)}deg`, transform: `rotate(${tilt(tr.id + selectedDate)}deg)`, animationDelay: `${i * 90}ms` }}
+                        />
+                      ) : (
+                        <span className="mw-slap" style={{ animationDelay: `${i * 90}ms` }}>
+                          <PencilCurl size={22} />
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ) : streak.currentStreak > 0 && (
-              <div className="flex flex-col items-center">
-                <div className="font-serif text-7xl font-medium tabular-nums leading-none text-foreground">
-                  {streak.currentStreak}
-                </div>
-                <div className="flex items-center gap-1.5 mt-2">
-                  <Flame className="h-4 w-4 text-orange-500" strokeWidth={2} fill="currentColor" />
-                  <span className="text-sm text-muted-foreground">
-                    {streak.currentStreak === 1
-                      ? t("today.streakDaysOne")
-                      : t("today.streakDaysMany", { count: streak.currentStreak })}
-                  </span>
-                </div>
-              </div>
-            )}
-            {!hardDay && (
-            <p className="text-sm text-muted-foreground max-w-xs pt-1">
-              {playMode
-                ? (answeredCount === 1
-                    ? t("dailySession.playRoundOne")
-                    : t("dailySession.playRoundMany", { count: answeredCount }))
-                : deck.length === 0
-                // Tell the user *which* day is filled. Without the date,
-                // the message reads "all caught up for today" no matter
-                // which past day they navigated to — confusing if they
-                // got here by tapping April 25 in the calendar.
-                ? selectedDate !== todayLocal()
-                  ? t("dailySession.caughtUpForDate", {
-                      date: format(new Date(selectedDate + "T00:00:00"), "d MMMM", { locale: dateLocale }),
-                    })
-                  : t("dailySession.caughtUp")
-                : answeredCount > 0
-                ? (answeredCount === 1
-                    ? t("dailySession.answeredOne")
-                    : t("dailySession.answeredMany", { count: answeredCount }))
-                : t("dailySession.seeYouTomorrow")}
-            </p>
-            )}
-            {newPatternsAdded > 0 && (
-              <p className="text-xs text-primary">
-                {newPatternsAdded === 1
-                  ? t("dailySession.newPatternsOne")
-                  : t("dailySession.newPatternsMany", { count: newPatternsAdded })}
-              </p>
-            )}
+            </div>
+          )}
+
+          {/* 2. Malu */}
+          <div className="w-full max-w-sm flex items-end gap-2">
+            <Malu pose={hardDay ? "hug" : playMode ? "wink" : "cheer"} size={hardDay ? 92 : 108} className="shrink-0 -ml-1" />
+            <div className="mw-bubble mb-8 text-[18px] leading-snug">
+              {hardDay && echoDoor ? (
+                <>
+                  {/* "Hard day." would judge a drink, so that door gets only the thanks. */}
+                  {echoDoor.id !== "drinking" && <span className="block">{t("doors.hardDayTitle")}</span>}
+                  <span className="block">{t("doors.hardDayBody")}</span>
+                </>
+              ) : story ? (
+                <>
+                  <span className="block text-[15px] text-muted-foreground">{t("mw.storyLabel")}</span>
+                  <span className="block">{story}</span>
+                </>
+              ) : playMode ? (
+                answeredCount === 1 ? t("dailySession.playRoundOne") : t("dailySession.playRoundMany", { count: answeredCount })
+              ) : deck.length === 0 && !isToday ? (
+                t("dailySession.caughtUpForDate", { date: format(new Date(selectedDate + "T00:00:00"), "d MMMM", { locale: dateLocale }) })
+              ) : (
+                t("dailySession.caughtUp")
+              )}
+            </div>
           </div>
 
+          {/* 3. What it adds up to, and how far the first report is */}
           {echo && echoDoor && (
             <EchoCard
               doorId={echoDoor.id}
@@ -977,130 +1068,50 @@ export const DailySession = ({
               fact={echo.fact ? factLine(t, echo.fact) : null}
             />
           )}
+          {!playMode && (
+            <div className="w-full max-w-sm">
+              <p className="mw-display text-[19px]">
+                {road < FINDINGS_AFTER ? t("mw.today.roadTitle", { count: FINDINGS_AFTER - road }) : t("mw.today.roadReady")}
+              </p>
+              <div className="mt-2 flex gap-[3px]" aria-hidden="true">
+                {Array.from({ length: FINDINGS_AFTER }, (_, i) => (
+                  <span key={i} className={cn("h-3 flex-1 rounded-[3px]", i < road ? "bg-[hsl(var(--mw-brand))]" : "bg-[hsl(var(--mw-grid))]")} />
+                ))}
+              </div>
+            </div>
+          )}
+          {newPatternsAdded > 0 && (
+            <p className="text-[16px] text-muted-foreground">
+              {newPatternsAdded === 1
+                ? t("dailySession.newPatternsOne")
+                : t("dailySession.newPatternsMany", { count: newPatternsAdded })}
+            </p>
+          )}
 
-          {/* Action list — vertical, each row touchable. Primary action
-              gets a tinted background; rest are clean rows. */}
-          <div className="w-full max-w-sm space-y-2">
-            {rows.map((row) => {
-              const Icon = row.icon;
-              const primary = row.tone === "primary";
-              const buttonClasses = cn(
-                "w-full flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.99]",
-                primary
-                  ? "bg-primary/10 border border-primary/30 hover:bg-primary/15"
-                  : "bg-muted/30 border border-transparent hover:bg-muted/50",
-              );
-
-              // Special case: "past-dates" row opens a calendar
-              // popover instead of firing a static onClick — the
-              // user picks any past day, not just yesterday.
-              if (row.key === "past-dates" && onDateChange) {
-                return (
-                  <Popover key={row.key}>
-                    <PopoverTrigger asChild>
-                      <button className={buttonClasses}>
-                        <div
-                          className={cn(
-                            "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                            primary
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-background text-foreground",
-                          )}
-                        >
-                          <Icon className="h-5 w-5" strokeWidth={1.75} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn("text-base font-semibold", primary && "text-primary")}>{row.title}</p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="center">
-                      <CalendarPicker
-                        mode="single"
-                        locale={dateLocale}
-                        onSelect={(d) => {
-                          if (d) {
-                            haptics.tap();
-                            const iso = dateToIso(d);
-                            onDateChange(iso);
-                          }
-                        }}
-                        // Block today and future — this row is for
-                        // back-filling, today is what the regular
-                        // session is already for.
-                        disabled={(d) => {
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          return d >= today;
-                        }}
-                        // Visual fill status — green dot under fully
-                        // answered days, amber under partial, none for
-                        // empty days. Saves the user from tap-to-find.
-                        modifiers={{
-                          fullyFilled: (d) => fillStatusByDate.get(dateToIso(d)) === "full",
-                          partiallyFilled: (d) => fillStatusByDate.get(dateToIso(d)) === "partial",
-                        }}
-                        modifiersClassNames={{
-                          fullyFilled:
-                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-emerald-500",
-                          partiallyFilled:
-                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-amber-400",
-                        }}
-                      />
-                      {/* Tiny legend so the dots are self-explanatory. */}
-                      <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-[10px] text-muted-foreground border-t">
-                        <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          {t("dailySession.legendFilled")}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                          {t("dailySession.legendPartial")}
-                        </span>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                );
-              }
-
-              return (
-                <button
-                  key={row.key}
-                  onClick={row.onClick}
-                  className={buttonClasses}
-                >
-                  <div
-                    className={cn(
-                      "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                      primary
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" strokeWidth={1.75} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn("text-base font-semibold", primary && "text-primary")}>
-                      {row.title}
-                    </p>
-                  </div>
-                  <ChevronRight className={cn("h-4 w-4 flex-shrink-0", primary ? "text-primary" : "text-muted-foreground/40")} />
+          <div className="flex-1 min-h-2" />
+          {primaryRow && (
+            <button
+              type="button"
+              onClick={road >= FINDINGS_AFTER && onGoToPatterns && !playMode ? onGoToPatterns : primaryRow.onClick}
+              className="mw-btn w-full max-w-sm"
+            >
+              {road >= FINDINGS_AFTER && onGoToPatterns && !playMode ? t("mw.done.seeReport") : t("mw.done.goodNight")}
+            </button>
+          )}
+          <div className="flex flex-wrap justify-center gap-x-2 -mt-1">
+            {linkRows
+              .filter((row) => !(row.key === "patterns" && road >= FINDINGS_AFTER))
+              .map((row) => (
+                <button key={row.key} type="button" onClick={row.onClick} className="mw-link">
+                  {row.title}
                 </button>
-              );
-            })}
+              ))}
+            {road >= FINDINGS_AFTER && onGoToPatterns && !playMode && primaryRow && (
+              <button type="button" onClick={primaryRow.onClick} className="mw-link">
+                {t("mw.done.goodNight")}
+              </button>
+            )}
           </div>
-
-          {/* Explicit "close" at the bottom — mirrors the active-session
-              footer so the user always has a thumb-reachable way out
-              instead of the screen feeling like it floats outside the app. */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors mt-1"
-          >
-            {t("common.close")}
-          </button>
         </div>
       </BottomSheet>
     );
@@ -1110,61 +1121,52 @@ export const DailySession = ({
     return null;
   }
 
-  // Yes / No are the same calm buttons (1.8.0). Colouring them by which
-  // answer is "the problem" read as right / wrong answers (design review,
-  // Oct 27): the evening question is for honesty, not a test.
+  // Malu's world (1.9): night paper, the question taped on as a note
+  // with its topic sticker, Yes / No as two equal paper buttons (no
+  // right/wrong colours), and a row of squares at the top that fills
+  // with a sticker or a pencil curl after every answer.
+  const doorNow = getDoorState();
+  const doorOf = (id: string) =>
+    !doorNow ? undefined : doorNow.trackerId === id ? doorNow.id : doorNow.extra?.find((x) => x.trackerId === id)?.id;
+  const kindOf = (tr: Tracker) => topicKind(tr.title, doorOf(tr.id));
+  const currentKind = kindOf(currentQuestion.tracker);
   const answerButton =
-    "h-16 rounded-[20px] border-[1.5px] border-foreground/25 bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground text-[19px] font-semibold";
+    "h-16 rounded-[14px] bg-[hsl(var(--mw-paper))] text-foreground text-[20px] font-semibold flex items-center justify-center gap-2 shadow-[0_0_0_1.5px_hsl(var(--mw-grid)),0_8px_14px_-10px_rgb(0_0_0/0.6)] active:scale-[0.97] transition-transform disabled:opacity-50";
 
   return (
-    // Deck mode wrapped in BottomSheet with Apple-Music-style
-    // presentation. scaleBackground + 95vh height = "card layered on
-    // top of the app" feel, matches Apple Music / Yandex Music
-    // Now Playing. Drag-down from the header (above the card area)
-    // closes; the card area itself opts out of vaul's drag via
-    // data-vaul-no-drag below so horizontal yes/no swipes don't
-    // compete with vertical drag-to-close.
     <BottomSheet
       open
       onOpenChange={(o) => { if (!o) onClose(); }}
-      className="h-[95vh] flex flex-col p-0"
+      className="h-[95vh] flex flex-col p-0 mw-night mw-room"
       scaleBackground
+      hideClose
       ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
       <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
+      <div className="px-4 pb-2 pt-2 flex-shrink-0 space-y-2.5">
         <div className="flex items-center justify-between">
-          {/* Smart undo. Pops the answered-history stack and:
-              - if the previous action was a saved Yes/No → asks the
-                parent to remove that entry (so the day reads as
-                un-answered, e.g. notifications fire later, calendar
-                dot disappears, threshold count decrements).
-              - if it was a Skip → just navigates back, nothing to
-                clear.
-              Hidden during the post-swipe animation to avoid mid-
-              flight state mixups. */}
-          {/* Fixed h-9 so the row's height stays the same whether
-              the Undo button is rendered or not — otherwise the slot
-              collapses to 0 height when hidden, the title row jumps
-              up/down between renders, and the date strip below
-              visibly trembles every time the user starts a swipe.
-              Visibility is gated only by currentIndex; isAnimating
-              just disables interaction (don't unmount on every swipe
-              animation — that flickered the button in/out as the
-              user reported). */}
-          <div className="w-9 h-9 flex items-center justify-start">
+          {/* Undo: pops the answered-history stack, clears that answer. */}
+          <div className="w-10 h-10 flex items-center justify-start">
             {currentIndex > 0 && (
               <button
                 type="button"
                 disabled={isAnimating}
                 onClick={() => {
                   const last = answeredHistory.current.pop();
+                  if (last) {
+                    setStamps((prev) => {
+                      const next = { ...prev };
+                      delete next[last.trackerId];
+                      return next;
+                    });
+                  }
                   if (last?.saved && onClearAnswer) {
-                    // Fire-and-forget like handleAnswer — never block
-                    // the UI on a save/delete round-trip.
                     onClearAnswer(last.trackerId, selectedDate).catch((err) => {
                       console.warn("[DailySession] onClearAnswer failed", err);
                     });
+                    if (last.also) {
+                      onClearAnswer(last.also, selectedDate).catch(() => {});
+                    }
                     setAnsweredCount((c) => Math.max(0, c - 1));
                   }
                   setCurrentIndex((prev) => Math.max(0, prev - 1));
@@ -1177,33 +1179,31 @@ export const DailySession = ({
                   currentDy.current = 0;
                 }}
                 aria-label={t("dailySession.previousQuestion")}
-                className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
+                className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground active:bg-foreground/10 disabled:opacity-50"
               >
-                <Undo2 className="h-4 w-4" strokeWidth={2} />
+                <Glyph kind="back" size={22} />
               </button>
             )}
           </div>
-          <div className="text-center">
-            {/* A past day is named in the title itself ("Friday, 30 October")
-                instead of a tiny "filling in for" line under it. */}
-            <p className="text-[17px] font-bold">
-              {selectedDate === todayLocal()
-                ? t("dailySession.tonight")
-                : (() => {
-                    const s = format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale });
-                    return s.charAt(0).toUpperCase() + s.slice(1);
-                  })()}
-              <span className="font-medium text-muted-foreground">
-                {" · "}
-                {t("dailySession.countOf", { current: currentIndex + 1, total: totalQuestions })}
-              </span>
-            </p>
-          </div>
-          <div className="w-9 h-9" />
+          <p className="mw-display text-[19px] text-center">
+            {selectedDate === todayLocal()
+              ? t("dailySession.tonight")
+              : (() => {
+                  const d = format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale });
+                  return d.charAt(0).toUpperCase() + d.slice(1);
+                })()}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.close")}
+            className="h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground active:bg-foreground/10"
+          >
+            <Glyph kind="close" size={22} />
+          </button>
         </div>
 
-        {/* Date strip — last 7 days. Tap any to answer for that date.
-            Future dates are excluded — you can't pre-fill tomorrow. */}
+        {/* Date strip: last 7 days, tap one to answer for it. */}
         {onDateChange && (() => {
           const todayStr = todayLocal();
           const days = Array.from({ length: 7 }, (_, i) => {
@@ -1217,93 +1217,76 @@ export const DailySession = ({
               {days.map(({ iso, dayNum, date }) => {
                 const isSelected = iso === selectedDate;
                 const isToday = iso === todayStr;
-                const weekday = format(date, "EEEEEE", { locale: dateLocale });
                 return (
                   <button
                     key={iso}
                     onClick={() => { haptics.tap(); onDateChange(iso); }}
+                    aria-pressed={isSelected}
                     className={cn(
-                      "flex-1 flex flex-col items-center justify-center py-1 rounded-full transition-all",
-                      isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted/40"
+                      "flex-1 flex flex-col items-center justify-center py-1 rounded-[8px] transition-all",
+                      isSelected ? "bg-[hsl(var(--mw-brand))] text-[#2E2433] -rotate-2 shadow-[0_0_0_2px_#fff]" : "text-muted-foreground",
                     )}
                   >
-                    <span className="text-[11px] font-semibold uppercase tracking-wide opacity-80">{weekday}</span>
-                    <span className={cn(
-                      "text-base font-semibold tabular-nums",
-                      isToday && !isSelected && "text-foreground"
-                    )}>{dayNum}</span>
+                    <span className="text-[13px] font-semibold">{format(date, "EEEEEE", { locale: dateLocale })}</span>
+                    <span className={cn("text-[17px] font-semibold tabular-nums", isToday && !isSelected && "text-foreground")}>{dayNum}</span>
                   </button>
                 );
               })}
             </div>
           );
         })()}
+
+        {/* Tonight's page so far: one square per card. */}
+        {!playMode && (
+          <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(totalQuestions, 10)}, minmax(0, 1fr))` }} aria-hidden="true">
+            {deck.slice(0, 10).map((q, i) => {
+              const v = stamps[q.tracker.id];
+              const hit = v === undefined || v === null ? null : q.tracker.problemWhen === "yes" ? v : !v;
+              return (
+                <div
+                  key={q.tracker.id}
+                  className="mw-cell !aspect-square"
+                  data-today={i === currentIndex ? "true" : undefined}
+                >
+                  {hit === true && (
+                    <TopicIcon
+                      kind={kindOf(q.tracker)}
+                      size={30}
+                      sticker
+                      className="absolute mw-slap"
+                      style={{ ["--r" as string]: `${tilt(q.tracker.id)}deg`, transform: `rotate(${tilt(q.tracker.id)}deg)` }}
+                    />
+                  )}
+                  {hit === false && <span className="mw-slap"><PencilCurl size={18} /></span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Card area — pointer handlers attached HERE only, not on the
-          whole deck wrapper. With handlers on the wrapper, every
-          touch (header, buttons, anywhere) had to go through our
-          direction-lock first; on iOS WebView that handshake cost
-          enough latency to make vaul's drag-to-close feel sluggish
-          compared to Settings/TrackerDetails.
-
-          data-vaul-no-drag: opts this region out of vaul's
-          drag-to-close. Apple Music does the same — drag-down to
-          dismiss only fires from the top of the sheet (album art /
-          handle), not from the controls. Here, drag-down comes from
-          the header (counter + date strip + progress bar above
-          this div). The card area below is fully owned by our
-          horizontal yes/no swipe handlers, so the user's natural
-          finger-arc on a swipe-right (which inevitably has some
-          downward component) stops being interpreted by vaul as
-          "she wants to close the sheet" and our handlers see it
-          cleanly. */}
+      {/* Card area: swipe right = yes, left = no, down = skip. The
+          region opts out of vaul's drag (data-vaul-no-drag) so swipes
+          don't close the sheet. */}
       <div
         data-vaul-no-drag
-        className="flex-1 flex items-stretch justify-center p-3 overflow-hidden relative"
+        className="flex-1 flex items-stretch justify-center px-4 pt-5 pb-3 overflow-hidden relative"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
         onPointerCancel={endPointer}
       >
-        {/* First-card-ever swipe hint: faint monochrome chevrons just
-            outside the card's left/right edges. Sit on the outer
-            pointer container so they DON'T move with the card during
-            drag — they stay as fixed reference markers while the
-            card slides toward / away from them. Disappear forever
-            once the user has answered any card. */}
-        {!firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && (
+        {!firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && !currentQuestion.feelings && (
           <>
-            <ChevronLeft
-              aria-hidden="true"
-              className="ds-first-chev absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
-              strokeWidth={2}
-            />
-            <ChevronRight
-              aria-hidden="true"
-              className="ds-first-chev absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
-              strokeWidth={2}
-            />
+            <span aria-hidden="true" className="ds-first-chev absolute left-0.5 top-1/2 text-muted-foreground/60 pointer-events-none"><Glyph kind="left" size={26} /></span>
+            <span aria-hidden="true" className="ds-first-chev absolute right-0.5 top-1/2 text-muted-foreground/60 pointer-events-none"><Glyph kind="right" size={26} /></span>
           </>
         )}
         <div
           className={cn(
             "w-full max-w-lg flex",
-            // CSS transition only during the post-release phase (snap-
-            // back or fly-out). While the user is actively dragging,
-            // dragX/dragY change on every pointermove — chaining a
-            // 300 ms tween onto each step made the card visibly trail
-            // the finger and "shake" on slow, thoughtful drags.
             (isAnimating || (dragX === 0 && dragY === 0)) && "transition-transform duration-300",
-            // Gentle one-shot wiggle for the very first card the user
-            // ever sees — left tilt, right tilt, settle. The animation
-            // is on transform; once the user starts dragging the inline
-            // transform on this same element supersedes (so wiggle +
-            // drag don't fight). The class is gated on the same
-            // condition as the chevrons above.
-            !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && "ds-first-wiggle",
+            !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && !currentQuestion.feelings && "ds-first-wiggle",
             swipeDirection === "right" && "translate-x-[120%] rotate-12",
             swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
             swipeDirection === "down" && "translate-y-[120%] opacity-50",
@@ -1315,78 +1298,76 @@ export const DailySession = ({
               : undefined
           }}
         >
-          <div className="relative w-full flex">
-            <Card className="card-premium overflow-hidden shadow-2xl flex-1 flex flex-col">
-              <CardContent className="p-6 flex-1 flex flex-col">
-                {/* Only the "new question" mark of a play round; the small
-                    category chip that sat here is gone (1.8.0). */}
-                {currentQuestion.isNew && (
-                  <div className="flex-shrink-0">
-                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[13px] px-3 py-1">
-                      <Sparkles className="h-3.5 w-3.5 mr-1" />
-                      {t("dailySession.newSuggestion")}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Question — fills the card, big and plain. The tracker
-                    title used to sit above it in caps; it mostly repeated
-                    the question, so it's gone (title stays in the list). */}
-                <div className="flex-1 flex flex-col justify-center px-1">
-                  <p className="text-[30px] font-bold leading-[1.14] tracking-tight text-foreground [text-wrap:balance]">
-                    {localizeTrackerQuestion(currentQuestion.tracker.questionText, currentQuestion.tracker.title)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          <div
+            className="mw-taped relative w-full flex-1 flex flex-col px-6 pt-8 pb-6"
+            style={{ ["--tape" as string]: tapeVar(currentKind), transform: `rotate(${tilt(currentQuestion.tracker.id) / 5}deg)` }}
+          >
+            {currentQuestion.isNew && (
+              <span className="mw-hand self-start text-[17px] text-muted-foreground">{t("dailySession.newSuggestion")}</span>
+            )}
+            <TopicIcon kind={currentKind} size={64} sticker className="-ml-1" style={{ transform: "rotate(-6deg)" }} />
+            <div className="flex-1 flex flex-col justify-center">
+              <p className="mw-display text-[31px] leading-[1.16] text-foreground [text-wrap:balance]">
+                {currentQuestion.feelings
+                  ? t("doors.feel.title")
+                  : localizeTrackerQuestion(currentQuestion.tracker.questionText, currentQuestion.tracker.title)}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom buttons — slimmed so the card area gets more vertical
-          room. Skip is a tiny inline text link instead of a full-width
-          button (it's already discoverable via swipe-down + the in-card
-          hint). No/Yes get default-size pills. */}
       <div
-        className="px-4 pt-2 flex-shrink-0 bg-background border-t"
+        className="px-4 pt-2 flex-shrink-0"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <Button onClick={() => handleAnswer(false)} disabled={isAnimating} className={answerButton}>
-            {t("common.no")}
-          </Button>
-          <Button onClick={() => handleAnswer(true)} disabled={isAnimating} className={answerButton}>
-            {t("common.yes")}
-          </Button>
-        </div>
-        {/* Skip as a plain button. "Or swipe the card" is gone: the
-            first card wiggles to show the swipe instead. */}
-        <div className="mt-1.5 flex justify-center">
-          <button
-            type="button"
-            onClick={handleSkip}
-            disabled={isAnimating}
-            className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-          >
+        {currentQuestion.feelings ? (
+          <div className="grid grid-cols-2 gap-3">
+            {FEELINGS.map((f) => (
+              <button key={f} type="button" onClick={() => handleFeeling(f)} disabled={isAnimating} className={answerButton}>
+                <FeelingFace kind={f} />
+                {t(`doors.feel.${f}`)}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => handleAnswer(false)} disabled={isAnimating} className={answerButton}>
+              <PencilCurl size={22} />
+              {t("common.no")}
+            </button>
+            <button type="button" onClick={() => handleAnswer(true)} disabled={isAnimating} className={answerButton}>
+              <TopicIcon kind={currentKind} size={30} />
+              {t("common.yes")}
+            </button>
+          </div>
+        )}
+        <div className="mt-1 flex justify-center">
+          <button type="button" onClick={handleSkip} disabled={isAnimating} className="mw-link disabled:opacity-50">
             {t("common.skip")}
           </button>
-        </div>
-        {/* Progress: one short bar per question, filled as you go. */}
-        <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
-          {Array.from({ length: Math.min(totalQuestions, 12) }, (_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-1 rounded-full transition-colors",
-                totalQuestions > 8 ? "w-4" : "w-7",
-                i < Math.round((progress / 100) * Math.min(totalQuestions, 12)) ? "bg-primary" : "bg-foreground/20",
-              )}
-            />
-          ))}
         </div>
       </div>
       </div>
     </BottomSheet>
+  );
+};
+
+/** Four hand-drawn faces for the mood card. */
+const FeelingFace = ({ kind }: { kind: Feeling }) => {
+  const fill = kind === "good" ? "#CFE6C4" : kind === "okay" ? "#FFF1C4" : kind === "low" ? "#C9E8F7" : "#D9D0F7";
+  const mouth =
+    kind === "good" ? "M10.5 18.6c3 2.6 8 2.6 11 0"
+      : kind === "okay" ? "M11 19.4h10"
+      : kind === "low" ? "M10.8 21.2c3-2.8 7.4-2.8 10.4 0"
+      : "M10 19.8c1.1-1.2 2.2-1.2 3.3 0s2.2 1.2 3.3 0 2.2-1.2 3.3 0 2.2 1.2 3.3 0";
+  return (
+    <svg aria-hidden="true" width={30} height={30} viewBox="0 0 32 32" fill="none" stroke="#5A3624" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 4.6c6.4 0 11.2 4.8 11.2 11.3S22.4 27.4 16 27.4 4.8 22.4 4.8 15.9 9.6 4.6 16 4.6z" fill={fill} />
+      <circle cx="12" cy="13.4" r="1.5" fill="#5A3624" stroke="none" />
+      <circle cx="20" cy="13.4" r="1.5" fill="#5A3624" stroke="none" />
+      <path d={mouth} />
+    </svg>
   );
 };
 
@@ -1408,16 +1389,13 @@ const EchoCard = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className="w-full max-w-sm rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-[18px] py-5">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{t("doors.echo.soFar")}</p>
-      <p className="mt-2.5 text-[22px] leading-tight font-bold tracking-tight">{line}</p>
+    <div className="mw-taped w-full max-w-sm px-[18px] pt-5 pb-4" style={{ ["--tape" as string]: tapeVar(topicKind("", doorId as never)) }}>
+      <p className="mw-hand text-[17px] text-muted-foreground">{t("doors.echo.soFar")}</p>
+      <p className="mt-1 mw-display text-[22px] leading-tight">{line}</p>
       {fact && (
         <>
-          <p className="mt-2.5 text-lg leading-snug">{fact}</p>
-          <span className="mt-3.5 inline-flex items-center gap-2 h-[30px] px-3 rounded-full border border-emerging/70 text-emerging text-[13px] font-semibold">
-            <Clock className="h-3.5 w-3.5" strokeWidth={2.4} />
-            {t("doors.echo.early")}
-          </span>
+          <p className="mt-2 text-[18px] leading-snug">{fact}</p>
+          <p className="mt-2 mw-hand text-[16px] text-muted-foreground">{t("doors.echo.early")}</p>
         </>
       )}
     </div>

@@ -29,7 +29,9 @@ import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
-import { DoorHero, TrialWeek } from "./DoorHero";
+import { TodayTop } from "./mw/TodayTop";
+import { Malu } from "./mw/Malu";
+import { TopicIcon, topicKind } from "./mw/TopicIcon";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
@@ -387,6 +389,8 @@ export const TodayTab = () => {
   };
 
   const triggerConfetti = () => {
+    // Malu's world (1.9): no confetti; the stickers are the reward.
+    if (document.documentElement.dataset.theme?.startsWith("malu")) return;
     confetti({
       particleCount: 100,
       spread: 70,
@@ -856,22 +860,11 @@ export const TodayTab = () => {
   if (trackers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full px-6 text-center space-y-6 -mt-12">
-        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Play className="h-9 w-9 text-primary ml-1" strokeWidth={1.75} fill="currentColor" />
-        </div>
-        <div className="space-y-2">
-          <p className="text-2xl font-serif font-medium">{t("today.emptyTitle")}</p>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {t("today.emptyHint")}
-          </p>
-        </div>
-        <Button
-          onClick={() => setAddTrackerModalOpen(true)}
-          className="rounded-full px-6"
-        >
-          <Plus className="mr-2 h-4 w-4" />
+        <Malu pose="wave" size={150} bob />
+        <p className="mw-display text-[26px]">{t("today.emptyTitle")}</p>
+        <button type="button" onClick={() => setAddTrackerModalOpen(true)} className="mw-btn w-full max-w-xs">
           {t("today.addFirst")}
-        </Button>
+        </button>
         
         <AddTrackerModal
           open={addTrackerModalOpen}
@@ -937,86 +930,32 @@ export const TodayTab = () => {
         />
       )}
 
-      {/* Door hero (1.8.0): this week's count per door with a small "+".
-          Renders nothing for people who didn't come in through a door.
-          The streak chip and "Add question" that sat above it are gone:
-          the streak shows at the end of the evening, adding lives in
-          "My questions" below (design rule: one main button per screen). */}
-      <DoorHero trackers={trackers} entries={entries} />
-      <TrialWeek entries={entries} />
-
-      {/* Tonight (1.8.0): the ONE main action on Today. Replaced the
-          "Ideas of the day" carousel, the floating "+" and the unlabeled
-          Play in the tab bar, which competed for the same thumb (design
-          review, Oct 27). */}
-      {(() => {
-        const todayIso = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
-        const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
-        if (active.length === 0) return null;
-        const left = active.filter((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === todayIso)).length;
-        if (left === 0) {
-          return (
-            <p className="text-center text-[15px] text-muted-foreground animate-fade-in">{t("today.tonightDone")}</p>
-          );
+      {/* Malu's world (1.9): Malu's line, tonight's card, the week map
+          (tap a day to fill it) and the road to the first report. */}
+      <TodayTop
+        trackers={trackers}
+        entries={entries}
+        onOpenSession={(date) => {
+          setSelectedDate(date);
+          setDailySessionOpen(true);
+        }}
+        onOpenPatterns={() =>
+          window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))
         }
-        return (
-          <div className="animate-fade-in">
-            <Button
-              onClick={() => {
-                haptics.medium();
-                setSelectedDate(todayIso);
-                setDailySessionOpen(true);
-              }}
-              className="w-full h-[54px] rounded-full text-[17px] font-semibold"
-            >
-              {t("today.answerTonight", { count: left })}
-            </Button>
-          </div>
-        );
-      })()}
-
-      {/* Missed yesterday (1.8.0, from phone testing: "couldn't find how
-          to answer for past days"). Shown only to someone who was already
-          answering before yesterday, so a brand-new user isn't asked
-          about a day before they installed. */}
-      {(() => {
-        const yIso = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
-        const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
-        const firstDay = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
-        if (!firstDay || firstDay >= yIso) return null;
-        const missed = active.some((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === yIso));
-        if (!missed) return null;
-        return (
-          <Button
-            variant="outline"
-            onClick={() => {
-              haptics.tap();
-              setSelectedDate(yIso);
-              setDailySessionOpen(true);
-            }}
-            className="w-full h-[52px] -mt-3 rounded-full text-[16px] font-semibold bg-transparent border-foreground/20 animate-fade-in"
-          >
-            {t("today.answerYesterday")}
-          </Button>
-        );
-      })()}
+      />
 
       {/* Notif opt-in banner — shown only when reminders are off, the
           user hasn't dismissed it, and there are answers on at least two
           days (so it never stacks on top of a brand-new Today). */}
       {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && (
-        <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
-          <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
+        <div className="mw-sheet pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
+          <Bell className="h-5 w-5 flex-shrink-0" strokeWidth={2.2} />
           {/* One short line (1.8.0): the title and the sentence under it
               were two ways of saying "turn on the reminder". */}
           <p className="flex-1 min-w-0 text-base font-semibold leading-snug">{t("today.notifBannerShort")}</p>
-          <Button
-            size="sm"
-            onClick={handleEnableNotifs}
-            className="rounded-full h-9 px-4 text-[15px] font-semibold"
-          >
+          <button type="button" onClick={handleEnableNotifs} className="mw-btn mw-btn-sm !min-h-[40px]">
             {t("today.notifBannerEnable")}
-          </Button>
+          </button>
           <button
             onClick={handleDismissNotifBanner}
             aria-label={t("today.notifBannerDismiss")}
@@ -1046,6 +985,8 @@ export const TodayTab = () => {
           const doorId = doorState.trackerId === id ? doorState.id : doorState.extra?.find((x) => x.trackerId === id)?.id;
           return doorId ? t(`doors.${doorId}.name`) : null;
         };
+        const doorIdOf = (id: string) =>
+          !doorState ? undefined : doorState.trackerId === id ? doorState.id : doorState.extra?.find((x) => x.trackerId === id)?.id;
         const renderTrackerCard = (tracker: Tracker, isPlay: boolean) => {
           // Selection mode only applies to regular cards. Play cards
           // keep their own keep / delete buttons so the user can
@@ -1068,11 +1009,12 @@ export const TodayTab = () => {
                 else handleOpenTrackerDetails(tracker);
               }}
               className={cn(
-                "flex items-center gap-3 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-3 min-h-[60px] py-3 cursor-pointer active:scale-[0.99] transition-transform",
-                inSelectMode && isSelected && "border-primary bg-primary/10",
+                "flex items-center gap-3 pl-3 pr-3 min-h-[60px] py-2.5 cursor-pointer active:bg-foreground/[0.04] transition-colors",
+                inSelectMode && isSelected && "bg-[hsl(var(--mw-butter))]",
               )}
             >
-              <span className="flex-1 min-w-0 text-[17px] font-semibold leading-snug">
+              <TopicIcon kind={topicKind(tracker.title, doorIdOf(tracker.id))} size={34} />
+              <span className="flex-1 min-w-0 text-[17px] font-bold leading-snug">
                 {doorNameOf(tracker.id) ?? localizeTrackerTitle(tracker.title)}
               </span>
               {inSelectMode ? (
@@ -1115,94 +1057,53 @@ export const TodayTab = () => {
           );
         };
 
-        const listShown = listOpen || selectionMode;
+        const listShown = true;
         return (
           <>
-            {/* "My questions": the list is folded by default (1.8.0) so
-                Today is just the count and tonight's button. Opening it
-                shows the old list (drag, edit, bulk) plus Add question. */}
-            {regularTrackers.length + playTrackers.length > 0 && (
-              <div className="flex items-center gap-2 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-2 py-2">
-                <button
-                  type="button"
-                  onClick={() => setListOpen((v) => !v)}
-                  aria-expanded={listShown}
-                  className="flex-1 min-w-0 flex items-center gap-3 py-2 text-left"
-                >
-                  <span className="flex-1 text-[17px] font-semibold">{t("today.myQuestions")}</span>
-                  <span className="text-[16px] text-muted-foreground tabular-nums">{regularTrackers.length + playTrackers.length}</span>
-                  <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", listShown && "rotate-180")} />
-                </button>
-                {/* Adding stays visible without opening the list (phone
-                    testing: "couldn't see where to add a question"). */}
-                <button
-                  type="button"
-                  data-coachmark="add-button"
-                  onClick={() => {
-                    markTrackerAdded();
-                    setAddTrackerModalOpen(true);
-                  }}
-                  aria-label={t("today.addNew")}
-                  className="h-11 w-11 shrink-0 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
-                >
-                  <Plus className="h-5 w-5" strokeWidth={2.6} />
-                </button>
-              </div>
-            )}
-            {listShown && regularTrackers.length > 0 && (
-              <div data-coachmark="cards-list" className="space-y-3 animate-fade-in">
-                {/* Selection-mode header. When OFF, show a small "Изменить"
-                    action so the user can enter bulk-edit mode. When ON,
-                    show selected count + Cancel + Delete (N).
-                    Hidden when there's only 1 regular tracker — bulk
-                    select is overkill for a single item. */}
-                {regularTrackers.length > 1 && (
-                  <div className="flex items-center justify-between -mb-1">
-                    {selectionMode ? (
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedTrackerIds.size === 0
-                            ? t("today.selectionModeHint")
-                            : t("today.selectionCount", { count: selectedTrackerIds.size })}
-                        </p>
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={exitSelectionMode}
-                            className="text-xs rounded-full h-7 px-3"
-                          >
-                            {t("common.cancel")}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleBulkDelete}
-                            disabled={selectedTrackerIds.size === 0}
-                            className="text-xs rounded-full h-7 px-3 text-destructive hover:bg-destructive/10 disabled:text-muted-foreground"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            {selectedTrackerIds.size > 0
-                              ? t("today.bulkDeleteAction", { count: selectedTrackerIds.size })
-                              : t("today.bulkDeleteEmpty")}
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <span />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectionMode(true)}
-                          className="text-[15px] rounded-full h-9 px-3 text-muted-foreground hover:text-foreground"
+            {/* "My questions" (1.9): always open again, so Today is never
+                an empty screen (phone testing), adding is the last row. */}
+            {regularTrackers.length > 0 && (
+              <div data-coachmark="cards-list" className="animate-fade-in">
+                <div className="flex items-center justify-between px-1 mb-2">
+                  {selectionMode ? (
+                    <>
+                      <p className="text-[15px] font-bold text-muted-foreground">
+                        {selectedTrackerIds.size === 0
+                          ? t("today.selectionModeHint")
+                          : t("today.selectionCount", { count: selectedTrackerIds.size })}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <button type="button" onClick={exitSelectionMode} className="h-10 px-3 rounded-full text-[15px] font-bold">
+                          {t("common.cancel")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkDelete}
+                          disabled={selectedTrackerIds.size === 0}
+                          className="h-10 px-3 rounded-full text-[15px] font-bold text-destructive disabled:text-muted-foreground"
                         >
-                          {t("today.editCards")}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                )}
+                          {selectedTrackerIds.size > 0
+                            ? t("today.bulkDeleteAction", { count: selectedTrackerIds.size })
+                            : t("today.bulkDeleteEmpty")}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="mw-display text-[20px]">{t("mw.today.myQuestions")}</h2>
+                      {regularTrackers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectionMode(true)}
+                          className="h-10 px-3 rounded-full text-[15px] font-bold text-muted-foreground"
+                        >
+                          {t("mw.today.edit")}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="mw-sheet overflow-hidden divide-y divide-[hsl(var(--mw-line)/0.1)]">
                 {/* Plain list — swipe-reveal removed. Per-card
                     Archive / Delete actions now live inside
                     TrackerDetails (opens on card tap). Bulk
@@ -1219,7 +1120,7 @@ export const TodayTab = () => {
                     items={regularTrackers.map((t) => t.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-2">
+                    <div className="divide-y divide-[hsl(var(--mw-line)/0.1)]">
                       {regularTrackers.map((tracker) => (
                         <SortableTrackerRow key={tracker.id} tracker={tracker} showHandle={selectionMode}>
                           {renderTrackerCard(tracker, false)}
@@ -1228,6 +1129,21 @@ export const TodayTab = () => {
                     </div>
                   </SortableContext>
                 </DndContext>
+                <button
+                  type="button"
+                  data-coachmark="add-button"
+                  onClick={() => {
+                    markTrackerAdded();
+                    setAddTrackerModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 pl-3 pr-3 min-h-[60px] py-2.5 text-left active:bg-foreground/[0.04]"
+                >
+                  <span className="mw-round !h-[34px] !w-[34px] !shadow-none" aria-hidden="true">
+                    <Plus className="h-[18px] w-[18px]" strokeWidth={3} />
+                  </span>
+                  <span className="flex-1 text-[17px] font-bold">{t("mw.today.addQuestion")}</span>
+                </button>
+                </div>
               </div>
             )}
 

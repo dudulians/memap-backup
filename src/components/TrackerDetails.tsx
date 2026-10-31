@@ -3,6 +3,9 @@
 // Answering moved out: tonight's card answers today, Patterns → Calendar
 // fixes past days. Canvas "MeMap: новая версия", page 12, RestQuestion.
 import { useState, useEffect } from "react";
+import { Glyph } from "./mw/Glyph";
+import { PencilCurl, TopicIcon, topicKind } from "./mw/TopicIcon";
+import { tilt } from "./mw/WeekMap";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getEntries } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
@@ -105,62 +108,62 @@ export const TrackerDetails = ({
       ? t("overview.daysYes", { count: monthCount })
       : t("overview.daysNo", { count: monthCount });
 
+  const kind = topicKind(tracker.title, doorId);
   return (
-    // Side padding keeps card borders off the BottomSheet's clipped edges.
+    // Sticker Diary (1.9): the name on its tape, this month as a page of
+    // stickers, the limit as squares, one sentence each.
     <div className="px-5 pb-20 animate-fade-in">
-      <h2 className="text-[26px] font-bold tracking-tight leading-tight pr-10">{name}</h2>
+      <div className="flex items-center gap-3 pr-10">
+        <TopicIcon kind={kind} size={46} sticker style={{ transform: "rotate(-5deg)" }} />
+        <h2 className="mw-display text-[26px] leading-tight">{name}</h2>
+      </div>
 
-      <p className="mt-3 flex items-baseline gap-2.5">
-        <span className="text-[52px] leading-none font-bold tracking-tight tabular-nums">{monthCount}</span>
-        <span className="text-xl font-semibold">{countLabel}</span>
-      </p>
-      <p className="mt-1 text-[15px] text-muted-foreground">{monthName}</p>
-
-      <div className="mt-3 grid grid-cols-[repeat(16,minmax(0,1fr))] gap-[5px]" aria-hidden="true">
+      <div className="mt-5 flex items-baseline justify-between">
+        <p className="mw-display text-[20px]">{monthName}</p>
+        <p className="mw-hand text-[19px]">{monthCount} {countLabel}</p>
+      </div>
+      <div className="mt-2 grid grid-cols-7 gap-1" aria-hidden="true">
         {month.map((d) => (
-          <span
-            key={d.date}
-            className={cn(
-              "aspect-square rounded-full box-border",
-              d.status === "bad" && "bg-strong",
-              d.status === "ok" && "bg-balanced/40",
-              d.status === "none" && !d.future && !d.isToday && "bg-foreground/[0.1]",
-              d.status === "none" && d.isToday && "border-2 border-dashed border-primary/70",
-              d.future && "border border-foreground/[0.12]",
+          <span key={d.date} className="mw-cell" data-today={d.isToday} data-future={d.future}>
+            {d.status === "bad" && (
+              <TopicIcon kind={kind} size={30} sticker className="absolute" style={{ transform: `rotate(${tilt(d.date + tracker.id)}deg)` }} />
             )}
-          />
+            {d.status === "ok" && <PencilCurl size={16} />}
+          </span>
         ))}
       </div>
 
-      <div className={cn(
-        "mt-6 rounded-[22px] border px-[18px] py-4",
-        crossed ? "border-strong/30 bg-strong/[0.1]" : "border-foreground/[0.12] bg-foreground/[0.07]",
-      )}>
+      <div className="mw-sheet mt-6 px-4 py-4" style={crossed ? { boxShadow: "0 0 0 2px hsl(var(--tape-fights))" } : undefined}>
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-lg font-semibold">{t("addTracker.limit")}</span>
-          <span className="tabular-nums">
-            <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{limitCount}</span>
-            <span className="text-[17px] text-muted-foreground"> / {tracker.threshold}</span>
-          </span>
+          <span className="mw-display text-[19px]">{t("addTracker.limit")}</span>
+          <span className="mw-hand text-[19px] tabular-nums">{t("mw.limits.of", { n: limitCount, max: tracker.threshold })}</span>
         </div>
-        <div className="mt-3 h-2 rounded-full bg-foreground/10 overflow-hidden">
-          <div className={cn("h-full rounded-full", crossed ? "bg-strong" : "bg-primary")} style={{ width: `${pct}%` }} />
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">{t("patterns.limitsWindow", { count: tracker.periodDays })}</p>
+        {tracker.threshold <= 14 ? (
+          <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(tracker.threshold, 7)}, minmax(0, 1fr))` }} aria-hidden="true">
+            {Array.from({ length: Math.max(tracker.threshold, 7) }, (_, i) => (
+              <span key={i} className={cn("mw-cell !rounded-[4px]", i >= tracker.threshold && "opacity-0")}>
+                {i < Math.min(limitCount, tracker.threshold) && (
+                  <TopicIcon kind={kind} size={24} sticker className="absolute" style={{ transform: `rotate(${tilt(tracker.id + i)}deg)` }} />
+                )}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 h-3 rounded-[3px] bg-[hsl(var(--mw-grid))] overflow-hidden">
+            <div className="h-full bg-[hsl(var(--mw-brand))]" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+        <p className="mt-2 text-[16px] text-muted-foreground">{t("patterns.limitsWindow", { count: tracker.periodDays })}</p>
         {crossed && tracker.adviceAboveThreshold?.trim() && (
-          <p className="mt-3 text-[17px] leading-snug">{localizeTrackerAdvice(tracker.adviceAboveThreshold)}</p>
+          <p className="mt-3 mw-hand text-[19px] leading-snug">{localizeTrackerAdvice(tracker.adviceAboveThreshold)}</p>
         )}
       </div>
 
       {onEdit && (
-        <Button
-          variant="outline"
-          onClick={onEdit}
-          className="mt-6 w-full h-12 rounded-full gap-2 text-base bg-transparent border-foreground/20"
-        >
-          <Pencil className="h-4 w-4" />
+        <button type="button" onClick={onEdit} className="mw-btn mt-7 w-full">
+          <Glyph kind="pencil" size={20} />
           {t("trackerDetails.actionEdit")}
-        </Button>
+        </button>
       )}
       {(onArchive || onDelete) && (
         <div className="mt-2 flex justify-center gap-2">

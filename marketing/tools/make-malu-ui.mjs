@@ -13,7 +13,9 @@ import { openPage, INSTAGRAM } from "./lib/render.mjs";
 import { fontFace } from "./lib/ui.mjs";
 
 const MASCOT = path.join(path.dirname(INSTAGRAM), "mascot");
-const OUT = path.join(MASCOT, "ui");
+// STICKER=1: no floor shadow, into ui-sticker/ (the app bakes a white edge around these)
+const STICKER = !!process.env.STICKER;
+const OUT = path.join(MASCOT, STICKER ? "ui-sticker" : "ui");
 fs.mkdirSync(OUT, { recursive: true });
 const S = 640, K = 2.55, GROUND = 590;
 
@@ -33,13 +35,14 @@ const POSES = {
 
 const read = (f) => fs.readFileSync(path.join(MASCOT, f), "utf8");
 const script = `
+const STICKER = ${STICKER};
 const POSES = ${JSON.stringify(POSES)}, S = ${S}, K = ${K}, GROUND = ${GROUND};
 const LINE = CHIBI.LINE;
 const heart = (x, y, sc) => '<g transform="translate(' + x + ' ' + y + ') scale(' + sc + ')"><path d="M0 9 C-17 -3 -11 -21 0 -11 C11 -21 17 -3 0 9Z" fill="#f2847c" stroke="' + LINE + '" stroke-width="2.6" stroke-linejoin="round"/><ellipse cx="-5.5" cy="-7" rx="3" ry="2" fill="#fff" opacity=".85" transform="rotate(-30 -5.5 -7)"/></g>';
 window.pose = (key) => {
   // the heart pose sits a little lower to leave room for the hearts above
   const l = { who: "mallow", x: S / 2, y: GROUND + (key === "heart" ? 20 : 0), k: K, pose: POSES[key] };
-  let cast = lambShadow(l) + lamb(l);
+  let cast = (STICKER ? "" : lambShadow(l)) + lamb(l);
   if (key === "heart") {
     const a = lambAt(l, 70, -196), b = lambAt(l, -74, -180);
     cast += heart(a[0], a[1], K * 1.6) + heart(b[0], b[1], K * 1.05);

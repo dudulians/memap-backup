@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Glyph } from "./mw/Glyph";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
@@ -726,14 +727,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             <button
               type="button"
               onClick={() => setScreen(screen === "soundHaptics" || screen === "help" || screen === "data" ? "more" : "main")}
-              className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 -ml-1 px-2 py-1 -my-1 rounded-md min-h-[40px] active:bg-primary/10 transition-colors"
+              className="flex items-center gap-1 text-[16px] font-semibold text-foreground -ml-1 px-2 py-1 -my-1 rounded-md min-h-[44px] active:bg-foreground/5 transition-colors"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <Glyph kind="back" size={22} />
               <span>{t("common.back")}</span>
             </button>
           )}
           <h2 className={cn(
-            "text-lg font-semibold",
+            "mw-display text-[23px]",
             screen !== "main" ? "absolute left-1/2 -translate-x-1/2" : ""
           )}>
             {screen === "main" && t("settings.title")}
@@ -796,7 +797,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         </div>
                         <div className={row}>
                           <span className="flex-1 text-[17px] font-medium">{t("settings.theme")}</span>
-                          <div className="flex rounded-full bg-foreground/[0.08] p-1">
+                          <div className="flex rounded-[12px] bg-[hsl(var(--mw-page))] p-1">
                             {(() => {
                               // An older theme someone already uses stays as a third option.
                               const legacy = getLegacyTheme();
@@ -808,8 +809,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                                 hush: t("settings.themeHush"),
                               };
                               const options: [AppTheme, string][] = [
-                                ["aurora", t("settings.themeDark")],
-                                ["aurora-light", t("settings.themeLight")],
+                                ["malu", t("settings.themeLight")],
+                                ["malu-night", t("settings.themeDark")],
                               ];
                               if (legacy && legacyLabel[legacy]) options.push([legacy, legacyLabel[legacy]!]);
                               return options;
@@ -821,7 +822,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                                 aria-pressed={theme === id}
                                 className={cn(
                                   "h-9 px-3.5 rounded-full text-[15px] font-semibold transition-colors whitespace-nowrap",
-                                  theme === id ? "bg-foreground text-background" : "text-muted-foreground",
+                                  theme === id ? "bg-[hsl(var(--mw-brand))] text-[#2E2433] shadow-[0_0_0_2px_#fff] -rotate-1" : "text-muted-foreground",
                                 )}
                               >
                                 {label}

@@ -4,6 +4,10 @@
 // Multi bulk-select and the colour legend are gone (design rule: people
 // who hate reading). Canvas "MeMap: новая версия", page 12, RestCalendar.
 import { useState, useRef, useMemo, useEffect } from "react";
+import { Glyph } from "./mw/Glyph";
+import { PencilCurl, TopicIcon, topicKind } from "./mw/TopicIcon";
+import { tilt } from "./mw/WeekMap";
+import type { DoorId } from "@/lib/doors";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes } from "@/lib/notes";
 import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
@@ -238,6 +242,7 @@ export const OverviewCard = ({
   if (!activeTracker) return null;
 
   const doorId = doorOf.get(activeTracker.id);
+  const activeKind = topicKind(activeTracker.title, doorId as DoorId | undefined);
   const countLabel = doorId
     ? t(`doors.${doorId}.noun`, { count: monthCount })
     : activeTracker.problemWhen === "yes"
@@ -264,10 +269,7 @@ export const OverviewCard = ({
               type="button"
               onClick={() => { haptics.tap(); setActiveTrackerIndex(i); }}
               aria-pressed={on}
-              className={cn(
-                "shrink-0 max-w-[230px] truncate h-[42px] px-[18px] rounded-full border text-base transition-colors",
-                on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-              )}
+              className="mw-chip shrink-0 max-w-[230px] truncate"
             >
               {doorOf.has(tr.id) ? t(`doors.${doorOf.get(tr.id)}.name`) : localizeTrackerTitle(tr.title)}
             </button>
@@ -284,9 +286,9 @@ export const OverviewCard = ({
             aria-label={t("overview.prevMonth")}
             className="h-9 w-9 -ml-2 rounded-full flex items-center justify-center text-muted-foreground"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <Glyph kind="left" size={22} />
           </button>
-          <p className="flex-1 text-center text-[15px] font-semibold text-muted-foreground">{monthTitle}</p>
+          <p className="flex-1 text-center mw-display text-[21px]">{monthTitle}</p>
           <button
             type="button"
             onClick={() => { if (canGoNextMonth) { haptics.tap(); setDisplayMonth((prev) => addMonths(prev, 1)); } }}
@@ -294,46 +296,55 @@ export const OverviewCard = ({
             aria-label={t("overview.nextMonth")}
             className="h-9 w-9 -mr-2 rounded-full flex items-center justify-center text-muted-foreground disabled:opacity-30"
           >
-            <ChevronRight className="h-5 w-5" />
+            <Glyph kind="right" size={22} />
           </button>
         </div>
-        <p className="mt-2 flex items-baseline gap-2.5">
-          <span className="text-[56px] leading-none font-bold tracking-tight tabular-nums">{monthCount}</span>
-          <span className="text-xl font-semibold">{countLabel}</span>
+        {/* One short sentence, not a big number over a label. */}
+        <p className="mt-1 text-center mw-hand text-[20px]">
+          {monthCount} {countLabel}
         </p>
 
         <div className="mt-5 grid grid-cols-7">
           {Array.from({ length: 7 }, (_, i) => (
-            <span key={i} className="text-center text-[13px] font-semibold uppercase text-muted-foreground">
-              {format(addDays(MONDAY, i), "EEEEE", { locale: dateLocale })}
+            <span key={i} className="text-center text-[14px] font-semibold text-muted-foreground">
+              {format(addDays(MONDAY, i), "EEEEEE", { locale: dateLocale })}
             </span>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-7 gap-y-2">
+        <div className="mt-2 grid grid-cols-7 gap-1">
           {calendarDays.map((day) => (
-            <div key={day.dateStr} className="flex items-center justify-center">
+            <div key={day.dateStr}>
               {day.isCurrentMonth ? (
                 <button
                   type="button"
                   onClick={() => handleDayClick(day)}
                   disabled={day.isFutureDate}
+                  data-today={day.isToday}
+                  data-future={day.isFutureDate}
                   className={cn(
-                    "relative h-[38px] w-[38px] rounded-full flex items-center justify-center text-sm font-semibold tabular-nums box-border transition-colors",
-                    day.isFutureDate && "text-muted-foreground/40",
-                    !day.isFutureDate && day.status === "significant" && "bg-strong text-strong-foreground",
-                    !day.isFutureDate && day.status === "balanced" && "bg-balanced/35",
-                    !day.isFutureDate && day.status === "untracked" && !day.isToday && "text-muted-foreground",
-                    day.isToday && day.status === "untracked" && "border-2 border-dashed border-primary/70",
-                    day.isSelected && !day.isToday && "ring-2 ring-foreground/70",
+                    "mw-cell !items-start !justify-start p-1 tabular-nums",
+                    day.isSelected && !day.isToday && "!shadow-[inset_0_0_0_2px_hsl(var(--foreground)/0.6)]",
                   )}
                 >
-                  {format(day.date, "d")}
+                  <span className="relative z-[1] text-[13px] leading-none">{format(day.date, "d")}</span>
+                  {!day.isFutureDate && day.status === "significant" && (
+                    <TopicIcon
+                      kind={activeKind}
+                      size={34}
+                      sticker
+                      className="absolute right-0 bottom-0"
+                      style={{ transform: `rotate(${tilt(day.dateStr + activeTracker.id)}deg)` }}
+                    />
+                  )}
+                  {!day.isFutureDate && day.status === "balanced" && (
+                    <span className="absolute right-1.5 bottom-1.5"><PencilCurl size={18} /></span>
+                  )}
                   {noteDatesSet.has(day.dateStr) && (
-                    <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-[1.5px] bg-foreground/60 rounded-full" />
+                    <span className="absolute left-1 bottom-1"><Glyph kind="pencil" size={13} strokeWidth={2.4} /></span>
                   )}
                 </button>
               ) : (
-                <span className="h-[38px] w-[38px]" />
+                <span className="block aspect-square" />
               )}
             </div>
           ))}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { Check, ArrowRight, Languages } from "lucide-react";
+import { Check } from "lucide-react";
+import { Malu } from "./mw/Malu";
 import { cn } from "@/lib/utils";
 import {
   hasExplicitLanguage,
@@ -93,7 +93,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden bg-background">
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-background mw-room">
       <div className="relative z-10 h-full w-full overflow-y-auto">
         {step === "language" && (
           <div className="min-h-full flex items-center justify-center px-5 py-8">
@@ -125,11 +125,9 @@ const LanguagePickerScreen = ({ onNext }: { onNext: () => void }) => {
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center animate-fade-in">
-      <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
-        <Languages className="h-6 w-6" strokeWidth={1.75} />
-      </div>
-      <h1 className="text-2xl font-bold text-center mb-5">{t("language.title")}</h1>
-      <div className="w-full max-w-[320px] space-y-2.5 mb-6">
+      <Malu pose="wave" size={150} bob className="-mb-3" />
+      <h1 className="mw-display text-[30px] text-center mb-6">{t("language.title")}</h1>
+      <div className="w-full max-w-[320px] space-y-3 mb-8">
         {SUPPORTED_LANGUAGES.map((lng) => {
           const isSelected = picked === lng.code;
           return (
@@ -138,33 +136,26 @@ const LanguagePickerScreen = ({ onNext }: { onNext: () => void }) => {
               onClick={() => handlePick(lng.code)}
               data-onb-interactive
               style={{ touchAction: "manipulation" }}
-              className={cn(
-                "w-full text-left rounded-2xl px-4 py-4 flex items-center gap-3 transition-all border",
-                isSelected ? "bg-primary/10 border-primary/40 shadow-sm" : "bg-card border-border/50 hover:border-border",
-              )}
+              aria-pressed={isSelected}
+              className="mw-choice min-h-[64px]"
             >
-              <div className="flex-1 min-w-0 text-lg font-medium">{lng.native}</div>
-              {isSelected && (
-                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
-                  <Check className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />
-                </div>
-              )}
+              <div className="flex-1 min-w-0">{lng.native}</div>
+              {isSelected && <Check className="h-6 w-6 shrink-0" strokeWidth={3} />}
             </button>
           );
         })}
       </div>
-      <Button
-        size="lg"
+      <button
+        type="button"
         onClick={() => {
           setLanguage(picked);
           onNext();
         }}
         data-onb-interactive
-        className="rounded-full px-8 h-[52px] text-[17px] shadow-lg shadow-primary/20"
+        className="mw-btn w-full max-w-[320px]"
       >
         {t("common.next")}
-        <ArrowRight className="h-4 w-4 ml-1.5" />
-      </Button>
+      </button>
     </div>
   );
 };

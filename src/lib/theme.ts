@@ -1,9 +1,23 @@
-export type AppTheme = "classic" | "aurora" | "aurora-light" | "liquid" | "terra" | "pop" | "hush";
+import { getUiMode } from "./uiMode";
+
+export type AppTheme =
+  | "classic" | "aurora" | "aurora-light" | "liquid" | "terra" | "pop" | "hush"
+  | "malu" | "malu-night";
 
 const THEME_KEY = "memap_theme";
+const LEGACY_THEMES: AppTheme[] = ["classic", "liquid", "terra", "pop", "hush"];
 
 export const getTheme = (): AppTheme => {
   const stored = localStorage.getItem(THEME_KEY);
+  // Malu's world (1.9): the new screens have their own day and night.
+  // The 1.8.0 dark/light picks map onto them; the five older themes
+  // stay as they are (Settings offers them as a third option).
+  if (getUiMode() === "new") {
+    if (stored === "malu" || stored === "aurora-light") return "malu";
+    if (stored === "malu-night" || stored === "aurora") return "malu-night";
+    if (stored && (LEGACY_THEMES as string[]).includes(stored)) return stored as AppTheme;
+    return "malu";
+  }
   if (stored === "classic") return "classic";
   if (stored === "aurora") return "aurora";
   if (stored === "liquid") return "liquid";
@@ -24,7 +38,6 @@ export const getTheme = (): AppTheme => {
 // trying dark or light isn't a one-way door. Remembered the first time
 // it's read while still active.
 const LEGACY_THEME_KEY = "memap_legacy_theme";
-const LEGACY_THEMES: AppTheme[] = ["classic", "liquid", "terra", "pop", "hush"];
 
 export const getLegacyTheme = (): AppTheme | null => {
   try {

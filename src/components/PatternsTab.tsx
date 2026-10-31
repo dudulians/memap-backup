@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { TopicIcon, topicKind } from "./mw/TopicIcon";
+import { tilt } from "./mw/WeekMap";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -270,7 +272,7 @@ export const PatternsTab = () => {
           each one screen-sized. The tab list stays sticky under the app
           header so long tracker lists don't hide the nav. */}
       <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
-        <div className="sticky top-0 z-30 -mx-4 px-4 py-1.5 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
+        <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-background">
           {/* Underline-style tabs — no outer container pill, no inner
               pill. Active state is just bolder text + a thin
               underline. Eliminates the "pill in pill" geometry problem
@@ -280,22 +282,22 @@ export const PatternsTab = () => {
               Trends moved up to 2nd position per user request — for
               her, the day-by-day visual story is more frequently
               checked than the at-a-time signals snapshot. */}
-          <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-0">
+          <TabsList className="w-full grid grid-cols-3 h-auto p-0 bg-transparent rounded-none gap-2">
             <TabsTrigger
               value="findings"
-              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+              className="relative rounded-[12px] h-11 text-[17px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1"
             >
               {t("patterns.tabFindings")}
             </TabsTrigger>
             <TabsTrigger
               value="overview"
-              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+              className="relative rounded-[12px] h-11 text-[17px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1"
             >
               {t("patterns.tabCalendar")}
             </TabsTrigger>
             <TabsTrigger
               value="signals"
-              className="relative rounded-none border-b-2 border-transparent h-[46px] text-base font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
+              className="relative rounded-[12px] h-11 text-[17px] font-semibold text-muted-foreground transition-transform data-[state=active]:bg-[hsl(var(--mw-brand))] data-[state=active]:text-[#2E2433] data-[state=active]:shadow-[0_0_0_2.5px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] data-[state=active]:-rotate-1"
             >
               {t("patterns.tabLimits")}
               {strongCount > 0 && (
@@ -342,11 +344,13 @@ export const PatternsTab = () => {
             doorName.set(door.trackerId, t(`doors.${door.id}.name`));
             for (const x of door.extra ?? []) doorName.set(x.trackerId, t(`doors.${x.id}.name`));
           }
+          const kindOf = (tr: Tracker) =>
+            topicKind(tr.title, !door ? undefined : door.trackerId === tr.id ? door.id : door.extra?.find((x) => x.trackerId === tr.id)?.id);
           const periods = live.map((tr) => tr.periodDays);
           const common = periods.sort((a, b) => periods.filter((p) => p === b).length - periods.filter((p) => p === a).length)[0];
           return (
             <div className="animate-fade-in">
-              {common && <p className="mx-1 mb-3 text-[17px] text-muted-foreground">{t("patterns.limitsWindow", { count: common })}</p>}
+              {common && <h2 className="mx-1 mb-3 mw-display text-[20px]">{t("patterns.limitsWindow", { count: common })}</h2>}
               <div className="space-y-2.5">
                 {live.map((tracker) => {
                   const stats = getTrackerStats(tracker);
@@ -361,31 +365,32 @@ export const PatternsTab = () => {
                       key={tracker.id}
                       type="button"
                       onClick={() => setReflectionSheetTracker(tracker)}
-                      className={cn(
-                        "block w-full text-left rounded-[22px] border px-[18px] py-4 active:scale-[0.99] transition-transform",
-                        crossed ? "border-strong/30 bg-strong/[0.12]" : "border-foreground/[0.12] bg-foreground/[0.07]",
-                      )}
+                      className={cn("mw-sheet block w-full text-left px-4 py-3.5 active:scale-[0.99] transition-transform", crossed && "!shadow-[0_0_0_2px_hsl(var(--tape-fights))]")}
                     >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="min-w-0 text-lg font-semibold leading-snug">{doorName.get(tracker.id) ?? localizeTrackerTitle(tracker.title)}</span>
-                        <span className="shrink-0 tabular-nums">
-                          <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{stats.significantDays}</span>
-                          <span className="text-[17px] text-muted-foreground"> / {tracker.threshold}</span>
-                          <ChevronRight className="inline-block h-5 w-5 ml-1.5 -mt-1 text-muted-foreground/60" />
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <TopicIcon kind={kindOf(tracker)} size={32} />
+                        <span className="flex-1 min-w-0 text-[18px] font-semibold leading-snug">{doorName.get(tracker.id) ?? localizeTrackerTitle(tracker.title)}</span>
+                        <span className="shrink-0 mw-hand text-[19px] tabular-nums">{t("mw.limits.of", { n: stats.significantDays, max: tracker.threshold })}</span>
                       </div>
-                      {sub && <p className="mt-0.5 text-sm text-muted-foreground">{sub}</p>}
-                      <div className="mt-3 h-2 rounded-full bg-foreground/10 overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full transition-all duration-700 ease-out", crossed ? "bg-strong" : "bg-primary")}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
+                      {sub && <p className="mt-1 text-[16px] text-muted-foreground">{sub}</p>}
+                      {/* The limit as squares: each counted day is a sticker. */}
+                      {tracker.threshold <= 14 ? (
+                        <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(tracker.threshold, 7)}, minmax(0, 1fr))` }} aria-hidden="true">
+                          {Array.from({ length: Math.max(tracker.threshold, 7) }, (_, i) => (
+                            <span key={i} className={cn("mw-cell !rounded-[4px]", i >= tracker.threshold && "opacity-0")}>
+                              {i < Math.min(stats.significantDays, tracker.threshold) && (
+                                <TopicIcon kind={kindOf(tracker)} size={24} sticker className="absolute" style={{ transform: `rotate(${tilt(tracker.id + i)}deg)` }} />
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-3 h-3 rounded-[3px] bg-[hsl(var(--mw-grid))] overflow-hidden">
+                          <div className="h-full bg-[hsl(var(--mw-brand))] transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
                       {crossed && (
-                        <span className="mt-3 inline-flex items-center gap-1 text-base font-semibold text-strong">
-                          {t("patterns.whatNow")}
-                          <ChevronRight className="h-4 w-4" />
-                        </span>
+                        <span className="mt-3 mw-btn mw-btn-sm pointer-events-none">{t("patterns.whatNow")}</span>
                       )}
                     </button>
                   );

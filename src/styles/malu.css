@@ -1,0 +1,514 @@
+/* Malu's world, "Sticker Diary" (1.9). The app is a notebook you
+   decorate at night: grid paper, washi tape, and every answer is a
+   sticker drawn in the lambs' brown line. Research behind it:
+   marketing/research_notes/Продукт и дизайн/visual_identity.md.
+
+   Rules (so it doesn't drift back to the generic AI look):
+   - paper is flat; only stickers and the one main button get the
+     die-cut white edge and a shadow
+   - one owned colour, strawberry milk #FF9AAE; topic colours only on
+     tape and stickers
+   - no small tracked capitals, no glass, no neon on dark
+   - radii by role: tape 4, cell 6, label 14, stickers are shapes
+
+   Themes: "malu" (grid paper, default for new installs) and
+   "malu-night" (navy paper, the reels' 2am kitchen). The evening
+   questions always use night paper (.mw-night). */
+
+html[data-theme="malu"] {
+  --background: 230 33% 97%;       /* #F5F6FA notebook paper */
+  --foreground: 285 17% 17%;       /* #2E2433 aubergine ink */
+  --card: 0 0% 100%;
+  --card-foreground: 285 17% 17%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 285 17% 17%;
+  --primary: 348 100% 80%;         /* #FF9AAE strawberry milk, ink text on it */
+  --primary-foreground: 285 17% 17%;
+  --secondary: 228 33% 94%;
+  --secondary-foreground: 285 17% 17%;
+  --muted: 228 30% 93%;
+  --muted-foreground: 264 6% 44%;  /* #6E6878 pencil, 5:1 */
+  --accent: 345 100% 94%;          /* #FFE1E8 */
+  --accent-foreground: 285 17% 17%;
+  --destructive: 352 62% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 221 50% 91%;           /* #DCE3F2 grid line */
+  --input: 221 40% 86%;
+  --ring: 348 100% 80%;
+  --balanced: 225 30% 75%;         /* calm: pencil periwinkle */
+  --balanced-foreground: 285 17% 17%;
+  --emerging: 46 100% 77%;         /* #FFE08A */
+  --emerging-foreground: 285 17% 17%;
+  --strong: 348 100% 78%;          /* it happened: strawberry */
+  --strong-foreground: 285 17% 17%;
+  --untracked: 228 30% 93%;
+  --untracked-foreground: 264 6% 44%;
+  --note: 230 35% 40%;
+
+  --mw-ink: 285 17% 17%;
+  --mw-pencil: 264 6% 44%;
+  --mw-curl: 225 30% 69%;          /* #9AA7C7 "no" pencil curl */
+  --mw-line: 21 43% 25%;           /* #5A3624 the lambs' line, art only */
+  --mw-paper: 0 0% 100%;
+  --mw-grid: 221 50% 91%;
+  --mw-brand: 348 100% 80%;
+  --mw-page: 230 33% 97%;
+  --tape-fights: 348 100% 80%;     /* #FF9AAE */
+  --tape-migraine: 255 70% 86%;    /* #CFC3F5 */
+  --tape-drinking: 46 100% 77%;    /* #FFE08A */
+  --tape-kid: 22 100% 83%;         /* #FFC7A6 */
+  --tape-mood: 196 66% 80%;        /* #A9DCF0 */
+  --tape-other: 100 38% 82%;       /* #CFE6C4 */
+}
+
+html[data-theme="malu-night"],
+.mw-night {
+  --background: 235 35% 23%;       /* #262A4F navy paper */
+  --foreground: 36 100% 96%;       /* #FFF6EA */
+  --card: 235 33% 28%;             /* #2F3460 */
+  --card-foreground: 36 100% 96%;
+  --popover: 235 33% 28%;
+  --popover-foreground: 36 100% 96%;
+  --primary: 348 100% 80%;
+  --primary-foreground: 285 17% 17%;
+  --secondary: 235 30% 32%;
+  --secondary-foreground: 36 100% 96%;
+  --muted: 235 30% 31%;
+  --muted-foreground: 236 40% 84%; /* #C8CAEB */
+  --accent: 235 30% 36%;
+  --accent-foreground: 36 100% 96%;
+  --destructive: 352 90% 72%;
+  --destructive-foreground: 285 17% 17%;
+  --border: 235 33% 31%;           /* #33386A grid */
+  --input: 235 30% 40%;
+  --ring: 348 100% 80%;
+  --balanced: 225 30% 69%;
+  --balanced-foreground: 285 17% 17%;
+  --emerging: 46 100% 77%;
+  --emerging-foreground: 285 17% 17%;
+  --strong: 348 100% 78%;
+  --strong-foreground: 285 17% 17%;
+  --untracked: 235 30% 31%;
+  --untracked-foreground: 236 40% 84%;
+  --note: 196 66% 80%;
+
+  --mw-ink: 36 100% 96%;
+  --mw-pencil: 236 40% 84%;
+  --mw-curl: 225 35% 62%;
+  --mw-line: 21 43% 25%;
+  --mw-paper: 235 33% 29%;
+  --mw-grid: 235 33% 31%;
+  --mw-brand: 348 100% 80%;
+  --mw-page: 235 35% 23%;
+  --tape-fights: 348 100% 80%;
+  --tape-migraine: 255 70% 86%;
+  --tape-drinking: 46 100% 77%;
+  --tape-kid: 22 100% 83%;
+  --tape-mood: 196 66% 80%;
+  --tape-other: 100 38% 82%;
+}
+
+:root {
+  --mw-font-display: "Playpen Sans", "Golos Text", system-ui, sans-serif;
+  --mw-font-body: "Golos Text", system-ui, -apple-system, sans-serif;
+  --mw-font-hand: "Pangolin", "Playpen Sans", cursive;
+}
+
+/* The page: grid paper, very light. Night: navy paper, navy grid and
+   a few fairy lights along the top, like the reels' kitchen. */
+[data-theme="malu"] body,
+[data-theme="malu"] .mw-room {
+  background-color: #F5F6FA;
+  background-image:
+    linear-gradient(rgba(214, 222, 240, 0.75) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 222, 240, 0.75) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+  color: hsl(var(--foreground));
+}
+[data-theme="malu-night"] body,
+[data-theme="malu-night"] .mw-room,
+.mw-night.mw-room {
+  background-color: #262A4F;
+  background-image:
+    radial-gradient(2.5px 2.5px at 9% 2.5%, #FFE49A 50%, transparent 52%),
+    radial-gradient(2px 2px at 27% 4%, #FFE49A 50%, transparent 52%),
+    radial-gradient(2.5px 2.5px at 46% 2%, #FFE49A 50%, transparent 52%),
+    radial-gradient(2px 2px at 66% 4.5%, #FFE49A 50%, transparent 52%),
+    radial-gradient(2.5px 2.5px at 86% 2.5%, #FFE49A 50%, transparent 52%),
+    linear-gradient(rgba(51, 56, 106, 0.9) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(51, 56, 106, 0.9) 1px, transparent 1px);
+  background-size: auto, auto, auto, auto, auto, 22px 22px, 22px 22px;
+  background-position: 0 0, 0 0, 0 0, 0 0, 0 0, -1px -1px, -1px -1px;
+  color: hsl(var(--foreground));
+}
+[data-theme="malu"] body,
+[data-theme="malu-night"] body {
+  font-family: var(--mw-font-body);
+  letter-spacing: 0;
+}
+[data-theme="malu"] body::before,
+[data-theme="malu-night"] body::before {
+  display: none;
+}
+[data-theme="malu"] .font-serif-display,
+[data-theme="malu-night"] .font-serif-display {
+  font-family: var(--mw-font-display);
+  letter-spacing: 0;
+}
+
+@layer components {
+  .mw-display {
+    font-family: var(--mw-font-display);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+  .mw-hand {
+    font-family: var(--mw-font-hand);
+    letter-spacing: 0;
+  }
+
+  /* A plain piece of paper on the page: flat, no line, no shadow
+     beyond a hair. Lists and sections live on it. */
+  .mw-sheet {
+    background: hsl(var(--mw-paper));
+    border-radius: 14px;
+    box-shadow: 0 0 0 1px hsl(var(--mw-grid)), 0 1px 0 rgb(46 36 51 / 0.06);
+  }
+
+  /* A piece of paper taped onto the page (two bits of tape on the top
+     corners). For the one thing on a screen that matters most. */
+  .mw-taped {
+    position: relative;
+    background: hsl(var(--mw-paper));
+    border-radius: 6px;
+    box-shadow: 0 1px 0 rgb(46 36 51 / 0.08), 0 10px 18px -12px rgb(46 36 51 / 0.45);
+  }
+  .mw-taped::before,
+  .mw-taped::after {
+    content: "";
+    position: absolute;
+    top: -9px;
+    width: 58px;
+    height: 20px;
+    background: hsl(var(--tape, var(--tape-fights)) / 0.85);
+    background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.18) 0 4px, transparent 4px 9px);
+    border-radius: 2px;
+    -webkit-mask: linear-gradient(90deg, transparent 0 2px, #000 2px calc(100% - 2px), transparent calc(100% - 2px));
+            mask: linear-gradient(90deg, transparent 0 2px, #000 2px calc(100% - 2px), transparent calc(100% - 2px));
+  }
+  .mw-taped::before { left: 14px; transform: rotate(-6deg); }
+  .mw-taped::after { right: 14px; transform: rotate(5deg); }
+
+  /* Washi tape strip: question rows, week strips, labels. */
+  .mw-tape {
+    position: relative;
+    background: hsl(var(--tape, var(--tape-other)) / 0.9);
+    background-image: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.2) 0 5px, transparent 5px 11px);
+    border-radius: 4px;
+    -webkit-mask:
+      conic-gradient(from -45deg at left, transparent 90deg, #000 0) left / 51% 9px repeat-y,
+      conic-gradient(from 135deg at right, transparent 90deg, #000 0) right / 51% 9px repeat-y;
+            mask:
+      conic-gradient(from -45deg at left, transparent 90deg, #000 0) left / 51% 9px repeat-y,
+      conic-gradient(from 135deg at right, transparent 90deg, #000 0) right / 51% 9px repeat-y;
+  }
+
+  /* The one main button per screen: a strawberry sticker label. */
+  .mw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 56px;
+    padding: 0 1.5rem;
+    border-radius: 14px;
+    border: 3px solid #fff;
+    background: hsl(var(--mw-brand));
+    color: #2E2433;
+    font-family: var(--mw-font-display);
+    font-weight: 700;
+    font-size: 19px;
+    transform: rotate(-1.2deg);
+    box-shadow: 0 1px 0 rgb(46 36 51 / 0.12), 0 8px 14px -8px rgb(46 36 51 / 0.5);
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mw-btn:active {
+    transform: rotate(0deg) scale(0.97);
+    box-shadow: 0 1px 0 rgb(46 36 51 / 0.12), 0 3px 6px -4px rgb(46 36 51 / 0.5);
+  }
+  .mw-btn:disabled {
+    opacity: 0.45;
+    transform: none;
+  }
+  .mw-btn-sm {
+    min-height: 46px;
+    font-size: 17px;
+    padding: 0 1.1rem;
+  }
+  /* A sticker in another colour (inside tonight's navy card). */
+  .mw-btn-butter {
+    background: #FFE08A;
+  }
+  .mw-btn-white {
+    background: #fff;
+    border-color: #fff;
+  }
+
+  /* Secondary action: pencil words with a hand-drawn underline. */
+  .mw-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    padding: 0 0.6rem;
+    font-weight: 600;
+    font-size: 17px;
+    color: hsl(var(--mw-pencil));
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='6' viewBox='0 0 120 6'%3E%3Cpath d='M2 3.6c18-2.2 36 1.6 56-.4s40-1.8 60 .6' fill='none' stroke='%239AA7C7' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")
+      center calc(100% - 8px) / calc(100% - 1.2rem) 6px no-repeat;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Round "+" sticker. */
+  .mw-round {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    border: 3px solid #fff;
+    background: hsl(var(--mw-brand));
+    color: #2E2433;
+    box-shadow: 0 1px 0 rgb(46 36 51 / 0.12), 0 6px 10px -6px rgb(46 36 51 / 0.5);
+    transition: transform 0.14s ease;
+  }
+  .mw-round:active {
+    transform: scale(0.94);
+  }
+
+  /* Chip: a small label; picked = a strawberry sticker. */
+  .mw-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 44px;
+    padding: 0 1rem;
+    border-radius: 14px;
+    background: hsl(var(--mw-paper));
+    box-shadow: 0 0 0 1.5px hsl(var(--mw-grid));
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    font-size: 17px;
+    transition: transform 0.14s ease, background-color 0.14s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mw-chip[aria-pressed="true"] {
+    background: hsl(var(--mw-brand));
+    color: #2E2433;
+    box-shadow: 0 0 0 3px #fff, 0 6px 10px -6px rgb(46 36 51 / 0.5);
+    transform: rotate(-1.5deg);
+  }
+
+  /* Big choice (doors, language): paper card; picked = sticker edge. */
+  .mw-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    width: 100%;
+    text-align: left;
+    border-radius: 14px;
+    background: hsl(var(--mw-paper));
+    box-shadow: 0 0 0 1.5px hsl(var(--mw-grid));
+    padding: 0.75rem 1rem;
+    font-family: var(--mw-font-display);
+    font-weight: 700;
+    font-size: 19px;
+    color: hsl(var(--foreground));
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mw-choice[aria-pressed="true"] {
+    background: hsl(var(--tape, var(--mw-brand)) / 0.55);
+    box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px hsl(var(--tape, var(--mw-brand))), 0 10px 16px -10px rgb(46 36 51 / 0.55);
+    transform: rotate(-1deg);
+  }
+
+  /* Calendar / week cell: a notebook square. The answer is what sits
+     in it: a sticker (it happened), a pencil curl (it didn't), or just
+     the pencilled date (no answer). */
+  .mw-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    background: hsl(var(--mw-paper) / 0.6);
+    box-shadow: inset 0 0 0 1px hsl(var(--mw-grid));
+    color: hsl(var(--mw-pencil));
+    font-size: 13px;
+    font-weight: 600;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mw-cell[data-today="true"] {
+    box-shadow: inset 0 0 0 2px hsl(var(--mw-brand));
+  }
+  .mw-cell[data-future="true"] {
+    opacity: 0.35;
+  }
+
+  /* Speech bubble for Malu. */
+  .mw-bubble {
+    position: relative;
+    background: hsl(var(--mw-paper));
+    border-radius: 18px;
+    padding: 0.6rem 0.95rem;
+    box-shadow: 0 0 0 1.5px hsl(var(--mw-line) / 0.85), 0 6px 12px -10px rgb(46 36 51 / 0.6);
+    font-family: var(--mw-font-hand);
+    color: hsl(var(--foreground));
+  }
+  .mw-bubble::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    bottom: 14px;
+    width: 14px;
+    height: 14px;
+    background: hsl(var(--mw-paper));
+    border-left: 1.5px solid hsl(var(--mw-line) / 0.85);
+    border-bottom: 1.5px solid hsl(var(--mw-line) / 0.85);
+    transform: rotate(45deg) skew(8deg, 8deg);
+    border-radius: 0 0 0 3px;
+  }
+
+  /* Die-cut sticker look for images (Malu art has its edge baked in). */
+  .mw-sticker-img {
+    filter: drop-shadow(0 1px 0 rgb(46 36 51 / 0.12)) drop-shadow(0 6px 6px rgb(46 36 51 / 0.18));
+  }
+
+  /* Bottom nav: a strip of paper; the active tab is a sticker. */
+  [data-theme="malu"] .nav-floating,
+  [data-theme="malu-night"] .nav-floating {
+    background: hsl(var(--mw-paper));
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 0 0 1.5px hsl(var(--mw-grid)), 0 10px 20px -14px rgb(46 36 51 / 0.6);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  [data-theme="malu"] .nav-floating [aria-current="page"],
+  [data-theme="malu-night"] .nav-floating [aria-current="page"] {
+    background: hsl(var(--mw-brand));
+    color: #2E2433;
+    box-shadow: 0 0 0 2.5px #fff, 0 6px 10px -6px rgb(46 36 51 / 0.5);
+    transform: rotate(-1.5deg);
+  }
+}
+
+/* Slap and settle: a sticker lands. */
+@keyframes mwSlap {
+  0% { transform: scale(1.35) rotate(var(--r, 0deg)); opacity: 0; }
+  55% { transform: scale(0.94) rotate(var(--r, 0deg)); opacity: 1; }
+  100% { transform: scale(1) rotate(var(--r, 0deg)); opacity: 1; }
+}
+.mw-slap {
+  animation: mwSlap 0.28s cubic-bezier(0.3, 1.3, 0.6, 1) both;
+}
+@keyframes mwBoop {
+  0%, 100% { transform: scale(1, 1); }
+  30% { transform: scale(1.08, 0.9); }
+  60% { transform: scale(0.96, 1.05); }
+}
+.mw-boop {
+  animation: mwBoop 0.45s ease-in-out;
+  transform-origin: 50% 90%;
+}
+@keyframes mwBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.mw-bob {
+  animation: mwBob 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mw-slap, .mw-boop, .mw-bob { animation: none; }
+}
+
+/* ------------------------------------------------------------------
+   Guardrails for older screens inside Malu's world. Rather than
+   rewriting every sheet, the 1.8.0 building blocks are re-skinned here:
+   see-through cards become paper, tiny tracked capitals become plain
+   words, shadcn's main button becomes the strawberry sticker. Classic
+   mode never uses these themes, so it is untouched.
+   ------------------------------------------------------------------ */
+[data-theme^="malu"] .bg-foreground\/\[0\.07\],
+[data-theme^="malu"] .bg-foreground\/\[0\.05\],
+[data-theme^="malu"] .bg-foreground\/\[0\.06\],
+[data-theme^="malu"] .bg-muted\/30,
+[data-theme^="malu"] .bg-card,
+.mw-night .bg-foreground\/\[0\.07\],
+.mw-night .bg-foreground\/\[0\.05\] {
+  background-color: hsl(var(--mw-paper));
+}
+[data-theme^="malu"] .border-foreground\/\[0\.12\],
+[data-theme^="malu"] .border-foreground\/\[0\.14\],
+[data-theme^="malu"] .border-foreground\/\[0\.18\],
+[data-theme^="malu"] .border-border\/50,
+[data-theme^="malu"] .border-border\/40 {
+  border-color: hsl(var(--mw-grid));
+}
+[data-theme^="malu"] .divide-foreground\/\[0\.08\] > :not([hidden]) ~ :not([hidden]),
+[data-theme^="malu"] .divide-foreground\/10 > :not([hidden]) ~ :not([hidden]) {
+  border-color: hsl(var(--mw-grid));
+}
+[data-theme^="malu"] .uppercase,
+.mw-night .uppercase {
+  text-transform: none;
+  letter-spacing: 0 !important;
+}
+[data-theme^="malu"] .text-xs,
+[data-theme^="malu"] .text-\[10px\],
+[data-theme^="malu"] .text-\[11px\],
+[data-theme^="malu"] .text-\[12px\],
+[data-theme^="malu"] .text-\[13px\] {
+  font-size: 15px;
+  line-height: 1.35;
+}
+[data-theme^="malu"] h1,
+[data-theme^="malu"] h2,
+[data-theme^="malu"] h3,
+[data-theme^="malu"] [role="dialog"] h2 {
+  font-family: var(--mw-font-display);
+  letter-spacing: 0;
+}
+[data-theme^="malu"] button.bg-primary,
+[data-theme^="malu"] a.bg-primary {
+  border: 3px solid #fff;
+  border-radius: 14px;
+  color: #2E2433;
+  font-family: var(--mw-font-display);
+  font-weight: 700;
+  box-shadow: 0 1px 0 rgb(46 36 51 / 0.12), 0 8px 14px -8px rgb(46 36 51 / 0.5);
+}
+[data-theme^="malu"] [role="tablist"] {
+  background: transparent;
+}
+[data-theme^="malu"] [role="tab"][data-state="active"],
+[data-theme^="malu"] [role="tab"][aria-selected="true"] {
+  font-family: var(--mw-font-display);
+}
+/* Sheets and dialogs are paper too. */
+[data-theme="malu"] [data-vaul-drawer]:not(.mw-night),
+[data-theme="malu"] [role="dialog"]:not(.mw-night) {
+  background-color: #F5F6FA;
+  background-image:
+    linear-gradient(rgba(214, 222, 240, 0.75) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 222, 240, 0.75) 1px, transparent 1px);
+  background-size: 22px 22px;
+}

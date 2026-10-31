@@ -23,7 +23,8 @@ import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { daysAgoIso, getDoorState } from "@/lib/doors";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import maluWave from "@/assets/malu/malu-wave.webp";
+import { Malu } from "./mw/Malu";
+import { Glyph } from "./mw/Glyph";
 
 interface NotesTabProps {
   targetDate?: string;
@@ -130,10 +131,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   }, {} as Record<string, Note[]>);
 
   const chip = (on: boolean) =>
-    cn(
-      "inline-flex items-center gap-1.5 h-11 px-4 rounded-full border text-[16px] transition-colors",
-      on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-    );
+    cn("mw-chip", on && "!bg-[hsl(var(--mw-brand))] !text-[#2E2433] !shadow-[0_0_0_3px_#fff,0_6px_10px_-6px_rgb(46_36_51/0.5)] -rotate-1");
 
   return (
     <>
@@ -149,15 +147,15 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
         )}
 
         <div className="flex items-center justify-between gap-3 animate-fade-in">
-          <h1 className="text-[28px] font-bold tracking-tight">{t("notesTab.title")}</h1>
+          <h1 className="mw-display text-[30px]">{t("notesTab.title")}</h1>
           {notes.length > 0 && (
             <button
               type="button"
               onClick={() => setDraft({ date: today, text: "", linkedPatternId: "" })}
               aria-label={t("notesTab.write")}
-              className="h-11 w-11 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
+              className="mw-round"
             >
-              <Plus className="h-5 w-5" strokeWidth={2.6} />
+              <Glyph kind="plus" size={24} strokeWidth={3} />
             </button>
           )}
         </div>
@@ -169,7 +167,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t("addTracker.search")}
-              className="h-12 pl-12 pr-11 rounded-2xl text-base bg-foreground/[0.06] border-foreground/[0.14]"
+              className="h-12 pl-12 pr-11 rounded-[14px] text-[17px] bg-white border-0 shadow-[0_0_0_1.5px_hsl(var(--mw-grid))]"
             />
             {searchQuery && (
               <button
@@ -185,14 +183,15 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
         {loading ? null : notes.length === 0 ? (
           <div className="flex flex-col items-center text-center pt-10 animate-fade-in">
-            <img src={maluWave} alt="" className="h-32 w-32" />
-            <p className="mt-2 text-[22px] font-bold">{t("notesTab.empty")}</p>
-            <Button
+            <Malu pose="shy" size={140} bob />
+            <p className="mt-2 mw-display text-[24px]">{t("notesTab.empty")}</p>
+            <button
+              type="button"
               onClick={() => setDraft({ date: today, text: "", linkedPatternId: "" })}
-              className="mt-6 w-full h-[54px] rounded-full text-[17px] font-semibold"
+              className="mw-btn mt-7 w-full"
             >
               {t("notesTab.write")}
-            </Button>
+            </button>
           </div>
         ) : filteredNotes.length === 0 ? (
           <p className="pt-10 text-center text-[17px] text-muted-foreground animate-fade-in">{t("addTracker.nothingFound")}</p>
@@ -204,17 +203,20 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
                 id={`notes-date-${date}`}
                 className={cn("space-y-2 rounded-[22px] transition-colors duration-700", highlightedDate === date && "bg-primary/10 -mx-2 px-2 py-2")}
               >
-                <p className="px-1 text-[17px] font-semibold text-muted-foreground">{dayLabel(date)}</p>
+                <span className="mw-tape inline-flex px-3 py-0.5 text-[17px] font-semibold" style={{ ["--tape" as string]: "var(--tape-mood)", transform: "rotate(-1deg)" }}>
+                  {dayLabel(date)}
+                </span>
                 {dateNotes.map((note) => (
                   <button
                     key={note.id}
                     type="button"
                     onClick={() => setDraft({ id: note.id, date: note.date, text: note.text, linkedPatternId: note.linkedPatternId ?? "" })}
-                    className="block w-full text-left rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-[18px] py-4 active:scale-[0.99] transition-transform"
+                    className="mw-sheet block w-full text-left px-[18px] py-4 active:scale-[0.99] transition-transform"
                   >
-                    <p className="text-[17px] leading-snug whitespace-pre-line line-clamp-6">{note.text}</p>
+                    <p className="mw-hand text-[19px] leading-snug whitespace-pre-line line-clamp-6">{note.text}</p>
                     {note.linkedPatternId && trackerName(note.linkedPatternId) && (
-                      <span className="mt-3 inline-flex items-center h-8 px-3 rounded-full bg-foreground/[0.08] text-[14px] font-semibold">
+                      <span className="mt-3 inline-flex items-center gap-1.5 text-[16px] font-semibold text-muted-foreground">
+                        <Glyph kind="pencil" size={16} />
                         {trackerName(note.linkedPatternId)}
                       </span>
                     )}
@@ -235,7 +237,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
       >
         {draft && (
           <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col">
-            <h2 className="text-[22px] font-bold tracking-tight pr-10">
+            <h2 className="mw-display text-[24px] pr-10">
               {draft.id ? t("notesTab.editNote") : t("notesTab.newNote")}
             </h2>
             <Textarea
@@ -244,7 +246,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               onChange={(e) => setDraft({ ...draft, text: e.target.value })}
               placeholder={t("notesTab.placeholder")}
               aria-label={t("notesTab.newNote")}
-              className="mt-4 min-h-[150px] rounded-2xl text-[17px] leading-snug bg-foreground/[0.06] border-foreground/[0.14]"
+              className="mt-4 min-h-[150px] rounded-[14px] mw-hand text-[19px] leading-snug bg-white text-[#2E2433] border-0 shadow-[0_0_0_1.5px_hsl(var(--mw-grid))]"
             />
 
             <div className="mt-5 flex flex-wrap gap-2">
@@ -295,21 +297,13 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
             )}
 
             <div className="flex-1 min-h-6" />
-            <Button
-              onClick={save}
-              disabled={!draft.text.trim()}
-              className="mt-6 w-full h-[54px] rounded-full text-[17px] font-semibold"
-            >
+            <button type="button" onClick={save} disabled={!draft.text.trim()} className="mw-btn mt-6 w-full">
               {t("common.save")}
-            </Button>
+            </button>
             {draft.id && (
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="mt-2 w-full h-11 rounded-full text-[16px] text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
+              <button type="button" onClick={() => setDeleteDialogOpen(true)} className="mw-link mt-2 self-center !text-destructive">
                 {t("common.delete")}
-              </Button>
+              </button>
             )}
           </div>
         )}

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
+import { Glyph } from "@/components/mw/Glyph";
 import { PatternsTab } from "@/components/PatternsTab";
 import { NotesTab } from "@/components/NotesTab";
 import { CalendarDays, TrendingUp, NotebookPen, Settings, ArrowUp } from "lucide-react";
@@ -132,15 +133,15 @@ const Index = () => {
     <div className="h-screen overflow-hidden flex flex-col relative">
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 pb-2.5 pt-safe-plus-2">
-        <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
+      <header className="sticky top-0 z-10 px-4 pb-1 pt-safe-plus-2">
+        <h1 className="mw-display text-[21px] text-center text-foreground">MeMap</h1>
         <button
           data-coachmark="settings-button"
           onClick={() => setSettingsModalOpen(true)}
           aria-label={t("common.settings")}
-          className="absolute right-2 bottom-1.5 h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+          className="absolute right-2 bottom-0 h-11 w-11 rounded-full flex items-center justify-center text-foreground active:bg-foreground/5 transition-colors"
         >
-          <Settings className="h-5 w-5" strokeWidth={1.75} />
+          <Glyph kind="gear" size={25} strokeWidth={2.2} />
         </button>
       </header>
 
@@ -177,10 +178,10 @@ const Index = () => {
         <button
           onClick={scrollMainToTop}
           aria-label="Scroll to top"
-          className="fixed right-4 z-20 h-11 w-11 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform animate-fade-in"
+          className="mw-round fixed right-4 z-20 animate-fade-in"
           style={{ bottom: "calc(6.5rem + env(safe-area-inset-bottom, 0px))" }}
         >
-          <ArrowUp className="h-5 w-5" />
+          <Glyph kind="up" size={22} />
         </button>
       )}
 
@@ -196,10 +197,10 @@ const Index = () => {
         <div className="max-w-2xl mx-auto px-4">
           <div className="nav-floating grid grid-cols-3 overflow-hidden">
             {([
-              { tab: "cards", icon: CalendarDays, label: t("common.today") },
-              { tab: "patterns", icon: TrendingUp, label: t("common.patterns") },
-              { tab: "notes", icon: NotebookPen, label: t("common.notes") },
-            ] as const).map(({ tab, icon: Icon, label }) => (
+              { tab: "cards", glyph: "calendar", label: t("common.today") },
+              { tab: "patterns", glyph: "chart", label: t("common.patterns") },
+              { tab: "notes", glyph: "pencil", label: t("common.notes") },
+            ] as const).map(({ tab, glyph, label }) => (
               <button
                 key={tab}
                 data-coachmark={tab === "patterns" ? "patterns-tab" : undefined}
@@ -215,8 +216,8 @@ const Index = () => {
                   ${activeTab === tab ? "text-foreground bg-muted shadow-sm" : "text-muted-foreground hover:text-foreground"}
                 `}
               >
-                <Icon className="h-5 w-5 mb-0.5" />
-                <span className="text-[11px] font-medium">{label}</span>
+                <Glyph kind={glyph} size={24} strokeWidth={2.2} className="mb-0.5" />
+                <span className="text-[14px] font-semibold">{label}</span>
               </button>
             ))}
           </div>
