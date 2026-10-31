@@ -121,7 +121,10 @@ export const DoorHero = ({
             <p className="min-w-0 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
               {t(`doors.${main.door.id}.heroLabel`)}
             </p>
-            {plus(main, true)}
+            {/* Mood is answered in the evening, so it has no "+" (phone
+                testing: "+ Low day" with "When? / What weighed on you?" made
+                no sense for a mood). Event doors keep their quick log. */}
+            {main.door.kind === "event" && plus(main, true)}
           </div>
           <p className="mt-2.5 flex items-baseline gap-2">
             <span className="text-[56px] leading-none font-bold tracking-tight tabular-nums">{main.counts.last7}</span>
@@ -145,15 +148,34 @@ export const DoorHero = ({
                   <span className="text-[15px] text-muted-foreground">{t("doors.thisWeek")}</span>
                 </p>
               </div>
-              {plus(main, false)}
+              {main.door.kind === "event" && plus(main, false)}
             </div>
             {week(main.counts, "sm")}
           </div>
           {rest.map((row) => (
             <div key={row.door.id} className="flex items-center gap-3 border-t border-foreground/[0.08] px-[18px] py-3">
               <p className="min-w-0 flex-1 truncate text-base font-semibold">{t(`doors.${row.door.id}.name`)}</p>
-              <span className="text-xl font-bold tabular-nums">{row.counts.last7}</span>
-              {plus(row, false)}
+              {row.door.kind === "event" ? (
+                <>
+                  <span className="text-xl font-bold tabular-nums">{row.counts.last7}</span>
+                  {plus(row, false)}
+                </>
+              ) : (
+                <span className="flex gap-1" aria-hidden="true">
+                  {row.counts.week.map((d) => (
+                    <span
+                      key={d.date}
+                      className={cn(
+                        "h-3.5 w-3.5 rounded-full box-border",
+                        d.value === true && "bg-strong",
+                        d.value === false && "bg-balanced",
+                        d.value === undefined && !d.isToday && "bg-foreground/[0.1]",
+                        d.value === undefined && d.isToday && "border-[1.5px] border-dashed border-primary/70",
+                      )}
+                    />
+                  ))}
+                </span>
+              )}
             </div>
           ))}
         </>

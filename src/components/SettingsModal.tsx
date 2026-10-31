@@ -22,7 +22,7 @@ import {
   type DemoPackId,
 } from "@/lib/demoDataGenerator";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Bell, Trash2, Flame, Download, ListChecks, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud, Star } from "lucide-react";
+import { Trash2, Download, Volume2, HelpCircle, FileSpreadsheet, Upload, Lock, Sparkles, ChevronLeft, ChevronRight, Database, FlaskConical, Mail, FileText, Star, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,10 @@ import { Capacitor } from "@capacitor/core";
 import { track } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
+import { getDoorState } from "@/lib/doors";
+
+// Shown under Data & privacy and in support emails. Bump with each release.
+const APP_VERSION = "1.8.0";
 
 interface SettingsModalProps {
   open: boolean;
@@ -131,7 +135,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     | "main"
     | "language"
     | "gender"
-    | "appearance"
     | "notifications"
     | "soundHaptics"
     | "trackers"
@@ -185,6 +188,17 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const handleLanguageChange = (lng: SupportedLanguage) => {
     setCurrentLang(lng);
     setLanguage(lng);
+  };
+
+  // Row styles shared by every Settings screen (1.8.0).
+  const card = "rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]";
+  const row = "w-full flex items-center gap-3 px-4 min-h-[60px] py-2.5 text-left";
+  const rowBtn = cn(row, "active:bg-muted/60 transition-colors");
+  // Door questions go by their door name, like everywhere else.
+  const doorName = (id: string) => {
+    const door = getDoorState();
+    const doorId = door?.trackerId === id ? door.id : door?.extra?.find((x) => x.trackerId === id)?.id;
+    return doorId ? t(`doors.${doorId}.name`) : null;
   };
 
   const handleThemeChange = (next: AppTheme) => {
@@ -725,7 +739,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             {screen === "main" && t("settings.title")}
             {screen === "language" && t("language.settingsLabel")}
             {screen === "gender" && t("gender.settingsLabel")}
-            {screen === "appearance" && t("settings.appearance")}
             {screen === "notifications" && t("settings.dailyRemindersTitle")}
             {screen === "soundHaptics" && t("settings.soundAndHaptics")}
             {screen === "trackers" && t("settings.trackersTitle")}
@@ -866,593 +879,264 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
               </div>
             )}
 
-            {/* === LANGUAGE SUB-SCREEN === */}
+            {/* Sub-screens (1.8.0): the same card of big rows as the
+                first screen, the control right in the row, no lines of
+                small explanation under every heading. */}
+
+            {/* === LANGUAGE === */}
             {screen === "language" && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Languages className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="font-medium text-sm">{t("language.settingsLabel")}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {t("language.subtitle")}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {SUPPORTED_LANGUAGES.map((lng) => {
-                      const isActive = currentLang === lng.code;
-                      return (
-                        <button
-                          key={lng.code}
-                          onClick={() => handleLanguageChange(lng.code)}
-                          className={`rounded-xl border p-2.5 text-left transition-all ${
-                            isActive
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                              : "border-border/50 hover:border-border bg-muted/20"
-                          }`}
-                        >
-                          <div className="text-sm font-medium">{lng.native}</div>
-                          {lng.native !== lng.name && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5">{lng.name}</div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              <div className={card}>
+                {SUPPORTED_LANGUAGES.map((lng) => (
+                  <button key={lng.code} type="button" onClick={() => handleLanguageChange(lng.code)} className={rowBtn}>
+                    <span className="flex-1 text-[17px] font-medium">{lng.native}</span>
+                    {currentLang === lng.code && <Check className="h-5 w-5 text-primary" strokeWidth={2.6} />}
+                  </button>
+                ))}
               </div>
-            </div>
             )}
 
-            {/* === GENDER SUB-SCREEN === */}
+            {/* === ADDRESS FORM (Russian copy only) === */}
             {screen === "gender" && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="font-medium text-sm">{t("gender.settingsLabel")}</h3>
-                    <p className="text-xs text-muted-foreground">{t("gender.subtitle")}</p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["male", "female", "neutral"] as const).map((p) => {
-                      const isActive = currentPol === p;
-                      return (
-                        <button
-                          key={p}
-                          onClick={() => handlePolChange(p)}
-                          className={`rounded-xl border p-2.5 text-center transition-all text-sm ${
-                            isActive
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/30 font-medium"
-                              : "border-border/50 hover:border-border bg-muted/20"
-                          }`}
-                        >
-                          {t(`gender.${p}`)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              <div className={card}>
+                {(["female", "male", "neutral"] as const).map((p) => (
+                  <button key={p} type="button" onClick={() => handlePolChange(p)} className={rowBtn}>
+                    <span className="flex-1 text-[17px] font-medium">{t(`gender.${p}`)}</span>
+                    {currentPol === p && <Check className="h-5 w-5 text-primary" strokeWidth={2.6} />}
+                  </button>
+                ))}
               </div>
-            </div>
             )}
 
-            {/* === APPEARANCE SUB-SCREEN === */}
-            {screen === "appearance" && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Palette className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="font-medium text-sm">{t("settings.appearance")}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {t("settings.appearanceDesc")}
-                    </p>
-                  </div>
-
-                  {/* Two themes (1.8.0): dark, the look of the store and
-                      Instagram, and light. Seven used to be offered; the
-                      other five still render for anyone who picked one
-                      earlier, until they tap one of these two. */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { id: "aurora", icon: Sparkles, label: t("settings.themeDark"), desc: t("settings.themeDarkDesc") },
-                      { id: "aurora-light", icon: Sun, label: t("settings.themeLight"), desc: t("settings.themeLightDesc") },
-                    ] as const).map(({ id, icon: Icon, label, desc }) => (
-                      <button
-                        key={id}
-                        onClick={() => handleThemeChange(id)}
-                        aria-pressed={theme === id}
-                        className={`flex flex-col items-start gap-1.5 rounded-xl border p-3 text-left transition-all ${
-                          theme === id
-                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                            : "border-border/50 hover:border-border bg-muted/20"
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm font-medium">{label}</span>
-                        </div>
-                        <span className="text-[11px] text-muted-foreground leading-snug">{desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-            )}
-
-            {/* === NOTIFICATIONS SUB-SCREEN === */}
+            {/* === EVENING REMINDER === */}
             {screen === "notifications" && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Bell className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="font-medium text-sm">{t("settings.dailyRemindersTitle")}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {t("settings.dailyRemindersDesc")}
-                    </p>
+              <div className="space-y-4">
+                <div className={card}>
+                  <div className={row}>
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.eveningReminder")}</span>
+                    <Switch id="notifications-toggle" checked={notificationSettings.enabled} onCheckedChange={handleNotificationToggle} />
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="notifications-toggle" className="text-sm">
-                      {t("settings.enableNotifications")}
-                    </Label>
-                    <Switch
-                      id="notifications-toggle"
-                      checked={notificationSettings.enabled}
-                      onCheckedChange={handleNotificationToggle}
-                    />
-                  </div>
-
                   {notificationSettings.enabled && (
-                    <div className="space-y-4 animate-fade-in">
-                      <div className="space-y-2">
-                        <Label className="text-sm">{t("settings.reminderTime")}</Label>
-                        <TimePickerField
-                          value={notificationSettings.time}
-                          onChange={handleTimeChange}
-                        />
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3 pt-2 border-t border-border/30">
-                        <div className="flex-1">
-                          <Label htmlFor="threshold-toggle" className="text-sm">
-                            {t("settings.actionSignalAlerts")}
-                          </Label>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {t("settings.actionSignalAlertsDesc")}
-                          </p>
-                        </div>
-                        <Switch
-                          id="threshold-toggle"
-                          checked={notificationSettings.thresholdAlerts}
-                          onCheckedChange={(v) => {
-                            const next = { ...notificationSettings, thresholdAlerts: v };
-                            setNotificationSettings(next);
-                            saveNotificationSettings(next);
-                          }}
-                        />
+                    <div className={cn(row, "animate-fade-in")}>
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.reminderTime")}</span>
+                      <div className="w-[150px]">
+                        <TimePickerField value={notificationSettings.time} onChange={handleTimeChange} />
                       </div>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-            )}
-
-            {/* === SOUND & HAPTICS SUB-SCREEN === */}
-            {/* Renamed from the old "session" sub-screen. The dead
-                "include suggested questions" toggle was dropped (the
-                auto-injection feature it controlled was removed long
-                ago — flipping the switch did nothing). The "show
-                tracker ideas" toggle moved into the Trackers sub-
-                screen where it belongs. What's left here is exactly
-                Sound + Vibration + the diagnostic, so the user can
-                find vibration in seconds instead of guessing under
-                "Daily session". */}
-            {screen === "soundHaptics" && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Volume2 className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h3 className="font-medium text-sm">{t("settings.soundAndHaptics")}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {t("settings.soundAndHapticsDesc")}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Volume2 className="h-4 w-4 text-muted-foreground" />
-                      <Label htmlFor="sound-toggle" className="text-sm">
-                        {t("settings.sound")}
-                      </Label>
+                {notificationSettings.enabled && (
+                  <div className={card}>
+                    <div className={row}>
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.limitAlerts")}</span>
+                      <Switch
+                        id="threshold-toggle"
+                        checked={notificationSettings.thresholdAlerts}
+                        onCheckedChange={(v) => {
+                          const next = { ...notificationSettings, thresholdAlerts: v };
+                          setNotificationSettings(next);
+                          saveNotificationSettings(next);
+                        }}
+                      />
                     </div>
-                    <Switch
-                      id="sound-toggle"
-                      checked={sessionSettings.soundEnabled}
-                      onCheckedChange={(v) => handleSessionSettingsChange("soundEnabled", v)}
-                    />
                   </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Vibrate className="h-4 w-4 text-muted-foreground" />
-                      <Label htmlFor="haptics-toggle" className="text-sm">
-                        {t("settings.haptics")}
-                      </Label>
-                    </div>
-                    <Switch
-                      id="haptics-toggle"
-                      checked={sessionSettings.hapticsEnabled}
-                      onCheckedChange={(v) => handleSessionSettingsChange("hapticsEnabled", v)}
-                    />
-                  </div>
-
-                </div>
-              </div>
-            </div>
-            )}
-
-            {/* === TRACKERS SUB-SCREEN === */}
-            {screen === "trackers" && (
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm">{t("settings.trackersTitle")}</h3>
-              <p className="text-xs text-muted-foreground">
-                {t("settings.trackersDesc")}
-              </p>
-              {/* "Show tracker ideas" lives here now. Was in the old
-                  Daily Session sub-screen alongside Sound/Vibration —
-                  thematically wrong. Tracker-discovery toggle belongs
-                  with tracker management. */}
-              <div className="flex items-center justify-between">
-                <Label htmlFor="ideas-toggle" className="text-sm">
-                  {t("settings.showTrackerIdeas")}
-                </Label>
-                <Switch
-                  id="ideas-toggle"
-                  checked={!ideasDismissed}
-                  onCheckedChange={handleToggleIdeas}
-                />
-              </div>
-
-              {/* Sensitive-topics toggle. Off by default for store
-                  rating safety — sex / libido / ex-partner templates
-                  exist in the library but stay hidden until the user
-                  flips this on. Symmetric with the isExpat gate but
-                  controlled here in Settings rather than the one-time
-                  onboarding flow (so the user can turn it on later
-                  without re-running the tour). */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <Label htmlFor="sensitive-toggle" className="text-sm block">
-                    {t("settings.showSensitive")}
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {t("settings.showSensitiveDesc")}
-                  </p>
-                </div>
-                <Switch
-                  id="sensitive-toggle"
-                  checked={showSensitive}
-                  onCheckedChange={handleToggleSensitive}
-                />
-              </div>
-
-              {/* Trackers list here is for hide / show only. Reordering
-                  lives on the Cards home screen — it writes sortIndex,
-                  and this list reads by sortIndex, so the order stays
-                  in sync automatically. The old grip dots were pure
-                  decoration and removed in 1.7.8 to avoid a false
-                  drag affordance that fought the bottom-sheet's own
-                  swipe-to-dismiss gesture. */}
-              <div className="space-y-2">
-                {trackers.map(tracker => {
-                  const SIcon = getTrackerIcon(tracker.title, tracker.category);
-                  return (
-                    <div
-                      key={tracker.id}
-                      className="flex items-center gap-3 p-2 rounded-xl bg-muted/30"
-                    >
-                      <SIcon className="h-4 w-4 text-muted-foreground" strokeWidth={1.75} />
-                      <span className="flex-1 text-sm truncate">{localizeTrackerTitle(tracker.title)}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleToggleTrackerActive(tracker.id)}
-                        className="h-8 w-8"
-                      >
-                        {tracker.archived ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-primary" />
-                        )}
-                      </Button>
-                    </div>
-                  );
-                })}
-                {trackers.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    {t("settings.noTrackersYet")}
-                  </p>
                 )}
               </div>
-            </div>
             )}
 
-            {/* === HELP SUB-SCREEN === */}
-            {screen === "help" && (
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm">{t("settings.helpTitle")}</h3>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  // Wipe ALL tour / hint seen-flags so every guided
-                  // moment runs again from scratch — onboarding,
-                  // the main coachmark, the Patterns / Add-Tracker
-                  // / Custom mini-tours, and the small in-card
-                  // discovery nudges (swipe wiggle, FAB pulse).
-                  // Without this, "Show app tour" only re-ran the
-                  // onboarding interview but left every mini-tour
-                  // permanently dismissed.
-                  resetTourSeen();
-                  resetCoachmarkSeen();
-                  resetTourKey("memap_patterns_tour_seen");
-                  resetTourKey("memap_add_tracker_tour_seen");
-                  resetTourKey("memap_custom_tour_seen");
-                  resetTourKey("memap_first_swipe_seen");
-                  resetTourKey("memap_added_own_tracker");
-                  onStartTour?.();
-                }}
-                className="w-full justify-start"
-              >
-                <HelpCircle className="h-4 w-4 mr-2" />
-                {t("settings.showAppTour")}
-              </Button>
-
-              {/* Contact / support email. Opens the user's default
-                  mail client pre-filled with subject + diagnostic
-                  body (app version, OS) so we get useful context
-                  when they write. The email below is a placeholder
-                  — swap to a real Support inbox before public launch. */}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const subject = encodeURIComponent("MeMap support");
-                  const body = encodeURIComponent(
-                    `\n\n\n---\nApp version: 1.7.5\nPlatform: ${Capacitor.getPlatform()}\nLanguage: ${getLanguage()}`,
-                  );
-                  window.open(
-                    `mailto:memap.support@gmail.com?subject=${subject}&body=${body}`,
-                    "_blank",
-                  );
-                }}
-                className="w-full justify-start"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                {t("settings.contactSupport")}
-              </Button>
-
-              {/* Terms of Service — required by both App Store and
-                  Play Store to be linked from somewhere visible
-                  inside the app. URL is the production GitHub Pages
-                  alongside the Privacy Policy. */}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  window.open(
-                    "https://memap-tracker.netlify.app/TERMS.html",
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
-                }}
-                className="w-full justify-start"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                {t("settings.termsOfService")}
-              </Button>
-
-              {/* Single-source disclaimer (1.7.2). Was shown on every
-                  Patterns sub-tab — became invisible repetition. Now
-                  lives once here so users who want to know what
-                  MeMap is and isn't have a stable place to find it. */}
-              <div className="rounded-xl bg-muted/40 border border-border/30 p-3 space-y-2">
-                <p className="text-xs leading-relaxed text-foreground/85">
-                  {t("patterns.disclaimer")}
-                </p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {t("patterns.disclaimer2")}
-                </p>
+            {/* === SOUND & VIBRATION === */}
+            {screen === "soundHaptics" && (
+              <div className={card}>
+                <div className={row}>
+                  <span className="flex-1 text-[17px] font-medium">{t("settings.sound")}</span>
+                  <Switch id="sound-toggle" checked={sessionSettings.soundEnabled} onCheckedChange={(v) => handleSessionSettingsChange("soundEnabled", v)} />
+                </div>
+                <div className={row}>
+                  <span className="flex-1 text-[17px] font-medium">{t("settings.haptics")}</span>
+                  <Switch id="haptics-toggle" checked={sessionSettings.hapticsEnabled} onCheckedChange={(v) => handleSessionSettingsChange("hapticsEnabled", v)} />
+                </div>
               </div>
-            </div>
             )}
 
-            {/* === DATA & PRIVACY SUB-SCREEN === */}
-            {screen === "data" && (
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm">{t("settings.dataPrivacyTitle")}</h3>
-
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/40 border border-border/30">
-                <Lock className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {t("settings.dataPrivacyLock")}
-                </p>
-              </div>
-
-              {/* Platform-specific automatic-backup info. iOS users get
-                  iCloud Backup for free (system-wide, ~daily when phone
-                  is charging + Wi-Fi + locked). Android users get the
-                  equivalent via Android Auto Backup → Google Drive
-                  (config in android/app/src/main/res/xml/backup_rules.xml).
-                  Either way no user action is needed — this panel just
-                  tells them that's the case so they don't feel they
-                  *have* to use the Backup button to be safe. The
-                  manual Backup button remains for power users who
-                  want a portable JSON file. */}
-              {Capacitor.getPlatform() === "ios" && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                  <Cloud className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {t("settings.dataAutoBackupIos")}
-                  </p>
-                </div>
-              )}
-              {Capacitor.getPlatform() === "android" && (
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/20">
-                  <Cloud className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {t("settings.dataAutoBackupAndroid")}
-                  </p>
-                </div>
-              )}
-
-              <Button
-                variant="outline"
-                onClick={handleBackupJSON}
-                className="w-full justify-start"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {t("settings.backupFull")}
-              </Button>
-
-              <div className="relative">
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={handleFileSelected}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  aria-label={t("settings.importBackupLabel")}
-                />
-                <Button variant="outline" className="w-full justify-start pointer-events-none">
-                  <Upload className="h-4 w-4 mr-2" />
-                  {t("settings.restoreBackup")}
-                </Button>
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={handleExportData}
-                className="w-full justify-start"
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                {t("settings.exportCsv")}
-              </Button>
-
-              {/* Dev-only test data generator. Owner-facing tool to fill
-                  60 days of biased fake entries so Trends and Correlations
-                  have realistic data without waiting weeks. Hidden in
-                  prod by `import.meta.env.DEV` — never shipped to App
-                  Store / Play Store users. Subtle visual treatment
-                  (orange border) signals "this is not for you" if it
-                  ever leaks through accidentally. */}
-              {import.meta.env.DEV && (
-                <Button
-                  variant="outline"
-                  onClick={() => setDevGenDialogOpen(true)}
-                  className="w-full justify-start border-orange-500/40 text-orange-600 hover:bg-orange-500/10 hover:text-orange-600"
-                >
-                  <FlaskConical className="h-4 w-4 mr-2" />
-                  {t("settings.devDataButton")}
-                </Button>
-              )}
-
-              {/* Demo packs — owner-only marketing tool. REPLACES
-                  trackers + entries with one of four themed packs,
-                  each engineered to surface non-obvious correlations
-                  for App Store screenshots / preview recordings.
-                  Visible when (DEV build) OR (demo-mode unlocked via
-                  7-tap on the version label below). */}
-              {showDemoButtons && (
-                <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/5 p-3">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {t("settings.demoSectionTitle")}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {t("settings.demoSectionDesc")}
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    {DEMO_PACK_IDS.map((packId) => (
-                      <Button
-                        key={packId}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openDemoConfirm(packId)}
-                        className="justify-start border-primary/40 text-primary hover:bg-primary/10 hover:text-primary text-xs"
-                      >
-                        {t(`settings.demoPack_${packId.replace("-", "_")}`)}
-                      </Button>
+            {/* === MY QUESTIONS: show / hide. Order is set on Today. ===
+                The "Show question ideas" switch is gone with the ideas
+                carousel itself. */}
+            {screen === "trackers" && (
+              <div className="space-y-4">
+                {trackers.length > 0 ? (
+                  <div className={card}>
+                    {trackers.map((tracker) => (
+                      <div key={tracker.id} className={row}>
+                        <span className={cn("flex-1 min-w-0 text-[17px] font-medium leading-snug", tracker.archived && "text-muted-foreground")}>
+                          {doorName(tracker.id) ?? localizeTrackerTitle(tracker.title)}
+                        </span>
+                        <Switch
+                          checked={!tracker.archived}
+                          onCheckedChange={() => handleToggleTrackerActive(tracker.id)}
+                          aria-label={doorName(tracker.id) ?? localizeTrackerTitle(tracker.title)}
+                        />
+                      </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Privacy policy link — required by App Store / Play Store
-                  for any app submission. URL is the production hosted
-                  policy (GitHub Pages). Opens in external browser so
-                  the user can read it without leaving the app context. */}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  window.open(
-                    "https://memap-tracker.netlify.app/PRIVACY_POLICY.html",
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
-                }}
-                className="w-full justify-start"
-              >
-                <Lock className="h-4 w-4 mr-2" />
-                {t("settings.privacyPolicy")}
-              </Button>
-
-              <div className="pt-2">
-                <div className="flex items-start gap-3">
-                  <Trash2 className="h-5 w-5 text-destructive mt-0.5" />
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <h3 className="font-medium text-sm text-destructive">{t("settings.resetAllTitle")}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {t("settings.resetAllDesc")}
-                      </p>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setResetDialogOpen(true)}
-                      className="w-full"
-                    >
-                      {t("settings.resetAllBtn")}
-                    </Button>
+                ) : (
+                  <p className="py-6 text-center text-[17px] text-muted-foreground">{t("settings.noTrackersYet")}</p>
+                )}
+                {/* Sensitive templates (intimacy, libido, exes) stay out of
+                    the library until this is on. */}
+                <div className={card}>
+                  <div className={row}>
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.sensitiveShort")}</span>
+                    <Switch id="sensitive-toggle" checked={showSensitive} onCheckedChange={handleToggleSensitive} />
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Version label at the very bottom. Also the secret
-                  tap target — 7 taps within 2 s toggle demo-mode
-                  unlock (exposes the demo-pack buttons in production
-                  builds where import.meta.env.DEV is false). The
-                  "Demo mode ON" pill only appears once unlocked, so
-                  App Store users see only the version. */}
-              <button
-                type="button"
-                onClick={handleVersionTap}
-                className="w-full text-center text-[11px] text-muted-foreground/60 pt-4 pb-2 select-none"
-              >
-                v1.7.5
-                {demoUnlocked && (
-                  <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[9px] font-medium">
-                    <Sparkles className="h-2.5 w-2.5" />
-                    {t("settings.demoModeOn")}
-                  </span>
+            {/* === HELP === */}
+            {screen === "help" && (
+              <div className="space-y-4">
+                <div className={card}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Wipe every tour / hint flag so the whole guided
+                      // start runs again from scratch.
+                      resetTourSeen();
+                      resetCoachmarkSeen();
+                      resetTourKey("memap_patterns_tour_seen");
+                      resetTourKey("memap_add_tracker_tour_seen");
+                      resetTourKey("memap_custom_tour_seen");
+                      resetTourKey("memap_first_swipe_seen");
+                      resetTourKey("memap_added_own_tracker");
+                      onStartTour?.();
+                    }}
+                    className={rowBtn}
+                  >
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.showAppTour")}</span>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground/60" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const subject = encodeURIComponent("MeMap support");
+                      const body = encodeURIComponent(
+                        `\n\n\n---\nApp version: ${APP_VERSION}\nPlatform: ${Capacitor.getPlatform()}\nLanguage: ${getLanguage()}`,
+                      );
+                      window.open(`mailto:memap.support@gmail.com?subject=${subject}&body=${body}`, "_blank");
+                    }}
+                    className={rowBtn}
+                  >
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.contactSupport")}</span>
+                    <Mail className="h-5 w-5 text-muted-foreground/60" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.open("https://memap-tracker.netlify.app/TERMS.html", "_blank", "noopener,noreferrer")}
+                    className={rowBtn}
+                  >
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.termsOfService")}</span>
+                    <FileText className="h-5 w-5 text-muted-foreground/60" />
+                  </button>
+                </div>
+                {/* The one place the "not a medical app" note lives. */}
+                <p className="px-1 text-[15px] leading-snug text-muted-foreground">{t("patterns.disclaimer")}</p>
+              </div>
+            )}
+
+            {/* === DATA & PRIVACY === */}
+            {screen === "data" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 px-1">
+                  <Lock className="h-5 w-5 text-primary flex-shrink-0" />
+                  <p className="text-[17px] font-semibold">{t("settings.dataOnPhone")}</p>
+                </div>
+                <div className={card}>
+                  <button type="button" onClick={handleBackupJSON} className={rowBtn}>
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.backupFull")}</span>
+                    <Download className="h-5 w-5 text-muted-foreground/60" />
+                  </button>
+                  <div className={cn(rowBtn, "relative")}>
+                    <input
+                      type="file"
+                      accept="application/json,.json"
+                      onChange={handleFileSelected}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      aria-label={t("settings.importBackupLabel")}
+                    />
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.restoreBackup")}</span>
+                    <Upload className="h-5 w-5 text-muted-foreground/60" />
+                  </div>
+                  <button type="button" onClick={handleExportData} className={rowBtn}>
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.exportCsv")}</span>
+                    <FileSpreadsheet className="h-5 w-5 text-muted-foreground/60" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.open("https://memap-tracker.netlify.app/PRIVACY_POLICY.html", "_blank", "noopener,noreferrer")}
+                    className={rowBtn}
+                  >
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.privacyPolicy")}</span>
+                    <FileText className="h-5 w-5 text-muted-foreground/60" />
+                  </button>
+                </div>
+
+                {/* Owner-only tools: the test data generator (dev builds)
+                    and demo packs for store screenshots (dev builds, or
+                    after 7 taps on the version below). */}
+                {import.meta.env.DEV && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setDevGenDialogOpen(true)}
+                    className="w-full justify-start border-orange-500/40 text-orange-600 hover:bg-orange-500/10 hover:text-orange-600"
+                  >
+                    <FlaskConical className="h-4 w-4 mr-2" />
+                    {t("settings.devDataButton")}
+                  </Button>
                 )}
-              </button>
-            </div>
+                {showDemoButtons && (
+                  <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {t("settings.demoSectionTitle")}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {DEMO_PACK_IDS.map((packId) => (
+                        <Button
+                          key={packId}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDemoConfirm(packId)}
+                          className="justify-start border-primary/40 text-primary hover:bg-primary/10 hover:text-primary text-xs"
+                        >
+                          {t(`settings.demoPack_${packId.replace("-", "_")}`)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className={card}>
+                  <button type="button" onClick={() => setResetDialogOpen(true)} className={rowBtn}>
+                    <span className="flex-1 text-[17px] font-medium text-destructive">{t("settings.resetAllTitle")}</span>
+                    <Trash2 className="h-5 w-5 text-destructive/70" />
+                  </button>
+                </div>
+
+                {/* Version, and the secret 7-tap target that unlocks the
+                    demo packs in store builds. */}
+                <button
+                  type="button"
+                  onClick={handleVersionTap}
+                  className="w-full text-center text-[13px] text-muted-foreground/60 pt-2 pb-2 select-none"
+                >
+                  MeMap {APP_VERSION}
+                  {demoUnlocked && (
+                    <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-medium">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      {t("settings.demoModeOn")}
+                    </span>
+                  )}
+                </button>
+              </div>
             )}
           </div>
         </div>

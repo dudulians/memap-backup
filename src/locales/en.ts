@@ -215,6 +215,9 @@ const en = {
     trackersCount_other: "{{count}} active",
     noTrackersYet: "No questions yet",
     showSensitive: "Sensitive topics",
+    sensitiveShort: "Intimacy & exes",
+    limitAlerts: "When a limit is crossed",
+    dataOnPhone: "Everything stays on this phone",
     showSensitiveDesc: "Intimacy, libido, exes — adds a few more questions to the library",
 
     helpTitle: "Help",
@@ -638,6 +641,11 @@ const en = {
   },
 
   notesTab: {
+    title: "Notes",
+    empty: "Nothing here yet",
+    write: "Write a note",
+    placeholder: "What happened today?",
+    otherDay: "Other day",
     yourNotes: "Your Notes",
     subtitle: "Reflections and thoughts tied to your days.",
     addNote: "Add note",
@@ -1029,7 +1037,7 @@ const en = {
     ready: "You're set.",
     remindShort: "Remind me tonight at {{time}}",
     firstEntryShort: "first entry",
-    readyShort: "ready",
+    readyShort: "questions added",
     when: {
       today: "Today",
       yesterday: "Yesterday",

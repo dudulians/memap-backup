@@ -222,6 +222,9 @@ const ru: Translation = {
     trackersCount_few: "{{count}} активных",
     trackersCount_many: "{{count}} активных",
     noTrackersYet: "Пока нет вопросов",
+    sensitiveShort: "Близость и бывшие",
+    limitAlerts: "Когда порог перейдён",
+    dataOnPhone: "Всё хранится только на этом телефоне",
     showSensitive: "Чувствительные темы",
     showSensitiveDesc: "Близость, либидо, бывшие — добавит ещё несколько вопросов в библиотеку",
 
@@ -663,6 +666,11 @@ const ru: Translation = {
   },
 
   notesTab: {
+    title: "Заметки",
+    empty: "Пока пусто",
+    write: "Написать заметку",
+    placeholder: "Что сегодня было?",
+    otherDay: "Другой день",
     yourNotes: "Твои заметки",
     subtitle: "Размышления и мысли, привязанные к дням.",
     addNote: "Добавить заметку",
@@ -1093,7 +1101,7 @@ const ru: Translation = {
     ready: "Готово.",
     remindShort: "Напомнить сегодня в {{time}}",
     firstEntryShort: "первая запись",
-    readyShort: "готово",
+    readyShort: "вопросы добавлены",
     when: {
       today: "Сегодня",
       yesterday: "Вчера",

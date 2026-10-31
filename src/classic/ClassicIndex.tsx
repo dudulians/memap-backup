@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TodayTab } from "./TodayTab";
 import { PatternsTab } from "./PatternsTab";
-import { NotesTab } from "@/components/NotesTab";
+import { NotesTab } from "./NotesTab";
 import { Layers, TrendingUp, Play, Settings, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { SettingsModal } from "./SettingsModal";

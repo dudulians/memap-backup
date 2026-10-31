@@ -1110,7 +1110,6 @@ export const DailySession = ({
     return null;
   }
 
-  const categoryColor = getCategoryColor(currentQuestion.tracker.category);
   // Yes / No are the same calm buttons (1.8.0). Colouring them by which
   // answer is "the problem" read as right / wrong answers (design review,
   // Oct 27): the evening question is for honesty, not a test.
@@ -1185,18 +1184,20 @@ export const DailySession = ({
             )}
           </div>
           <div className="text-center">
+            {/* A past day is named in the title itself ("Friday, 30 October")
+                instead of a tiny "filling in for" line under it. */}
             <p className="text-[17px] font-bold">
-              {t("dailySession.tonight")}
+              {selectedDate === todayLocal()
+                ? t("dailySession.tonight")
+                : (() => {
+                    const s = format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale });
+                    return s.charAt(0).toUpperCase() + s.slice(1);
+                  })()}
               <span className="font-medium text-muted-foreground">
                 {" · "}
                 {t("dailySession.countOf", { current: currentIndex + 1, total: totalQuestions })}
               </span>
             </p>
-            {selectedDate !== todayLocal() && (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {t("dailySession.fillingInFor", { date: format(new Date(selectedDate + "T00:00:00"), "MMM d", { locale: dateLocale }) })}
-              </p>
-            )}
           </div>
           <div className="w-9 h-9" />
         </div>
@@ -1228,9 +1229,9 @@ export const DailySession = ({
                         : "text-muted-foreground hover:bg-muted/40"
                     )}
                   >
-                    <span className="text-[9px] uppercase tracking-wider opacity-70">{weekday}</span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide opacity-80">{weekday}</span>
                     <span className={cn(
-                      "text-sm font-medium tabular-nums",
+                      "text-base font-semibold tabular-nums",
                       isToday && !isSelected && "text-foreground"
                     )}>{dayNum}</span>
                   </button>
@@ -1239,9 +1240,6 @@ export const DailySession = ({
             </div>
           );
         })()}
-        {onDateChange && (
-          <p className="text-center text-xs text-muted-foreground">{t("dailySession.missedDayHint")}</p>
-        )}
       </div>
 
       {/* Card area — pointer handlers attached HERE only, not on the
@@ -1320,29 +1318,16 @@ export const DailySession = ({
           <div className="relative w-full flex">
             <Card className="card-premium overflow-hidden shadow-2xl flex-1 flex flex-col">
               <CardContent className="p-6 flex-1 flex flex-col">
-                {/* Top: category badge (compact) + optional new badge */}
-                <div className="flex items-start justify-between gap-2 flex-shrink-0">
-                  <Badge
-                    variant="secondary"
-                    className="text-[11px] px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: `hsl(var(--${categoryColor}) / 0.15)`,
-                      color: `hsl(var(--${categoryColor}))`
-                    }}
-                  >
-                    {(() => {
-                      const QIcon = getTrackerIcon(currentQuestion.tracker.title, currentQuestion.tracker.category);
-                      return <QIcon className="h-3 w-3 mr-1 inline-block" strokeWidth={1.75} />;
-                    })()}
-                    {localizeTrackerTheme(currentQuestion.tracker)}
-                  </Badge>
-                  {currentQuestion.isNew && (
-                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">
-                      <Sparkles className="h-3 w-3 mr-1" />
+                {/* Only the "new question" mark of a play round; the small
+                    category chip that sat here is gone (1.8.0). */}
+                {currentQuestion.isNew && (
+                  <div className="flex-shrink-0">
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[13px] px-3 py-1">
+                      <Sparkles className="h-3.5 w-3.5 mr-1" />
                       {t("dailySession.newSuggestion")}
                     </Badge>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {/* Question — fills the card, big and plain. The tracker
                     title used to sit above it in caps; it mostly repeated
@@ -1374,20 +1359,18 @@ export const DailySession = ({
             {t("common.yes")}
           </Button>
         </div>
-        {/* One quiet line: swipe works too, and Skip. Close is the X at
-            the top of the sheet, so there's no second Close here. */}
-        <p className="mt-2.5 text-center text-[13px] text-muted-foreground">
-          {t("dailySession.orSwipe")}
-          {" · "}
+        {/* Skip as a plain button. "Or swipe the card" is gone: the
+            first card wiggles to show the swipe instead. */}
+        <div className="mt-1.5 flex justify-center">
           <button
             type="button"
             onClick={handleSkip}
             disabled={isAnimating}
-            className="underline underline-offset-2 hover:text-foreground transition-colors disabled:opacity-50"
+            className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
             {t("common.skip")}
           </button>
-        </p>
+        </div>
         {/* Progress: one short bar per question, filled as you go. */}
         <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
           {Array.from({ length: Math.min(totalQuestions, 12) }, (_, i) => (

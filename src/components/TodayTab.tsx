@@ -5,7 +5,8 @@ import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storag
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical, ChevronDown } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import { getDoorState } from "@/lib/doors";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
 import {
@@ -1038,99 +1039,79 @@ export const TodayTab = () => {
         const regularTrackers = trackers.filter((tr) => tr.source !== "play" && !tr.archived);
         const playTrackers = trackers.filter((tr) => tr.source === "play" && !tr.archived);
 
+        // Door questions go by their door name, like everywhere else.
+        const doorState = getDoorState();
+        const doorNameOf = (id: string) => {
+          if (!doorState) return null;
+          const doorId = doorState.trackerId === id ? doorState.id : doorState.extra?.find((x) => x.trackerId === id)?.id;
+          return doorId ? t(`doors.${doorId}.name`) : null;
+        };
         const renderTrackerCard = (tracker: Tracker, isPlay: boolean) => {
-          const TIcon = getTrackerIcon(tracker.title, tracker.category);
-          const todayEntry = getSelectedDateEntry(tracker.id);
-          const answered = todayEntry !== undefined;
           // Selection mode only applies to regular cards. Play cards
-          // keep their own ✓/× row so the user can promote-or-delete
-          // them one at a time without losing that affordance.
+          // keep their own keep / delete buttons so the user can
+          // promote-or-delete them one at a time.
           const inSelectMode = selectionMode && !isPlay;
           const isSelected = selectedTrackerIds.has(tracker.id);
           return (
-            <Card
+            <div
               key={tracker.id}
+              role="button"
+              tabIndex={0}
               onClick={() => {
-                if (inSelectMode) {
-                  toggleTrackerSelection(tracker.id);
-                } else {
-                  handleOpenTrackerDetails(tracker);
-                }
+                if (inSelectMode) toggleTrackerSelection(tracker.id);
+                else handleOpenTrackerDetails(tracker);
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                if (inSelectMode) toggleTrackerSelection(tracker.id);
+                else handleOpenTrackerDetails(tracker);
               }}
               className={cn(
-                "card-premium cursor-pointer hover:shadow-md transition-all active:scale-[0.99]",
-                inSelectMode && isSelected && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+                "flex items-center gap-3 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-3 min-h-[60px] py-3 cursor-pointer active:scale-[0.99] transition-transform",
+                inSelectMode && isSelected && "border-primary bg-primary/10",
               )}
             >
-              <CardContent className="p-3.5 flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0">
-                  <TIcon className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  {/* Question primary, title secondary — same hierarchy
-                      as TrackerDetails. The user is here to answer
-                      ("did I work out today?"), not to read a metric
-                      label ("Тренировался"). Title still rendered as
-                      a small breadcrumb so identity is preserved. The
-                      question can wrap to 2 lines (line-clamp-2)
-                      because long questions clipped to a single line
-                      with "..." lose the qualifying details that
-                      make the question unambiguous. */}
-                  {tracker.questionText && (
-                    <p className="font-medium text-sm leading-snug line-clamp-2">
-                      {localizeTrackerQuestion(tracker.questionText, tracker.title)}
-                    </p>
+              <span className="flex-1 min-w-0 text-[17px] font-semibold leading-snug">
+                {doorNameOf(tracker.id) ?? localizeTrackerTitle(tracker.title)}
+              </span>
+              {inSelectMode ? (
+                <span
+                  className={cn(
+                    "w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                    isSelected ? "bg-primary border-primary" : "border-muted-foreground/40",
                   )}
-                  <p className="text-[11px] text-muted-foreground/80 truncate mt-1">
-                    {localizeTrackerTitle(tracker.title)}
-                  </p>
-                </div>
-                {inSelectMode ? (
-                  <div
-                    className={cn(
-                      "w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
-                      isSelected
-                        ? "bg-primary border-primary"
-                        : "border-muted-foreground/40",
-                    )}
+                >
+                  {isSelected && <Check className="h-4 w-4 text-primary-foreground" strokeWidth={3} />}
+                </span>
+              ) : isPlay ? (
+                <span className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      promotePlayTracker(tracker);
+                    }}
+                    aria-label={t("today.keepPlayCard")}
+                    className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center"
                   >
-                    {isSelected && <Check className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />}
-                  </div>
-                ) : isPlay ? (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        promotePlayTracker(tracker);
-                      }}
-                      aria-label={t("today.keepPlayCard")}
-                      className="h-7 w-7 rounded-full bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Direct delete — no confirmation dialog.
-                        // Throwaway play cards; undo toast is the safety net.
-                        deletePlayCard(tracker);
-                      }}
-                      aria-label={t("today.deletePlayCard")}
-                      className="h-7 w-7 rounded-full bg-destructive/10 text-destructive hover:bg-destructive/20 flex items-center justify-center transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      answered ? "bg-primary" : "bg-muted-foreground/20"
-                    }`}
-                    aria-label={answered ? t("today.answeredToday") : t("today.notAnsweredToday")}
-                  />
-                )}
-              </CardContent>
-            </Card>
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Direct delete: throwaway play cards; the undo toast is the safety net.
+                      deletePlayCard(tracker);
+                    }}
+                    aria-label={t("today.deletePlayCard")}
+                    className="h-10 w-10 rounded-full bg-destructive/10 text-destructive flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </span>
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+              )}
+            </div>
           );
         };
 
@@ -1209,16 +1190,13 @@ export const TodayTab = () => {
                       </>
                     ) : (
                       <>
-                        <span className="text-xs uppercase tracking-wider text-muted-foreground/70 font-medium">
-                          {t("today.cardsSection")}
-                        </span>
+                        <span />
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setSelectionMode(true)}
-                          className="text-xs rounded-full h-7 px-3 text-muted-foreground hover:text-foreground"
+                          className="text-[15px] rounded-full h-9 px-3 text-muted-foreground hover:text-foreground"
                         >
-                          <ListChecks className="h-3 w-3 mr-1" />
                           {t("today.editCards")}
                         </Button>
                       </>
@@ -1243,7 +1221,7 @@ export const TodayTab = () => {
                   >
                     <div className="space-y-2">
                       {regularTrackers.map((tracker) => (
-                        <SortableTrackerRow key={tracker.id} tracker={tracker}>
+                        <SortableTrackerRow key={tracker.id} tracker={tracker} showHandle={selectionMode}>
                           {renderTrackerCard(tracker, false)}
                         </SortableTrackerRow>
                       ))}
@@ -1425,9 +1403,12 @@ interface SortableSwipeCardProps {
 const SortableTrackerRow = ({
   tracker,
   children,
+  showHandle,
 }: {
   tracker: Tracker;
   children: React.ReactNode;
+  /** The drag grip shows only in "Edit" mode (1.8.0), so the plain list is just names. */
+  showHandle: boolean;
 }) => {
   const {
     attributes,
@@ -1460,7 +1441,7 @@ const SortableTrackerRow = ({
       className="flex items-stretch gap-1 select-none"
     >
       <div className="flex-1 min-w-0">{children}</div>
-      <button
+      {showHandle && <button
         {...listeners}
         type="button"
         className="touch-none select-none cursor-grab active:cursor-grabbing self-center py-2 px-1 text-muted-foreground/40 hover:text-muted-foreground/80 flex-shrink-0"
@@ -1468,7 +1449,7 @@ const SortableTrackerRow = ({
         aria-label="Drag to reorder"
       >
         <GripVertical className="h-5 w-5" />
-      </button>
+      </button>}
     </div>
   );
 };
