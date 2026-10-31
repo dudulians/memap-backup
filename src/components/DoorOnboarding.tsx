@@ -19,6 +19,7 @@ import { getNotificationSettings } from "@/lib/notifications";
 import { localizeTrackerQuestionRaw } from "@/lib/trackerLocalize";
 import maluWave from "@/assets/malu/malu-wave.webp";
 import maluHappy from "@/assets/malu/malu-happy.webp";
+import { SHOW_MASCOT } from "@/lib/mascot";
 import {
   DOORS,
   Door,
@@ -253,7 +254,7 @@ const DoneScreen = ({
   return (
     <Screen className="items-center text-center">
       <div className="flex-1 min-h-6" />
-      <img src={maluHappy} alt="" aria-hidden="true" className="h-[200px] w-[200px] -mt-5 -mb-7" />
+      {SHOW_MASCOT && <img src={maluHappy} alt="" aria-hidden="true" className="h-[200px] w-[200px] -mt-5 -mb-7" />}
       <h1 className="text-[40px] leading-[1.1] font-bold tracking-tight">{title}</h1>
       {rows && rows.length > 0 && (
         <div className="mt-6 w-full rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] divide-y divide-foreground/[0.08] text-left">
@@ -314,9 +315,11 @@ export const DoorPickerScreen = ({ onPick }: { onPick: (r: PickResult) => void }
 
   return (
     <Screen>
-      <div className="pt-1 flex justify-center">
-        <img src={maluWave} alt="" aria-hidden="true" className="h-[112px] w-[112px] -mb-4" />
-      </div>
+      {SHOW_MASCOT && (
+        <div className="pt-1 flex justify-center">
+          <img src={maluWave} alt="" aria-hidden="true" className="h-[112px] w-[112px] -mb-4" />
+        </div>
+      )}
       <Title className="mt-1">{t("doors.pickTitle")}</Title>
       <p className="mt-2 text-[17px] text-muted-foreground">{t("doors.pickSubtitle")}</p>
       <div className="mt-5 flex flex-col gap-2.5">
@@ -831,9 +834,11 @@ export const CuriousFlow = ({ onBack, onFinish }: { onBack: () => void; onFinish
   return (
     <Screen className="text-center">
       <TopBar onBack={() => setStage("example")} />
-      <div className="mt-1 flex justify-center">
-        <img src={maluHappy} alt="" aria-hidden="true" className="h-[120px] w-[120px] -mt-3 -mb-4" />
-      </div>
+      {SHOW_MASCOT && (
+        <div className="mt-1 flex justify-center">
+          <img src={maluHappy} alt="" aria-hidden="true" className="h-[120px] w-[120px] -mt-3 -mb-4" />
+        </div>
+      )}
       <Title className="mt-2">{t("doors.curious.weekTitle")}</Title>
       <p className="mt-2.5 text-[18px] text-muted-foreground">{t("doors.curious.weekSub")}</p>
       <div className="mt-5 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] divide-y divide-foreground/[0.08] text-left">

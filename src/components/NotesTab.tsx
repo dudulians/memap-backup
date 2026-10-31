@@ -24,6 +24,7 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { daysAgoIso, getDoorState } from "@/lib/doors";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import maluWave from "@/assets/malu/malu-wave.webp";
+import { SHOW_MASCOT } from "@/lib/mascot";
 
 interface NotesTabProps {
   targetDate?: string;
@@ -185,7 +186,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
         {loading ? null : notes.length === 0 ? (
           <div className="flex flex-col items-center text-center pt-10 animate-fade-in">
-            <img src={maluWave} alt="" className="h-32 w-32" />
+            {SHOW_MASCOT && <img src={maluWave} alt="" className="h-32 w-32" />}
             <p className="mt-2 text-[22px] font-bold">{t("notesTab.empty")}</p>
             <Button
               onClick={() => setDraft({ date: today, text: "", linkedPatternId: "" })}

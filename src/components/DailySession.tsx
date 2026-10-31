@@ -29,6 +29,7 @@ import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/d
 import { echoLine, factLine } from "@/lib/echo";
 import maluCheer from "@/assets/malu/malu-cheer.webp";
 import maluHeart from "@/assets/malu/malu-heart.webp";
+import { SHOW_MASCOT } from "@/lib/mascot";
 
 interface DailySessionProps {
   trackers: Tracker[];
@@ -909,12 +910,14 @@ export const DailySession = ({
               was logged. The PNG has air around the lamb, hence the
               negative margins. */}
           <div className="flex flex-col items-center text-center space-y-3">
-            <img
-              src={hardDay ? maluHeart : maluCheer}
-              alt=""
-              aria-hidden="true"
-              className="h-[160px] w-[160px] -mt-4 -mb-6"
-            />
+            {SHOW_MASCOT && (
+              <img
+                src={hardDay ? maluHeart : maluCheer}
+                alt=""
+                aria-hidden="true"
+                className="h-[160px] w-[160px] -mt-4 -mb-6"
+              />
+            )}
             {hardDay && echoDoor ? (
               <div className="flex flex-col items-center">
                 {/* "Hard day." would judge a drink, so that door gets only the thanks. */}

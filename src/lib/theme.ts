@@ -10,13 +10,12 @@ export const getTheme = (): AppTheme => {
   if (stored === "terra") return "terra";
   if (stored === "pop") return "pop";
   if (stored === "hush") return "hush";
-  // Unset theme. Since 1.8.0 new installs open in dark aurora, the
-  // same look as the store page, Instagram and the mockups. People who
-  // already finished onboarding before 1.8.0 and never picked a theme
-  // keep the light one they've been seeing, so nobody's app flips
-  // colour after an update.
-  if (localStorage.getItem("memap_tour_seen") === "true") return "aurora-light";
-  return "aurora";
+  if (stored === "aurora-light") return "aurora-light";
+  // Unset theme: Aurora Light for everyone (her pick, Oct 31 2026: "возьмём
+  // аврору лайт мою тему"). Dark Aurora stays one tap away in Settings.
+  // Before this, a stored "aurora-light" wasn't read back at all, so
+  // picking Light in Settings didn't stick for new-flow users.
+  return "aurora-light";
 };
 
 // 1.8.0 offers only dark and light. Anyone who picked one of the five
