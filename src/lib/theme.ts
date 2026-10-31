@@ -10,11 +10,13 @@ const LEGACY_THEMES: AppTheme[] = ["classic", "liquid", "terra", "pop", "hush"];
 export const getTheme = (): AppTheme => {
   const stored = localStorage.getItem(THEME_KEY);
   // Malu's world (1.9): the new screens have their own day and night.
-  // The 1.8.0 dark/light picks map onto them; the five older themes
-  // stay as they are (Settings offers them as a third option).
+  // 1.8.0 wrote "aurora" for every new install (it was the default, not
+  // a choice), so both 1.8.0 looks map to the day notebook; only an
+  // explicit "malu-night" opens on navy. The five older themes stay as
+  // they are (Settings offers them as a third option).
   if (getUiMode() === "new") {
-    if (stored === "malu" || stored === "aurora-light") return "malu";
-    if (stored === "malu-night" || stored === "aurora") return "malu-night";
+    if (stored === "malu-night") return "malu-night";
+    if (stored === "malu" || stored === "aurora-light" || stored === "aurora") return "malu";
     if (stored && (LEGACY_THEMES as string[]).includes(stored)) return stored as AppTheme;
     return "malu";
   }
