@@ -347,8 +347,8 @@ export const PatternsTab = () => {
           return (
             <div className="animate-fade-in">
               {common && <p className="mx-1 mb-3 text-[17px] text-muted-foreground">{t("patterns.limitsWindow", { count: common })}</p>}
-              <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] overflow-hidden">
-                {live.map((tracker, i) => {
+              <div className="space-y-2.5">
+                {live.map((tracker) => {
                   const stats = getTrackerStats(tracker);
                   const crossed = stats.significantDays >= tracker.threshold;
                   const pct = Math.min(100, Math.round((stats.significantDays / Math.max(1, tracker.threshold)) * 100));
@@ -362,9 +362,8 @@ export const PatternsTab = () => {
                       type="button"
                       onClick={() => setReflectionSheetTracker(tracker)}
                       className={cn(
-                        "block w-full text-left px-[18px] py-[18px]",
-                        i > 0 && "border-t border-foreground/[0.08]",
-                        crossed && "bg-strong/[0.12]",
+                        "block w-full text-left rounded-[22px] border px-[18px] py-4 active:scale-[0.99] transition-transform",
+                        crossed ? "border-strong/30 bg-strong/[0.12]" : "border-foreground/[0.12] bg-foreground/[0.07]",
                       )}
                     >
                       <div className="flex items-baseline justify-between gap-3">
@@ -372,6 +371,7 @@ export const PatternsTab = () => {
                         <span className="shrink-0 tabular-nums">
                           <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{stats.significantDays}</span>
                           <span className="text-[17px] text-muted-foreground"> / {tracker.threshold}</span>
+                          <ChevronRight className="inline-block h-5 w-5 ml-1.5 -mt-1 text-muted-foreground/60" />
                         </span>
                       </div>
                       {sub && <p className="mt-0.5 text-sm text-muted-foreground">{sub}</p>}

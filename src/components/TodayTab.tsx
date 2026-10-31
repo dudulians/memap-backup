@@ -974,6 +974,32 @@ export const TodayTab = () => {
         );
       })()}
 
+      {/* Missed yesterday (1.8.0, from phone testing: "couldn't find how
+          to answer for past days"). Shown only to someone who was already
+          answering before yesterday, so a brand-new user isn't asked
+          about a day before they installed. */}
+      {(() => {
+        const yIso = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
+        const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
+        const firstDay = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
+        if (!firstDay || firstDay >= yIso) return null;
+        const missed = active.some((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === yIso));
+        if (!missed) return null;
+        return (
+          <Button
+            variant="outline"
+            onClick={() => {
+              haptics.tap();
+              setSelectedDate(yIso);
+              setDailySessionOpen(true);
+            }}
+            className="w-full h-[52px] -mt-3 rounded-full text-[16px] font-semibold bg-transparent border-foreground/20 animate-fade-in"
+          >
+            {t("today.answerYesterday")}
+          </Button>
+        );
+      })()}
+
       {/* Notif opt-in banner — shown only when reminders are off, the
           user hasn't dismissed it, and there are answers on at least two
           days (so it never stacks on top of a brand-new Today). */}
@@ -1115,16 +1141,32 @@ export const TodayTab = () => {
                 Today is just the count and tonight's button. Opening it
                 shows the old list (drag, edit, bulk) plus Add question. */}
             {regularTrackers.length + playTrackers.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setListOpen((v) => !v)}
-                aria-expanded={listShown}
-                className="w-full flex items-center gap-3 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-4 py-4 text-left"
-              >
-                <span className="flex-1 text-[17px] font-semibold">{t("today.myQuestions")}</span>
-                <span className="text-[16px] text-muted-foreground tabular-nums">{regularTrackers.length + playTrackers.length}</span>
-                <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", listShown && "rotate-180")} />
-              </button>
+              <div className="flex items-center gap-2 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-2 py-2">
+                <button
+                  type="button"
+                  onClick={() => setListOpen((v) => !v)}
+                  aria-expanded={listShown}
+                  className="flex-1 min-w-0 flex items-center gap-3 py-2 text-left"
+                >
+                  <span className="flex-1 text-[17px] font-semibold">{t("today.myQuestions")}</span>
+                  <span className="text-[16px] text-muted-foreground tabular-nums">{regularTrackers.length + playTrackers.length}</span>
+                  <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", listShown && "rotate-180")} />
+                </button>
+                {/* Adding stays visible without opening the list (phone
+                    testing: "couldn't see where to add a question"). */}
+                <button
+                  type="button"
+                  data-coachmark="add-button"
+                  onClick={() => {
+                    markTrackerAdded();
+                    setAddTrackerModalOpen(true);
+                  }}
+                  aria-label={t("today.addNew")}
+                  className="h-11 w-11 shrink-0 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
+                >
+                  <Plus className="h-5 w-5" strokeWidth={2.6} />
+                </button>
+              </div>
             )}
             {listShown && regularTrackers.length > 0 && (
               <div data-coachmark="cards-list" className="space-y-3 animate-fade-in">
@@ -1252,9 +1294,8 @@ export const TodayTab = () => {
                 </div>
               </div>
             )}
-            {(listShown || regularTrackers.length + playTrackers.length === 0) && (
+            {regularTrackers.length + playTrackers.length === 0 && (
               <Button
-                data-coachmark="add-button"
                 variant="outline"
                 onClick={() => {
                   markTrackerAdded();

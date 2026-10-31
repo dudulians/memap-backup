@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import ClassicIndex from "./classic/ClassicIndex";
+import { getUiMode } from "@/lib/uiMode";
 import NotFound from "./pages/NotFound";
 import { getNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { primeAudio } from "@/lib/feedback";
@@ -106,6 +108,7 @@ const App = () => {
     // Also set theme + language as USER properties so future Mixpanel
     // funnels can segment by them without re-emitting on every event.
     setUserProperty("theme", getTheme());
+    setUserProperty("ui", getUiMode());
     setUserProperty("language", getLanguage());
 
     // Returns from background. iOS keeps the WebView alive for hours,
@@ -153,7 +156,8 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
+              {/* Old users keep the 1.7.9 screens (src/lib/uiMode.ts) */}
+              <Route path="/" element={getUiMode() === "classic" ? <ClassicIndex /> : <Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
