@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { DayMark } from "./mw/DayMark";
 import { TopicIcon, topicKind } from "./mw/TopicIcon";
 import { tilt } from "./mw/WeekMap";
 import { useTranslation } from "react-i18next";
@@ -377,9 +378,13 @@ export const PatternsTab = () => {
                       {tracker.threshold <= 14 ? (
                         <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(tracker.threshold, 7)}, minmax(0, 1fr))` }} aria-hidden="true">
                           {Array.from({ length: Math.max(tracker.threshold, 7) }, (_, i) => (
-                            <span key={i} className={cn("mw-cell !rounded-[4px]", i >= tracker.threshold && "opacity-0")}>
+                            <span
+                              key={i}
+                              className={cn("mw-cell !rounded-[4px]", i >= tracker.threshold && "opacity-0")}
+                              data-mood={i < Math.min(stats.significantDays, tracker.threshold) ? "bad" : undefined}
+                            >
                               {i < Math.min(stats.significantDays, tracker.threshold) && (
-                                <TopicIcon kind={kindOf(tracker)} size={24} sticker className="absolute" style={{ transform: `rotate(${tilt(tracker.id + i)}deg)` }} />
+                                <DayMark value={tracker.problemWhen === "yes"} kind={kindOf(tracker)} size={24} style={{ transform: `rotate(${tilt(tracker.id + i)}deg)` }} />
                               )}
                             </span>
                           ))}

@@ -6,6 +6,7 @@
 // evenings: the first week report (counts per topic as a sticker strip,
 // the strongest "what came before"), until the engine has a real link.
 import { useEffect, useMemo } from "react";
+import { moodOf } from "./mw/DayMark";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
@@ -39,8 +40,19 @@ const sentenceKey = (c: CorrelationResult): string => {
   return more ? "patterns.findSameDay" : "patterns.findSameDayLess";
 };
 
-/** A row of notebook squares: a tiny sticker where it happened. */
-const Strip = ({ label, kind, hits }: { label: string; kind: TopicKind; hits: (boolean | undefined)[] }) => (
+/** A row of notebook squares: a sticker for "yes", a curl for "no",
+ *  green / pink for good / bad (see DayMark). */
+const Strip = ({
+  label,
+  kind,
+  hits,
+  problemWhen = "yes",
+}: {
+  label: string;
+  kind: TopicKind;
+  hits: (boolean | undefined)[];
+  problemWhen?: "yes" | "no";
+}) => (
   <div>
     <span
       className="mw-tape inline-flex items-center gap-1.5 pl-2 pr-3 py-0.5 text-[16px] font-semibold max-w-full"
@@ -51,7 +63,7 @@ const Strip = ({ label, kind, hits }: { label: string; kind: TopicKind; hits: (b
     </span>
     <div className="mt-1.5 grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${hits.length}, minmax(0, 1fr))` }} aria-hidden="true">
       {hits.map((v, i) => (
-        <span key={i} className="mw-cell !rounded-[4px]">
+        <span key={i} className="mw-cell !rounded-[4px]" data-mood={moodOf({ problemWhen }, v)}>
           {v === true && <TopicIcon kind={kind} size={hits.length > 7 ? 20 : 30} sticker className="absolute" style={{ transform: `rotate(${tilt(label + i)}deg)` }} />}
           {v === false && hits.length <= 7 && <PencilCurl size={16} />}
         </span>
@@ -143,11 +155,8 @@ export const FindingsView = ({
     const doorRows = trackers.filter((tr) => !tr.archived && doorIdOf(tr.id));
     const rows = (doorRows.length ? doorRows : trackers.filter((tr) => !tr.archived).slice(0, 3)).map((tr) => {
       const byDate = new Map(entries.filter((e) => e.trackerId === tr.id).map((e) => [e.date, e.value]));
-      const hits = dates.map((d) => {
-        const v = byDate.get(d);
-        return v === undefined ? undefined : isHit(tr, v);
-      });
-      return { tr, hits, k: hits.filter((h) => h === true).length };
+      const hits = dates.map((d) => byDate.get(d));
+      return { tr, hits, k: hits.filter((v) => v !== undefined && isHit(tr, v)).length };
     });
     const fact = door && trackers.some((tr) => tr.id === door.trackerId) ? strongestContextFact(door, trackers, entries) : null;
     return (
@@ -161,7 +170,7 @@ export const FindingsView = ({
           <div className="mt-4 space-y-4">
             {rows.map(({ tr, hits, k }) => (
               <div key={tr.id}>
-                <Strip label={doorIdOf(tr.id) ? t(`week.row.${doorIdOf(tr.id)}`) : localizeTrackerTitle(tr.title)} kind={kindOf(tr)} hits={hits} />
+                <Strip label={doorIdOf(tr.id) ? t(`week.row.${doorIdOf(tr.id)}`) : localizeTrackerTitle(tr.title)} kind={kindOf(tr)} hits={hits} problemWhen={tr.problemWhen} />
                 <p className="mt-1.5 text-[17px] font-semibold">{t("mw.find.rowCount", { k, n: 7 })}</p>
               </div>
             ))}
@@ -186,8 +195,8 @@ export const FindingsView = ({
         <p className="mw-hand text-[18px] text-muted-foreground">{t("patterns.findStrongest")}</p>
         <p className="mt-1 mw-display text-[23px] leading-[1.2]">{sentence(top)}</p>
         <div className="mt-4 space-y-3">
-          <Strip label={localizeTrackerTitle(top.trackerA.title)} kind={kindOf(top.trackerA)} hits={yesOn(top.trackerA)} />
-          <Strip label={localizeTrackerTitle(top.trackerB.title)} kind={kindOf(top.trackerB)} hits={yesOn(top.trackerB)} />
+          <Strip label={localizeTrackerTitle(top.trackerA.title)} kind={kindOf(top.trackerA)} hits={yesOn(top.trackerA)} problemWhen={top.trackerA.problemWhen} />
+          <Strip label={localizeTrackerTitle(top.trackerB.title)} kind={kindOf(top.trackerB)} hits={yesOn(top.trackerB)} problemWhen={top.trackerB.problemWhen} />
         </div>
         <p className="mt-3 text-[17px] font-semibold">{t("mw.find.seen", { k, n })}</p>
         <button type="button" onClick={onSeeDays} className="mw-link -ml-2 mt-1">

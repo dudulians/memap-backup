@@ -4,6 +4,7 @@
 // Multi bulk-select and the colour legend are gone (design rule: people
 // who hate reading). Canvas "MeMap: новая версия", page 12, RestCalendar.
 import { useState, useRef, useMemo, useEffect } from "react";
+import { MoodLegend, moodOf } from "./mw/DayMark";
 import { Glyph } from "./mw/Glyph";
 import { PencilCurl, TopicIcon, topicKind } from "./mw/TopicIcon";
 import { tilt } from "./mw/WeekMap";
@@ -321,13 +322,14 @@ export const OverviewCard = ({
                   disabled={day.isFutureDate}
                   data-today={day.isToday}
                   data-future={day.isFutureDate}
+                  data-mood={day.isFutureDate ? undefined : moodOf(activeTracker, entryMap.get(day.dateStr)?.value)}
                   className={cn(
                     "mw-cell !items-start !justify-start p-1 tabular-nums",
                     day.isSelected && !day.isToday && "!shadow-[inset_0_0_0_2px_hsl(var(--foreground)/0.6)]",
                   )}
                 >
                   <span className="relative z-[1] text-[13px] leading-none">{format(day.date, "d")}</span>
-                  {!day.isFutureDate && day.status === "significant" && (
+                  {!day.isFutureDate && entryMap.get(day.dateStr)?.value === true && (
                     <TopicIcon
                       kind={activeKind}
                       size={34}
@@ -336,7 +338,7 @@ export const OverviewCard = ({
                       style={{ transform: `rotate(${tilt(day.dateStr + activeTracker.id)}deg)` }}
                     />
                   )}
-                  {!day.isFutureDate && day.status === "balanced" && (
+                  {!day.isFutureDate && entryMap.get(day.dateStr)?.value === false && (
                     <span className="absolute right-1.5 bottom-1.5"><PencilCurl size={18} /></span>
                   )}
                   {noteDatesSet.has(day.dateStr) && (
@@ -349,6 +351,7 @@ export const OverviewCard = ({
             </div>
           ))}
         </div>
+        <MoodLegend className="mt-3" />
       </div>
 
       {/* Notes slot for the selected date. Fixed height whenever ANY

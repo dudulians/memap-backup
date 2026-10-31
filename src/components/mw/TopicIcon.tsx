@@ -7,7 +7,7 @@ import type { DoorId } from "@/lib/doors";
 
 export type TopicKind =
   | "fight" | "migraine" | "drink" | "kid" | "mood" | "anxious" | "sleep" | "tired"
-  | "food" | "sun" | "move" | "heart" | "cry" | "phone" | "drop" | "pill" | "talk" | "star";
+  | "food" | "sun" | "move" | "heart" | "cry" | "phone" | "drop" | "pill" | "talk" | "star" | "call";
 
 const has = (t: string, words: string[]) => words.some((w) => t.includes(w));
 
@@ -32,6 +32,8 @@ export const topicKind = (title: string, door?: DoorId): TopicKind => {
   if (has(t, ["move", "exercise", "sport", "train", "danc", "трениров", "спорт", "двигал", "танц", "зарядк"])) return "move";
   if (has(t, ["period", "cycle", "pms", "water", "месячн", "цикл", "пмс", "вод"])) return "drop";
   if (has(t, ["pill", "medic", "таблет", "лекарств"])) return "pill";
+  // A call before "phone" (screens) and "talk": "Did I call mom?"
+  if (has(t, ["call", "rang", "звонил", "звонила", "позвон", "созвон", "набрал"])) return "call";
   if (has(t, ["phone", "scroll", "screen", "social", "телефон", "соцсет", "экран", "листал"])) return "phone";
   if (has(t, ["love", "partner", "hug", "kiss", "sex", "together", "любим", "партнёр", "партнер", "обним", "близост", "вдвоём", "вдвоем"])) return "heart";
   if (has(t, ["said", "spoke", "voice", "call", "сказал", "голос", "звонил", "говорил"])) return "talk";
@@ -43,7 +45,7 @@ export const FILL: Record<TopicKind, string> = {
   fight: "#FF9AAE", migraine: "#CFC3F5", drink: "#FFE08A", kid: "#FFC7A6", mood: "#A9DCF0",
   anxious: "#D9D0F7", sleep: "#C9CEF2", tired: "#FFF1C4", food: "#FFD9B0", sun: "#FFE08A",
   move: "#CFE6C4", heart: "#FFB3C1", cry: "#C9E8F7", phone: "#D9D0F7", drop: "#FFB8C6",
-  pill: "#D8EED8", talk: "#FFF1C4", star: "#FFE08A",
+  pill: "#D8EED8", talk: "#FFF1C4", star: "#FFE08A", call: "#CFE6C4",
 };
 
 /** Tape colour variable for a topic, for strips and picked cards. */
@@ -118,9 +120,15 @@ const ART: Record<TopicKind, { f?: string; l?: string; dot?: [number, number, nu
     f: "M7 18.6l9.2-9.2c2.6-2.6 6.2-2.6 8.2-.6s2 5.6-.6 8.2L14.6 26.2c-2.6 2.6-6.2 2.6-8.2.6s-2-5.6.6-8.2z",
     l: "M11.6 13.8l6.6 6.6",
   },
+  // A round speech bubble (the square one read as a drop-down menu).
   talk: {
-    f: "M5 9c0-2 1.6-3.6 3.6-3.6h14.8c2 0 3.6 1.6 3.6 3.6v8.6c0 2-1.6 3.6-3.6 3.6h-7.2l-5.6 4.6.8-4.6H8.6C6.6 21.2 5 19.6 5 17.6z",
-    dot: [[11.4, 13.4, 1.4], [16, 13.4, 1.4], [20.6, 13.4, 1.4]],
+    f: "M16 5.2c6.3 0 11.2 4 11.2 9.1S22.3 23.4 16 23.4c-1.3 0-2.5-.2-3.6-.5L6.4 26l1.5-4.6C5.9 19.7 4.8 17.2 4.8 14.3c0-5.1 4.9-9.1 11.2-9.1z",
+    dot: [[11.4, 14.4, 1.4], [16, 14.4, 1.4], [20.6, 14.4, 1.4]],
+  },
+  // A phone handset, for "Did I call…?"
+  call: {
+    f: "M9.6 4.8c1.1-.6 2.4-.2 3 .8l2.1 3.6c.5 1 .3 2.2-.6 2.8l-1.7 1.2c1.2 2.8 3.2 4.9 5.9 6.2l1.4-1.6c.7-.8 1.9-1 2.8-.4l3.4 2.3c1 .7 1.3 2 .7 3l-1.3 2c-1 1.5-2.8 2.1-4.5 1.6C13.4 24.3 8.3 19 6.2 12.4c-.5-1.7.1-3.5 1.6-4.5z",
+    l: "M20.2 5.6c2.9.6 5.2 2.9 5.8 5.8M19.6 9.4c1.3.4 2.4 1.4 2.8 2.8",
   },
   star: {
     f: "M16 4.2l3.4 7.2 7.8 1-5.7 5.4 1.4 7.8L16 21.8l-6.9 3.8 1.4-7.8-5.7-5.4 7.8-1z",

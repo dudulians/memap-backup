@@ -59,6 +59,8 @@ html[data-theme="malu"] {
   --tape-kid: 22 100% 83%;         /* #FFC7A6 */
   --tape-mood: 196 66% 80%;        /* #A9DCF0 */
   --tape-other: 100 38% 82%;       /* #CFE6C4 */
+  --mw-good: 100 48% 87%;          /* green square: a good day for this question */
+  --mw-bad: 348 100% 90%;          /* pink square: a bad day */
 }
 
 html[data-theme="malu-night"],
@@ -106,6 +108,8 @@ html[data-theme="malu-night"],
   --tape-kid: 22 100% 83%;
   --tape-mood: 196 66% 80%;
   --tape-other: 100 38% 82%;
+  --mw-good: 120 22% 38%;
+  --mw-bad: 345 38% 44%;
 }
 
 :root {
@@ -355,6 +359,14 @@ html[data-theme="malu-night"],
     font-size: 13px;
     font-weight: 600;
     -webkit-tap-highlight-color: transparent;
+  }
+  .mw-cell[data-mood="good"] {
+    background: hsl(var(--mw-good));
+    box-shadow: none;
+  }
+  .mw-cell[data-mood="bad"] {
+    background: hsl(var(--mw-bad));
+    box-shadow: none;
   }
   .mw-cell[data-today="true"] {
     box-shadow: inset 0 0 0 2px hsl(var(--mw-brand));

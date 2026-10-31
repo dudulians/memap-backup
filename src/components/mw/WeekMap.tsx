@@ -6,6 +6,7 @@
 // Same days line up, so "drank on Tuesday, migraine on Wednesday" is
 // visible without a single sentence.
 import { useMemo, useState } from "react";
+import { DayMark, MoodLegend, moodOf } from "./DayMark";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
@@ -118,20 +119,18 @@ export const WeekMap = ({
                       onClick={() => onDayTap?.(c.date)}
                       aria-label={`${format(new Date(c.date + "T12:00:00"), "EEEE d MMMM", { locale: dateLocale })}: ${t(`week.cell.${c.state}`)}`}
                       data-state={c.state}
+                      data-mood={moodOf(row.tracker, c.value)}
                       data-today={c.isToday}
                       data-future={c.isFuture}
                       className="mw-cell"
                     >
-                      {c.state === "hit" && (
-                        <TopicIcon
-                          kind={kind}
-                          size={34}
-                          sticker
-                          className={cn("absolute", animate && "mw-slap")}
-                          style={{ ["--r" as string]: `${tilt(c.date + row.tracker.id)}deg`, transform: `rotate(${tilt(c.date + row.tracker.id)}deg)`, animationDelay: animate ? `${(ri * 7 + ci) * 60}ms` : undefined }}
-                        />
-                      )}
-                      {c.state === "fine" && <PencilCurl size={20} />}
+                      <DayMark
+                        value={c.value}
+                        kind={kind}
+                        size={34}
+                        slap={animate}
+                        style={{ ["--r" as string]: `${tilt(c.date + row.tracker.id)}deg`, transform: `rotate(${tilt(c.date + row.tracker.id)}deg)`, animationDelay: animate ? `${(ri * 7 + ci) * 60}ms` : undefined }}
+                      />
                     </button>
                   ))}
                 </div>
@@ -140,6 +139,8 @@ export const WeekMap = ({
           );
         })}
       </div>
+
+      <MoodLegend className="mt-3" />
 
       {rows.length > maxRows && (
         <button

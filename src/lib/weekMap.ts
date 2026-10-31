@@ -13,6 +13,8 @@ export type CellState = "hit" | "fine" | "empty";
 export interface WeekCell {
   date: string;
   state: CellState;
+  /** The answer itself (yes / no), if there is one. */
+  value?: boolean;
   isToday: boolean;
   isFuture: boolean;
 }
@@ -82,7 +84,7 @@ export const weekRows = (
     const cells = dates.map((date) => {
       const v = byKey.get(`${tracker.id}|${date}`);
       const state: CellState = v === undefined ? "empty" : isHit(tracker, v) ? "hit" : "fine";
-      return { date, state, isToday: date === today, isFuture: date > today };
+      return { date, state, value: v, isToday: date === today, isFuture: date > today };
     });
     return { tracker, door, cells, hits: cells.filter((c) => c.state === "hit").length };
   });

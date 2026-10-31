@@ -978,6 +978,8 @@ const ru: Translation = {
     },
     all: "Все {{count}}",
     less: "Свернуть",
+    good: "хорошо",
+    bad: "плохо",
   },
   mw: {
     today: {

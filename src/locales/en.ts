@@ -924,6 +924,8 @@ const en = {
     },
     all: "All {{count}}",
     less: "Fewer",
+    good: "good",
+    bad: "bad",
   },
   mw: {
     today: {

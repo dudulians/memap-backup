@@ -435,6 +435,7 @@ export const DoorFlow = ({
                 type="button"
                 onClick={() => toggleDay(d)}
                 aria-pressed={on}
+                data-mood={on ? "bad" : undefined}
                 data-onb-interactive
                 style={{ touchAction: "manipulation" }}
                 className={cn(

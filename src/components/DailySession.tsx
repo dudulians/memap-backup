@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { DayMark, MoodLegend, moodOf } from "./mw/DayMark";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -981,10 +982,9 @@ export const DailySession = ({
         const e = entries.find((x) => x.trackerId === tr.id && x.date === selectedDate);
         const local = stamps[tr.id];
         const value = local !== undefined ? local : e?.value;
-        const hit = value === undefined || value === null ? null : tr.problemWhen === "yes" ? value : !value;
-        return { tr, hit };
+        return { tr, value: value === null ? undefined : value };
       })
-      .filter((x) => x.hit !== null);
+      .filter((x) => x.value !== undefined);
     const evenings = eveningDates(trackers, entries);
     let recalled = false;
     try {
@@ -1010,24 +1010,19 @@ export const DailySession = ({
           {!playMode && dayStamps.length > 0 && (
             <div className="mw-taped w-full max-w-sm px-4 pt-5 pb-4" style={{ ["--tape" as string]: "var(--tape-mood)" }}>
               <p className="mw-display text-[20px]">{dayLabel}</p>
-              <div className="mt-3 grid grid-cols-6 gap-1.5">
-                {dayStamps.map(({ tr, hit }, i) => {
+              <MoodLegend className="!justify-start mb-1 mt-1" />
+              <div className="mt-2 grid grid-cols-6 gap-1.5">
+                {dayStamps.map(({ tr, value }, i) => {
                   const kind = topicKind(tr.title, doorState?.trackerId === tr.id ? doorState.id : doorState?.extra?.find((x) => x.trackerId === tr.id)?.id);
                   return (
-                    <div key={tr.id} className="mw-cell">
-                      {hit ? (
-                        <TopicIcon
-                          kind={kind}
-                          size={38}
-                          sticker
-                          className="absolute mw-slap"
-                          style={{ ["--r" as string]: `${tilt(tr.id + selectedDate)}deg`, transform: `rotate(${tilt(tr.id + selectedDate)}deg)`, animationDelay: `${i * 90}ms` }}
-                        />
-                      ) : (
-                        <span className="mw-slap" style={{ animationDelay: `${i * 90}ms` }}>
-                          <PencilCurl size={22} />
-                        </span>
-                      )}
+                    <div key={tr.id} className="mw-cell" data-mood={moodOf(tr, value)}>
+                      <DayMark
+                        value={value}
+                        kind={kind}
+                        size={38}
+                        slap
+                        style={{ ["--r" as string]: `${tilt(tr.id + selectedDate)}deg`, transform: `rotate(${tilt(tr.id + selectedDate)}deg)`, animationDelay: `${i * 90}ms` }}
+                      />
                     </div>
                   );
                 })}
@@ -1241,23 +1236,21 @@ export const DailySession = ({
           <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(totalQuestions, 10)}, minmax(0, 1fr))` }} aria-hidden="true">
             {deck.slice(0, 10).map((q, i) => {
               const v = stamps[q.tracker.id];
-              const hit = v === undefined || v === null ? null : q.tracker.problemWhen === "yes" ? v : !v;
+              const value = v === null ? undefined : v;
               return (
                 <div
                   key={q.tracker.id}
                   className="mw-cell !aspect-square"
+                  data-mood={moodOf(q.tracker, value)}
                   data-today={i === currentIndex ? "true" : undefined}
                 >
-                  {hit === true && (
-                    <TopicIcon
-                      kind={kindOf(q.tracker)}
-                      size={30}
-                      sticker
-                      className="absolute mw-slap"
-                      style={{ ["--r" as string]: `${tilt(q.tracker.id)}deg`, transform: `rotate(${tilt(q.tracker.id)}deg)` }}
-                    />
-                  )}
-                  {hit === false && <span className="mw-slap"><PencilCurl size={18} /></span>}
+                  <DayMark
+                    value={value}
+                    kind={kindOf(q.tracker)}
+                    size={30}
+                    slap
+                    style={{ ["--r" as string]: `${tilt(q.tracker.id)}deg`, transform: `rotate(${tilt(q.tracker.id)}deg)` }}
+                  />
                 </div>
               );
             })}

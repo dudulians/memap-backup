@@ -3,6 +3,7 @@
 // Answering moved out: tonight's card answers today, Patterns → Calendar
 // fixes past days. Canvas "MeMap: новая версия", page 12, RestQuestion.
 import { useState, useEffect } from "react";
+import { DayMark, moodOf } from "./mw/DayMark";
 import { Glyph } from "./mw/Glyph";
 import { PencilCurl, TopicIcon, topicKind } from "./mw/TopicIcon";
 import { tilt } from "./mw/WeekMap";
@@ -124,11 +125,8 @@ export const TrackerDetails = ({
       </div>
       <div className="mt-2 grid grid-cols-7 gap-1" aria-hidden="true">
         {month.map((d) => (
-          <span key={d.date} className="mw-cell" data-today={d.isToday} data-future={d.future}>
-            {d.status === "bad" && (
-              <TopicIcon kind={kind} size={30} sticker className="absolute" style={{ transform: `rotate(${tilt(d.date + tracker.id)}deg)` }} />
-            )}
-            {d.status === "ok" && <PencilCurl size={16} />}
+          <span key={d.date} className="mw-cell" data-today={d.isToday} data-future={d.future} data-mood={moodOf(tracker, mine.get(d.date)?.value)}>
+            <DayMark value={mine.get(d.date)?.value} kind={kind} size={30} style={{ transform: `rotate(${tilt(d.date + tracker.id)}deg)` }} />
           </span>
         ))}
       </div>
@@ -141,9 +139,13 @@ export const TrackerDetails = ({
         {tracker.threshold <= 14 ? (
           <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.max(tracker.threshold, 7)}, minmax(0, 1fr))` }} aria-hidden="true">
             {Array.from({ length: Math.max(tracker.threshold, 7) }, (_, i) => (
-              <span key={i} className={cn("mw-cell !rounded-[4px]", i >= tracker.threshold && "opacity-0")}>
+              <span
+                key={i}
+                className={cn("mw-cell !rounded-[4px]", i >= tracker.threshold && "opacity-0")}
+                data-mood={i < Math.min(limitCount, tracker.threshold) ? "bad" : undefined}
+              >
                 {i < Math.min(limitCount, tracker.threshold) && (
-                  <TopicIcon kind={kind} size={24} sticker className="absolute" style={{ transform: `rotate(${tilt(tracker.id + i)}deg)` }} />
+                  <DayMark value={tracker.problemWhen === "yes"} kind={kind} size={24} style={{ transform: `rotate(${tilt(tracker.id + i)}deg)` }} />
                 )}
               </span>
             ))}
