@@ -6,6 +6,7 @@
 // evenings: the first week report (counts per topic as a sticker strip,
 // the strongest "what came before"), until the engine has a real link.
 import { useEffect, useMemo } from "react";
+import { Explainer } from "./mw/Infographics";
 import { moodOf } from "./mw/DayMark";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
@@ -137,6 +138,9 @@ export const FindingsView = ({
               <span key={i} className={cn("h-3.5 flex-1 rounded-[3px]", i < road ? "bg-[hsl(var(--mw-brand))]" : "bg-[hsl(var(--mw-grid))]")} />
             ))}
           </div>
+          <Explainer id="findings" label={t("mw.explain.findLabel")}>
+            <p className="text-[18px] leading-snug">{t("mw.explain.findLine")}</p>
+          </Explainer>
           <div className="mw-taped p-[18px] pt-6 opacity-90" style={{ ["--tape" as string]: "var(--tape-other)" }}>
             <p className="mw-hand text-[18px] text-muted-foreground">{t("doors.exampleBadge")}</p>
             <p className="mt-1 mw-display text-[22px] leading-[1.2]">{t("mw.find.exampleSentence")}</p>

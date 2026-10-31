@@ -8,6 +8,7 @@
 // No "context" questions here any more: they were answered for
 // yesterday and asked again in the evening, which read as a bug.
 import { useState } from "react";
+import { HowSteps, WhyArt } from "./mw/Infographics";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
@@ -231,6 +232,27 @@ const DoneScreen = ({
   );
 };
 
+// Why (before the doors): memory says "every day", the page says 5 of 30.
+export const WhyScreen = ({ onNext }: { onNext: () => void }) => {
+  const { t } = useTranslation();
+  return (
+    <Screen>
+      <div className="mt-6 flex items-end gap-2">
+        <Malu pose="think" size={96} className="shrink-0 -ml-1" />
+        <Title className="pb-4">{t("mw.why.title")}</Title>
+      </div>
+      <div className="mt-4">
+        <WhyArt />
+      </div>
+      <p className="mt-5 text-[19px] font-medium leading-snug mw-drop" style={{ animationDelay: "2600ms" }}>
+        {t("mw.why.line")}
+      </p>
+      <div className="flex-1 min-h-6" />
+      <PrimaryButton onClick={onNext}>{t("doors.next")}</PrimaryButton>
+    </Screen>
+  );
+};
+
 // Doors --------------------------------------------------------------
 
 export type PickResult = { kind: "doors"; ids: DoorId[] } | { kind: "own" } | { kind: "curious" };
@@ -333,7 +355,7 @@ export const DoorFlow = ({
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [main, ...extras] = doors;
   const [i, setI] = useState(0);
-  const [stage, setStage] = useState<"week" | "reveal" | "done">("week");
+  const [stage, setStage] = useState<"how" | "week" | "reveal" | "done">("how");
   const [days, setDays] = useState<Record<string, string[]>>({});
   const [skipped, setSkipped] = useState<Record<string, boolean>>({});
   const [tags, setTags] = useState<Record<string, string[]>>({});
@@ -417,10 +439,26 @@ export const DoorFlow = ({
     else void commit(nextSkip);
   };
 
+  if (stage === "how") {
+    return (
+      <Screen>
+        <TopBar onBack={onBack} step={0} steps={doors.length + 2} />
+        <Title className="mt-3">{t("mw.how.title")}</Title>
+        <div className="mt-4">
+          <HowSteps door={main.id} />
+        </div>
+        <div className="h-5" />
+        <div className="sticky bottom-0 -mx-5 px-5 pt-4 bg-gradient-to-t from-background from-70% to-transparent">
+          <PrimaryButton onClick={() => setStage("week")}>{t("mw.how.go")}</PrimaryButton>
+        </div>
+      </Screen>
+    );
+  }
+
   if (stage === "week") {
     return (
       <Screen key={door.id}>
-        <TopBar onBack={i > 0 ? () => setI(i - 1) : onBack} step={i} steps={doors.length + 1} />
+        <TopBar onBack={i > 0 ? () => setI(i - 1) : () => setStage("how")} step={i + 1} steps={doors.length + 2} />
         <div className="mt-1 flex justify-center">
           <Malu pose={DOOR_POSE[door.id]} size={104} />
         </div>
@@ -491,7 +529,7 @@ export const DoorFlow = ({
     const allSkipped = doors.every((d) => skipped[d.id]);
     return (
       <Screen>
-        <TopBar step={doors.length} steps={doors.length + 1} />
+        <TopBar step={doors.length + 1} steps={doors.length + 2} />
         <div className="mt-1 flex items-end gap-2">
           <Malu pose={anyHit ? "hug" : allSkipped ? "wave" : "cheer"} size={anyHit ? 84 : 100} className="shrink-0 -ml-1" />
           <p className="mw-bubble mb-7 text-[18px] leading-snug">

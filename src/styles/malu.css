@@ -524,3 +524,23 @@ html[data-theme="malu-night"],
     linear-gradient(90deg, rgba(214, 222, 240, 0.75) 1px, transparent 1px);
   background-size: 22px 22px;
 }
+
+/* Infographics: blocks drop in one after another; the "it feels like
+   every day" stickers keep wobbling. */
+@keyframes mwDrop {
+  0% { transform: translateY(-14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.mw-drop {
+  animation: mwDrop 0.45s cubic-bezier(0.3, 1.2, 0.6, 1) both;
+}
+@keyframes mwJitter {
+  0%, 100% { transform: rotate(var(--r, 0deg)) translateY(0); }
+  50% { transform: rotate(calc(var(--r, 0deg) * -1)) translateY(-3px); }
+}
+.mw-jitter {
+  animation: mwSlap 0.28s cubic-bezier(0.3, 1.3, 0.6, 1) both, mwJitter 1.6s ease-in-out 0.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mw-drop, .mw-jitter { animation: none; }
+}

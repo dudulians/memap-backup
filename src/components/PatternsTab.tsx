@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Explainer, LimitArt } from "./mw/Infographics";
 import { DayMark } from "./mw/DayMark";
 import { TopicIcon, topicKind } from "./mw/TopicIcon";
 import { tilt } from "./mw/WeekMap";
@@ -351,6 +352,13 @@ export const PatternsTab = () => {
           const common = periods.sort((a, b) => periods.filter((p) => p === b).length - periods.filter((p) => p === a).length)[0];
           return (
             <div className="animate-fade-in">
+              <Explainer id="limits" label={t("mw.explain.limitLabel")} className="mx-1 mb-3">
+                <p className="mw-display text-[19px] leading-snug">{t("mw.explain.limitTitle")}</p>
+                <div className="mt-3">
+                  <LimitArt kind={live[0] ? kindOf(live[0]) : "fight"} max={8} used={8} />
+                </div>
+                <p className="mt-3 text-[17px] leading-snug">{t("mw.explain.limitLine")}</p>
+              </Explainer>
               {common && <h2 className="mx-1 mb-3 mw-display text-[20px]">{t("patterns.limitsWindow", { count: common })}</h2>}
               <div className="space-y-2.5">
                 {live.map((tracker) => {

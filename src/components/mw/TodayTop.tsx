@@ -7,6 +7,7 @@
 //   this week as a map you can tap to fill any day
 //   the road to the first findings, so there is a reason to come back
 import { useMemo, useState } from "react";
+import { Explainer, ReadTheMap } from "./Infographics";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -160,6 +161,9 @@ export const TodayTop = ({
           </button>
         </div>
         <WeekMap trackers={trackers} entries={entries} dates={dates} onDayTap={onOpenSession} className="mt-2" />
+        <Explainer id="weekmap" label={t("mw.explain.mapLabel")} className="mt-2">
+          <ReadTheMap />
+        </Explainer>
         {missed.length > 0 && (
           <button
             type="button"

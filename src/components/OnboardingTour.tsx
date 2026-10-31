@@ -19,7 +19,7 @@ import {
 } from "@/lib/notifications";
 import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door } from "@/lib/doors";
-import { DoorPickerScreen, DoorFlow, OwnFlow, CuriousFlow, PickResult, Finish } from "./DoorOnboarding";
+import { DoorPickerScreen, DoorFlow, OwnFlow, CuriousFlow, PickResult, Finish, WhyScreen } from "./DoorOnboarding";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -32,15 +32,15 @@ interface OnboardingTourProps {
 // 1.8.0: language (first install only) → doors, then one of three short
 // paths (DoorOnboarding.tsx). The five-screen interview (gender, focus,
 // context, goal, starter pack) and the coach tour after it are gone.
-type Step = "language" | "doors" | "door" | "own" | "curious";
+type Step = "language" | "why" | "doors" | "door" | "own" | "curious";
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
-  const [step, setStep] = useState<Step>(() => (hasExplicitLanguage() ? "doors" : "language"));
+  const [step, setStep] = useState<Step>(() => (hasExplicitLanguage() ? "why" : "language"));
   const [doors, setDoors] = useState<Door[]>([]);
 
   useEffect(() => {
     if (open) {
-      setStep(hasExplicitLanguage() ? "doors" : "language");
+      setStep(hasExplicitLanguage() ? "why" : "language");
       setDoors([]);
       document.body.style.overflow = "hidden";
     }
@@ -97,9 +97,10 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
       <div className="relative z-10 h-full w-full overflow-y-auto">
         {step === "language" && (
           <div className="min-h-full flex items-center justify-center px-5 py-8">
-            <LanguagePickerScreen onNext={() => setStep("doors")} />
+            <LanguagePickerScreen onNext={() => setStep("why")} />
           </div>
         )}
+        {step === "why" && <WhyScreen onNext={() => setStep("doors")} />}
         {step === "doors" && <DoorPickerScreen onPick={onPick} />}
         {step === "door" && doors.length > 0 && (
           <DoorFlow doors={doors} onBack={() => setStep("doors")} onFinish={finish} />
