@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
 import { countedDays, DAYS_PER_WEEK, getChests, pathModel, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { placeScenery, type Rect } from "@/lib/pathScenery";
-import { ISLAND_DEFS, mapPic } from "@/lib/islands";
+import { islandDef, islandName, mapPic } from "@/lib/islands";
 import { islandStyle } from "@/lib/islandColors";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
@@ -175,7 +175,7 @@ export const EveningPath = ({
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
-    const name = s.island ? t(`map.island.${s.island}`) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
+    const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
   };
 
@@ -457,7 +457,7 @@ export const EveningPath = ({
         ) : undefined}
       >
         {s.island ? (
-          <img src={mapPic("icon_" + ISLAND_DEFS[s.island!].icon)} alt="" width={Math.round(p.r * 1.25)} height={Math.round(p.r * 1.25)} decoding="async" draggable={false} className="pointer-events-none" />
+          <img src={mapPic("icon_" + islandDef(s.island!).icon)} alt="" width={Math.round(p.r * 1.25)} height={Math.round(p.r * 1.25)} decoding="async" draggable={false} className="pointer-events-none" />
         ) : (
           <Icon className={current ? "h-9 w-9" : "h-7 w-7"} strokeWidth={2.3} />
         )}

@@ -26,7 +26,7 @@ import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { Pressable } from "@/components/ui/pressable";
 import { IslandPicture } from "@/components/IslandPicture";
-import { ISLAND_DEFS, islandOf, mapPic } from "@/lib/islands";
+import { islandDef, islandName, islandOf, mapPic } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
 import { cardQuestion } from "@/lib/cardText";
 import { Flame, Clock } from "lucide-react";
@@ -1459,8 +1459,8 @@ const DeckCard = ({ question, stamp }: { question: SessionQuestion; stamp?: { ye
       }}
     >
       <div className="flex items-center gap-2 px-5 pt-5">
-        <img src={mapPic("icon_" + ISLAND_DEFS[island].icon)} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none" />
-        <span className="text-[15px] font-bold text-foreground/80">{t(`map.island.${island}`)}</span>
+        <img src={mapPic("icon_" + islandDef(island).icon)} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none" />
+        <span className="text-[15px] font-bold text-foreground/80">{islandName(t, island)}</span>
         {question.isNew && (
           <Badge className="ml-auto bg-primary/20 text-primary border-primary/30 text-[13px] px-3 py-1">
             <Sparkles className="h-3.5 w-3.5 mr-1" />

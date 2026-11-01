@@ -5,7 +5,7 @@
 // links. World: days, streak, chests, each island's week, strongest links.
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { mapPic, type Island, type Route } from "@/lib/islands";
+import { islandName, mapPic, type Island, type Route } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
@@ -92,7 +92,7 @@ export const WorldStats = ({ islands, routes, trackers, entries }: { islands: Is
             <img src={mapPic("icon_" + isl.def.icon)} alt="" width={30} height={30} />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-[16px] font-bold">{t(`map.island.${isl.id}`)}</span>
+                <span className="truncate text-[16px] font-bold">{islandName(t, isl.id)}</span>
                 <span className="shrink-0 text-[14px] font-semibold tabular-nums text-muted-foreground">{t("map.daysOf7", { k: isl.answeredDays })}</span>
               </div>
               <div className="mt-1 h-2 overflow-hidden rounded-full bg-foreground/[0.08]">

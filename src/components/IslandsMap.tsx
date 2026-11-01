@@ -10,10 +10,11 @@ import { useTranslation } from "react-i18next";
 import { Link2 } from "lucide-react";
 import { Tracker } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
-import { mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
+import { islandName, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { getChests } from "@/lib/pathSteps";
 import { IslandPicture } from "@/components/IslandPicture";
+import { islandHsl } from "@/lib/islandColors";
 
 const PIC = 132;
 const WEATHER_PIC: Record<Exclude<Weather, null>, string> = { storm: "thunder_cloud", clouds: "partly_cloudy", sun: "sun" };
@@ -23,12 +24,15 @@ export const IslandsMap = ({
   routes,
   trackers,
   width,
+  fill = {},
   onOpen,
 }: {
   islands: Island[];
   routes: Route[];
   trackers: Tracker[];
   width: number;
+  /** answered today, 0..1 per island: a calm ring around its icon */
+  fill?: Record<string, number>;
   onOpen: (id: IslandId) => void;
 }) => {
   const { t } = useTranslation();
@@ -96,7 +100,7 @@ export const IslandsMap = ({
           <button key={isl.id} type="button" onClick={() => { haptics.tap(); onOpen(isl.id); }}
             className="absolute flex flex-col items-center active:scale-[0.97] transition-transform"
             style={{ left: p.x - PIC / 2 - 10, top: p.y, width: PIC + 20 }}
-            aria-label={`${t(`map.island.${isl.id}`)}${isl.weather ? ` · ${t(`map.weather.${isl.weather}`)}` : ""}`}>
+            aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.legend.${isl.weather}`)}` : ""}`}>
             <span className="relative">
               <IslandPicture id={isl.id} width={PIC} />
               {isl.weather && (
@@ -105,8 +109,17 @@ export const IslandsMap = ({
               )}
             </span>
             <span className="surface -mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-3">
-              <img src={mapPic("icon_" + isl.def.icon)} alt="" width={26} height={26} decoding="async" draggable={false} />
-              <span className="truncate text-[15px] font-bold text-foreground">{t(`map.island.${isl.id}`)}</span>
+              <span className="relative flex h-8 w-8 items-center justify-center">
+                <svg width={32} height={32} className="absolute inset-0 -rotate-90" aria-hidden="true">
+                  <circle cx={16} cy={16} r={14} fill="none" stroke="hsl(var(--foreground) / 0.08)" strokeWidth={3} />
+                  {(fill[isl.id] ?? 0) > 0 && (
+                    <circle cx={16} cy={16} r={14} fill="none" stroke={`hsl(${islandHsl(isl.id)})`} strokeWidth={3} strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 14 * (fill[isl.id] ?? 0)} ${2 * Math.PI * 14}`} />
+                  )}
+                </svg>
+                <img src={mapPic("icon_" + isl.def.icon)} alt="" width={22} height={22} decoding="async" draggable={false} />
+              </span>
+              <span className="truncate text-[15px] font-bold text-foreground">{islandName(t, isl.id)}</span>
             </span>
           </button>
         );

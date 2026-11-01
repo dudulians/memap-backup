@@ -1,10 +1,10 @@
 // An island as a picture: her base art plus what stands on it, the same
 // composition the Map draws on its ball (WorldMap drawThing). Used on the
 // evening cards (Aurora step 3) and on island sheets.
-import { ISLAND_DEFS, mapPic, type IslandId } from "@/lib/islands";
+import { islandDef, mapPic, type IslandId } from "@/lib/islands";
 
 export const IslandPicture = ({ id, width = 150, className }: { id: IslandId; width?: number; className?: string }) => {
-  const def = ISLAND_DEFS[id];
+  const def = islandDef(id);
   // Land items rise above the base, so the box is taller than the base.
   const height = Math.round(width * 0.9);
   const cy = height - width * 0.3; // the base's centre

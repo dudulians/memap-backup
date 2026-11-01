@@ -4,8 +4,12 @@
 // an island = how often its "hard" answer came this week. Pictures are her
 // map set (marketing/brand/map-assets), shipped as small webp files.
 import { Tracker, TrackerEntry } from "@/types/tracker";
+import type { TFunction } from "i18next";
 import { computeCorrelations } from "@/lib/correlations";
 import { isoLocal } from "@/lib/doors";
+import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
+import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { getOwnIslands, LOOKS } from "@/lib/ownIslands";
 
 const PICS = new Map(
   Object.entries(import.meta.glob("@/assets/map/*.webp", { eager: true, import: "default" }) as Record<string, string>)
@@ -13,7 +17,9 @@ const PICS = new Map(
 );
 export const mapPic = (name: string): string => PICS.get(name) ?? "";
 
-export type IslandId = "me" | "love" | "kids" | "health" | "body" | "pet" | "parents" | "world" | "other";
+export type BuiltinIsland = "me" | "love" | "kids" | "health" | "body" | "pet" | "parents" | "world" | "work" | "mine" | "other";
+/** A built-in island, or one she made ("own-…"). */
+export type IslandId = BuiltinIsland | `own-${string}`;
 
 export interface IslandDef {
   id: IslandId;
@@ -23,7 +29,7 @@ export interface IslandDef {
   icon: string;
 }
 
-export const ISLAND_DEFS: Record<IslandId, IslandDef> = {
+export const ISLAND_DEFS: Record<BuiltinIsland, IslandDef> = {
   me: { id: "me", base: "island_plain", land: [["flowering_bush", .4, .02, -.4]], icon: "wellbeing" },
   love: { id: "love", base: "island_plain", land: [["cherry_blossom_tree", .56, .04, -.44]], icon: "love" },
   kids: { id: "kids", base: "island_waterfall", icon: "growth" },
@@ -32,11 +38,30 @@ export const ISLAND_DEFS: Record<IslandId, IslandDef> = {
   pet: { id: "pet", base: "island_rocky", land: [["house", .56, .04, -.36]], icon: "pets" },
   parents: { id: "parents", base: "island_plain", land: [["orange_tree", .44, .04, -.46]], icon: "family" },
   world: { id: "world", base: "island_rocky", land: [["city_buildings", .58, 0, -.42], ["lighthouse", .3, .27, -.32]], icon: "travel" },
+  // Nov 2 2026 (her ask: old questions onto islands, "если свои, то новый
+  // остров… назови сам"): work questions get their own island, and the
+  // questions she typed herself live on "My own".
+  work: { id: "work", base: "island_rocky", land: [["city_buildings", .58, 0, -.42]], icon: "career" },
+  mine: { id: "mine", base: "island_plain", land: [["camping_tent", .5, .02, -.3]], icon: "books" },
   other: { id: "other", base: "island_plain", land: [["palm_trees", .52, .02, -.46]], icon: "hobbies" },
 };
 
+export const isOwnIsland = (id: string): id is `own-${string}` => id.startsWith("own-");
+
+/** Picture and icon of any island, hers included. */
+export const islandDef = (id: IslandId): IslandDef => {
+  if (!isOwnIsland(id)) return ISLAND_DEFS[id] ?? ISLAND_DEFS.other;
+  const own = getOwnIslands().find((i) => i.id === id);
+  const look = LOOKS[own?.look ?? "grove"] ?? LOOKS.grove;
+  return { id, base: look.base, land: look.land, icon: own?.icon ?? "hobbies" };
+};
+
+/** The name she sees: built-in names in her language, her own as typed. */
+export const islandName = (t: TFunction, id: IslandId): string =>
+  isOwnIsland(id) ? getOwnIslands().find((i) => i.id === id)?.name ?? "" : t(`map.island.${id}`);
+
 // Library cluster → island. Trackers made from a library card carry `cluster`.
-const CLUSTER: Record<string, IslandId> = {
+const CLUSTER: Record<string, BuiltinIsland> = {
   partner: "love", "trending-argued": "love", "trending-wanted-child": "love",
   parenting: "kids", "child-wellbeing": "kids", "trending-yelled": "kids",
   health: "health",
@@ -46,10 +71,36 @@ const CLUSTER: Record<string, IslandId> = {
   "elderly-parent": "parents",
   "external-events": "world", expat: "world",
 };
-const CATEGORY: Record<Tracker["category"], IslandId> = {
+const CATEGORY: Record<Tracker["category"], BuiltinIsland> = {
   Emotions: "me", Voice: "me", Connections: "love", Social: "love", Health: "health", Body: "body", Curious: "other", Fun: "other",
 };
-export const islandOf = (t: Tracker): IslandId => (t.cluster && CLUSTER[t.cluster]) || CATEGORY[t.category] || "other";
+const WORK = new Set([
+  "burned-out-after-work", "didnt-want-to-work", "worked-overtime", "felt-fulfilled-at-work", "boss-was-difficult",
+  "conflict-with-colleague", "wanted-leave-job", "thought-career-change", "long-commute", "dealt-with-paperwork",
+]);
+const STREAM_OF = new Map(LIFE_STREAMS.flatMap((st) => st.templates.map((tpl) => [tpl.id, st.id] as const)));
+const islandCache = new Map<string, IslandId>();
+
+/** Where a question lives. Her move wins; then work questions; then the
+ *  library cluster it came from (found by its title when not stored); a
+ *  question she typed herself goes to "My own". */
+export const islandOf = (t: Tracker): IslandId => {
+  if (t.island && (isOwnIsland(t.island) ? getOwnIslands().some((i) => i.id === t.island) : t.island in ISLAND_DEFS)) {
+    return t.island as IslandId;
+  }
+  const key = `${t.title}|${t.cluster ?? ""}|${t.category}`;
+  const hit = islandCache.get(key);
+  if (hit) return hit;
+  const tpl = matchTemplateIdByTitle(t.title);
+  const id: IslandId =
+    (tpl && WORK.has(tpl) && "work") ||
+    (t.cluster && CLUSTER[t.cluster]) ||
+    (tpl && CLUSTER[STREAM_OF.get(tpl) ?? ""]) ||
+    (!tpl ? "mine" : CATEGORY[t.category]) ||
+    "other";
+  islandCache.set(key, id);
+  return id;
+};
 
 // Where islands sit: on the ball (lon/lat, a tight cluster so several fit in
 // view) and on the flat map (in a 370×600 box). Busiest island takes slot 0.
@@ -96,6 +147,7 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
     d.setDate(d.getDate() - back);
     return isoLocal(d);
   };
+  for (const own of getOwnIslands()) if (!groups.has(own.id)) groups.set(own.id, []);
   const list = [...groups.entries()].map(([id, ts]) => {
     const byId = new Map(ts.map((t) => [t.id, t]));
     // hard/answered days per week, week 0 = the last 7 days
@@ -123,14 +175,14 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
     }
     const best = [...topCount.entries()].sort((x, y) => y[1] - x[1])[0];
     return {
-      id, def: ISLAND_DEFS[id], trackerIds: ts.map((t) => t.id), weather,
+      id, def: islandDef(id), trackerIds: ts.map((t) => t.id), weather,
       hardDays: now.hard.size, answeredDays: now.answered.size, usual,
       top: best ? { trackerId: best[0], days: best[1] } : null,
     };
   });
 
   list.sort((x, y) => y.trackerIds.length - x.trackerIds.length);
-  return list.slice(0, SLOTS.length).map((x, i) => ({ ...x, slot: SLOTS[i] }));
+  return list.map((x, i) => ({ ...x, slot: SLOTS[i % SLOTS.length] }));
 };
 
 /** Sea routes: the strongest link found between questions on two different islands. */

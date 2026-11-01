@@ -36,6 +36,38 @@ const ru: Translation = {
   },
 
   // Карта (Aurora UX, 1 ноября 2026): вопросы как острова на шаре.
+  // Her own islands and questions (Nov 2 2026)
+  islands: {
+    new: "Новый остров",
+    edit: "Изменить остров",
+    create: "Создать остров",
+    save: "Сохранить",
+    delete: "Удалить остров",
+    openTwin: "Открыть «{{name}}»",
+    myIsland: "Мой остров",
+    name: "Название острова",
+    namePh: "Карьера, Собака, Дом…",
+    anotherLook: "Другой вид",
+    idea: { career: "Карьера", home: "Дом", food: "Еда", study: "Учёба", music: "Музыка", friends: "Друзья", travel: "Поездки", hobby: "Хобби" },
+    icon: { career: "Карьера", home: "Дом", books: "Книги", music: "Музыка", food: "Еда", coffee: "Кофе", hobbies: "Хобби", growth: "Рост", travel: "Поездки", family: "Семья", love: "Любовь", health: "Здоровье", fitness: "Спорт", pets: "Питомцы", wellbeing: "Самочувствие" },
+    questionsHere_one: "{{count}} вопрос здесь",
+    questionsHere_few: "{{count}} вопроса здесь",
+    questionsHere_many: "{{count}} вопросов здесь",
+    questionsHere_other: "{{count}} вопроса здесь",
+    move: "Перенести на другой остров",
+    backHome: "Вернуть на место",
+    addHere: "Добавить вопрос сюда",
+    added: "Добавлено. Вопрос появится в шагах уже сегодня.",
+    guide1: "1. Спроси то, на что ответ «да» или «нет».",
+    guide2: "2. Вопрос появится в шагах уже сегодня.",
+    questionPh: "Была прогулка с собакой?",
+    yesNoTip: "Лучше всего работают вопросы да/нет.",
+    yesIs: "«Да» — это…",
+    good: "Хорошо",
+    hard: "Тяжело",
+    goodOrHard: "Хорошо или тяжело?",
+    add: "Добавить",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Твой мир",
@@ -75,7 +107,7 @@ const ru: Translation = {
     unexplored: "Добавь вопрос из новой сферы, и этот остров откроется.",
     emptyTitle: "Твой мир ждёт",
     emptyBody: "Добавь первый вопрос на «Сегодня», и здесь появится его остров.",
-    island: { me: "Я", love: "Любовь", kids: "Дети", health: "Здоровье", body: "Тело и привычки", pet: "Питомец", parents: "Родители", world: "Мир вокруг", other: "Другое" },
+    island: { work: "Работа", mine: "Своё", me: "Я", love: "Любовь", kids: "Дети", health: "Здоровье", body: "Тело и привычки", pet: "Питомец", parents: "Родители", world: "Мир вокруг", other: "Другое" },
     weather: { storm: "Штормовая неделя", clouds: "Облачно", sun: "Спокойная неделя", none: "На этой неделе нет ответов" },
   },
 

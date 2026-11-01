@@ -6,7 +6,7 @@
 // is her plain cloud. "Map" melts the ball into a flat map.
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Island, IslandId, Route, mapPic } from "@/lib/islands";
+import { Island, IslandId, Route, islandName, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 
 type V3 = [number, number, number];
@@ -144,7 +144,7 @@ export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; route
         if (sk) { const im = pic(sk[0]), a = p.al * Math.max(e, Math.min(1, (p.z - .3) * 3)); if (im.complete && im.naturalWidth && a > .03) { const w = sk[1] * p.sc, h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = a; ctx.drawImage(im, p.x + (o.lon > 0 ? .3 : -.28) * o.w * p.sc - w / 2, p.y - o.w * p.sc * .62 - h, w, h); ctx.restore(); } }
       });
       // names last, so no weather picture covers them
-      things.forEach((o) => { const isl = o.island!, p = P.get(isl.id)!; pill(p.x, p.y + o.w * p.sc * .34, t(`map.island.${isl.id}`), "icon_" + isl.def.icon, Math.max(e, Math.min(1, (p.z - .3) * 3)) * p.al, false); });
+      things.forEach((o) => { const isl = o.island!, p = P.get(isl.id)!; pill(p.x, p.y + o.w * p.sc * .34, islandName(t, isl.id), "icon_" + isl.def.icon, Math.max(e, Math.min(1, (p.z - .3) * 3)) * p.al, false); });
       if (ga > .01) { ctx.save(); ctx.globalAlpha = ga; const rim = ctx.createRadialGradient(g.cx, g.cy, g.R * .86, g.cx, g.cy, g.R); rim.addColorStop(0, "rgba(11,42,53,0)"); rim.addColorStop(1, "rgba(11,42,53,.22)"); ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.fill(); ctx.restore(); }
       if (moving || dragging) kick();
     }

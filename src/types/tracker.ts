@@ -31,6 +31,10 @@ export interface Tracker {
   // in a separate section on Cards. User can bulk-delete, or "promote"
   // them to regular cards (which clears this flag).
   source?: "play";
+  // Aurora islands (Nov 2 2026): the island she moved this question to,
+  // a built-in id ("work", "health"…) or one of her own ("own-…").
+  // Unset = its natural island. The classic screens ignore it.
+  island?: string;
   // LifeStreams cluster id (e.g. "partner", "health", "external-events").
   // Set when the tracker was created from a library template, OR when
   // the user picked a Theme on the Custom form. Used by correlations

@@ -34,6 +34,36 @@ const en = {
   },
 
   // Map tab (Aurora UX, Nov 1 2026): your questions as islands on a ball.
+  // Her own islands and questions (Nov 2 2026)
+  islands: {
+    new: "New island",
+    edit: "Edit island",
+    create: "Create island",
+    save: "Save",
+    delete: "Delete island",
+    openTwin: "Open “{{name}}”",
+    myIsland: "My island",
+    name: "Island name",
+    namePh: "Career, Dog, Home…",
+    anotherLook: "Another look",
+    idea: { career: "Career", home: "Home", food: "Food", study: "Study", music: "Music", friends: "Friends", travel: "Travel", hobby: "Hobby" },
+    icon: { career: "Career", home: "Home", books: "Books", music: "Music", food: "Food", coffee: "Coffee", hobbies: "Hobbies", growth: "Growth", travel: "Travel", family: "Family", love: "Love", health: "Health", fitness: "Fitness", pets: "Pets", wellbeing: "Wellbeing" },
+    questionsHere_one: "{{count}} question here",
+    questionsHere_other: "{{count}} questions here",
+    move: "Move to another island",
+    backHome: "Back to its place",
+    addHere: "Add a question here",
+    added: "Added. It joins your steps from today.",
+    guide1: "1. Ask something you answer with yes or no.",
+    guide2: "2. It joins your steps from today.",
+    questionPh: "Walked the dog?",
+    yesNoTip: "Yes/no questions work best.",
+    yesIs: "A yes is…",
+    good: "Good",
+    hard: "Hard",
+    goodOrHard: "Good or hard?",
+    add: "Add",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Your world",
@@ -69,7 +99,7 @@ const en = {
     unexplored: "Add a question from a new area to open this island.",
     emptyTitle: "Your world is waiting",
     emptyBody: "Add your first question on Today, and its island appears here.",
-    island: { me: "Me", love: "Love life", kids: "Kids", health: "Health", body: "Body & habits", pet: "Pet", parents: "Parents", world: "World around", other: "Other" },
+    island: { work: "Work", mine: "My own", me: "Me", love: "Love life", kids: "Kids", health: "Health", body: "Body & habits", pet: "Pet", parents: "Parents", world: "World around", other: "Other" },
     weather: { storm: "Stormy week", clouds: "Some clouds", sun: "Calm week", none: "No answers this week" },
   },
 
