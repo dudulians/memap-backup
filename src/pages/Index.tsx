@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
 import { MapTab } from "@/components/MapTab";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { NotesTab } from "@/components/NotesTab";
 import { CalendarDays, Map as MapIcon, NotebookPen, Settings, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
@@ -138,6 +139,14 @@ const Index = () => {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Her avatar, if she chose one, stands in the gear's place.
+  const [avatar, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
+  useEffect(() => {
+    const sync = () => setAvatarPic(avatarUrl(getAvatar()));
+    window.addEventListener("memap-avatar-changed", sync);
+    return () => window.removeEventListener("memap-avatar-changed", sync);
+  }, []);
+
   // Content fades in under the header and out behind the floating tab bar.
   // On Today the week banner sticks to the top and covers what scrolls.
   const CONTENT_MASK = activeTab === "cards"
@@ -164,7 +173,7 @@ const Index = () => {
           aria-label={t("common.settings")}
           className="absolute right-2 bottom-1.5 h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >
-          <Settings className="h-5 w-5" strokeWidth={1.75} />
+          {avatar ? <img src={avatar} alt="" className="h-8 w-8 rounded-full object-contain" /> : <Settings className="h-5 w-5" strokeWidth={1.75} />}
         </button>
       </header>
 

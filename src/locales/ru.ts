@@ -68,6 +68,21 @@ const ru: Translation = {
     goodOrHard: "Хорошо или тяжело?",
     add: "Добавить",
   },
+  avatar: {
+    title: "Аватар",
+    none: "Без аватара",
+    name: { cat: "Кот", dog: "Пёс", rabbit: "Кролик", panda: "Панда", bear: "Медведь", penguin: "Пингвин", fox: "Лиса", koala: "Коала", sloth: "Ленивец", otter: "Выдра", hedgehog: "Ёжик", raccoon: "Енот", deer: "Олень", cow: "Корова", pig: "Свинка", chick: "Цыплёнок", owl: "Сова", elephant: "Слон", lion: "Лев", tiger: "Тигр", zebra: "Зебра", giraffe: "Жираф", crocodile: "Крокодил", seal: "Тюлень", whale: "Кит", narwhal: "Нарвал", fennec_fox: "Фенек", red_panda: "Красная панда", unicorn: "Единорог" },
+  },
+  // Limits as lighthouses (Nov 2 2026)
+  lighthouse: {
+    if: "ЕСЛИ",
+    then: "ТОГДА",
+    rule: "«{{name}}» {{n}}+ дней из {{period}}",
+    ruleNo: "без «{{name}}» {{n}}+ дней из {{period}}",
+    yourPlan: "твой план (нажми, чтобы написать)",
+    count: "{{k}} из {{n}}",
+    lit: "Маяк горит · время для твоего плана",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Твой мир",
@@ -609,7 +624,7 @@ const ru: Translation = {
     tabFindings: "Находки",
     tabCalendar: "Календарь",
     tabCharts: "Графики",
-    tabLimits: "Пороги",
+    tabLimits: "Маяки",
     limitsWindow_one: "За {{count}} день",
     limitsWindow_few: "За {{count}} дня",
     limitsWindow_many: "За {{count}} дней",

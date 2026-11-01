@@ -34,6 +34,8 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
+import { AvatarPicker } from "@/components/AvatarPicker";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { track } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
@@ -109,6 +111,13 @@ const saveSessionSettings = (settings: SessionSettings) => {
 export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps) => {
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings());
   const [sessionSettings, setSessionSettings] = useState(getSessionSettings());
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarId, setAvatarId] = useState<string | null>(getAvatar());
+  useEffect(() => {
+    const sync = () => setAvatarId(getAvatar());
+    window.addEventListener("memap-avatar-changed", sync);
+    return () => window.removeEventListener("memap-avatar-changed", sync);
+  }, []);
   const [globalStreak, setGlobalStreak] = useState({ currentStreak: 0, longestStreak: 0, lastActiveDate: null, totalActiveDays: 0 });
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -707,6 +716,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
   return (
     <>
+      <AvatarPicker open={avatarOpen} onClose={() => setAvatarOpen(false)} />
       {/* Settings bottom sheet. Header bar stays drag-eligible (vaul
           will dismiss when pulled), but the long scrollable body opts
           out of body-drag with data-vaul-no-drag. Without that, vaul's
@@ -779,6 +789,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   return (
                     <>
                       <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                        {/* Avatar (Aurora, optional; Malu first). */}
+                        <button type="button" onClick={() => setAvatarOpen(true)} className={cn(row, "active:bg-muted/60 transition-colors")}>
+                          <span className="flex-1 text-[17px] font-medium">{t("avatar.title")}</span>
+                          {avatarUrl(avatarId)
+                            ? <img src={avatarUrl(avatarId)!} alt="" className="h-9 w-9 object-contain" />
+                            : <span className="text-[16px] text-muted-foreground">{t("avatar.none")}</span>}
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                        </button>
                         <div className={row}>
                           <button type="button" onClick={() => setScreen("notifications")} className="flex-1 min-w-0 text-left text-[17px] font-medium">
                             {t("settings.eveningReminder")}

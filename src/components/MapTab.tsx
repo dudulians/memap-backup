@@ -12,6 +12,7 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
+import { litTrackers } from "@/lib/lighthouses";
 import { haptics } from "@/lib/haptics";
 import { WorldMap } from "./WorldMap";
 import { IslandsMap, WeatherLegend } from "./IslandsMap";
@@ -70,6 +71,11 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
     return Object.fromEntries(islands.map((i) => [i.id, i.trackerIds.length ? i.trackerIds.filter((id) => done.has(id)).length / i.trackerIds.length : 0]));
   }, [islands, entries]);
   const canMake = getOwnIslands().length < MAX_OWN;
+  // Islands with a lit lighthouse (a rule she set was reached).
+  const lit = useMemo(() => {
+    const on = litTrackers(trackers, entries);
+    return new Set(islands.filter((i) => i.trackerIds.some((id) => on.has(id))).map((i) => i.id));
+  }, [islands, trackers, entries]);
 
   return (
     <div ref={boxRef} className="map-sea relative h-full overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
@@ -93,7 +99,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           {loaded && islands.length > 0 && <div className="mt-3"><WeatherLegend /></div>}
           {loaded && islands.length > 0 && (
             <div className="mt-2">
-              <IslandsMap islands={islands} routes={routes} trackers={trackers} width={width} fill={fill} onOpen={setOpen} />
+              <IslandsMap islands={islands} routes={routes} trackers={trackers} width={width} fill={fill} lit={lit} onOpen={setOpen} />
             </div>
           )}
           {loaded && canMake && (

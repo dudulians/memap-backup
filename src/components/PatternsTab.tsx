@@ -13,7 +13,8 @@ import { TrendChart } from "./TrendChart";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { mapPic } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 
 // focusIds (Map, Nov 1 2026): show only one island's questions. Saves still
@@ -386,43 +387,49 @@ export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
             <div className="animate-fade-in">
               {common && <p className="mx-1 mb-3 text-[17px] text-muted-foreground">{t("patterns.limitsWindow", { count: common })}</p>}
               <div className="space-y-2.5">
+                {/* Lighthouses (Aurora, plan §3.5): each limit reads as a rule,
+                    IF it came N+ days in its window → THEN her plan. A crossed
+                    rule is lit: gold, never red. Tap to change the rule or plan. */}
                 {live.map((tracker) => {
                   const stats = getTrackerStats(tracker);
-                  const crossed = stats.significantDays >= tracker.threshold;
+                  const lit = stats.significantDays >= tracker.threshold;
                   const pct = Math.min(100, Math.round((stats.significantDays / Math.max(1, tracker.threshold)) * 100));
-                  const sub = [
-                    tracker.problemWhen === "no" ? t("patterns.countsNo") : null,
-                    tracker.periodDays !== common ? t("patterns.limitsWindowShort", { count: tracker.periodDays }) : null,
-                  ].filter(Boolean).join(" · ");
+                  const name = doorName.get(tracker.id) ?? localizeTrackerTitle(tracker.title);
+                  const plan = tracker.adviceAboveThreshold ? localizeTrackerAdvice(tracker.adviceAboveThreshold) : "";
                   return (
                     <button
                       key={tracker.id}
                       type="button"
                       onClick={() => setReflectionSheetTracker(tracker)}
                       className={cn(
-                        "block w-full text-left rounded-[22px] border px-[18px] py-4 active:scale-[0.99] transition-transform",
-                        crossed ? "border-strong/30 bg-strong/[0.12]" : "border-foreground/[0.12] bg-foreground/[0.07]",
+                        "surface block w-full text-left rounded-[20px] px-[18px] py-4 active:scale-[0.99] transition-transform",
+                        lit && "ring-2 ring-[hsl(var(--coin-gold))]",
                       )}
                     >
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="min-w-0 text-lg font-semibold leading-snug">{doorName.get(tracker.id) ?? localizeTrackerTitle(tracker.title)}</span>
-                        <span className="shrink-0 tabular-nums">
-                          <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{stats.significantDays}</span>
-                          <span className="text-[17px] text-muted-foreground"> / {tracker.threshold}</span>
-                          <ChevronRight className="inline-block h-5 w-5 ml-1.5 -mt-1 text-muted-foreground/60" />
-                        </span>
+                      <div className="flex items-start gap-3">
+                        <img src={mapPic("lighthouse")} alt="" width={40} height={40}
+                          className={cn("mt-0.5 h-10 w-10 shrink-0 object-contain", !lit && "opacity-50 grayscale")} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[16px] font-bold leading-snug">
+                            <span className="text-[13px] font-extrabold tracking-[0.06em] text-muted-foreground">{t("lighthouse.if")} </span>
+                            {t(tracker.problemWhen === "no" ? "lighthouse.ruleNo" : "lighthouse.rule", { name, n: tracker.threshold, period: tracker.periodDays })}
+                          </p>
+                          <p className="mt-1 text-[16px] font-semibold leading-snug text-foreground/80">
+                            <span className="text-[13px] font-extrabold tracking-[0.06em] text-muted-foreground">{t("lighthouse.then")} </span>
+                            {plan || t("lighthouse.yourPlan")}
+                          </p>
+                        </div>
+                        <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground/60" />
                       </div>
-                      {sub && <p className="mt-0.5 text-sm text-muted-foreground">{sub}</p>}
-                      <div className="mt-3 h-2 rounded-full bg-foreground/10 overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full transition-all duration-700 ease-out", crossed ? "bg-strong" : "bg-primary")}
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="h-2 flex-1 rounded-full bg-foreground/10 overflow-hidden">
+                          <div className="h-full rounded-full bg-[hsl(var(--coin-gold))] transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="shrink-0 text-[14px] font-semibold tabular-nums text-muted-foreground">{t("lighthouse.count", { k: stats.significantDays, n: tracker.threshold })}</span>
                       </div>
-                      {crossed && (
-                        <span className="mt-3 inline-flex items-center gap-1 text-base font-semibold text-strong">
-                          {t("patterns.whatNow")}
-                          <ChevronRight className="h-4 w-4" />
+                      {lit && (
+                        <span className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-full bg-[hsl(var(--coin-gold)/0.18)] px-3 text-[14px] font-bold text-[hsl(30_70%_30%)] dark:text-[hsl(44_90%_70%)]">
+                          {t("lighthouse.lit")}
                         </span>
                       )}
                     </button>

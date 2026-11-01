@@ -64,6 +64,21 @@ const en = {
     goodOrHard: "Good or hard?",
     add: "Add",
   },
+  avatar: {
+    title: "Avatar",
+    none: "No avatar",
+    name: { cat: "Cat", dog: "Dog", rabbit: "Rabbit", panda: "Panda", bear: "Bear", penguin: "Penguin", fox: "Fox", koala: "Koala", sloth: "Sloth", otter: "Otter", hedgehog: "Hedgehog", raccoon: "Raccoon", deer: "Deer", cow: "Cow", pig: "Pig", chick: "Chick", owl: "Owl", elephant: "Elephant", lion: "Lion", tiger: "Tiger", zebra: "Zebra", giraffe: "Giraffe", crocodile: "Crocodile", seal: "Seal", whale: "Whale", narwhal: "Narwhal", fennec_fox: "Fennec", red_panda: "Red panda", unicorn: "Unicorn" },
+  },
+  // Limits as lighthouses (Nov 2 2026)
+  lighthouse: {
+    if: "IF",
+    then: "THEN",
+    rule: "“{{name}}” {{n}}+ days in {{period}}",
+    ruleNo: "no “{{name}}” {{n}}+ days in {{period}}",
+    yourPlan: "your plan (tap to write it)",
+    count: "{{k}} of {{n}}",
+    lit: "Lit up · time for your plan",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Your world",
@@ -565,7 +580,7 @@ const en = {
     tabFindings: "Findings",
     tabCalendar: "Calendar",
     tabCharts: "Charts",
-    tabLimits: "Limits",
+    tabLimits: "Lighthouses",
     limitsWindow_one: "Last {{count}} day",
     limitsWindow_other: "Last {{count}} days",
     limitsWindowShort_one: "{{count}} day",

@@ -25,6 +25,7 @@ export const IslandsMap = ({
   trackers,
   width,
   fill = {},
+  lit,
   onOpen,
 }: {
   islands: Island[];
@@ -33,6 +34,8 @@ export const IslandsMap = ({
   width: number;
   /** answered today, 0..1 per island: a calm ring around its icon */
   fill?: Record<string, number>;
+  /** islands whose lighthouse is lit */
+  lit?: Set<string>;
   onOpen: (id: IslandId) => void;
 }) => {
   const { t } = useTranslation();
@@ -103,6 +106,10 @@ export const IslandsMap = ({
             aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.legend.${isl.weather}`)}` : ""}`}>
             <span className="relative">
               <IslandPicture id={isl.id} width={PIC} />
+              {lit?.has(isl.id) && (
+                <img src={mapPic("lighthouse")} alt="" aria-hidden="true" width={40} height={52} decoding="async" draggable={false}
+                  className="pointer-events-none absolute -left-2 bottom-3 object-contain drop-shadow-[0_0_10px_hsl(44_96%_60%/0.8)]" />
+              )}
               {isl.weather && (
                 <img src={mapPic(WEATHER_PIC[isl.weather])} alt="" aria-hidden="true" width={46} height={46} decoding="async" draggable={false}
                   className="pointer-events-none absolute -right-3 -top-1 object-contain" />

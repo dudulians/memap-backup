@@ -19,6 +19,7 @@ import { getNotes } from "@/lib/notes";
 import { Pressable, type PressTone } from "@/components/ui/pressable";
 import { DESIGN_W, GAP, LIP, R_CHEST, R_DAY, Road, Scenery, WEEK_TITLES, WEEK_TONES, WeekRing, WeekStrip, XS } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 
 // Coins zigzag on a rhythm from a 340-wide design (XS in PathParts), scaled
@@ -233,6 +234,14 @@ export const EveningPath = ({
   const [chestOpen, setChestOpen] = useState<{ week: number; dates: string[] } | null>(null);
   const [pastShown, setPastShown] = useState(1);
   const chests = useMemo(() => getChests(), [chestOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Her avatar (optional) stands in the slot kept free beside the focus coin.
+  const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
+  useEffect(() => {
+    const sync = () => setAvatarPic(avatarUrl(getAvatar()));
+    window.addEventListener("memap-avatar-changed", sync);
+    return () => window.removeEventListener("memap-avatar-changed", sync);
+  }, []);
 
   // The flame lives in the header (Index renders an empty slot there).
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
@@ -595,6 +604,12 @@ export const EveningPath = ({
             );
           })}
 
+          {avatarPic && (
+            <div aria-hidden="true" className="pointer-events-none absolute" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
+              <span className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
+              <img src={avatarPic} alt="" width={60} height={60} className="relative h-[60px] w-[60px] object-contain" />
+            </div>
+          )}
           {nodes.map((n, i) => coin(n, i))}
           {focusLabel}
           {typeof open === "number" && bubble(open)}
