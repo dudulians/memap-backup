@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { X, ChevronRight, ChevronLeft, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home, Undo2 } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home, Undo2, Check } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -23,6 +24,7 @@ import { track } from "@/lib/analytics";
 import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
+import { Pressable } from "@/components/ui/pressable";
 import { Flame, Clock } from "lucide-react";
 import { maybeRequestRating } from "@/lib/appRating";
 import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/doors";
@@ -63,6 +65,11 @@ interface DailySessionProps {
   // answered is saved as a tracker tagged with `source: "play"` so it
   // shows in a separate Cards section the user can prune later.
   playMode?: boolean;
+  // Aurora "steps, not evenings" (Nov 2 2026): answer only these questions
+  // (one topic on Today's path), named by stepTitle in the header. The
+  // session then ends on a small "Done" card instead of the evening's.
+  onlyIds?: string[];
+  stepTitle?: string;
 }
 
 interface SessionQuestion {
@@ -150,6 +157,8 @@ export const DailySession = ({
   onDateChange,
   onPlayRandom,
   playMode = false,
+  onlyIds,
+  stepTitle,
 }: DailySessionProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -336,8 +345,9 @@ export const DailySession = ({
     // Step 1: Get unanswered questions from active trackers
     // Same set the path counts (eveningPath activeTrackers): play-round
     // cards stay out of the evening until she keeps them.
+    const only = onlyIds ? new Set(onlyIds) : null;
     const unansweredQuestions = trackers
-      .filter(tracker => !tracker.archived && tracker.source !== "play")
+      .filter(tracker => !tracker.archived && tracker.source !== "play" && (!only || only.has(tracker.id)))
       .map(tracker => {
         const existingEntry = entries.find(
           e => e.trackerId === tracker.id && e.date === selectedDate
@@ -358,7 +368,7 @@ export const DailySession = ({
     // Daily session now contains only the user's own trackers — no
     // surprise cards appear without the user asking for them.
     return unansweredQuestions;
-  }, [trackers, entries, selectedDate]);
+  }, [trackers, entries, selectedDate, onlyIds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deck rebuilds when selectedDate changes — that lets the date-strip in
   // the header navigate to other days without unmounting the session.
@@ -557,7 +567,7 @@ export const DailySession = ({
         setCurrentIndex(prev => prev + 1);
       } else {
         setCompleted(true);
-        triggerConfetti();
+        if (!onlyIds) triggerConfetti();
       }
       setSwipeDirection(null);
       setIsAnimating(false);
@@ -592,7 +602,7 @@ export const DailySession = ({
         setCurrentIndex(prev => prev + 1);
       } else {
         setCompleted(true);
-        if (answeredCount > 0) {
+        if (answeredCount > 0 && !onlyIds) {
           triggerConfetti();
         }
       }
@@ -721,6 +731,26 @@ export const DailySession = ({
     currentDx.current = 0;
     currentDy.current = 0;
   };
+
+  // A step (one topic) ends on a small card: what was done, then back to
+  // the path, where the next step is waiting.
+  if (completed && onlyIds) {
+    return createPortal(
+      <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center animate-fade-in">
+        <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white shadow-[0_6px_0_hsl(var(--lip-teal))]">
+          <Check className="h-12 w-12" strokeWidth={3.2} />
+        </span>
+        <p className="mt-6 text-[28px] font-bold tracking-tight">{t("path.stepDone")}</p>
+        <p className="mt-1 text-[17px] font-medium text-muted-foreground">
+          {stepTitle ? `${stepTitle} · ` : ""}{t("path.answers", { count: answeredCount })}
+        </p>
+        <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+          {t("path.continue")}
+        </Pressable>
+      </div>,
+      document.body,
+    );
+  }
 
   if (completed) {
     // Compute streak fresh on the completion screen — the user just
@@ -1192,7 +1222,9 @@ export const DailySession = ({
             {/* A past day is named in the title itself ("Friday, 30 October")
                 instead of a tiny "filling in for" line under it. */}
             <p className="text-[17px] font-bold">
-              {selectedDate === todayLocal()
+              {stepTitle && selectedDate === todayLocal()
+                ? stepTitle
+                : selectedDate === todayLocal()
                 ? t("dailySession.tonight")
                 : (() => {
                     const s = format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale });

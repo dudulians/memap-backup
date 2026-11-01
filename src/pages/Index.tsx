@@ -44,7 +44,8 @@ const Index = () => {
       const tab = (e as CustomEvent).detail?.tab as Tab | undefined;
       if (tab === "cards" || tab === "patterns" || tab === "notes") {
         if (tab === "patterns" && (e as CustomEvent).detail?.open === "all") {
-          try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
+          const section = (e as CustomEvent).detail?.section ?? "findings";
+          try { localStorage.setItem("memap_patterns_section", section); } catch { /* ignore */ }
           setMapOpen("all");
         }
         setActiveTab(tab);

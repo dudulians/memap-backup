@@ -1,5 +1,13 @@
 > Nov 2 note from Uliana, after the plan was written: she no longer likes the built Map/globe: "как будто просто накиданы разные элементы, планки, непонятные цифры, непонятно что к чему относится". The Map section must be redesigned for clarity before more work on it.
 
+> **Nov 2, later: steps, not evenings (her words, after step 2).** "меня утомляет 20 вопросов делать… позволять людям по топикам проходить в течение дня или по приоритету"; "каждый шаг одинаковый или разный? если разный — разные цвета"; "надо чтоб человек прошёл за первый же день несколько шагов, какие-то станут зелёными автоматически (после онбординга), потом добавь то, добавь это, и самый главный — пройти вопросики"; new islands only after people do their own questions; notes beside the path saying what was done. This replaces "one stop = one evening" in §3.2:
+> - **Today's steps.** One step per island (topic), at most 7 questions each, the main topic first, then the biggest. Any of them can be done at any time of the day. Each step has its island's colour and her island icon; tasks are gold.
+> - **Day 1** starts with two steps already done: "Your topic" and "First answer". Then the topic steps, then one small task.
+> - **One task a day after the questions**: week 1 = write a note, see your calendar, add a question, look at a chart, open your map. From week 2, "Open a new island" (so people do their own questions first).
+> - **A day counts** when at least one topic step is done (or half of all questions, the old rule, so old evenings still count). Seven counted days make a week and open the chest. The flame counts days in a row.
+> - **Past days** fold into one coin each with a note beside it ("Mon · 12"); coming days are coins with weekday letters.
+> - A topic step opens the evening deck with only that island's questions and ends on a small "Done" card.
+
 # MeMap: The Masterpiece Plan (final)
 
 *Version 2.0 ("Aurora Light"), branch `design/aurora-ux`. The old 1.7.9 screens in `src/classic/` stay as they are and are not part of this plan.*

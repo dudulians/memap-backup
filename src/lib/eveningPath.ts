@@ -1,9 +1,7 @@
-// The path of evenings on Today (Aurora UX, step 1). Duolingo's lesson
-// path, rebuilt for MeMap: every evening is a stop, seven evenings make
-// a "week" (not a calendar week), and the seventh opens a report.
+// Day helpers for Today's path (Aurora UX). Since Nov 2 2026 the path is
+// made of steps (src/lib/pathSteps.ts); the old "evening" rule stays here
+// because old evenings must keep counting.
 import { Tracker, TrackerEntry } from "@/types/tracker";
-
-export const EVENINGS_PER_WEEK = 7;
 
 export const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -28,27 +26,6 @@ export const eveningDates = (trackers: Tracker[], entries: TrackerEntry[], today
   return [...perDay.entries()].filter(([, s]) => s.size >= need).map(([d]) => d).sort();
 };
 
-export interface PathState {
-  /** 0-based week number. */
-  week: number;
-  /** Evenings done in this week, tonight included when it's done. */
-  doneInWeek: number;
-  tonightDone: boolean;
-  /** Index (0..6) of tonight's stop in this week. */
-  tonightIndex: number;
-  /** This week's seven evenings are all done (tonight finished it). */
-  weekComplete: boolean;
-  totalEvenings: number;
-  /** Questions still unanswered tonight. */
-  leftTonight: number;
-  /** Questions an evening asks (active, not play cards). */
-  activeCount: number;
-  /** Dates of this week's done stops, in order (stop i = weekDates[i]). */
-  weekDates: string[];
-  /** Evenings in a row by the same rule, ending tonight or last night. */
-  streak: number;
-}
-
 /** Consecutive evening dates ending today, or yesterday while tonight
  *  is still open, so the flame never disagrees with the path. */
 export const eveningStreak = (dates: string[], now = new Date()): number => {
@@ -61,28 +38,4 @@ export const eveningStreak = (dates: string[], now = new Date()): number => {
     d.setDate(d.getDate() - 1);
   }
   return n;
-};
-
-export const pathState = (trackers: Tracker[], entries: TrackerEntry[], now = new Date()): PathState => {
-  const today = isoDay(now);
-  const dates = eveningDates(trackers, entries, today);
-  const tonightDone = dates.includes(today);
-  const before = dates.length - (tonightDone ? 1 : 0);
-  const week = Math.floor(before / EVENINGS_PER_WEEK);
-  const tonightIndex = before % EVENINGS_PER_WEEK;
-  const doneInWeek = tonightIndex + (tonightDone ? 1 : 0);
-  const active = activeTrackers(trackers);
-  const leftTonight = active.filter((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === today)).length;
-  return {
-    week,
-    doneInWeek,
-    tonightDone,
-    tonightIndex,
-    weekComplete: doneInWeek === EVENINGS_PER_WEEK,
-    totalEvenings: dates.length,
-    leftTonight,
-    activeCount: active.length,
-    weekDates: dates.slice(week * EVENINGS_PER_WEEK, week * EVENINGS_PER_WEEK + doneInWeek),
-    streak: eveningStreak(dates, now),
-  };
 };

@@ -31,7 +31,7 @@ import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
 import { EveningPath } from "./EveningPath";
-import { pathState } from "@/lib/eveningPath";
+import { markTaskDone, pathModel, type Step, type TaskId } from "@/lib/pathSteps";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
@@ -164,6 +164,8 @@ export const TodayTab = () => {
   const [trackerToDelete, setTrackerToDelete] = useState<Tracker | null>(null);
   const [addTrackerModalOpen, setAddTrackerModalOpen] = useState(false);
   const [dailySessionOpen, setDailySessionOpen] = useState(false);
+  // A step on Today's path answers one topic only (Aurora, Nov 2 2026).
+  const [step, setStep] = useState<{ ids: string[]; title: string } | null>(null);
   // When true, the next session opens in random-play mode (10 random new
   // templates, saved as source="play" trackers). Reset after the session
   // closes so the next manual ▶ tap goes back to normal mode.
@@ -907,10 +909,13 @@ export const TodayTab = () => {
           onClose={() => {
             setDailySessionOpen(false);
             setPlayMode(false);
+            setStep(null);
+            loadData();
           }}
           onComplete={() => {
             setDailySessionOpen(false);
             setPlayMode(false);
+            setStep(null);
             loadData();
           }}
           onGoToPatterns={() => {
@@ -938,29 +943,42 @@ export const TodayTab = () => {
             setPlayRoundNonce((n) => n + 1);
           }}
           playMode={playMode}
+          onlyIds={step?.ids}
+          stepTitle={step?.title}
           // Re-mount the session whenever play mode turns on or a new
           // round is requested, so each round gets a fresh shuffle.
-          key={playMode ? `play-${playRoundNonce}` : "normal"}
+          key={playMode ? `play-${playRoundNonce}` : step ? `step-${step.ids.join(",")}` : "normal"}
         />
       )}
 
-      {/* The path of evenings (Aurora UX step 1, Oct 31 2026): replaces
-          the "Last 7 days" door card, the trial week card and the lone
-          "Answer tonight's N" button. Tonight's stop starts the evening;
-          the seventh stop opens the report in Patterns. */}
+      {/* Today's path (Aurora UX; step 1 Oct 31, steps not evenings Nov 2
+          2026): replaces the "Last 7 days" door card and the lone "Answer
+          tonight's N" button. Each topic step starts its own short deck;
+          the gold task opens the thing it teaches; the chest opens the
+          report on the Map. */}
       <EveningPath
         trackers={trackers}
         entries={entries}
-        onStartTonight={() => {
-          const d = new Date();
-          setSelectedDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+        onStartStep={(s: Step, title: string) => {
+          setStep({ ids: s.trackerIds, title });
+          setSelectedDate(isoLocal(new Date()));
           setDailySessionOpen(true);
+        }}
+        onTask={(task: TaskId) => {
+          const toMap = (section?: string) =>
+            window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: section ? { tab: "patterns", open: "all", section } : { tab: "patterns" } }));
+          if (task === "note") window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
+          else if (task === "calendar") { markTaskDone("calendar"); toMap("overview"); }
+          else if (task === "chart") { markTaskDone("chart"); toMap("trends"); }
+          else if (task === "map") { markTaskDone("map"); toMap(); }
+          else { markTrackerAdded(); setAddTrackerModalOpen(true); }
         }}
         onOpenReport={() => {
           try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
           window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } }));
         }}
         onFillDay={(date) => {
+          setStep(null);
           setSelectedDate(date);
           setDailySessionOpen(true);
         }}
@@ -976,7 +994,7 @@ export const TodayTab = () => {
       {/* Notif opt-in banner — shown only when reminders are off, the
           user hasn't dismissed it, and there are answers on at least two
           days (so it never stacks on top of a brand-new Today). */}
-      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && pathState(trackers, entries).tonightDone && (
+      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && pathModel(trackers, entries).todayCounted && (
         <div className="surface rounded-[20px] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
           <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
           {/* One short line (1.8.0): the title and the sentence under it
