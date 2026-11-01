@@ -30,8 +30,8 @@ import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
-import { DoorQuickLog } from "./DoorHero";
 import { EveningPath } from "./EveningPath";
+import { pathState } from "@/lib/eveningPath";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
@@ -960,39 +960,24 @@ export const TodayTab = () => {
           try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
           window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } }));
         }}
+        onFillDay={(date) => {
+          setSelectedDate(date);
+          setDailySessionOpen(true);
+        }}
+        onOpenDay={(date) => {
+          window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date } }));
+        }}
       />
 
-      {/* Missed yesterday (1.8.0, from phone testing: "couldn't find how
-          to answer for past days"). Shown only to someone who was already
-          answering before yesterday, so a brand-new user isn't asked
-          about a day before they installed. */}
-      {(() => {
-        const yIso = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
-        const active = trackers.filter((tr) => !tr.archived && tr.source !== "play");
-        const firstDay = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
-        if (!firstDay || firstDay >= yIso) return null;
-        const missed = active.some((tr) => !entries.some((e) => e.trackerId === tr.id && e.date === yIso));
-        if (!missed) return null;
-        return (
-          <Button
-            variant="outline"
-            onClick={() => {
-              haptics.tap();
-              setSelectedDate(yIso);
-              setDailySessionOpen(true);
-            }}
-            className="w-full h-[52px] -mt-3 rounded-full text-[16px] font-semibold bg-transparent border-foreground/20 animate-fade-in"
-          >
-            {t("today.answerYesterday")}
-          </Button>
-        );
-      })()}
+      {/* "Answer for yesterday" lives in tonight's bubble on the path now
+          (Aurora step 2): a "Fill in Tuesday?" chip when one of the last
+          two days is empty. */}
 
       {/* Notif opt-in banner — shown only when reminders are off, the
           user hasn't dismissed it, and there are answers on at least two
           days (so it never stacks on top of a brand-new Today). */}
-      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && (
-        <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
+      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && pathState(trackers, entries).tonightDone && (
+        <div className="surface rounded-[20px] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
           <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
           {/* One short line (1.8.0): the title and the sentence under it
               were two ways of saying "turn on the reminder". */}
@@ -1014,9 +999,9 @@ export const TodayTab = () => {
         </div>
       )}
 
-      {/* Log a fight or a migraine the moment it happens (was the "+" on
-          the old door card). */}
-      <DoorQuickLog trackers={trackers} />
+      {/* "Happened just now?" (DoorQuickLog) left Today in Aurora step 2;
+          it moves into the mystery's island on the Map as "Log a fight"
+          (plan §3.2.8). */}
 
       {/* Tracker list — Cards mode. Split into regular cards and
           "Play round" cards (created by random-play mode). Play cards
@@ -1059,7 +1044,7 @@ export const TodayTab = () => {
                 else handleOpenTrackerDetails(tracker);
               }}
               className={cn(
-                "flex items-center gap-3 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-3 min-h-[60px] py-3 cursor-pointer active:scale-[0.99] transition-transform",
+                "surface flex items-center gap-3 rounded-[20px] pl-4 pr-3 min-h-[60px] py-3 cursor-pointer active:scale-[0.99] transition-transform",
                 inSelectMode && isSelected && "border-primary bg-primary/10",
               )}
             >
@@ -1113,7 +1098,7 @@ export const TodayTab = () => {
                 Today is just the count and tonight's button. Opening it
                 shows the old list (drag, edit, bulk) plus Add question. */}
             {regularTrackers.length + playTrackers.length > 0 && (
-              <div className="flex items-center gap-2 rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] pl-4 pr-2 py-2">
+              <div className="surface flex items-center gap-2 rounded-[20px] pl-4 pr-2 py-2">
                 <button
                   type="button"
                   onClick={() => setListOpen((v) => !v)}

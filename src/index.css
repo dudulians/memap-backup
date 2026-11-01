@@ -1831,3 +1831,177 @@
   background-position: top center;
   background-size: 100% auto;
 }
+
+/* Night sea for dark Aurora (plan §3.2.1): the same picture at about 35%
+   brightness under deep blue. */
+[data-theme="aurora"] .memap-sea-bg {
+  display: block;
+  background-color: hsl(205 40% 10%);
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: cover;
+}
+[data-theme="aurora"] .memap-sea-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, hsl(210 50% 12% / 0.7), hsl(205 45% 10% / 0.86) 55%, hsl(205 40% 10% / 0.94));
+}
+
+/* ---------- The path of evenings: depth (Aurora UX step 2, Nov 2 2026) ----------
+   Her ask: "тени или объёма добавить в стиле приложения" and "кружочки должны
+   отжиматься как в Duolingo". One recipe for every raised thing (plan §6):
+   a face, a darker lip of the same shape 6px under it, a ground shadow.
+   Pressing sinks the face 4px, so the lip shrinks 6 → 2px. Only transform
+   animates. Light values by default, dark Aurora overrides. */
+:root {
+  --path-ribbon: 195 40% 97%;
+  --path-under: 195 25% 82%;
+  --path-shadow: rgba(16, 42, 56, 0.12);
+  --path-ahead: 200 15% 70%;
+  --scenery-shadow: rgba(20, 60, 80, 0.14);
+  --ground-shadow: rgba(16, 42, 56, 0.22);
+
+  --coin-teal: 173 72% 36%;
+  --coin-teal-hi: 170 66% 44%;
+  --lip-teal: 175 76% 25%;
+  --coin-slate: 0 0% 100%;
+  --coin-slate-hi: 0 0% 100%;
+  --lip-slate: 200 26% 80%;
+  --coin-gold: 38 92% 56%;
+  --coin-gold-hi: 44 96% 66%;
+  --lip-gold: 30 80% 40%;
+  --coin-sky: 205 78% 46%;
+  --coin-sky-hi: 200 80% 56%;
+  --lip-sky: 210 70% 32%;
+  --coin-lilac: 262 48% 56%;
+  --coin-lilac-hi: 262 60% 66%;
+  --lip-lilac: 262 42% 40%;
+
+  --surface: 0 0% 100%;
+  --surface-alpha: 0.92;
+  --surface-border: rgba(255, 255, 255, 1);
+  --surface-shadow: 0 1px 2px rgba(16, 42, 56, 0.05), 0 10px 24px -14px rgba(16, 42, 56, 0.18);
+}
+[data-theme="aurora"] {
+  --path-ribbon: 200 25% 22%;
+  --path-under: 205 30% 12%;
+  --path-shadow: rgba(0, 0, 0, 0.45);
+  --path-ahead: 200 12% 45%;
+  --scenery-shadow: rgba(0, 0, 0, 0.4);
+  --ground-shadow: rgba(0, 0, 0, 0.45);
+
+  --coin-teal: 173 70% 38%;
+  --coin-teal-hi: 170 66% 46%;
+  --lip-teal: 176 72% 20%;
+  --coin-slate: 205 25% 26%;
+  --coin-slate-hi: 205 24% 32%;
+  --lip-slate: 205 32% 14%;
+  --lip-gold: 30 75% 30%;
+  --lip-sky: 210 65% 24%;
+  --lip-lilac: 262 40% 30%;
+
+  --surface: 205 25% 16%;
+  --surface-alpha: 0.94;
+  --surface-border: rgba(255, 255, 255, 0.06);
+  --surface-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.55);
+}
+
+/* Layout-touching rules sit in the components layer, so Tailwind
+   utilities on the same element (absolute, justify-between…) still win. */
+@layer components {
+  /* White card (plan §6 Surface). */
+  .surface {
+    background: hsl(var(--surface) / var(--surface-alpha));
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--surface-shadow);
+  }
+
+  /* Raised, pressable: <button class="press3d tone-teal"> with a ground,
+     a lip and a face span inside (src/components/ui/pressable.tsx). */
+  .press3d {
+    position: relative;
+    display: block;
+    padding: 0 0 6px;
+    border: 0;
+    background: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .press3d:focus { outline: none; }
+  .press3d:focus-visible .press3d-face { outline: 3px solid hsl(var(--primary) / 0.6); outline-offset: 3px; }
+  .press3d-ground {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: -5px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ground-shadow);
+    filter: blur(5px);
+    pointer-events: none;
+  }
+  .press3d-lip {
+    position: absolute;
+    inset: 6px 0 0 0;
+    border-radius: inherit;
+    background: hsl(var(--p3-lip));
+    pointer-events: none;
+  }
+  .press3d-face {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(135deg, hsl(var(--p3-face-hi)) 0%, hsl(var(--p3-face)) 70%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+    color: var(--p3-ink);
+    transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .press3d:active .press3d-face,
+  .press3d.is-pressed .press3d-face {
+    transform: translateY(4px);
+    transition: transform 80ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .press3d:disabled .press3d-face { transform: none; }
+}
+.tone-teal { --p3-face: var(--coin-teal); --p3-face-hi: var(--coin-teal-hi); --p3-lip: var(--lip-teal); --p3-ink: #fff; }
+.tone-slate { --p3-face: var(--coin-slate); --p3-face-hi: var(--coin-slate-hi); --p3-lip: var(--lip-slate); --p3-ink: hsl(var(--muted-foreground)); }
+.tone-gold { --p3-face: var(--coin-gold); --p3-face-hi: var(--coin-gold-hi); --p3-lip: var(--lip-gold); --p3-ink: hsl(28 70% 16%); }
+.tone-sky { --p3-face: var(--coin-sky); --p3-face-hi: var(--coin-sky-hi); --p3-lip: var(--lip-sky); --p3-ink: #fff; }
+.tone-lilac { --p3-face: var(--coin-lilac); --p3-face-hi: var(--coin-lilac-hi); --p3-lip: var(--lip-lilac); --p3-ink: #fff; }
+
+/* The road: an under-stroke for thickness, a pale ribbon, dashes on top. */
+.path-road { filter: drop-shadow(0 4px 10px var(--path-shadow)); }
+
+/* Tonight's halo: the one loop on Today, breathing once every 4s. */
+@keyframes pathHalo {
+  0%, 100% { transform: scale(0.94); opacity: 0.55; }
+  50% { transform: scale(1.04); opacity: 0.9; }
+}
+.path-halo { animation: pathHalo 4s ease-in-out infinite; }
+
+/* A "not yet" tap: a short wiggle of the face. */
+@keyframes pathWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-7deg); }
+  45% { transform: rotate(6deg); }
+  70% { transform: rotate(-3deg); }
+}
+.path-wiggle .press3d-face { animation: pathWiggle 420ms ease-in-out 1; }
+
+/* Bubbles over the path: 160ms in. */
+@keyframes pathBubbleIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.path-bubble { animation: pathBubbleIn 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .path-halo { animation: none; opacity: 0.7; }
+  .path-wiggle .press3d-face { animation: none; }
+  .path-bubble { animation-duration: 1ms; }
+  .press3d-face { transition: none; }
+}

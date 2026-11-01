@@ -137,6 +137,12 @@ const Index = () => {
     setRefreshKey(prev => prev + 1);
   };
 
+  // Content fades in under the header and out behind the floating tab bar.
+  // On Today the week banner sticks to the top and covers what scrolls.
+  const CONTENT_MASK = activeTab === "cards"
+    ? "linear-gradient(to bottom, #000 0, #000 calc(100% - 120px), transparent calc(100% - 24px))"
+    : "linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 120px), transparent calc(100% - 24px))";
+
   return (
     <div className="h-screen overflow-hidden flex flex-col relative">
       {/* Her sea at dawn behind Today and Notes (Nov 1 2026). Light Aurora
@@ -148,6 +154,8 @@ const Index = () => {
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
       <header className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2 border-b ${activeTab === "patterns" ? "backdrop-blur-lg bg-background/60 border-border/40" : "bg-transparent border-transparent"}`}>
+        {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
+        <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
         <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
         <button
           data-coachmark="settings-button"
@@ -169,7 +177,7 @@ const Index = () => {
       <main
         ref={mainRef}
         className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : "flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4"}
-        style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: "linear-gradient(to bottom, transparent 0, #000 18px)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 18px)" }}
+        style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK }}
       >
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
         {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} onOpened={() => setMapOpen(null)} />}

@@ -41,7 +41,27 @@ export interface PathState {
   totalEvenings: number;
   /** Questions still unanswered tonight. */
   leftTonight: number;
+  /** Questions an evening asks (active, not play cards). */
+  activeCount: number;
+  /** Dates of this week's done stops, in order (stop i = weekDates[i]). */
+  weekDates: string[];
+  /** Evenings in a row by the same rule, ending tonight or last night. */
+  streak: number;
 }
+
+/** Consecutive evening dates ending today, or yesterday while tonight
+ *  is still open, so the flame never disagrees with the path. */
+export const eveningStreak = (dates: string[], now = new Date()): number => {
+  const set = new Set(dates);
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!set.has(isoDay(d))) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (set.has(isoDay(d))) {
+    n++;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+};
 
 export const pathState = (trackers: Tracker[], entries: TrackerEntry[], now = new Date()): PathState => {
   const today = isoDay(now);
@@ -61,5 +81,8 @@ export const pathState = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     weekComplete: doneInWeek === EVENINGS_PER_WEEK,
     totalEvenings: dates.length,
     leftTonight,
+    activeCount: active.length,
+    weekDates: dates.slice(week * EVENINGS_PER_WEEK, week * EVENINGS_PER_WEEK + doneInWeek),
+    streak: eveningStreak(dates, now),
   };
 };
