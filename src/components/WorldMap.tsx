@@ -122,7 +122,7 @@ export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; route
       const P = new Map<IslandId, P>(); things.forEach((o) => P.set(o.island!.id, place(o, true)));
       // sea routes: along the ball, curves on the flat map
       routes.forEach(({ a, b, k, n }, i) => {
-        const label = t("map.ofN", { k, n });
+        const label = "🔗"; // numbers live in the island sheet now (her Nov 2 note)
         const A = byId.get(a), B = byId.get(b); if (!A || !B) return;
         if (ga > .01) {
           const va = vec(A.lon, A.lat), vb = vec(B.lon, B.lat), om = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));

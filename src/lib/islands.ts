@@ -69,36 +69,66 @@ export interface Island {
   /** hard days / answered days this week */
   hardDays: number;
   answeredDays: number;
+  /** this week against her own last four (null until two of them have answers) */
+  usual: "rougher" | "usual" | "calmer" | null;
+  /** the question that came up most this week, and on how many days */
+  top: { trackerId: string; days: number } | null;
   slot: (typeof SLOTS)[number];
 }
 
-/** k of n: the second question came on k of the n days the first one did */
-export interface Route { a: IslandId; b: IslandId; k: number; n: number }
+/** k of n: the second question came on k of the n days the first one did
+ *  (lag 1: the next day). First/second are tracker ids, in reading order. */
+export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean }
 
-/** The islands that have questions, busiest first, with this week's weather. */
+/** The islands that have questions, busiest first, with this week's
+ *  weather. Honest weather (plan §3.5, Nov 2 2026): a hard day is a day a
+ *  problem question was answered YES; no weather before 3 answered days;
+ *  3+ hard days = often (storm), 1-2 = sometimes (clouds), 0 = calm. */
 export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Island[] => {
-  const live = trackers.filter((t) => !t.archived);
+  const live = trackers.filter((t) => !t.archived && t.source !== "play");
   const groups = new Map<IslandId, Tracker[]>();
   for (const t of live) {
     const id = islandOf(t);
     groups.set(id, [...(groups.get(id) ?? []), t]);
   }
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 6);
-  const from = isoLocal(weekAgo);
+  const dayStart = (back: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - back);
+    return isoLocal(d);
+  };
   const list = [...groups.entries()].map(([id, ts]) => {
     const byId = new Map(ts.map((t) => [t.id, t]));
-    const answered = new Set<string>(), hard = new Set<string>();
+    // hard/answered days per week, week 0 = the last 7 days
+    const weeks = Array.from({ length: 5 }, () => ({ answered: new Set<string>(), hard: new Set<string>() }));
+    const topCount = new Map<string, number>();
     for (const e of entries) {
       const t = byId.get(e.trackerId);
-      if (!t || e.date < from) continue;
-      answered.add(e.date);
-      if (e.value === (t.problemWhen === "yes")) hard.add(e.date);
+      if (!t) continue;
+      for (let w = 0; w < 5; w++) {
+        if (e.date > dayStart(w * 7) || e.date < dayStart(w * 7 + 6)) continue;
+        weeks[w].answered.add(e.date);
+        if (t.problemWhen === "yes" && e.value === true) {
+          weeks[w].hard.add(e.date);
+          if (w === 0) topCount.set(t.id, (topCount.get(t.id) ?? 0) + 1);
+        }
+      }
     }
-    const ratio = answered.size ? hard.size / answered.size : 0;
-    const weather: Weather = answered.size === 0 ? null : hard.size >= 3 && ratio >= .5 ? "storm" : hard.size >= 1 ? "clouds" : "sun";
-    return { id, def: ISLAND_DEFS[id], trackerIds: ts.map((t) => t.id), weather, hardDays: hard.size, answeredDays: answered.size };
+    const now = weeks[0];
+    const weather: Weather = now.answered.size < 3 ? null : now.hard.size >= 3 ? "storm" : now.hard.size >= 1 ? "clouds" : "sun";
+    const past = weeks.slice(1).filter((w) => w.answered.size >= 3);
+    let usual: Island["usual"] = null;
+    if (past.length >= 2 && now.answered.size >= 3) {
+      const avg = past.reduce((sum, w) => sum + w.hard.size, 0) / past.length;
+      usual = now.hard.size > avg + 1 ? "rougher" : now.hard.size < avg - 1 ? "calmer" : "usual";
+    }
+    const best = [...topCount.entries()].sort((x, y) => y[1] - x[1])[0];
+    return {
+      id, def: ISLAND_DEFS[id], trackerIds: ts.map((t) => t.id), weather,
+      hardDays: now.hard.size, answeredDays: now.answered.size, usual,
+      top: best ? { trackerId: best[0], days: best[1] } : null,
+    };
   });
+
   list.sort((x, y) => y.trackerIds.length - x.trackerIds.length);
   return list.slice(0, SLOTS.length).map((x, i) => ({ ...x, slot: SLOTS[i] }));
 };
@@ -116,8 +146,11 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
     const key = [a, b].sort().join("|");
     if (seen.has(key)) continue;
     seen.add(key);
-    const n = c.counts.bothYes + c.counts.aYesBNo;
-    out.push({ a, b, k: c.counts.bothYes, n });
+    // lag -1: B the day before goes with A, so B is read first, and n
+    // counts the days the first one came.
+    const flip = c.lag === -1;
+    const n = c.counts.bothYes + (flip ? c.counts.aNoBYes : c.counts.aYesBNo);
+    out.push({ a, b, k: c.counts.bothYes, n, first: flip ? c.trackerB.id : c.trackerA.id, second: flip ? c.trackerA.id : c.trackerB.id, nextDay: c.lag !== 0 });
   }
   return out.slice(0, 4);
 };
