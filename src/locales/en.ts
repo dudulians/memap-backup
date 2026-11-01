@@ -814,6 +814,9 @@ const en = {
   },
 
   notesTab: {
+    dictate: "Say it",
+    dictateStop: "Stop",
+    dictateHint: "Tap the microphone on the keyboard and speak. Your words become text.",
     title: "Notes",
     empty: "Nothing here yet",
     write: "Write a note",

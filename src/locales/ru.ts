@@ -870,6 +870,9 @@ const ru: Translation = {
   },
 
   notesTab: {
+    dictate: "Сказать голосом",
+    dictateStop: "Стоп",
+    dictateHint: "Нажми микрофон на клавиатуре и говори — слова станут текстом.",
     title: "Заметки",
     empty: "Пока пусто",
     write: "Написать заметку",

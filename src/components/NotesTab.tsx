@@ -3,9 +3,10 @@
 // optional question as big buttons. Tap a note to edit or delete it.
 // The labelled form, the subtitle and the tiny edit / trash icons of
 // 1.7.9 are gone (design rule: people who hate reading).
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { DictateButton } from "@/components/DictateButton";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -44,6 +45,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedDate, setHighlightedDate] = useState<string | undefined>(targetDate);
@@ -240,6 +242,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               {draft.id ? t("notesTab.editNote") : t("notesTab.newNote")}
             </h2>
             <Textarea
+              ref={noteRef}
               autoFocus={!draft.id}
               value={draft.text}
               onChange={(e) => setDraft({ ...draft, text: e.target.value })}
@@ -247,6 +250,13 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               aria-label={t("notesTab.newNote")}
               className="mt-4 min-h-[150px] rounded-2xl text-[17px] leading-snug bg-foreground/[0.06] border-foreground/[0.14]"
             />
+            {/* Speak it: plain dictation into the text, no AI (her ask). */}
+            <div className="mt-3">
+              <DictateButton
+                target={() => noteRef.current}
+                onText={(more) => setDraft((d) => (d ? { ...d, text: d.text ? `${d.text.trimEnd()} ${more}` : more } : d))}
+              />
+            </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
               {[today, yesterday].map((iso) => (
