@@ -707,6 +707,7 @@ const ru: Translation = {
   },
 
   dailySession: {
+    notSure: "Не знаю",
     questionOf: "Вопрос {{current}} из {{total}}",
     tonight: "Вечер",
     countOf: "{{current}} из {{total}}",

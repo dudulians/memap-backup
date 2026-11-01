@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { X, ChevronRight, ChevronLeft, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home, Undo2, Check } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, ChevronDown, ArrowLeft, ArrowRight, Sparkles, Shuffle, Pencil, CalendarDays, BarChart3, Home, Undo2, Check } from "lucide-react";
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -25,6 +25,9 @@ import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { Pressable } from "@/components/ui/pressable";
+import { IslandPicture } from "@/components/IslandPicture";
+import { ISLAND_DEFS, islandOf, mapPic } from "@/lib/islands";
+import { islandHsl } from "@/lib/islandColors";
 import { Flame, Clock } from "lucide-react";
 import { maybeRequestRating } from "@/lib/appRating";
 import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/doors";
@@ -478,7 +481,6 @@ export const DailySession = ({
 
   const currentQuestion = deck[currentIndex];
   const totalQuestions = deck.length;
-  const progress = totalQuestions > 0 ? ((currentIndex) / totalQuestions) * 100 : 100;
 
   // Lock body scroll when session is active
   useEffect(() => {
@@ -644,7 +646,13 @@ export const DailySession = ({
   // bigger than horizontal got yielded away).
   const hasClaimedSwipe = useRef(false);
 
+  // Past the line where letting go answers: one light swipe haptic each
+  // time the finger crosses it (plan §3.3), not on every move.
+  const crossedRef = useRef(false);
+  const [showDates, setShowDates] = useState(false);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    crossedRef.current = false;
     if (isAnimatingRef.current) return;
     const target = e.target as HTMLElement;
     // Let buttons & interactive controls handle their own clicks
@@ -684,6 +692,11 @@ export const DailySession = ({
     currentDy.current = dy;
     setDragX(dx);
     setDragY(dy);
+    const over = Math.abs(dx) >= 50;
+    if (over !== crossedRef.current) {
+      crossedRef.current = over;
+      if (over) haptics.swipe();
+    }
   };
 
   const endPointer = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -1148,9 +1161,6 @@ export const DailySession = ({
   // Yes / No are the same calm buttons (1.8.0). Colouring them by which
   // answer is "the problem" read as right / wrong answers (design review,
   // Oct 27): the evening question is for honesty, not a test.
-  const answerButton =
-    "h-16 rounded-[20px] border-[1.5px] border-foreground/25 bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground text-[19px] font-semibold";
-
   return (
     // Deck mode wrapped in BottomSheet with Apple-Music-style
     // presentation. scaleBackground + 95vh height = "card layered on
@@ -1167,7 +1177,7 @@ export const DailySession = ({
       ariaTitle={t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}
     >
       <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-4 pb-2 pt-2 border-b flex-shrink-0 space-y-2">
+      <div className="px-4 pb-2 pt-2 flex-shrink-0 space-y-2">
         <div className="flex items-center justify-between">
           {/* Smart undo. Pops the answered-history stack and:
               - if the previous action was a saved Yes/No → asks the
@@ -1220,8 +1230,10 @@ export const DailySession = ({
           </div>
           <div className="text-center">
             {/* A past day is named in the title itself ("Friday, 30 October")
-                instead of a tiny "filling in for" line under it. */}
-            <p className="text-[17px] font-bold">
+                instead of a tiny "filling in for" line under it. Tapping it
+                shows the date strip (hidden by default since Aurora step 3). */}
+            <button type="button" disabled={!onDateChange} onClick={() => { haptics.tap(); setShowDates((v) => !v); }}
+              aria-expanded={showDates} className="inline-flex items-center gap-1 text-[17px] font-bold">
               {stepTitle && selectedDate === todayLocal()
                 ? stepTitle
                 : selectedDate === todayLocal()
@@ -1234,14 +1246,15 @@ export const DailySession = ({
                 {" · "}
                 {t("dailySession.countOf", { current: currentIndex + 1, total: totalQuestions })}
               </span>
-            </p>
+              {onDateChange && <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showDates && "rotate-180")} strokeWidth={2.4} />}
+            </button>
           </div>
           <div className="w-9 h-9" />
         </div>
 
         {/* Date strip — last 7 days. Tap any to answer for that date.
             Future dates are excluded — you can't pre-fill tomorrow. */}
-        {onDateChange && (() => {
+        {onDateChange && showDates && (() => {
           const todayStr = todayLocal();
           const days = Array.from({ length: 7 }, (_, i) => {
             const d = new Date();
@@ -1299,7 +1312,7 @@ export const DailySession = ({
           cleanly. */}
       <div
         data-vaul-no-drag
-        className="flex-1 flex items-stretch justify-center p-3 overflow-hidden relative"
+        className="flex-1 flex items-stretch justify-center p-3 overflow-hidden relative select-none [-webkit-touch-callout:none]"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endPointer}
@@ -1325,107 +1338,156 @@ export const DailySession = ({
             />
           </>
         )}
-        <div
-          className={cn(
-            "w-full max-w-lg flex",
-            // CSS transition only during the post-release phase (snap-
-            // back or fly-out). While the user is actively dragging,
-            // dragX/dragY change on every pointermove — chaining a
-            // 300 ms tween onto each step made the card visibly trail
-            // the finger and "shake" on slow, thoughtful drags.
-            (isAnimating || (dragX === 0 && dragY === 0)) && "transition-transform duration-300",
-            // Gentle one-shot wiggle for the very first card the user
-            // ever sees — left tilt, right tilt, settle. The animation
-            // is on transform; once the user starts dragging the inline
-            // transform on this same element supersedes (so wiggle +
-            // drag don't fight). The class is gated on the same
-            // condition as the chevrons above.
-            // Only while the card rests: a running animation beats the inline
-            // drag transform, so the wiggle froze the card under the finger.
-            !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && dragX === 0 && dragY === 0 && "ds-first-wiggle",
-            swipeDirection === "right" && "translate-x-[120%] rotate-12",
-            swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
-            swipeDirection === "down" && "translate-y-[120%] opacity-50",
-            isAnimating && !swipeDirection && "opacity-0"
-          )}
-          style={{
-            transform: !isAnimating && (dragX || dragY)
-              ? `translateX(${dragX}px) translateY(${Math.max(0, dragY)}px) rotate(${dragX * 0.04}deg)`
-              : undefined
-          }}
-        >
-          <div className="relative w-full flex">
-            <Card className="card-premium overflow-hidden shadow-2xl flex-1 flex flex-col">
-              <CardContent className="p-6 flex-1 flex flex-col">
-                {/* Only the "new question" mark of a play round; the small
-                    category chip that sat here is gone (1.8.0). */}
-                {currentQuestion.isNew && (
-                  <div className="flex-shrink-0">
-                    <Badge className="bg-primary/20 text-primary border-primary/30 text-[13px] px-3 py-1">
-                      <Sparkles className="h-3.5 w-3.5 mr-1" />
-                      {t("dailySession.newSuggestion")}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Question — fills the card, big and plain. The tracker
-                    title used to sit above it in caps; it mostly repeated
-                    the question, so it's gone (title stays in the list). */}
-                <div className="flex-1 flex flex-col justify-center px-1">
-                  <p className="text-[30px] font-bold leading-[1.14] tracking-tight text-foreground [text-wrap:balance]">
-                    {localizeTrackerQuestion(currentQuestion.tracker.questionText, currentQuestion.tracker.title)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+        {/* The deck (Aurora step 3): the next two cards peek from behind
+            and the second one rises while the top card flies off; the top
+            card is keyed by index, so a new card never flies back in from
+            the side. A slate YES/NO stamp follows the drag. */}
+        <div className="relative w-full max-w-lg flex pb-5">
+          {[2, 1].map((depth) => {
+            const q = deck[currentIndex + depth];
+            if (!q) return null;
+            const rising = depth === 1 && !!swipeDirection;
+            return (
+              <div
+                key={q.tracker.id}
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 bottom-5 flex transition-transform duration-200 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]"
+                style={{ transformOrigin: "50% 100%", transform: rising ? "none" : `translateY(${depth * 10}px) scale(${1 - depth * 0.05})` }}
+              >
+                <DeckCard question={q} />
+              </div>
+            );
+          })}
+          <div
+            key={currentIndex}
+            className={cn(
+              "relative w-full flex",
+              // CSS transition only during the post-release phase (snap-
+              // back or fly-out). While the user is actively dragging,
+              // dragX/dragY change on every pointermove — chaining a
+              // 300 ms tween onto each step made the card visibly trail
+              // the finger and "shake" on slow, thoughtful drags.
+              (isAnimating || (dragX === 0 && dragY === 0)) && "transition-transform duration-300",
+              // Only while the card rests: a running animation beats the inline
+              // drag transform, so the wiggle froze the card under the finger.
+              !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && dragX === 0 && dragY === 0 && "ds-first-wiggle",
+              swipeDirection === "right" && "translate-x-[120%] rotate-12",
+              swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
+              swipeDirection === "down" && "translate-y-[120%] opacity-50",
+              isAnimating && !swipeDirection && "opacity-0",
+            )}
+            style={{
+              transform: !isAnimating && (dragX || dragY)
+                ? `translateX(${dragX}px) translateY(${Math.max(0, dragY)}px) rotate(${dragX * 0.04}deg)`
+                : undefined,
+            }}
+          >
+            <DeckCard
+              question={currentQuestion}
+              stamp={
+                swipeDirection === "right" || swipeDirection === "left"
+                  ? { yes: swipeDirection === "right", opacity: 1 }
+                  : Math.abs(dragX) > 6
+                  ? { yes: dragX > 0, opacity: Math.min(1, Math.abs(dragX) / 90) }
+                  : null
+              }
+            />
           </div>
         </div>
       </div>
 
-      {/* Bottom buttons — slimmed so the card area gets more vertical
-          room. Skip is a tiny inline text link instead of a full-width
-          button (it's already discoverable via swipe-down + the in-card
-          hint). No/Yes get default-size pills. */}
       <div
-        className="px-4 pt-2 flex-shrink-0 bg-background border-t"
+        className="px-4 pt-1 flex-shrink-0 bg-background"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
       >
+        {/* Hints, not buttons (Aurora step 3): flat, slate, the dragged
+            side darkens. Tapping one answers too. */}
         <div className="grid grid-cols-2 gap-3">
-          <Button onClick={() => handleAnswer(false)} disabled={isAnimating} className={answerButton}>
+          <button
+            type="button"
+            onClick={() => handleAnswer(false)}
+            disabled={isAnimating}
+            className={cn("h-11 rounded-2xl flex items-center justify-center gap-1.5 text-[16px] font-semibold transition-colors disabled:opacity-60",
+              dragX < -20 ? "bg-foreground/[0.12] text-foreground" : "bg-foreground/[0.05] text-muted-foreground")}
+          >
+            <ArrowLeft className="h-4 w-4" strokeWidth={2.4} />
             {t("common.no")}
-          </Button>
-          <Button onClick={() => handleAnswer(true)} disabled={isAnimating} className={answerButton}>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAnswer(true)}
+            disabled={isAnimating}
+            className={cn("h-11 rounded-2xl flex items-center justify-center gap-1.5 text-[16px] font-semibold transition-colors disabled:opacity-60",
+              dragX > 20 ? "bg-foreground/[0.12] text-foreground" : "bg-foreground/[0.05] text-muted-foreground")}
+          >
             {t("common.yes")}
-          </Button>
+            <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
+          </button>
         </div>
-        {/* Skip as a plain button. "Or swipe the card" is gone: the
-            first card wiggles to show the swipe instead. */}
-        <div className="mt-1.5 flex justify-center">
+        <div className="mt-1 flex justify-center">
           <button
             type="button"
             onClick={handleSkip}
             disabled={isAnimating}
             className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
           >
-            {t("common.skip")}
+            {t("dailySession.notSure")}
           </button>
-        </div>
-        {/* Progress: one short bar per question, filled as you go. */}
-        <div className="mt-3 flex justify-center gap-1.5" aria-hidden="true">
-          {Array.from({ length: Math.min(totalQuestions, 12) }, (_, i) => (
-            <span
-              key={i}
-              className={cn(
-                "h-1 rounded-full transition-colors",
-                totalQuestions > 8 ? "w-4" : "w-7",
-                i < Math.round((progress / 100) * Math.min(totalQuestions, 12)) ? "bg-primary" : "bg-foreground/20",
-              )}
-            />
-          ))}
         </div>
       </div>
       </div>
     </BottomSheet>
+  );
+};
+
+// One evening card (Aurora step 3, plan §3.3): solid surface tinted with
+// the island's colour at the top, a slate lip, the island chip and picture
+// (the same one the Map uses), then the question, big. The stamp says YES
+// or NO in slate: the two never differ in colour.
+const DeckCard = ({ question, stamp }: { question: SessionQuestion; stamp?: { yes: boolean; opacity: number } | null }) => {
+  const { t } = useTranslation();
+  const island = islandOf(question.tracker);
+  const hsl = islandHsl(island);
+  const text = localizeTrackerQuestion(question.tracker.questionText, question.tracker.title);
+  const small = typeof window !== "undefined" && window.innerHeight < 720;
+  return (
+    <div
+      className="relative flex flex-1 flex-col overflow-hidden rounded-[28px] border border-[var(--surface-border)]"
+      style={{
+        background: `linear-gradient(180deg, hsl(${hsl} / 0.12) 0%, hsl(${hsl} / 0) 42%), hsl(var(--surface))`,
+        boxShadow: "0 6px 0 hsl(var(--lip-slate)), 0 22px 40px -22px rgba(16, 42, 56, 0.45)",
+      }}
+    >
+      <div className="flex items-center gap-2 px-5 pt-5">
+        <img src={mapPic("icon_" + ISLAND_DEFS[island].icon)} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none" />
+        <span className="text-[15px] font-bold text-foreground/80">{t(`map.island.${island}`)}</span>
+        {question.isNew && (
+          <Badge className="ml-auto bg-primary/20 text-primary border-primary/30 text-[13px] px-3 py-1">
+            <Sparkles className="h-3.5 w-3.5 mr-1" />
+            {t("dailySession.newSuggestion")}
+          </Badge>
+        )}
+      </div>
+      <div className="flex justify-center pt-1">
+        <IslandPicture id={island} width={small ? 118 : 150} />
+      </div>
+      <div className="flex flex-1 items-center px-6 pb-6">
+        <p className={cn("font-bold leading-[1.14] tracking-tight text-foreground [text-wrap:balance]",
+          text.length <= 50 ? "text-[30px]" : text.length <= 80 ? "text-[26px]" : "text-[23px]")}>
+          {text}
+        </p>
+      </div>
+      {stamp && (
+        <span
+          aria-hidden="true"
+          className={cn("pointer-events-none absolute top-6 rounded-xl border-4 border-[hsl(var(--muted-foreground))] bg-[hsl(var(--surface)/0.85)] px-3 py-0.5 text-[26px] font-black uppercase tracking-[0.08em] text-[hsl(var(--muted-foreground))]",
+            stamp.yes ? "left-5 -rotate-12" : "right-5 rotate-12")}
+          style={{ opacity: stamp.opacity }}
+        >
+          {stamp.yes ? t("common.yes") : t("common.no")}
+        </span>
+      )}
+    </div>
   );
 };
 

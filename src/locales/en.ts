@@ -664,6 +664,7 @@ const en = {
   },
 
   dailySession: {
+    notSure: "Not sure",
     questionOf: "Question {{current}} of {{total}}",
     tonight: "Tonight",
     countOf: "{{current}} of {{total}}",
