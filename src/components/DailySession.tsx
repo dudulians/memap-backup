@@ -28,6 +28,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { IslandPicture } from "@/components/IslandPicture";
 import { ISLAND_DEFS, islandOf, mapPic } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
+import { cardQuestion } from "@/lib/cardText";
 import { Flame, Clock } from "lucide-react";
 import { maybeRequestRating } from "@/lib/appRating";
 import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/doors";
@@ -1003,9 +1004,8 @@ export const DailySession = ({
                     })
                   : t("dailySession.caughtUp")
                 : answeredCount > 0
-                ? (answeredCount === 1
-                    ? t("dailySession.answeredOne")
-                    : t("dailySession.answeredMany", { count: answeredCount }))
+                // Real plural forms, no "(а)" (Aurora step 4); classic keeps its own strings.
+                ? t("path.answers", { count: answeredCount })
                 : t("dailySession.seeYouTomorrow")}
             </p>
             )}
@@ -1448,7 +1448,7 @@ const DeckCard = ({ question, stamp }: { question: SessionQuestion; stamp?: { ye
   const { t } = useTranslation();
   const island = islandOf(question.tracker);
   const hsl = islandHsl(island);
-  const text = localizeTrackerQuestion(question.tracker.questionText, question.tracker.title);
+  const text = cardQuestion(question.tracker);
   const small = typeof window !== "undefined" && window.innerHeight < 720;
   return (
     <div

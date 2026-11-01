@@ -255,6 +255,16 @@ export const scheduleNotification = async (
       dayBody = localizedQuestion
         ? `${localizedQuestion}\n${promptBody}`
         : promptBody;
+      // New screens (Aurora step 1 leftover): questions can be private
+      // ("A fight with your partner?"), so the lock screen shows only
+      // how much there is. Classic keeps its rotating question.
+      if (getUiMode() === "new") {
+        dayTitle = fallbackTitle;
+        dayBody = i18n.t("notifications.privateBody", {
+          count: activeTrackers.length,
+          min: Math.max(1, Math.round((activeTrackers.length * 4) / 60)),
+        });
+      }
     }
 
     notifications.push({

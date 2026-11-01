@@ -242,7 +242,7 @@ const ru: Translation = {
     noTrackersYet: "Пока нет вопросов",
     sensitiveShort: "Близость и бывшие",
     limitAlerts: "Когда порог перейдён",
-    dataOnPhone: "Всё хранится только на этом телефоне",
+    dataOnPhone: "Ответы хранятся на этом телефоне",
     showSensitive: "Чувствительные темы",
     showSensitiveDesc: "Близость, либидо, бывшие — добавит ещё несколько вопросов в библиотеку",
 
@@ -330,6 +330,10 @@ const ru: Translation = {
     // отклонить/раскрыть; тап открывает приложение сразу на дневной
     // сессии (App.tsx ловит localNotificationActionPerformed).
     dailyPromptBody: "Тапни чтобы ответить",
+    privateBody_one: "Сегодня · {{count}} вопрос · ~{{min}} мин",
+    privateBody_few: "Сегодня · {{count}} вопроса · ~{{min}} мин",
+    privateBody_many: "Сегодня · {{count}} вопросов · ~{{min}} мин",
+    privateBody_other: "Сегодня · {{count}} вопроса · ~{{min}} мин",
     thresholdTitle: "{{emoji}} Сигнал к действию",
     thresholdBody: "Вопрос «{{title}}» дошёл до {{threshold}} сигналов. Пора что-то с этим делать.",
     thresholdBodyWithAction: "«{{title}}» — {{threshold}} сигналов. Твоё действие: {{action}}",
@@ -433,7 +437,7 @@ const ru: Translation = {
     titleToday: "Сегодняшняя сессия",
     titleDate: "Сессия за {{date}}",
     sessionSubtitle: "Ответь на все вопросы",
-    sessionSubtitlePast: "Заполни ответы, которые пропустил(а) в этот день",
+    sessionSubtitlePast: "Заполни ответы за этот день",
     startSession: "Начать",
     ideasOfTheDay: "Идеи дня",
     addToMyMap: "Добавить в мою карту",
@@ -1036,7 +1040,7 @@ const ru: Translation = {
     chipsTitle: "Выбери вопрос",
     chipsBody: "Тапни любой чип сверху — увидишь календарь именно для этого вопроса.",
     multiTitle: "Заполнить пропущенное",
-    multiBody: "Тапни «Выбрать несколько» и отметь несколько дней разом — удобно если забыл(а) что-то заполнить за прошлые дни.",
+    multiBody: "Тапни «Выбрать несколько» и отметь несколько дней разом — удобно, если что-то пропущено за прошлые дни.",
     signalsTitle: "Сигналы",
     signalsBody: "Здесь вопросы которые набрали порог сигналов — приложение подсказывает, что стоит обратить внимание.",
     trendsTitle: "Тренды",
@@ -1245,7 +1249,7 @@ const ru: Translation = {
     thisWeek: "за неделю",
     loggedToast: "Записано",
     hardDayTitle: "Тяжёлый день.",
-    hardDayBody: "Спасибо, что записал(а).",
+    hardDayBody: "Спасибо за честный ответ.",
     reasons: {
       money: "Деньги",
       chores: "Быт",
@@ -1290,7 +1294,7 @@ const ru: Translation = {
       "felt-anxious": { ask: "Были стресс или тревога в тот день?", after: "в тревожный день" },
       "ate-by-2pm": { ask: "Была нормальная еда до 14:00?", after: "после пропущенной еды" },
       "felt-lonely": { ask: "Было одиноко в тот день?", after: "в одинокий день" },
-      "outside-30min": { ask: "Выходил(а) на улицу?", after: "в день без улицы" },
+      "outside-30min": { ask: "Удалось выйти на улицу?", after: "в день без улицы" },
     },
     echo: {
       soFar: "Пока что",

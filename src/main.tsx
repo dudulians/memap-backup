@@ -10,6 +10,7 @@ import "./lib/i18n";
 import { initSentry, sendInstallHeartbeat } from "./lib/sentry";
 // Init Mixpanel analytics. Anonymous, event-only, no PII. No-op in dev.
 import { initAnalytics } from "./lib/analytics";
+import { getUiMode } from "./lib/uiMode";
 
 initSentry();
 // Fire a one-time INFO event on fresh install so the Sentry dashboard
@@ -18,5 +19,8 @@ initSentry();
 // (localStorage flag), no-op in dev.
 sendInstallHeartbeat();
 initAnalytics();
+// The new screens get their own bundled font (MeMap Sans, index.css);
+// classic keeps the one it shipped with.
+document.documentElement.setAttribute("data-ui", getUiMode());
 
 createRoot(document.getElementById("root")!).render(<App />);

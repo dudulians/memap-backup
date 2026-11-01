@@ -235,7 +235,7 @@ const en = {
     showSensitive: "Sensitive topics",
     sensitiveShort: "Intimacy & exes",
     limitAlerts: "When a limit is crossed",
-    dataOnPhone: "Everything stays on this phone",
+    dataOnPhone: "Your answers are stored on this phone",
     showSensitiveDesc: "Intimacy, libido, exes — adds a few more questions to the library",
 
     helpTitle: "Help",
@@ -321,6 +321,9 @@ const en = {
     // with the notification itself; tap opens the app straight into
     // the daily session (App.tsx handles the deep-link).
     dailyPromptBody: "Tap to answer",
+    // New screens: no question on the lock screen (privacy).
+    privateBody_one: "Today · {{count}} question · ~{{min}} min",
+    privateBody_other: "Today · {{count}} questions · ~{{min}} min",
     thresholdTitle: "{{emoji}} Action signal reached",
     thresholdBody: "\"{{title}}\" hit {{threshold}} signals. Time to act.",
     thresholdBodyWithAction: "\"{{title}}\" — {{threshold}} signals. Your action: {{action}}",

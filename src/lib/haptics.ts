@@ -128,7 +128,9 @@ export const haptics = {
   tap: () => {
     if (!isHapticsEnabled()) return;
     if (isIOS) { safe(CoreHaptics.tap()); return; }
-    if (isAndroid) { safe(Haptics.selectionChanged()); return; }
+    // Android: selectionChanged is silent without selectionStart, so a
+    // light impact is the tap there (Aurora step 1 leftover).
+    if (isAndroid) { safe(Haptics.impact({ style: ImpactStyle.Light })); return; }
     webVibrate(5);
   },
 
