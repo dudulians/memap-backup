@@ -2080,7 +2080,7 @@
   60% { transform: translateY(6px) scale(1.02); opacity: 1; }
   100% { transform: none; }
 }
-.chest-drop { animation: chestDrop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.chest-drop { animation: chestDrop 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* The Map tab's own calm sea (Nov 2 2026). */
 .map-sea { background: linear-gradient(180deg, #e3f3f8 0%, #c8e9f2 35%, #b2dfec 100%); }
