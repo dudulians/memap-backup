@@ -334,8 +334,10 @@ export const DailySession = ({
     }
     
     // Step 1: Get unanswered questions from active trackers
+    // Same set the path counts (eveningPath activeTrackers): play-round
+    // cards stay out of the evening until she keeps them.
     const unansweredQuestions = trackers
-      .filter(tracker => !tracker.archived)
+      .filter(tracker => !tracker.archived && tracker.source !== "play")
       .map(tracker => {
         const existingEntry = entries.find(
           e => e.trackerId === tracker.id && e.date === selectedDate
@@ -1281,12 +1283,12 @@ export const DailySession = ({
           <>
             <ChevronLeft
               aria-hidden="true"
-              className="ds-first-chev absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
+              className="ds-first-chev absolute z-10 left-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
               strokeWidth={2}
             />
             <ChevronRight
               aria-hidden="true"
-              className="ds-first-chev absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
+              className="ds-first-chev absolute z-10 right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground/50 pointer-events-none"
               strokeWidth={2}
             />
           </>
@@ -1306,7 +1308,9 @@ export const DailySession = ({
             // transform on this same element supersedes (so wiggle +
             // drag don't fight). The class is gated on the same
             // condition as the chevrons above.
-            !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && "ds-first-wiggle",
+            // Only while the card rests: a running animation beats the inline
+            // drag transform, so the wiggle froze the card under the finger.
+            !firstSwipeSeen && currentIndex === 0 && !swipeDirection && !isAnimating && dragX === 0 && dragY === 0 && "ds-first-wiggle",
             swipeDirection === "right" && "translate-x-[120%] rotate-12",
             swipeDirection === "left" && "-translate-x-[120%] -rotate-12",
             swipeDirection === "down" && "translate-y-[120%] opacity-50",

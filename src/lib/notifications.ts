@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { getUiMode } from "@/lib/uiMode";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
@@ -66,7 +67,10 @@ export interface NotificationSettings {
 export const getNotificationSettings = (): NotificationSettings => {
   const enabled = localStorage.getItem(NOTIFICATION_ENABLED_KEY) === "true";
   const time = localStorage.getItem(NOTIFICATION_TIME_KEY) || "20:00";
-  const thresholdAlerts = localStorage.getItem(THRESHOLD_ALERTS_KEY) !== "false";
+  // New screens: limit alerts are OFF unless she turns them on (her rule,
+  // Nov 2026: no "time to act" pushes by default). Classic keeps its old default.
+  const stored = localStorage.getItem(THRESHOLD_ALERTS_KEY);
+  const thresholdAlerts = getUiMode() === "classic" ? stored !== "false" : stored === "true";
   return { enabled, time, thresholdAlerts };
 };
 

@@ -327,7 +327,8 @@ export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
               className="relative rounded-none border-b-2 border-transparent h-[46px] px-1 text-[15px] font-semibold text-muted-foreground data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground"
             >
               {t("patterns.tabLimits")}
-              {strongCount > 0 && (
+              {/* No red count badge on Limits (her rule: nothing negative). */}
+              {false && strongCount > 0 && (
                 <span className="absolute top-1 right-0 h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold flex items-center justify-center bg-strong text-strong-foreground">
                   {strongCount}
                 </span>

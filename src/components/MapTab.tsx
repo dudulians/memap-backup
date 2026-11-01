@@ -11,12 +11,13 @@ import { WorldMap } from "./WorldMap";
 import { PatternsTab } from "./PatternsTab";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
-export const MapTab = () => {
+export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" | null; onOpened?: () => void } = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [open, setOpen] = useState<IslandId | "all" | null>(null);
+  const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen);
+  useEffect(() => { if (initialOpen) { setOpen(initialOpen); onOpened?.(); } }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const load = async () => {

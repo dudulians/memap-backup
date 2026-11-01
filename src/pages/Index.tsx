@@ -24,6 +24,9 @@ const Index = () => {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [tourOpen, setTourOpen] = useState(false);
+  // Report buttons ask the Map to open a sheet straight away (Findings for
+  // all questions) instead of landing on the bare globe.
+  const [mapOpen, setMapOpen] = useState<"all" | null>(null);
   useEffect(() => {
     applyTheme(getTheme());
     if (shouldShowTour()) {
@@ -40,6 +43,10 @@ const Index = () => {
     const handler = (e: Event) => {
       const tab = (e as CustomEvent).detail?.tab as Tab | undefined;
       if (tab === "cards" || tab === "patterns" || tab === "notes") {
+        if (tab === "patterns" && (e as CustomEvent).detail?.open === "all") {
+          try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
+          setMapOpen("all");
+        }
         setActiveTab(tab);
       }
     };
@@ -165,7 +172,7 @@ const Index = () => {
         style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: "linear-gradient(to bottom, transparent 0, #000 18px)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 18px)" }}
       >
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
-        {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} />}
+        {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} onOpened={() => setMapOpen(null)} />}
         {activeTab === "notes" && (
           <NotesTab
             key={`notes-${refreshKey}`}

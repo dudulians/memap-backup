@@ -1776,7 +1776,7 @@
     100% { transform: translateX(0)    rotate(0); }
   }
   .ds-first-wiggle {
-    animation: dsFirstWiggle 1.8s cubic-bezier(0.45, 0, 0.55, 1) 0.5s 1 both;
+    animation: dsFirstWiggle 1.8s cubic-bezier(0.45, 0, 0.55, 1) 0.5s 1 none;
   }
 
   /* Companion chevron pulse — the two faint ◂ ▸ glyphs sitting just

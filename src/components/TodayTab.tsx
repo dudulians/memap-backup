@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { isoLocal } from "@/lib/doors";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -174,10 +175,10 @@ export const TodayTab = () => {
 
   // Selected date for viewing/editing entries (default: today)
   const [selectedDate, setSelectedDate] = useState(() => 
-    new Date().toISOString().split("T")[0]
+    isoLocal(new Date())
   );
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = isoLocal(new Date());
   const isViewingToday = selectedDate === today;
 
   useEffect(() => {
@@ -235,6 +236,9 @@ export const TodayTab = () => {
         setPlayMode(true);
         setPlayRoundNonce((n) => n + 1);
       }
+      // Always tonight in local time (a reminder tapped after midnight UTC
+      // or an app left open overnight must not save to the wrong day).
+      setSelectedDate(isoLocal(new Date()));
       setDailySessionOpen(true);
     };
     const scrollToPlay = () => {
@@ -914,7 +918,7 @@ export const TodayTab = () => {
             setPlayMode(false);
             loadData();
             window.dispatchEvent(
-              new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } })
+              new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } })
             );
           }}
           onDateChange={setSelectedDate}
@@ -954,7 +958,7 @@ export const TodayTab = () => {
         }}
         onOpenReport={() => {
           try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
-          window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }));
+          window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } }));
         }}
       />
 
