@@ -366,6 +366,23 @@ const en = {
     logNow: "Happened just now?",
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
+    priorDays_one: "{{count}} day so far",
+    priorDays_other: "{{count}} days so far",
+    earlierWeeks_one: "Earlier week · {{count}}",
+    earlierWeeks_other: "Earlier weeks · {{count}}",
+    chest: {
+      ready: "Your chest is ready",
+      open: "Open",
+      mapOfWeek: "A map of your week",
+      kOfN_one: "{{k}} of {{count}} day",
+      kOfN_other: "{{k}} of {{count}} days",
+      calm: "Calm week",
+      early: "Early",
+      earned: "You earned: {{item}}",
+      put: "Put it on my map",
+      placed: "It's on your map",
+    },
+    reward: { wooden_bridge: "a bridge", hot_air_balloon: "a balloon", marker_flag: "a flag", rainbow: "a rainbow" },
     allQuestions: "Your questions",
     mixed: "A bit of everything",
     inDays_one: "In {{count}} day",

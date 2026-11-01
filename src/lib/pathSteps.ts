@@ -38,6 +38,10 @@ export interface Step {
 }
 
 export interface PathModel {
+  /** counted days before the path started (an old user's history), folded into one chip */
+  prior: number;
+  /** finished weeks before this one, oldest first: their seven days */
+  pastWeeks: string[][];
   /** 0-based week */
   week: number;
   /** counted days of this week before today, oldest first */
@@ -211,16 +215,66 @@ const taskForToday = (week: number, today: string): { task: TaskId; done: boolea
   return null;
 };
 
+// --- Where the path starts, and the week chests ----------------------------------
+
+const START_KEY = "memap_path_start";
+
+/** The day the path began: onboarding day for a new user, the first day on
+ *  the new screens for an old one (their earlier days fold into a chip, so
+ *  nobody starts at "Week 9" with eight empty weeks; plan §3.2.2). */
+export const pathStart = (today: string): string => {
+  try {
+    const saved = localStorage.getItem(START_KEY);
+    if (saved) return saved;
+    const door = getDoorState();
+    const start = door?.startedAt && door.startedAt <= today ? door.startedAt : today;
+    localStorage.setItem(START_KEY, start);
+    return start;
+  } catch {
+    return today;
+  }
+};
+
+const CHESTS_KEY = "memap_week_chests";
+/** What a week's chest showed when it was opened: saved once, reopened as is. */
+export interface ChestLine { label: string; k: number; n: number; main?: boolean; calm?: boolean }
+export interface ChestRecord { openedAt: string; lines: ChestLine[]; fact?: string; reward: string; placed?: boolean }
+
+/** Things a chest gives, one per week in turn. They go on the Map, never on the path. */
+export const CHEST_REWARDS = ["wooden_bridge", "hot_air_balloon", "marker_flag", "rainbow"];
+export const rewardFor = (week: number) => CHEST_REWARDS[week % CHEST_REWARDS.length];
+
+export const getChests = (): Record<number, ChestRecord> => {
+  try {
+    return JSON.parse(localStorage.getItem(CHESTS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+};
+export const saveChest = (week: number, rec: ChestRecord) => {
+  const all = getChests();
+  all[week] = rec;
+  try {
+    localStorage.setItem(CHESTS_KEY, JSON.stringify(all));
+  } catch {
+    /* the chest just opens fresh next time */
+  }
+};
+
 // --- The model ----------------------------------------------------------------
 
 export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = new Date()): PathModel => {
   const today = isoLocal(now);
-  const days = countedDays(trackers, entries, today);
+  const all = countedDays(trackers, entries, today);
+  const start = pathStart(today);
+  const days = all.filter((d) => d >= start);
+  const prior = all.length - days.length;
   const todayCounted = days.includes(today);
   const before = days.filter((d) => d !== today);
   const week = Math.floor(before.length / DAYS_PER_WEEK);
   const k = before.length % DAYS_PER_WEEK;
   const pastInWeek = before.slice(week * DAYS_PER_WEEK, week * DAYS_PER_WEEK + k);
+  const pastWeeks = Array.from({ length: week }, (_, w) => before.slice(w * DAYS_PER_WEEK, (w + 1) * DAYS_PER_WEEK));
 
   const answeredToday = new Set(entries.filter((e) => e.date === today).map((e) => e.trackerId));
   const steps: Step[] = [];
@@ -257,12 +311,14 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   }
 
   return {
+    prior,
+    pastWeeks,
     week,
     pastInWeek,
     todayCounted,
     weekComplete: todayCounted && k === DAYS_PER_WEEK - 1,
-    totalDays: days.length,
-    streak: eveningStreak(days, now),
+    totalDays: all.length,
+    streak: eveningStreak(all, now),
     steps,
     current: steps.findIndex((s) => !s.done),
     leftToday,

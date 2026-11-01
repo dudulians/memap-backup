@@ -977,6 +977,7 @@ export const TodayTab = () => {
           try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
           window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } }));
         }}
+        onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
         onFillDay={(date) => {
           setStep(null);
           setSelectedDate(date);

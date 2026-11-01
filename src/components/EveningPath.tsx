@@ -10,30 +10,24 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Flame, Layers, Map as MapIcon, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
-import { countedDays, DAYS_PER_WEEK, pathModel, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
+import { countedDays, DAYS_PER_WEEK, getChests, pathModel, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { placeScenery, type Rect } from "@/lib/pathScenery";
 import { ISLAND_DEFS, mapPic } from "@/lib/islands";
 import { islandStyle } from "@/lib/islandColors";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
 import { Pressable, type PressTone } from "@/components/ui/pressable";
+import { DESIGN_W, GAP, LIP, R_CHEST, R_DAY, Road, Scenery, WEEK_TITLES, WEEK_TONES, WeekRing, WeekStrip, XS } from "@/components/PathParts";
+import { WeekChest } from "@/components/WeekChest";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 
-// Coins zigzag on a rhythm from a 340-wide design, scaled to the screen.
-const XS = [140, 220, 250, 200, 120, 90, 150, 205];
-const DESIGN_W = 340;
+// Coins zigzag on a rhythm from a 340-wide design (XS in PathParts), scaled
+// to the screen.
 const PATH_MAX = 440;
 const TOP = 34;
-const GAP = 26; // between two coins, edge to edge
-const R_DAY = 30;
 const R_STEP = 36;
 const R_CURRENT = 42;
-const R_CHEST = 46;
-const LIP = 6;
 const LABEL_W = 140;
-
-const WEEK_TONES: PressTone[] = ["teal", "gold", "sky", "lilac"];
-const WEEK_TITLES = 4; // path.title0..title3, then they repeat
 
 const TASK_ICON: Record<TaskId, LucideIcon> = {
   note: PenLine,
@@ -59,23 +53,6 @@ type PNode =
   | { kind: "chest" };
 type Open = number | "banner" | null;
 
-/** Seven arcs around a point: one per day of the week. */
-const WeekRing = ({ size, done, on, off, width = 4 }: { size: number; done: number; on: string; off: string; width?: number }) => {
-  const r = size / 2 - width / 2;
-  const c = size / 2;
-  const gap = 0.22;
-  const seg = (Math.PI * 2) / DAYS_PER_WEEK;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className="pointer-events-none">
-      {Array.from({ length: DAYS_PER_WEEK }, (_, i) => {
-        const a0 = -Math.PI / 2 + i * seg + gap / 2;
-        const a1 = a0 + seg - gap;
-        const p = (a: number) => `${c + r * Math.cos(a)},${c + r * Math.sin(a)}`;
-        return <path key={i} d={`M${p(a0)} A${r},${r} 0 0 1 ${p(a1)}`} fill="none" stroke={i < done ? on : off} strokeWidth={width} strokeLinecap="round" />;
-      })}
-    </svg>
-  );
-};
 
 /** A small white badge with a check, on a done coin's corner. */
 const DoneBadge = () => (
@@ -90,6 +67,7 @@ export const EveningPath = ({
   onStartStep,
   onTask,
   onOpenReport,
+  onOpenMap,
   onFillDay,
   onOpenDay,
 }: {
@@ -100,6 +78,8 @@ export const EveningPath = ({
   /** Do today's small task (write a note, see the calendar…). */
   onTask: (task: TaskId) => void;
   onOpenReport: () => void;
+  /** After a chest's reward goes on the map: show the Map. */
+  onOpenMap: () => void;
   /** Answer a missed day (one of the last two). */
   onFillDay: (date: string) => void;
   /** Look at a past day. */
@@ -249,6 +229,11 @@ export const EveningPath = ({
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
 
+  // A week's chest, open in its own sheet; and how many finished weeks show.
+  const [chestOpen, setChestOpen] = useState<{ week: number; dates: string[] } | null>(null);
+  const [pastShown, setPastShown] = useState(1);
+  const chests = useMemo(() => getChests(), [chestOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // The flame lives in the header (Index renders an empty slot there).
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderSlot(document.getElementById("memap-header-start")), []);
@@ -270,24 +255,15 @@ export const EveningPath = ({
 
   if (trackers.length === 0) return null;
 
-  const curve = (from: number, to: number) => {
-    let d = `M${stops[from].x},${stops[from].y}`;
-    for (let i = from + 1; i <= to; i++) {
-      const a = stops[i - 1];
-      const b = stops[i];
-      const my = (a.y + b.y) / 2;
-      d += ` C${a.x},${my} ${b.x},${my} ${b.x},${b.y}`;
-    }
-    return d;
-  };
-  const road = curve(0, chestIndex);
-  const walked = focus;
 
   const tone = WEEK_TONES[m.week % WEEK_TONES.length];
   const title = t(`path.title${m.week % WEEK_TITLES}`);
   const reportLabel = m.week === 0 ? t("path.firstReport") : t("path.weekReport");
   const daysDone = m.pastInWeek.length + (m.todayCounted ? 1 : 0);
   const toGo = DAYS_PER_WEEK - daysDone;
+
+  const openThisChest = () => setChestOpen({ week: m.week, dates: [...m.pastInWeek, isoDay(new Date())] });
+  const thisChest = chests[m.week];
 
   const startStep = (s: Step) => {
     setOpen(null);
@@ -349,7 +325,7 @@ export const EveningPath = ({
       return m.weekComplete ? (
         <>
           {head(t("path.reportReady"))}
-          {bigButton(t("path.openReport"), () => { setOpen(null); onOpenReport(); }, "gold", "medium")}
+          {bigButton(t("path.openReport"), () => { setOpen(null); openThisChest(); }, "gold", "medium")}
         </>
       ) : (
         head(reportLabel, t("path.toGo", { count: toGo }))
@@ -433,8 +409,8 @@ export const EveningPath = ({
             </>
           }
         >
-          <img src={mapPic("chest_closed")} alt="" width={60} height={51} decoding="async" draggable={false} className="pointer-events-none" />
-          {m.weekComplete && <img src={mapPic("sparkles")} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none absolute -right-2 -top-2" />}
+          <img src={mapPic(thisChest ? "chest_open_map" : "chest_closed")} alt="" width={thisChest ? 56 : 60} height={thisChest ? 58 : 51} decoding="async" draggable={false} className="pointer-events-none" />
+          {m.weekComplete && !thisChest && <img src={mapPic("sparkles")} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none absolute -right-2 -top-2" />}
         </Pressable>
       );
     }
@@ -521,7 +497,7 @@ export const EveningPath = ({
     if (m.weekComplete) {
       return (
         <div className={cn("absolute z-10 flex flex-col gap-1.5", align)} style={pos}>
-          <Pressable tone="gold" haptic="medium" onClick={onOpenReport} className="h-[42px] rounded-xl" faceClassName="px-4 text-[14px] font-extrabold uppercase tracking-[0.06em]">{t("path.openReport")}</Pressable>
+          <Pressable tone="gold" haptic="medium" onClick={openThisChest} className="h-[42px] rounded-xl" faceClassName="px-4 text-[14px] font-extrabold uppercase tracking-[0.06em]">{t("path.openReport")}</Pressable>
           <span className="text-[15px] font-semibold leading-tight text-foreground">{reportLabel}</span>
         </div>
       );
@@ -535,8 +511,31 @@ export const EveningPath = ({
 
   // A fragment, so the banner's sticky range is all of Today (it stays on
   // top while the question list scrolls under it), not just the path.
+  // Coming weeks start after this week's remaining days.
+  const comingAfter = (m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length) + 1;
+  const pastFrom = Math.max(0, m.pastWeeks.length - pastShown);
+
   return (
     <>
+      {/* An old user's days before the path began: one chip, no empty weeks. */}
+      {m.prior > 0 && (
+        <p className="surface mx-auto -mt-1 mb-1 w-fit rounded-full px-3.5 py-1.5 text-[14px] font-semibold text-muted-foreground">
+          {t("path.priorDays", { count: m.prior })}
+        </p>
+      )}
+      {pastFrom > 0 && (
+        <button type="button" onClick={() => setPastShown((n) => n + 4)} className="surface mx-auto block h-10 rounded-full px-4 text-[14px] font-semibold text-foreground">
+          {t("path.earlierWeeks", { count: pastFrom })}
+        </button>
+      )}
+      {m.pastWeeks.slice(pastFrom).map((dates, j) => {
+        const w = pastFrom + j;
+        return (
+          <WeekStrip key={w} week={w} width={width} kind="past" dates={dates} chest={chests[w] ?? null}
+            onOpenDay={onOpenDay} onOpenChest={() => setChestOpen({ week: w, dates })} />
+        );
+      })}
+
       {headerSlot && m.streak > 0 && createPortal(
         <span aria-label={t("path.streakAria", { count: m.streak })} className="surface inline-flex h-9 items-center gap-1 rounded-full pl-2 pr-3 text-[16px] font-bold tabular-nums text-foreground">
           <Flame className="h-[18px] w-[18px] fill-amber-400 text-amber-500" strokeWidth={2} />
@@ -577,26 +576,9 @@ export const EveningPath = ({
       {/* The path. */}
       <section aria-label={title} className="animate-fade-in" style={{ marginTop: 4 }}>
         <div ref={boxRef} className="relative mx-auto" style={{ width, height }}>
-          <svg width={width} height={height} className="path-road absolute inset-0 overflow-visible" aria-hidden="true">
-            <path d={road} transform="translate(0 3)" fill="none" stroke="hsl(var(--path-under))" strokeWidth={18} strokeLinecap="round" />
-            <path d={road} fill="none" stroke="hsl(var(--path-ribbon))" strokeWidth={16} strokeLinecap="round" />
-            {walked < chestIndex && <path d={curve(Math.max(walked, 0), chestIndex)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3} strokeDasharray="7 9" strokeLinecap="round" />}
-            {walked > 0 && <path d={curve(0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="7 9" strokeLinecap="round" />}
-          </svg>
-
+          <Road stops={stops} width={width} height={height} walked={focus} />
           {/* Her art beside the coins: static, seeded by the week. */}
-          {scenery.map((p, k) => (
-            <div key={k} aria-hidden="true" className="pointer-events-none absolute" style={{ left: p.x, top: p.y, width: p.w, height: p.h }}>
-              {p.ripple && (
-                <img src={mapPic("water_ripple")} alt="" width={Math.round(p.w * 1.15)} height={Math.round(p.w * 1.15 * 0.366)} decoding="async" draggable={false}
-                  className="absolute max-w-none opacity-90" style={{ left: -p.w * 0.075, bottom: -p.w * 0.16 }} />
-              )}
-              {p.shadow && !p.ripple && (
-                <span className="absolute rounded-[50%] blur-[2px]" style={{ left: p.w * 0.15, right: p.w * 0.15, bottom: -4, height: 9, background: "var(--scenery-shadow)" }} />
-              )}
-              <img src={mapPic(p.name)} alt="" width={p.w} height={p.h} decoding="async" draggable={false} className="relative" />
-            </div>
-          ))}
+          <Scenery pieces={scenery} />
 
           {/* Notes beside the coins: what each one was or is. */}
           {nodes.map((n, i) => {
@@ -618,6 +600,16 @@ export const EveningPath = ({
           {typeof open === "number" && bubble(open)}
         </div>
       </section>
+
+      {/* Two coming weeks, quiet, so the path never just ends. */}
+      {[1, 2].map((n) => (
+        <WeekStrip key={`c${n}`} week={m.week + n} width={width} kind="coming" firstOffset={comingAfter + (n - 1) * DAYS_PER_WEEK} />
+      ))}
+
+      {chestOpen && (
+        <WeekChest week={chestOpen.week} dates={chestOpen.dates} trackers={trackers} entries={entries}
+          onClose={() => setChestOpen(null)} onPlaced={() => { setChestOpen(null); onOpenMap(); }} />
+      )}
     </>
   );
 };

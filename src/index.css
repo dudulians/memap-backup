@@ -2068,3 +2068,16 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Coming weeks on the path (Aurora step 5): quiet, so today stands out.
+   Dark: a bit more opacity and less colour, so it doesn't go muddy. */
+.path-coming { opacity: 0.45; pointer-events: none; }
+[data-theme="aurora"] .path-coming { opacity: 0.6; filter: saturate(0.7); }
+
+/* A week's chest drops in once (Reduce Motion: it is just there). */
+@keyframes chestDrop {
+  0% { transform: translateY(-60px) scale(0.9); opacity: 0; }
+  60% { transform: translateY(6px) scale(1.02); opacity: 1; }
+  100% { transform: none; }
+}
+.chest-drop { animation: chestDrop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
