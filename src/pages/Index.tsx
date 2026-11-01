@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
-import { PatternsTab } from "@/components/PatternsTab";
+import { MapTab } from "@/components/MapTab";
 import { NotesTab } from "@/components/NotesTab";
-import { CalendarDays, TrendingUp, NotebookPen, Settings, ArrowUp } from "lucide-react";
+import { CalendarDays, Map as MapIcon, NotebookPen, Settings, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
 import { applyTheme, getTheme } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
+import seaDawn from "@/assets/bg/sea-dawn.webp";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
-// bottom bar is Today / Patterns / Notes.
+// bottom bar is Today / Patterns / Notes. Aurora UX (Nov 1 2026): the
+// "patterns" tab is now the Map (islands); Patterns open inside an island.
 type Tab = "cards" | "patterns" | "notes";
 
 const Index = () => {
@@ -130,9 +132,15 @@ const Index = () => {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col relative">
+      {/* Her sea at dawn behind Today and Notes (Nov 1 2026). Light Aurora
+          only (index.css); the Map tab draws its own sea. Fixed: the tab
+          content scrolls over it. */}
+      {activeTab !== "patterns" && (
+        <div aria-hidden="true" className="memap-sea-bg pointer-events-none absolute inset-0 -z-10" style={{ backgroundImage: `url(${seaDawn})` }} />
+      )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header className="sticky top-0 z-10 backdrop-blur-lg bg-background/60 border-b border-border/40 px-4 pb-2.5 pt-safe-plus-2">
+      <header className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2 border-b ${activeTab === "patterns" ? "backdrop-blur-lg bg-background/60 border-border/40" : "bg-transparent border-transparent"}`}>
         <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
         <button
           data-coachmark="settings-button"
@@ -153,11 +161,11 @@ const Index = () => {
           devices with a tall home indicator still clear the nav. */}
       <main
         ref={mainRef}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4"
-        style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}
+        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : "flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4"}
+        style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: "linear-gradient(to bottom, transparent 0, #000 18px)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0, #000 18px)" }}
       >
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
-        {activeTab === "patterns" && <PatternsTab key={`patterns-${refreshKey}`} />}
+        {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} />}
         {activeTab === "notes" && (
           <NotesTab
             key={`notes-${refreshKey}`}
@@ -197,7 +205,7 @@ const Index = () => {
           <div className="nav-floating grid grid-cols-3 overflow-hidden">
             {([
               { tab: "cards", icon: CalendarDays, label: t("common.today") },
-              { tab: "patterns", icon: TrendingUp, label: t("common.patterns") },
+              { tab: "patterns", icon: MapIcon, label: t("common.map") },
               { tab: "notes", icon: NotebookPen, label: t("common.notes") },
             ] as const).map(({ tab, icon: Icon, label }) => (
               <button

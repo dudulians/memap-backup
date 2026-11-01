@@ -54,21 +54,26 @@ export const FindingsView = ({
   trackers,
   entries,
   onSeeDays,
+  focusIds,
 }: {
   trackers: Tracker[];
   entries: TrackerEntry[];
   onSeeDays: () => void;
+  /** Map island: only pairs that include one of these questions (the other side can be anywhere). */
+  focusIds?: string[];
 }) => {
   const { t } = useTranslation();
   // People who came in through a door care about that question first, so
   // pairs that include it lead; otherwise the engine's own order stands.
   const findings = useMemo(() => {
-    const all = computeCorrelations(trackers, entries, 5);
+    const all = focusIds
+      ? computeCorrelations(trackers, entries, 15).filter((c) => focusIds.includes(c.trackerA.id) || focusIds.includes(c.trackerB.id)).slice(0, 5)
+      : computeCorrelations(trackers, entries, 5);
     const doorId = getDoorState()?.trackerId;
     if (!doorId) return all;
     const hasDoor = (c: CorrelationResult) => c.trackerA.id === doorId || c.trackerB.id === doorId;
     return [...all.filter(hasDoor), ...all.filter((c) => !hasDoor(c))];
-  }, [trackers, entries]);
+  }, [trackers, entries, focusIds]);
 
   // Same "value moment" bookkeeping the old Links tab did: feeds the
   // rating prompt and the correlation_viewed funnel step.

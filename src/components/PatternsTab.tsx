@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry, ReflectionCycle } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
@@ -16,7 +16,9 @@ import { uuid } from "@/lib/uuid";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { getDoorState, isoLocal } from "@/lib/doors";
 
-export const PatternsTab = () => {
+// focusIds (Map, Nov 1 2026): show only one island's questions. Saves still
+// go through the full lists, so nothing outside the island is touched.
+export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
@@ -244,6 +246,8 @@ export const PatternsTab = () => {
     setReflectionSheetTracker(updatedTracker);
   };
 
+  const visible = useMemo(() => (focusIds ? trackers.filter((tr) => focusIds.includes(tr.id)) : trackers), [trackers, focusIds]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -271,13 +275,13 @@ export const PatternsTab = () => {
     emerging: 1,
     balanced: 2,
   };
-  const sortedTrackers = [...trackers].sort((a, b) => {
+  const sortedTrackers = [...visible].sort((a, b) => {
     const sa = getTrackerStats(a).status;
     const sb = getTrackerStats(b).status;
     return statusRank[sa] - statusRank[sb];
   });
 
-  const strongCount = trackers.filter((t) => getTrackerStats(t).status === "strong").length;
+  const strongCount = visible.filter((t) => getTrackerStats(t).status === "strong").length;
 
   return (
     <div className="space-y-3">
@@ -339,13 +343,13 @@ export const PatternsTab = () => {
           subtle entrance without the carousel-mounting cost. */}
       <div className="mt-4">
         {section === "findings" && (
-          <FindingsView trackers={trackers} entries={entries} onSeeDays={() => handleSectionChange("overview")} />
+          <FindingsView trackers={trackers} entries={entries} focusIds={focusIds} onSeeDays={() => handleSectionChange("overview")} />
         )}
 
         {section === "overview" && (
           <div className="animate-fade-in">
             <OverviewCard
-              trackers={trackers}
+              trackers={visible}
               entries={entries}
               selectedDate={selectedDate}
               onDateSelect={setSelectedDate}
@@ -358,7 +362,7 @@ export const PatternsTab = () => {
         {/* --- CHARTS: the line chart over time, back from 1.7.9. */}
         {section === "trends" && (
           <div className="animate-fade-in">
-            <TrendChart trackers={trackers} entries={entries} roomy />
+            <TrendChart trackers={visible} entries={entries} roomy />
           </div>
         )}
 

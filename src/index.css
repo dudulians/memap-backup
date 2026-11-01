@@ -1820,3 +1820,14 @@
     animation: nudgePulseHalo 1.9s ease-out infinite;
   }
 }
+
+/* Her sea at dawn behind Today and Notes (Nov 1 2026): light Aurora only.
+   The picture keeps its width; below it the same pale blue continues. */
+.memap-sea-bg { display: none; }
+[data-theme="aurora-light"] .memap-sea-bg {
+  display: block;
+  background-color: #f0f5fd;
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% auto;
+}

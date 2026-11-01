@@ -20,6 +20,7 @@ const en = {
     saved: "Saved. Nice.",
     today: "Today",
     patterns: "Patterns",
+    map: "Map",
     notes: "Notes",
     settings: "Settings",
     addPattern: "Add new pattern",
@@ -30,6 +31,23 @@ const en = {
     edit: "Edit",
     clear: "Clear",
     saving: "Saving...",
+  },
+
+  // Map tab (Aurora UX, Nov 1 2026): your questions as islands on a ball.
+  map: {
+    aria: "Your world as a ball of islands. Drag to roll it, tap an island to open it.",
+    globe: "Globe",
+    flat: "Map",
+    hint: "Roll it with your finger",
+    ofN: "{{k}} of {{n}}",
+    backToMe: "Back to me",
+    all: "All",
+    unexploredLabel: "Not explored yet",
+    unexplored: "Add a question from a new area to open this island.",
+    emptyTitle: "Your world is waiting",
+    emptyBody: "Add your first question on Today, and its island appears here.",
+    island: { me: "Me", love: "Love life", kids: "Kids", health: "Health", body: "Body & habits", pet: "Pet", parents: "Parents", world: "World around", other: "Other" },
+    weather: { storm: "Stormy week", clouds: "Some clouds", sun: "Calm week", none: "No answers this week" },
   },
 
   language: {
