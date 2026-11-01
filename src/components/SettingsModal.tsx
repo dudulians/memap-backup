@@ -35,6 +35,8 @@ import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
 import { AvatarPicker } from "@/components/AvatarPicker";
+import { switchToOld } from "@/components/UpgradeInvite";
+import { History } from "lucide-react";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { track } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
@@ -894,6 +896,16 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
                   </button>
                 ))}
+                {/* Back to the 1.7.9 screens any time (plan §3.7, §3.8). */}
+                <button
+                  type="button"
+                  onClick={switchToOld}
+                  className="w-full flex items-center gap-3 px-4 min-h-[60px] text-left active:bg-muted/60 transition-colors"
+                >
+                  <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                  <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                </button>
               </div>
             )}
 

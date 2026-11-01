@@ -20,7 +20,17 @@ type Tab = "cards" | "patterns" | "notes";
 
 const Index = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<Tab>("cards");
+  // After "Open my map" (old-user upgrade) the first tab is the Map, once.
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    try {
+      const first = localStorage.getItem("memap_open_tab");
+      if (first === "patterns") {
+        localStorage.removeItem("memap_open_tab");
+        return "patterns";
+      }
+    } catch { /* Today */ }
+    return "cards";
+  });
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);

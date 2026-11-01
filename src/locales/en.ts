@@ -79,6 +79,25 @@ const en = {
     count: "{{k}} of {{n}}",
     lit: "Lit up · time for your plan",
   },
+  // Old users meet the new MeMap (Nov 2 2026)
+  upgrade: {
+    title: "Try the new MeMap?",
+    line: "Your answers come with you · Switch back any time",
+    try: "Try it",
+    notNow: "Not now",
+    building: "Building your map",
+    fromDays_one: "from your {{count}} day",
+    fromDays_other: "from your {{count}} days",
+    islands_one: "{{count}} question → {{k}} islands",
+    islands_other: "{{count}} questions → {{k}} islands",
+    firstLink: "First link",
+    linksLater: "Links show up as you answer",
+    lighthouses_one: "{{count}} limit → a lighthouse",
+    lighthouses_other: "{{count}} limits → lighthouses",
+    open: "Open my map",
+    back: "The old look is in Settings → More.",
+    oldLook: "Old look",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Your world",

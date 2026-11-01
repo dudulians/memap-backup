@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ClassicIndex from "./classic/ClassicIndex";
 import { getUiMode } from "@/lib/uiMode";
+import { UpgradeInvite } from "@/components/UpgradeInvite";
 import NotFound from "./pages/NotFound";
 import { getNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { primeAudio } from "@/lib/feedback";
@@ -157,7 +158,9 @@ const App = () => {
           <BrowserRouter>
             <Routes>
               {/* Old users keep the 1.7.9 screens (src/lib/uiMode.ts) */}
-              <Route path="/" element={getUiMode() === "classic" ? <ClassicIndex /> : <Index />} />
+              {/* Classic users get the invite to the new screens once (Aurora, plan §3.8),
+                  drawn from here so src/classic stays untouched. */}
+              <Route path="/" element={getUiMode() === "classic" ? <><ClassicIndex /><UpgradeInvite /></> : <Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
