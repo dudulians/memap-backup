@@ -8,6 +8,11 @@
 > - **Past days** fold into one coin each with a note beside it ("Mon · 12"); coming days are coins with weekday letters.
 > - A topic step opens the evening deck with only that island's questions and ends on a small "Done" card.
 
+> **Progress, Nov 2 (her 9-hour absence; she said "работай по всем шагам, не жди одобрения").** Built on `design/aurora-ux`, committed locally, not pushed, no Codemagic build. Phone link v7. Review pictures: `20-*.png` in this folder.
+> - Done: steps not evenings; step 3 cards (peek, stamp, island chip + picture, flat hints, threshold haptic); step 4 words (MeMap Sans = DM Sans + Onest Cyrillic, 30 short questions, private reminder, privacy line, Android tap, Reduce Motion); steps 5-6 endless path + week chest; Map made clear + island/world stats + honest weather; islands (Work, My own, her own islands, move a question, add one with good/hard, fill ring); avatars (Malu first); lighthouses IF → THEN; voice notes as plain dictation (keyboard mic in the app's web view); old-user upgrade + "Old look".
+> - Not done yet: onboarding v2 (§3.1), lesson v2 for old users, "Evening counted!" rounds inside the full deck, the end-of-evening redesign (§3.4 part 1), the mystery engine (17), full question rewrite (14, only 30 so far), weekly gold bonus arcs (11), new island from an unexplored cloud on the globe, a native speech plugin (needs a build and her OK).
+> - Decisions taken without her (easy to undo): day-1 tonight bubble not auto-open; "Happened just now?" left Today; reminder offer only after the day counts; small topics merge into "A bit of everything"; a day counts with one whole topic step (≥ 2 answers) or the old half rule; chest rewards rotate bridge → balloon → flag → rainbow; the globe stays as an optional round button.
+
 # MeMap: The Masterpiece Plan (final)
 
 *Version 2.0 ("Aurora Light"), branch `design/aurora-ux`. The old 1.7.9 screens in `src/classic/` stay as they are and are not part of this plan.*
