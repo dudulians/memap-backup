@@ -3,27 +3,20 @@
 // optional question as big buttons. Tap a note to edit or delete it.
 // The labelled form, the subtitle and the tiny edit / trash icons of
 // 1.7.9 are gone (design rule: people who hate reading).
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { DictateButton } from "@/components/DictateButton";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { Plus, X, ArrowLeft, Search, CalendarDays } from "lucide-react";
+import { NoteSheet, newDraft, useQuestionName, type NoteDraft } from "@/components/NoteSheet";
+import { Plus, X, ArrowLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Note, getNotes, addNote, updateNote, deleteNote } from "@/lib/notes";
+import { Note, getNotes } from "@/lib/notes";
 import { Tracker } from "@/types/tracker";
 import { getTrackers } from "@/lib/storage";
 import { format, parseISO } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
-import { toast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
-import { daysAgoIso, getDoorState } from "@/lib/doors";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { daysAgoIso } from "@/lib/doors";
 import maluWave from "@/assets/malu/malu-wave.webp";
 import { SHOW_MASCOT } from "@/lib/mascot";
 
@@ -36,17 +29,13 @@ interface NotesTabProps {
 // The search box appears once there's enough to search through.
 const SEARCH_FROM = 6;
 
-type Draft = { id?: string; date: string; text: string; linkedPatternId: string };
-
 export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const [notes, setNotes] = useState<Note[]>([]);
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const noteRef = useRef<HTMLTextAreaElement>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [draft, setDraft] = useState<NoteDraft | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedDate, setHighlightedDate] = useState<string | undefined>(targetDate);
 
@@ -76,44 +65,13 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   };
 
   // Door questions go by their door name, like everywhere else.
-  const door = getDoorState();
-  const trackerName = (id?: string) => {
-    if (!id) return null;
-    const doorId = door?.trackerId === id ? door.id : door?.extra?.find((x) => x.trackerId === id)?.id;
-    if (doorId) return t(`doors.${doorId}.name`);
-    const raw = trackers.find((tr) => tr.id === id)?.title;
-    return raw ? localizeTrackerTitle(raw) : null;
-  };
+  const trackerName = useQuestionName(trackers);
 
   const dayLabel = (iso: string) => {
     if (iso === today) return t("doors.when.today");
     if (iso === yesterday) return t("doors.when.yesterday");
     const d = parseISO(iso);
     return format(d, d.getFullYear() === new Date().getFullYear() ? "d MMMM" : "d MMMM yyyy", { locale: dateLocale });
-  };
-
-  const save = async () => {
-    if (!draft) return;
-    const text = draft.text.trim();
-    if (!text) return;
-    if (draft.id) {
-      await updateNote(draft.id, { text, date: draft.date, linkedPatternId: draft.linkedPatternId || undefined });
-      toast({ title: t("notesTab.noteUpdated") });
-    } else {
-      await addNote({ date: draft.date, text, linkedPatternId: draft.linkedPatternId || undefined });
-      toast({ title: t("notesTab.noteAdded") });
-    }
-    setDraft(null);
-    loadData();
-  };
-
-  const remove = async () => {
-    if (!draft?.id) return;
-    await deleteNote(draft.id);
-    toast({ title: t("notesTab.noteDeleted") });
-    setDeleteDialogOpen(false);
-    setDraft(null);
-    loadData();
   };
 
   const q = searchQuery.trim().toLowerCase();
@@ -132,12 +90,6 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
     return acc;
   }, {} as Record<string, Note[]>);
 
-  const chip = (on: boolean) =>
-    cn(
-      "inline-flex items-center gap-1.5 h-11 px-4 rounded-full border text-[16px] transition-colors",
-      on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-    );
-
   return (
     <>
       <div className="space-y-5 pb-20">
@@ -151,12 +103,12 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
           </button>
         )}
 
-        <div className="flex items-center justify-between gap-3 animate-fade-in">
+        <div className="sticky -top-4 z-[5] -mx-4 -mt-4 flex items-center justify-between gap-3 px-4 pb-2 pt-4 backdrop-blur-md bg-background/55 animate-fade-in">
           <h1 className="text-[28px] font-bold tracking-tight">{t("notesTab.title")}</h1>
           {notes.length > 0 && (
             <button
               type="button"
-              onClick={() => setDraft({ date: today, text: "", linkedPatternId: "" })}
+              onClick={() => setDraft(newDraft(today))}
               aria-label={t("notesTab.write")}
               className="h-11 w-11 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
             >
@@ -191,7 +143,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
             {SHOW_MASCOT && <img src={maluWave} alt="" className="h-32 w-32" />}
             <p className="mt-2 text-[22px] font-bold">{t("notesTab.empty")}</p>
             <Button
-              onClick={() => setDraft({ date: today, text: "", linkedPatternId: "" })}
+              onClick={() => setDraft(newDraft(today))}
               className="mt-6 w-full h-[54px] rounded-full text-[17px] font-semibold"
             >
               {t("notesTab.write")}
@@ -229,117 +181,8 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
         )}
       </div>
 
-      {/* Write / edit sheet */}
-      <BottomSheet
-        open={!!draft}
-        onOpenChange={(o) => !o && setDraft(null)}
-        className="h-[86vh]"
-        ariaTitle={draft?.id ? t("notesTab.editNote") : t("notesTab.newNote")}
-      >
-        {draft && (
-          <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col">
-            <h2 className="text-[22px] font-bold tracking-tight pr-10">
-              {draft.id ? t("notesTab.editNote") : t("notesTab.newNote")}
-            </h2>
-            <Textarea
-              ref={noteRef}
-              autoFocus={!draft.id}
-              value={draft.text}
-              onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-              placeholder={t("notesTab.placeholder")}
-              aria-label={t("notesTab.newNote")}
-              className="mt-4 min-h-[150px] rounded-2xl text-[17px] leading-snug bg-foreground/[0.06] border-foreground/[0.14]"
-            />
-            {/* Speak it: plain dictation into the text, no AI (her ask). */}
-            <div className="mt-3">
-              <DictateButton
-                target={() => noteRef.current}
-                onText={(more) => setDraft((d) => (d ? { ...d, text: d.text ? `${d.text.trimEnd()} ${more}` : more } : d))}
-              />
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {[today, yesterday].map((iso) => (
-                <button key={iso} type="button" onClick={() => setDraft({ ...draft, date: iso })} className={chip(draft.date === iso)}>
-                  {iso === today ? t("doors.when.today") : t("doors.when.yesterday")}
-                </button>
-              ))}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button type="button" className={chip(draft.date !== today && draft.date !== yesterday)}>
-                    <CalendarDays className="h-4 w-4" />
-                    {draft.date !== today && draft.date !== yesterday ? dayLabel(draft.date) : t("notesTab.otherDay")}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarPicker
-                    mode="single"
-                    locale={dateLocale}
-                    selected={parseISO(draft.date)}
-                    onSelect={(d) => {
-                      if (d) setDraft({ ...draft, date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` });
-                    }}
-                    disabled={(d) => d > new Date()}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Optional: which question this note is about. It also shows
-                on that question's calendar day. */}
-            {trackers.length > 0 && (
-              <div className="mt-4 -mx-5 px-5 flex gap-2 overflow-x-auto scrollbar-hide">
-                {trackers.map((tr) => {
-                  const on = draft.linkedPatternId === tr.id;
-                  return (
-                    <button
-                      key={tr.id}
-                      type="button"
-                      onClick={() => setDraft({ ...draft, linkedPatternId: on ? "" : tr.id })}
-                      className={cn(chip(on), "shrink-0 max-w-[240px] truncate")}
-                    >
-                      {trackerName(tr.id)}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <div className="flex-1 min-h-6" />
-            <Button
-              onClick={save}
-              disabled={!draft.text.trim()}
-              className="mt-6 w-full h-[54px] rounded-full text-[17px] font-semibold"
-            >
-              {t("common.save")}
-            </Button>
-            {draft.id && (
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="mt-2 w-full h-11 rounded-full text-[16px] text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                {t("common.delete")}
-              </Button>
-            )}
-          </div>
-        )}
-      </BottomSheet>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("notesTab.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("notesTab.deleteDesc")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={remove} className="bg-destructive text-destructive-foreground">
-              {t("common.delete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Write / edit sheet (shared with Today's note step). */}
+      <NoteSheet draft={draft} setDraft={setDraft} trackers={trackers} onSaved={loadData} />
     </>
   );
 };

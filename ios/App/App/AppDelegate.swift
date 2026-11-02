@@ -1,6 +1,8 @@
 import UIKit
 import Capacitor
 import CoreHaptics
+import Speech
+import AVFoundation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -204,5 +206,128 @@ public class CoreHapticsPlugin: CAPPlugin, CAPBridgedPlugin {
         } catch {
             print("[CoreHaptics] play failed: \(error)")
         }
+    }
+}
+
+// MARK: - Speech dictation plugin
+//
+// Her ask (Nov 2 2026): tap the mic in a note and just speak; no
+// "use the keyboard's microphone" hint. Plain speech-to-text with
+// SFSpeechRecognizer, on the device whenever the language allows it.
+// No AI, nothing stored: the words go straight into the note's text.
+// Same pattern as CoreHapticsPlugin above (class in this file, name
+// injected into packageClassList by codemagic.yaml after cap sync).
+// JS side: src/lib/speech.ts.
+
+@objc(SpeechDictationPlugin)
+public class SpeechDictationPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "SpeechDictationPlugin"
+    public let jsName = "SpeechDictation"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestAccess", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise),
+    ]
+
+    private let audioEngine = AVAudioEngine()
+    private var request: SFSpeechAudioBufferRecognitionRequest?
+    private var task: SFSpeechRecognitionTask?
+    private var tapInstalled = false
+
+    @objc func isAvailable(_ call: CAPPluginCall) {
+        let lang = call.getString("lang") ?? "en-US"
+        let recognizer = SFSpeechRecognizer(locale: Locale(identifier: lang))
+        call.resolve(["available": recognizer?.isAvailable ?? false])
+    }
+
+    // Asks for speech recognition, then the microphone (two system prompts
+    // the first time; afterwards it just answers).
+    @objc func requestAccess(_ call: CAPPluginCall) {
+        SFSpeechRecognizer.requestAuthorization { status in
+            guard status == .authorized else {
+                DispatchQueue.main.async { call.resolve(["granted": false]) }
+                return
+            }
+            AVAudioSession.sharedInstance().requestRecordPermission { ok in
+                DispatchQueue.main.async { call.resolve(["granted": ok]) }
+            }
+        }
+    }
+
+    // Listens until stop(); sends the words so far as "partial" events
+    // ({ text }) and "end" when it stops by itself.
+    @objc func start(_ call: CAPPluginCall) {
+        let lang = call.getString("lang") ?? "en-US"
+        DispatchQueue.main.async {
+            self.finish()
+            guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: lang)), recognizer.isAvailable else {
+                call.reject("unavailable")
+                return
+            }
+            do {
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+                try session.setActive(true, options: .notifyOthersOnDeactivation)
+
+                let req = SFSpeechAudioBufferRecognitionRequest()
+                req.shouldReportPartialResults = true
+                if recognizer.supportsOnDeviceRecognition {
+                    req.requiresOnDeviceRecognition = true
+                }
+                let input = self.audioEngine.inputNode
+                let format = input.outputFormat(forBus: 0)
+                guard format.sampleRate > 0 else {
+                    self.finish()
+                    call.reject("no microphone")
+                    return
+                }
+                input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
+                    req.append(buffer)
+                }
+                self.tapInstalled = true
+                self.request = req
+                self.audioEngine.prepare()
+                try self.audioEngine.start()
+
+                self.task = recognizer.recognitionTask(with: req) { [weak self] result, error in
+                    if let result = result {
+                        self?.notifyListeners("partial", data: ["text": result.bestTranscription.formattedString])
+                    }
+                    if error != nil || (result?.isFinal ?? false) {
+                        DispatchQueue.main.async {
+                            self?.finish()
+                            self?.notifyListeners("end", data: [:])
+                        }
+                    }
+                }
+                call.resolve()
+            } catch {
+                self.finish()
+                call.reject("start failed")
+            }
+        }
+    }
+
+    @objc func stop(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            self.finish()
+            call.resolve()
+        }
+    }
+
+    private func finish() {
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        if tapInstalled {
+            audioEngine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
+        }
+        request?.endAudio()
+        task?.finish()
+        request = nil
+        task = nil
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }

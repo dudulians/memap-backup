@@ -1,83 +1,65 @@
 // Speak a note (Aurora, her ask: "голосом записывать, но не AI, а просто
-// диктовать и в текст"). Plain dictation, no AI. Where the web view can
-// listen (SpeechRecognition), words are typed into the note as she speaks.
-// Where it can't (the iPhone app's web view), the button opens the keyboard
-// and says where the keyboard's own microphone is: that is the same plain
-// dictation, on the device. A native plugin can replace this later.
+// диктовать в текст"). Since Nov 2 2026 ("я жму жму, а потом читаю, что
+// нажми у себя на клавиатуре — так не должно быть"): one big mic button.
+// The first tap asks for the microphone, then words appear in the note as
+// she speaks; tap again to stop. No hint about the keyboard's mic.
+// Plain dictation, no AI: src/lib/speech.ts.
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Mic, Square } from "lucide-react";
+import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { getLanguage } from "@/lib/i18n";
+import { canDictate, listen, type Take } from "@/lib/speech";
 
-type Recognition = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  start: () => void;
-  stop: () => void;
-  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-};
-
-const make = (): Recognition | null => {
-  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
-  const R = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  return R ? new R() : null;
-};
-
-export const DictateButton = ({ onText, target }: { onText: (more: string) => void; target: () => HTMLTextAreaElement | null }) => {
+export const DictateButton = ({ text, onText }: { text: string; onText: (next: string) => void }) => {
   const { t } = useTranslation();
-  const [listening, setListening] = useState(false);
-  const [hint, setHint] = useState(false);
-  const rec = useRef<Recognition | null>(null);
-  useEffect(() => () => rec.current?.stop(), []);
+  const [state, setState] = useState<"idle" | "starting" | "listening" | "denied" | "unavailable">("idle");
+  const take = useRef<Take | null>(null);
+  // What was written before this take; the take's words go after it.
+  const base = useRef("");
+  useEffect(() => () => take.current?.stop(), []);
 
-  const start = () => {
+  if (!canDictate()) return null;
+
+  const start = async () => {
     haptics.tap();
-    const r = make();
-    if (!r) {
-      // No listening here: open the keyboard, its microphone dictates.
-      target()?.focus();
-      setHint(true);
+    base.current = text.trimEnd();
+    setState("starting");
+    const { result, take: running } = await listen(
+      (words) => onText(base.current ? `${base.current} ${words}` : words),
+      () => { take.current = null; setState((s) => (s === "listening" || s === "starting" ? "idle" : s)); },
+    );
+    if (result !== "listening" || !running) {
+      setState(result === "denied" ? "denied" : "unavailable");
       return;
     }
-    r.lang = getLanguage() === "ru" ? "ru-RU" : "en-US";
-    r.continuous = true;
-    r.interimResults = false;
-    r.onresult = (e) => {
-      let said = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) said += e.results[i][0].transcript;
-      if (said.trim()) onText(said.trim());
-    };
-    r.onend = () => setListening(false);
-    r.onerror = () => { setListening(false); target()?.focus(); setHint(true); };
-    rec.current = r;
-    try {
-      r.start();
-      setListening(true);
-    } catch {
-      target()?.focus();
-      setHint(true);
-    }
+    take.current = running;
+    setState("listening");
   };
   const stop = () => {
     haptics.tap();
-    rec.current?.stop();
-    setListening(false);
+    take.current?.stop();
+    take.current = null;
+    setState("idle");
   };
+  const on = state === "listening" || state === "starting";
 
   return (
-    <div>
-      <button type="button" onClick={listening ? stop : start} aria-pressed={listening}
-        className={cn("surface inline-flex h-11 items-center gap-2 rounded-full pl-3 pr-4 text-[15px] font-semibold",
-          listening && "ring-2 ring-[hsl(var(--coin-teal))]")}>
-        {listening ? <Square className="h-4 w-4 fill-current text-[hsl(var(--coin-teal))]" /> : <Mic className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />}
-        {listening ? t("notesTab.dictateStop") : t("notesTab.dictate")}
+    <div className="flex items-center gap-3">
+      <button type="button" onClick={on ? stop : start} aria-pressed={on}
+        aria-label={on ? t("notesTab.dictateStop") : t("notesTab.dictate")}
+        className={cn("relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
+          on ? "bg-[hsl(var(--coin-teal))] text-white" : "bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]")}>
+        {on && <span aria-hidden="true" className="dictate-pulse absolute inset-0 rounded-full" />}
+        <Mic className="relative h-6 w-6" strokeWidth={2.2} />
       </button>
-      {hint && <p className="mt-2 text-[15px] font-medium text-muted-foreground">{t("notesTab.dictateHint")}</p>}
+      <span className="text-[16px] font-semibold text-foreground/80">
+        {state === "listening" ? t("notesTab.listening")
+          : state === "starting" ? t("notesTab.dictate")
+          : state === "denied" ? t("notesTab.micDenied")
+          : state === "unavailable" ? t("notesTab.micUnavailable")
+          : t("notesTab.dictate")}
+      </span>
     </div>
   );
 };

@@ -82,8 +82,8 @@ workflows:
           # find the class via NSClassFromString at startup.
           IOS_CFG="$CM_BUILD_DIR/ios/App/App/capacitor.config.json"
           if [ -f "$IOS_CFG" ]; then
-            echo "==> Injecting CoreHapticsPlugin into iOS packageClassList"
-            python3 -c "import json,sys; p='$IOS_CFG'; d=json.load(open(p)); l=d.setdefault('packageClassList', []); 'CoreHapticsPlugin' in l or l.append('CoreHapticsPlugin'); json.dump(d, open(p,'w'), indent=2)"
+            echo "==> Injecting CoreHapticsPlugin + SpeechDictationPlugin into iOS packageClassList"
+            python3 -c "import json,sys; p='$IOS_CFG'; d=json.load(open(p)); l=d.setdefault('packageClassList', []); [l.append(c) for c in ('CoreHapticsPlugin', 'SpeechDictationPlugin') if c not in l]; json.dump(d, open(p,'w'), indent=2)"
             echo "==> packageClassList after patch:"
             python3 -c "import json; print(json.load(open('$IOS_CFG')).get('packageClassList'))"
           fi

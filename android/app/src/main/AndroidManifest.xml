@@ -62,4 +62,11 @@
          insurance — without VIBRATE the system silently ignores all
          Haptics.impact / .notification calls on every Android version. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Speaking a note (SpeechDictationPlugin): only while the mic button is on. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 </manifest>
