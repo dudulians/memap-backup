@@ -14,6 +14,9 @@ import { islandName, mapPic, type Island, type IslandId } from "@/lib/islands";
 import { addQuestionToIsland, setTrackerIsland } from "@/lib/ownIslands";
 import { cardQuestion } from "@/lib/cardText";
 import { Pressable } from "@/components/ui/pressable";
+import { hasTemplate, topicTemplates } from "@/components/NewIslandSheet";
+import { ensureTemplates } from "@/lib/doors";
+import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 const GUIDE_KEY = "memap_first_question_seen";
 
@@ -41,6 +44,8 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
     setAsk(false);
     setSaved(true);
   };
+
+  const ideas = topicTemplates(island.id).filter((tpl) => !hasTemplate(trackers, tpl)).slice(0, 4);
 
   return (
     <div className="space-y-2.5 pb-4">
@@ -112,6 +117,21 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
             {ask ? t("islands.goodOrHard") : t("islands.add")}
           </Pressable>
         </div>
+      )}
+
+      {/* Ready questions for this island, one tap each. */}
+      {ideas.length > 0 && (
+        <>
+          <p className="pt-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("islands.ideas")}</p>
+          {ideas.map((tpl) => (
+            <button key={tpl.id} type="button"
+              onClick={async () => { haptics.success(); await ensureTemplates([tpl.id]); window.dispatchEvent(new Event("memap-settings-changed")); }}
+              className="surface flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left">
+              <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{localizeTrackerQuestion(tpl.questionText)}</span>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
+            </button>
+          ))}
+        </>
       )}
     </div>
   );

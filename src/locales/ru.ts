@@ -38,6 +38,18 @@ const ru: Translation = {
   // Карта (Aurora UX, 1 ноября 2026): вопросы как острова на шаре.
   // Her own islands and questions (Nov 2 2026)
   islands: {
+    pickTopic: "Выбери тему",
+    ownTopic: "Своя тема",
+    nQuestions_one: "{{count}} вопрос",
+    nQuestions_few: "{{count}} вопроса",
+    nQuestions_many: "{{count}} вопросов",
+    nQuestions_other: "{{count}} вопроса",
+    pickQuestions: "Отметь вопросы, которые хочешь",
+    addN_one: "Добавить {{count}} вопрос",
+    addN_few: "Добавить {{count}} вопроса",
+    addN_many: "Добавить {{count}} вопросов",
+    addN_other: "Добавить {{count}} вопроса",
+    ideas: "Идеи для этого острова",
     new: "Новый остров",
     edit: "Изменить остров",
     create: "Создать остров",

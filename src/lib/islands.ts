@@ -74,7 +74,7 @@ const CLUSTER: Record<string, BuiltinIsland> = {
 const CATEGORY: Record<Tracker["category"], BuiltinIsland> = {
   Emotions: "me", Voice: "me", Connections: "love", Social: "love", Health: "health", Body: "body", Curious: "other", Fun: "other",
 };
-const WORK = new Set([
+export const WORK_TEMPLATES = new Set([
   "burned-out-after-work", "didnt-want-to-work", "worked-overtime", "felt-fulfilled-at-work", "boss-was-difficult",
   "conflict-with-colleague", "wanted-leave-job", "thought-career-change", "long-commute", "dealt-with-paperwork",
 ]);
@@ -93,7 +93,7 @@ export const islandOf = (t: Tracker): IslandId => {
   if (hit) return hit;
   const tpl = matchTemplateIdByTitle(t.title);
   const id: IslandId =
-    (tpl && WORK.has(tpl) && "work") ||
+    (tpl && WORK_TEMPLATES.has(tpl) && "work") ||
     (t.cluster && CLUSTER[t.cluster]) ||
     (tpl && CLUSTER[STREAM_OF.get(tpl) ?? ""]) ||
     (!tpl ? "mine" : CATEGORY[t.category]) ||

@@ -36,6 +36,14 @@ const en = {
   // Map tab (Aurora UX, Nov 1 2026): your questions as islands on a ball.
   // Her own islands and questions (Nov 2 2026)
   islands: {
+    pickTopic: "Pick a topic",
+    ownTopic: "My own topic",
+    nQuestions_one: "{{count}} question",
+    nQuestions_other: "{{count}} questions",
+    pickQuestions: "Tick the questions you want",
+    addN_one: "Add {{count}} question",
+    addN_other: "Add {{count}} questions",
+    ideas: "Ideas for this island",
     new: "New island",
     edit: "Edit island",
     create: "Create island",

@@ -19,6 +19,7 @@ import { IslandsMap, WeatherLegend } from "./IslandsMap";
 import { IslandStats, WorldStats } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
+import { NewIslandSheet } from "./NewIslandSheet";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
@@ -30,6 +31,8 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen);
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
+  // "+ New island": topics first, then their questions; or her own.
+  const [newOpen, setNewOpen] = useState(false);
   useEffect(() => { if (initialOpen) { setOpen(initialOpen); onOpened?.(); } }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -99,8 +102,8 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
               <IslandsMap islands={islands} routes={routes} trackers={trackers} width={width} fill={fill} lit={lit} onOpen={setOpen} />
             </div>
           )}
-          {loaded && canMake && (
-            <button type="button" onClick={() => { haptics.tap(); setEditor({ id: null }); }}
+          {loaded && (
+            <button type="button" onClick={() => { haptics.tap(); setNewOpen(true); }}
               className="mx-auto mt-2 flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-foreground/20 bg-white/40 px-5 text-[16px] font-bold text-foreground/80">
               <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}
             </button>
@@ -136,6 +139,11 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           {open && (open === "all" || (island && island.trackerIds.length > 0)) && <PatternsTab key={open} focusIds={island?.trackerIds} />}
         </div>
       </BottomSheet>
+      {newOpen && (
+        <NewIslandSheet islands={islands} trackers={trackers} canOwn={canMake} onClose={() => setNewOpen(false)}
+          onMakeOwn={() => { setNewOpen(false); setEditor({ id: null }); }}
+          onCreated={(id) => { setNewOpen(false); setOpen(id); }} />
+      )}
       {editor && (
         <IslandEditor editId={editor.id} islands={islands} onClose={() => setEditor(null)}
           onOpenIsland={(id) => { setEditor(null); setOpen(id); }} />
