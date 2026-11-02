@@ -4,15 +4,20 @@
 // What it showed is saved when opened and reopens as is.
 // Nov 2 2026 (her: "скучно, что награда — это репорт, надо инсайт + какие-то
 // новые приколы"): it opens card by card — the insight, the week in
-// numbers, how her guesses went — then two rewards: a piece for her map
-// and a new title.
+// numbers, how her guesses went — then what grew in her world since the
+// last chest (a house, a bridge, a special item…), next week's mission and
+// a new title.
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Clock, Crown, Lightbulb, Telescope, X } from "lucide-react";
+import { Clock, Crown, FlaskConical, Lightbulb, Sparkles, Target, Telescope, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
-import { mapPic } from "@/lib/islands";
+import { buildIslands, buildRoutes, islandName, mapPic, type IslandId } from "@/lib/islands";
+import { getNotes } from "@/lib/notes";
+import { guessedRightTotal } from "@/lib/predict";
+import { ITEMS, growthLand, growthOf, islandDays, itemEarned, itemProgress, lastWorld, nextMission, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
+import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { getDoor, getDoorState } from "@/lib/doors";
 import { factLine } from "@/lib/echo";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -42,6 +47,7 @@ export const WeekChest = ({
   const [rec, setRec] = useState<ChestRecord | null>(() => getChests()[week] ?? null);
   // Cards shown so far; an already opened chest shows them all.
   const [shown, setShown] = useState(() => (getChests()[week] ? 99 : 1));
+  const [testOpen, setTestOpen] = useState(false);
 
   const label = (s: ChestStat) => {
     if (s.door) {
@@ -53,8 +59,32 @@ export const WeekChest = ({
     return tr ? localizeTrackerTitle(tr.title) : "";
   };
 
-  const open = () => {
+  const open = async () => {
     haptics.medium();
+    // Her world now, to say what grew since the last chest.
+    const islands = buildIslands(trackers, entries);
+    const routes = buildRoutes(trackers, entries, islands);
+    const days = islandDays(trackers, entries);
+    const notes = await getNotes().then((n) => n.length).catch(() => 0);
+    const facts = worldFacts(trackers, entries, islands, routes, notes, guessedRightTotal(entries));
+    const world = {
+      growth: islands.flatMap((i) => growthOf(i.id, days.get(i.id) ?? 0).map((k) => `${i.id}:${k}`)),
+      items: ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id as string),
+      bridges: routes.slice(0, 3).map((r) => `${r.a}|${r.b}`),
+    };
+    const before = lastWorld();
+    const fresh = {
+      growth: world.growth.filter((g) => !before.growth.includes(g)),
+      items: world.items.filter((g) => !before.items.includes(g)),
+      bridges: world.bridges.filter((g) => !before.bridges.includes(g)),
+    };
+    const m = nextMission(facts, [...days.values()].filter((d) => d >= 3).length);
+    const mission = { id: m.id, n: m.id === "testRunning" ? m.day : m.id === "notes" ? m.left : m.id === "streak" ? m.goal : undefined };
+    // The two items she's closest to, for "next up" when nothing new grew.
+    const nextUp = ITEMS.filter((it) => !itemEarned(it.id, facts))
+      .map((it) => ({ id: it.id, p: itemProgress(it.id, facts) }))
+      .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1]).slice(0, 2)
+      .map((x) => `${x.id}:${x.p[0]}/${x.p[1]}`);
     const c = chestContent(trackers, entries, dates);
     const lines = [
       ...(c.main ? [{ label: label(c.main), k: c.main.k, n: c.main.n, main: true, calm: c.main.k === 0 }] : []),
@@ -75,6 +105,10 @@ export const WeekChest = ({
       insightEarly: !!c.insight && c.insight.n < 6,
       guesses: g.n > 0 ? g : undefined,
       title: titleFor(week),
+      world,
+      mission,
+      fresh,
+      nextUp,
     };
     saveChest(week, next);
     setRec(next);
@@ -98,6 +132,19 @@ export const WeekChest = ({
   );
   const kicker = (icon: ReactNode, text: string) => (
     <p className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{icon}{text}</p>
+  );
+
+  /** One line of "what grew": its picture, what it is, where or why. */
+  const row = (pic: string, what: string, sub: string, special = false, muted = false) => (
+    <div key={`${pic}${what}${sub}`} className="mt-3 flex items-center gap-3">
+      <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${special ? "bg-[hsl(var(--coin-gold)/0.16)]" : "bg-foreground/[0.04]"}`}>
+        <img src={mapPic(pic)} alt="" className={`max-h-11 max-w-11 object-contain ${muted ? "opacity-40 grayscale" : ""}`} draggable={false} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[17px] font-bold leading-snug">{what}</span>
+        <span className="block text-[14px] font-medium leading-snug text-muted-foreground">{sub}</span>
+      </span>
+    </div>
   );
 
   /** The cards, in the order they open. */
@@ -144,16 +191,72 @@ export const WeekChest = ({
         </div>,
       );
     }
-    // 4. The rewards: a piece for her map and a new title.
+    // 4. What grew in her world since the last chest (real progress only).
+    const fresh = r.fresh;
+    if (fresh) {
+      const rows: ReactNode[] = [];
+      // Special items first (the rarest), then each island's new pieces, then bridges.
+      fresh.items.forEach((id) => {
+        const it = ITEMS.find((x) => x.id === id);
+        if (it) rows.push(row(it.pic, t(`items.${id}.name`), t(`items.${id}.how`), true));
+      });
+      const byIsland = new Map<IslandId, GrowthKind[]>();
+      fresh.growth.forEach((g) => {
+        const [id, kind] = g.split(":") as [IslandId, GrowthKind];
+        byIsland.set(id, [...(byIsland.get(id) ?? []), kind]);
+      });
+      byIsland.forEach((kinds, id) => {
+        const pic = growthLand([kinds[0]]).front[0]?.[0] ?? growthLand([kinds[0]]).back[0]?.[0] ?? "";
+        rows.push(row(pic, islandName(t, id), kinds.map((k) => t(`growth.short.${k}`)).join(" · ")));
+      });
+      if (fresh.bridges.length > 0) {
+        const names = fresh.bridges.map((b) => b.split("|").map((x) => islandName(t, x as IslandId)).join(" ↔ "));
+        rows.push(row("wooden_bridge", t("path.chest.bridges", { count: fresh.bridges.length }), names.join(", ")));
+      }
+      if (rows.length > 5) {
+        const more = rows.length - 4;
+        rows.splice(4, rows.length, <p key="more" className="mt-3 text-[15px] font-semibold text-muted-foreground">{t("path.chest.moreOnMap", { count: more })}</p>);
+      }
+      out.push(
+        <div className="surface rounded-[22px] px-5 py-4 text-left">
+          {kicker(<Sparkles className="h-4 w-4 text-[hsl(var(--coin-gold))]" strokeWidth={2.4} />, rows.length ? t("path.chest.grew") : t("path.chest.nextUp"))}
+          {rows.length > 0 ? rows : (r.nextUp ?? []).map((x) => {
+            const [id, p] = x.split(":") as [ItemId, string];
+            const it = ITEMS.find((y) => y.id === id);
+            return it ? row(it.pic, t(`items.${id}.name`), `${t(`items.${id}.how`)} · ${p}`, false, true) : null;
+          })}
+        </div>,
+      );
+    }
+    // 5. Next week's mission.
+    if (r.mission) {
+      const id = r.mission.id;
+      out.push(
+        <div className="surface rounded-[22px] px-5 py-4 text-left">
+          {kicker(<Target className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />, t("mission.title"))}
+          <p className="mt-2 text-[20px] font-bold leading-snug">{t(`mission.${id}`, { count: r.mission.n, goal: r.mission.n })}</p>
+          <p className="mt-1 text-[15px] font-medium text-muted-foreground">{t(`mission.${id}Line`, { day: r.mission.n })}</p>
+          {id === "test" && (
+            <button type="button" onClick={() => { haptics.tap(); setTestOpen(true); }}
+              className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-[hsl(152_36%_44%)] px-4 text-[15px] font-bold text-white">
+              <FlaskConical className="h-4 w-4" strokeWidth={2.4} /> {t("mission.choose")}
+            </button>
+          )}
+        </div>,
+      );
+    }
+    // 6. A new title.
     out.push(
       <div className="surface rounded-[22px] px-5 py-4 text-left">
         {kicker(null, t("path.chest.rewards"))}
-        <div className="mt-3 flex items-center gap-3">
-          <img src={mapPic(r.reward)} alt="" width={56} height={56} className="h-14 w-14 object-contain" draggable={false} />
-          <p className="text-[17px] font-semibold leading-snug">{t("path.chest.earned", { item: t(`path.reward.${r.reward}`) })}</p>
-        </div>
+        {!r.fresh && (
+          <div className="mt-3 flex items-center gap-3">
+            <img src={mapPic(r.reward)} alt="" width={56} height={56} className="h-14 w-14 object-contain" draggable={false} />
+            <p className="text-[17px] font-semibold leading-snug">{t("path.chest.earned", { item: t(`path.reward.${r.reward}`) })}</p>
+          </div>
+        )}
         {r.title && (
-          <div className="mt-3 flex items-center gap-3 border-t border-foreground/[0.06] pt-3">
+          <div className={r.fresh ? "mt-3 flex items-center gap-3" : "mt-3 flex items-center gap-3 border-t border-foreground/[0.06] pt-3"}>
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--coin-gold)/0.18)] text-[hsl(var(--coin-gold))]">
               <Crown className="h-7 w-7" strokeWidth={2.2} />
             </span>
@@ -200,12 +303,13 @@ export const WeekChest = ({
                 <p className="text-[15px] font-semibold text-muted-foreground">{t("path.chest.placed")}</p>
               ) : (
                 <Pressable tone="gold" haptic="none" onClick={place} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-                  {t("path.chest.put")}
+                  {rec.fresh ? t("path.chest.seeMap") : t("path.chest.put")}
                 </Pressable>
               )}
             </div>
           </>
         )}
+        {testOpen && <ExperimentSheet mode="pick" trackers={trackers} entries={entries} onClose={() => setTestOpen(false)} />}
       </div>
     </div>,
     document.body,

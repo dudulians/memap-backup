@@ -12,12 +12,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Dices, Flame, Gift, Layers, Lightbulb, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Telescope, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Dices, FlaskConical, Flame, Gift, Layers, Lightbulb, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Telescope, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import type { PredictState } from "@/lib/predict";
 import { PredictGame } from "@/components/PredictGame";
+import { ExperimentSheet } from "@/components/ExperimentSheet";
+import { currentExperiment } from "@/lib/experiments";
 import { placeScenery, type Rect } from "@/lib/pathScenery";
 import { islandDef, islandName } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
@@ -39,6 +41,7 @@ const TASK_ICON: Record<TaskId, LucideIcon> = {
   chart: BarChart3,
   map: MapIcon,
   newIsland: Compass,
+  experiment: FlaskConical,
 };
 
 const minutesFor = (questions: number) => Math.max(1, Math.round((questions * 4) / 60));
@@ -163,6 +166,7 @@ export const EveningPath = ({
     if (s.kind === "game") return t("game.step");
     if (s.kind === "predict") return t(s.predict && s.predict.date !== isoDay(new Date()) ? "predict.stepTomorrow" : "predict.stepTonight");
     if (s.kind === "act") return t("act.step");
+    if (s.kind === "test") return t("experiment.stepDone");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
@@ -184,6 +188,7 @@ export const EveningPath = ({
     if (s.kind === "game") return "262 40% 64%";
     if (s.kind === "predict") return "322 30% 64%";
     if (s.kind === "act") return "34 68% 56%";
+    if (s.kind === "test") return "152 36% 46%";
     if (s.kind === "fill") return "205 46% 58%";
     return "var(--coin-teal)";
   };
@@ -200,7 +205,7 @@ export const EveningPath = ({
     }
     const s = n.step;
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Dices : s.kind === "fill" ? CalendarDays
-      : s.kind === "predict" ? Telescope : s.kind === "act" ? Lightbulb
+      : s.kind === "predict" ? Telescope : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical
       : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const icon = s.done && !s.skipped ? <Check className="h-5 w-5" strokeWidth={3} /> : <Icon className={current ? "h-8 w-8" : "h-5 w-5"} strokeWidth={2} />;
@@ -212,6 +217,7 @@ export const EveningPath = ({
     if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: t("game.stepSub"), action: t("game.play") };
     if (s.kind === "predict") return { look, icon, hue, title: stepName(s), sub: predictSub(s.predict), action: s.predict?.stage === "reveal" ? t("predict.see") : t("game.play") };
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
+    if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("predict.see") };
     return {
       look, icon, hue, title: stepName(s),
       sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
@@ -254,6 +260,7 @@ export const EveningPath = ({
   const [chestOpen, setChestOpen] = useState<{ week: number; dates: string[] } | null>(null);
   const [gameOpen, setGameOpen] = useState(false);
   const [predictOpen, setPredictOpen] = useState<PredictState | null>(null);
+  const [testOpen, setTestOpen] = useState<"pick" | "result" | null>(null);
   const [pastShown, setPastShown] = useState(1);
   const chests = useMemo(() => getChests(), [chestOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -300,6 +307,8 @@ export const EveningPath = ({
     else if (s.kind === "act") { markActSeen(); setTick((k) => k + 1); openActionPoints(); }
     else if (s.kind === "fill") onFillDay(s.date!);
     else if (s.kind === "task" && s.task === "note") setNoteDraft(newDraft());
+    else if (s.kind === "task" && s.task === "experiment") setTestOpen("pick");
+    else if (s.kind === "test") setTestOpen("result");
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
   };
@@ -567,6 +576,11 @@ export const EveningPath = ({
 
       {predictOpen && (predictOpen.stage === "guess" || predictOpen.stage === "reveal") && (
         <PredictGame state={predictOpen} trackers={trackers} entries={entries} onClose={() => { setPredictOpen(null); setTick((k) => k + 1); }} />
+      )}
+
+      {testOpen && (
+        <ExperimentSheet mode={testOpen} experiment={currentExperiment()} trackers={trackers} entries={entries}
+          onClose={() => { setTestOpen(null); setTick((k) => k + 1); }} />
       )}
 
       {gameOpen && (

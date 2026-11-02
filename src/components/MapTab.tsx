@@ -14,6 +14,10 @@ import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } 
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
+import { getNotes } from "@/lib/notes";
+import { guessedRightTotal } from "@/lib/predict";
+import { ITEMS, growthOf, islandDays, itemEarned, worldFacts, type ItemId } from "@/lib/growth";
+import { ExperimentSheet } from "./ExperimentSheet";
 import { haptics } from "@/lib/haptics";
 import { IslandsMap } from "./IslandsMap";
 import { WorldMap } from "./WorldMap";
@@ -85,6 +89,16 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
     return Object.fromEntries(islands.map((i) => [i.id, i.trackerIds.length ? i.trackerIds.filter((id) => done.has(id)).length / i.trackerIds.length : 0]));
   }, [islands, entries]);
   const canMake = getOwnIslands().length < MAX_OWN;
+  // Her world grows with what she does (src/lib/growth.ts).
+  const [notesCount, setNotesCount] = useState(0);
+  useEffect(() => { getNotes().then((n) => setNotesCount(n.length)).catch(() => undefined); }, []);
+  const growth = useMemo(() => {
+    const days = islandDays(trackers, entries);
+    return Object.fromEntries(islands.map((i) => [i.id, growthOf(i.id, days.get(i.id) ?? 0)]));
+  }, [islands, trackers, entries]);
+  const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount, guessedRightTotal(entries)), [trackers, entries, islands, routes, notesCount]);
+  const items: ItemId[] = useMemo(() => ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id), [facts]);
+  const [testFor, setTestFor] = useState<IslandId | null>(null);
   // Islands with a lit lighthouse (a rule she set was reached).
   const lit = useMemo(() => {
     const on = litTrackers(trackers, entries);
@@ -122,7 +136,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
         // The globe runs to the bottom of the screen, under the tab bar.
         loaded && (
           <div className="relative min-h-0 flex-1">
-            <WorldMap islands={islands} routes={routes} onOpen={setOpen} />
+            <WorldMap islands={islands} routes={routes} growth={growth} onOpen={setOpen} />
           </div>
         )
       ) : (
@@ -135,7 +149,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} onOpen={setOpen} />
+              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} growth={growth} items={items} onOpen={setOpen} />
             </div>
           )}
           {loaded && (
@@ -167,11 +181,14 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           </div>
           {island ? (
             <>
-              {island.trackerIds.length > 0 && <IslandStats island={island} routes={routes} trackers={trackers} />}
+              {island.trackerIds.length > 0 && (
+                <IslandStats island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []}
+                  days={islandDays(trackers, entries).get(island.id) ?? 0} onTest={() => { const id = island.id; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }} />
+              )}
               <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />
             </>
           ) : open === "all" ? (
-            <WorldStats islands={islands} routes={routes} trackers={trackers} entries={entries} />
+            <WorldStats islands={islands} routes={routes} trackers={trackers} entries={entries} facts={facts} />
           ) : null}
           {island && island.trackerIds.length > 0 && <PatternsTab key={open} focusIds={island.trackerIds} />}
         </div>
@@ -186,6 +203,9 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           {only && <PatternsTab key={only} only={only} />}
         </div>
       </BottomSheet>
+      {testFor && (
+        <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
+      )}
       {newOpen && (
         <NewIslandSheet islands={islands} trackers={trackers} canOwn={canMake} onClose={() => setNewOpen(false)}
           onMakeOwn={() => { setNewOpen(false); setEditor({ id: null }); }}

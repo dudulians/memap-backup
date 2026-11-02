@@ -134,6 +134,8 @@ export interface Island {
   usual: "rougher" | "usual" | "calmer" | null;
   /** the question that came up most this week, and on how many days */
   top: { trackerId: string; days: number } | null;
+  /** stormy in one of the four weeks before (a calm week now = a rainbow) */
+  wasStormy: boolean;
   slot: (typeof SLOTS)[number];
 }
 
@@ -184,10 +186,11 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
       usual = now.hard.size > avg + 1 ? "rougher" : now.hard.size < avg - 1 ? "calmer" : "usual";
     }
     const best = [...topCount.entries()].sort((x, y) => y[1] - x[1])[0];
+    const wasStormy = past.some((w) => w.hard.size >= 3);
     return {
       id, def: islandDef(id), trackerIds: ts.map((t) => t.id), weather,
       hardDays: now.hard.size, answeredDays: now.answered.size, usual,
-      top: best ? { trackerId: best[0], days: best[1] } : null,
+      top: best ? { trackerId: best[0], days: best[1] } : null, wasStormy,
     };
   });
 

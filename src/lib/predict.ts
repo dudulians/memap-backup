@@ -96,6 +96,12 @@ export const markRevealed = (date: string) => {
 };
 export const guessesFor = (date: string): DayGuess | null => read()[date] ?? null;
 
+/** All her right guesses so far (for the "sparkles" item). */
+export const guessedRightTotal = (entries: TrackerEntry[]): number => {
+  const s = read();
+  return Object.entries(s).reduce((sum, [d, g]) => sum + scoreOf(g, entries, d).hit, 0);
+};
+
 /** How her guesses went on these days (revealed ones), for the week's chest. */
 export const guessScore = (entries: TrackerEntry[], dates: string[]): { hit: number; n: number } => {
   const s = read();

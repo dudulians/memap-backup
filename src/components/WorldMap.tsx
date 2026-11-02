@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Island, IslandId, Route, islandName, mapPic } from "@/lib/islands";
+import { growthLand, type GrowthKind } from "@/lib/growth";
 import { haptics } from "@/lib/haptics";
 
 type V3 = [number, number, number];
@@ -42,7 +43,7 @@ const SCENERY: Thing[] = (() => {
 })();
 const BOAT: Thing = { lon: 1, lat: 5, fx: 210, fy: 322, w: 46 };
 
-export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; routes: Route[]; onOpen: (id: IslandId) => void }) => {
+export const WorldMap = ({ islands, routes, growth = {}, onOpen }: { islands: Island[]; routes: Route[]; growth?: Record<string, GrowthKind[]>; onOpen: (id: IslandId) => void }) => {
   const { t } = useTranslation();
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
@@ -62,7 +63,11 @@ export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; route
     const kick = () => { if (!raf && alive) raf = requestAnimationFrame(frame); };
     const pic = (n: string) => { let im = IMG.get(n); if (!im) { im = new Image(); im.onload = kick; im.src = mapPic(n); IMG.set(n, im); } return im; };
 
-    const things: Thing[] = islands.map((isl) => ({ lon: isl.slot.lon, lat: isl.slot.lat, fx: isl.slot.fx, fy: isl.slot.fy, w: 140, base: isl.def.base, land: isl.def.land, island: isl }));
+    const things: Thing[] = islands.map((isl) => {
+      // What grew there stands on it, as on the flat map (src/lib/growth.ts).
+      const g = growthLand(growth[isl.id] ?? [], isl.def.land);
+      return { lon: isl.slot.lon, lat: isl.slot.lat, fx: isl.slot.fx, fy: isl.slot.fy, w: 140, base: isl.def.base, land: [...g.back, ...(isl.def.land ?? []), ...g.front], island: isl };
+    });
     const byId = new Map(things.map((x) => [x.island!.id, x]));
 
     let W = 0, H = 0, dpr = 1, M: M3 = [1, 0, 0, 0, 1, 0, 0, 0, 1], vx = 0, vy = 0, tv = 0, tTarget = 0;
@@ -134,7 +139,9 @@ export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; route
           const va = vec(A.lon, A.lat), vb = vec(B.lon, B.lat), om = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
           ctx.save(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 3.2; ctx.setLineDash([1, 9]); ctx.lineCap = "round"; ctx.beginPath(); let pen = false, mid: number[] | null = null;
           for (let j = 0; j <= 40; j++) { const s = j / 40, k1 = Math.sin((1 - s) * om) / Math.sin(om), k2 = Math.sin(s * om) / Math.sin(om); const [x, y, z] = app(M, [va[0] * k1 + vb[0] * k2, va[1] * k1 + vb[1] * k2, va[2] * k1 + vb[2] * k2]); const sx = g.cx + g.R * x, sy = g.cy - g.R * y; if (z > .02) { if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); pen = true; } else pen = false; if (j === 20) mid = [sx, sy, z]; }
-          ctx.globalAlpha = ga * .9; ctx.stroke(); ctx.restore(); if (mid && mid[2] > .3 && mid[1] < H - 140) pill(mid[0], mid[1], label, null, ga * Math.min(1, (mid[2] - .3) * 3), true);
+          ctx.globalAlpha = ga * .9; ctx.stroke(); ctx.restore();
+          // A found link is a bridge (her: "между островами построился мост").
+          if (mid && mid[2] > .3 && mid[1] < H - 140) { const im = pic("wooden_bridge"); if (im.complete && im.naturalWidth) { const w = 64 * (W / 390) * (.6 + .4 * mid[2]), h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = ga * Math.min(1, (mid[2] - .3) * 3); ctx.drawImage(im, mid[0] - w / 2, mid[1] - h / 2, w, h); ctx.restore(); } }
         }
         if (e > .01) { const fb = flatBox(), pa = P.get(a)!, pb = P.get(b)!, bend = (i % 2 ? -40 : 36) * fb.s, mx = (pa.x + pb.x) / 2 + bend, my = (pa.y + pb.y) / 2; ctx.save(); ctx.globalAlpha = e * .85; ctx.strokeStyle = "#2A8F80"; ctx.lineWidth = 3.5; ctx.setLineDash([1, 10]); ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.quadraticCurveTo(mx, my, pb.x, pb.y); ctx.stroke(); ctx.restore(); pill((pa.x + pb.x) / 2 + bend / 2, my, label, null, e, true); }
       });
@@ -192,7 +199,7 @@ export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; route
     };
     kick();
     return () => { alive = false; cancelAnimationFrame(raf); ro.disconnect(); canvas.removeEventListener("pointerdown", onDown); canvas.removeEventListener("pointermove", onMove); canvas.removeEventListener("pointerup", onUp); canvas.removeEventListener("pointercancel", onUp); };
-  }, [islands, routes, t]);
+  }, [islands, routes, growth, t]);
 
   void setFlat;
   return (

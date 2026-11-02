@@ -11,16 +11,18 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { predictState, type PredictState } from "@/lib/predict";
 import { litTrackers } from "@/lib/lighthouses";
+import { currentExperiment, experimentOver, getExperiments } from "@/lib/experiments";
 
 export const DAYS_PER_WEEK = 7;
 const MAX_PER_STEP = 7;
 /** A topic with fewer questions joins the mixed step: no one-question steps. */
 const MIN_PER_STEP = 3;
 
-export type TaskId = "note" | "calendar" | "ownQuestion" | "chart" | "map" | "newIsland";
+export type TaskId = "note" | "calendar" | "ownQuestion" | "chart" | "map" | "newIsland" | "experiment";
 /** Week 1 teaches the app; later weeks open new islands, after her own. */
 const TASKS_WEEK1: TaskId[] = ["note", "calendar", "ownQuestion", "chart", "map"];
-const TASKS_LATER: TaskId[] = ["newIsland"];
+// Week 2 on: test one change (her "провёл эксперимент — сад"), then a new island.
+const TASKS_LATER: TaskId[] = ["experiment", "newIsland"];
 
 export interface Step {
   id: string;
@@ -28,7 +30,8 @@ export interface Step {
   /** "game": the day's "Guess" round (src/components/GuessGame.tsx) */
   /** "predict": guess tonight's answers, then see (src/lib/predict.ts) */
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "predict" | "act";
+  /** "test": her week of trying one change is over: see how it went */
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "predict" | "act" | "test";
   predict?: PredictState;
   /** fill: the day */
   date?: string;
@@ -227,6 +230,8 @@ export const syncTasks = (trackers: Tracker[], noteDays: string[], week: number)
     if (r.done) continue;
     if (task === "note" && noteDays.length > 0) {
       r.done = noteDays[noteDays.length - 1];
+    } else if (task === "experiment" && getExperiments().length > 0) {
+      r.done = getExperiments()[0].start;
     } else if (task === "ownQuestion" || task === "newIsland") {
       const now = task === "ownQuestion" ? activeQuestions(trackers).length : islandCount(trackers);
       if (r.base === undefined) r.base = now;
@@ -290,6 +295,13 @@ export interface ChestRecord {
   guesses?: { hit: number; n: number };
   /** a new title for her (CHEST_TITLES) */
   title?: string;
+  /** her world when opened (growth "island:kind", items, bridges "a|b"), to tell what's new next time */
+  world?: { growth: string[]; items: string[]; bridges: string[] };
+  /** next week's mission (src/lib/growth.ts) */
+  mission?: { id: string; n?: number };
+  /** what grew since the last chest, and the items she's closest to ("id:k/n") */
+  fresh?: { growth: string[]; items: string[]; bridges: string[] };
+  nextUp?: string[];
 }
 
 /** Things a chest gives, one per week in turn. They go on the Map, never on the path. */
@@ -395,6 +407,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   if (lit.size > 0) {
     steps.push({ id: "act", kind: "act", trackerIds: [...lit], answered: 0, done: actSeenToday() });
   }
+  // Her test week is over: see how it went (it grows a garden).
+  const test = currentExperiment();
+  if (test && experimentOver(test)) steps.push({ id: "test", kind: "test", trackerIds: [test.trackerId], answered: 0, done: false });
   if (predict && !predictFirst) steps.push(predictStep(predict));
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.

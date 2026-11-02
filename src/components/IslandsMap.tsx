@@ -8,6 +8,9 @@
 // Nov 2 2026 (her: "сразу подсветить, что между островами потенциально
 // могут быть связи"): neighbours not linked yet get a faint route with a
 // "?" (MeMap is checking); found links are drawn stronger, "Linked".
+// Later the same day (her: "карта должна отражать реальное развитие"): what
+// grew on each island stands on it, a found link is a wooden bridge, and her
+// special items (milestones) sit in the sea beside the islands.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 import { HelpCircle, Link2 } from "lucide-react";
@@ -15,7 +18,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { islandName, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
-import { getChests } from "@/lib/pathSteps";
+import { ITEMS, type GrowthKind, type ItemId } from "@/lib/growth";
 import { IslandPicture } from "@/components/IslandPicture";
 import { islandHsl } from "@/lib/islandColors";
 
@@ -30,6 +33,8 @@ export const IslandsMap = ({
   width,
   fill = {},
   lit,
+  growth = {},
+  items = [],
   onOpen,
 }: {
   islands: Island[];
@@ -42,6 +47,10 @@ export const IslandsMap = ({
   fill?: Record<string, number>;
   /** islands whose lighthouse is lit */
   lit?: Set<string>;
+  /** what has grown on each island */
+  growth?: Record<string, GrowthKind[]>;
+  /** special items she has earned */
+  items?: ItemId[];
   onOpen: (id: IslandId) => void;
 }) => {
   const { t } = useTranslation();
@@ -96,23 +105,39 @@ export const IslandsMap = ({
     return tr ? localizeTrackerTitle(tr.title) : "";
   };
 
-  // What her opened chests gave, set by the first two islands.
-  const placed = [...new Set(Object.values(getChests()).filter((c) => c.placed).map((c) => c.reward))];
-  const rewardAt = (name: string): CSSProperties | null => {
-    const a = pos[0];
-    const b = pos[1] ?? pos[0];
-    if (!a) return null;
-    if (name === "wooden_bridge") return { left: (a.x + b.x) / 2 - 40, top: (a.y + b.y) / 2 + PIC * 0.5, width: 80 };
-    if (name === "rainbow") return { left: a.x - 50, top: a.y - 64, width: 100 };
-    if (name === "marker_flag") return { left: a.x + PIC * 0.18, top: a.y - 8, width: 34 };
-    if (name === "hot_air_balloon") return { left: b.x + PIC * 0.28, top: b.y - 70, width: 44 };
-    return null;
-  };
+  // Special items sit in the free sea beside each island (the other column,
+  // level with its top), a second one a little lower.
+  const ITEM_W: Record<string, number> = { hot_air_balloon: 46, camera: 42, wooden_signpost: 40, books: 46, sparkles: 34, art_easel: 42, bicycle: 54, rainbow: 86, airplane: 62 };
+  const shownItems = ITEMS.filter((it) => items.includes(it.id));
 
   const linkSpots = {
     found: shown.map((r) => { const pa = where.get(r.a); const pb = where.get(r.b); return pa && pb ? spot(pa, pb) : null; }),
     maybe: maybe.map(([a, b]) => ({ a, b, at: spot(where.get(a.id)!, where.get(b.id)!) })),
   };
+  // Special items: the first free place beside an island (the other column,
+  // level with its top, then a little lower), never on an island, a name,
+  // a link or another item.
+  const busy = [
+    ...pos.map((p) => ({ x0: p.x - PIC / 2, x1: p.x + PIC / 2, y0: p.y - 6, y1: p.y + PIC * 0.78 })),
+    ...labels,
+    ...taken.map((q) => ({ x0: q.x - 42, x1: q.x + 42, y0: q.y - 30, y1: q.y + 30 })),
+  ];
+  const itemSpots = shownItems.map((it) => {
+    const w = ITEM_W[it.pic] ?? 44;
+    for (let j = 0; j < pos.length; j++) {
+      const p = pos[j];
+      for (const [fx, dy] of [[0.76, 4], [0.76, 70], [0.9, 30], [0.76, -40]] as const) {
+        const x = (p.x < width / 2 ? fx : 1 - fx) * width;
+        const y = p.y + dy;
+        const r = { x0: x - w / 2 - 4, x1: x + w / 2 + 4, y0: y - 4, y1: y + w * 0.9 + 4 };
+        if (r.x0 < 0 || r.x1 > width || r.y0 < 0) continue;
+        if (busy.some((b) => r.x0 < b.x1 && r.x1 > b.x0 && r.y0 < b.y1 && r.y1 > b.y0)) continue;
+        busy.push(r);
+        return { it, w, left: x - w / 2, top: y };
+      }
+    }
+    return null;
+  });
 
   return (
     <div className="relative mx-auto" style={{ width, height }}>
@@ -141,10 +166,11 @@ export const IslandsMap = ({
         })}
       </svg>
 
-      {placed.map((name) => {
-        const st = rewardAt(name);
-        return st ? <img key={name} src={mapPic(name)} alt="" aria-hidden="true" decoding="async" draggable={false} className="pointer-events-none absolute" style={st} /> : null;
-      })}
+      {itemSpots.map((sp) => sp && (
+        <img key={sp.it.id} src={mapPic(sp.it.pic)} alt={t(`items.${sp.it.id}.name`)} decoding="async" draggable={false}
+          className="pointer-events-none absolute object-contain drop-shadow-[0_6px_8px_rgba(16,42,56,0.18)]"
+          style={{ left: sp.left, top: sp.top, width: sp.w }} />
+      ))}
 
       {islands.map((isl, i) => {
         const p = pos[i];
@@ -154,7 +180,7 @@ export const IslandsMap = ({
             style={{ left: p.x - PIC / 2 - 10, top: p.y, width: PIC + 20 }}
             aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.weather.${isl.weather}`)}` : ""}`}>
             <span className="relative">
-              <IslandPicture id={isl.id} width={PIC} />
+              <IslandPicture id={isl.id} width={PIC} growth={growth[isl.id]} />
               {lit?.has(isl.id) && (
                 <img src={mapPic("lighthouse")} alt="" aria-hidden="true" width={40} height={52} decoding="async" draggable={false}
                   className="pointer-events-none absolute -left-2 bottom-3 object-contain drop-shadow-[0_0_10px_hsl(44_96%_60%/0.8)]" />
@@ -218,9 +244,12 @@ export const IslandsMap = ({
           <div key={i}>
             <button type="button" data-map-link onClick={() => { haptics.tap(); setLink((l) => (l === i ? null : i)); }}
               aria-label={`${t("map.linked")} · ${t("map.linkAria")}`} aria-expanded={link === i}
-              className="absolute flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white shadow-[0_6px_16px_-6px_hsl(var(--coin-teal))]"
-              style={{ left: mx - 20, top: my - 20 }}>
-              <Link2 className="h-[18px] w-[18px]" strokeWidth={2.6} />
+              className="absolute flex items-center justify-center active:scale-95 transition-transform"
+              style={{ left: mx - 30, top: my - 20, width: 60, height: 40 }}>
+              <img src={mapPic("wooden_bridge")} alt="" width={60} height={35} draggable={false} className="pointer-events-none object-contain drop-shadow-[0_5px_6px_rgba(16,42,56,0.22)]" />
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white">
+                <Link2 className="h-2.5 w-2.5" strokeWidth={3} />
+              </span>
             </button>
             {link === i && (
               <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
