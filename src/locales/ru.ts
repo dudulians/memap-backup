@@ -167,6 +167,7 @@ const ru: Translation = {
   },
   map: {
     // The clear map (Nov 2 2026)
+    summary: "Итоги недели",
     title: "Твой мир",
     thisWeek: "Эта неделя",
     world: "Мир",

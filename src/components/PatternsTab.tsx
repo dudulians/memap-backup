@@ -19,7 +19,9 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 
 // focusIds (Map, Nov 1 2026): show only one island's questions. Saves still
 // go through the full lists, so nothing outside the island is touched.
-export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
+// only (Map cards, Nov 2 2026, her note: "при нажатии на календарь хочу чтоб
+// сразу был виден календарь"): show one section, with no tabs to wander off.
+export const PatternsTab = ({ focusIds, only }: { focusIds?: string[]; only?: "findings" | "overview" | "trends" | "signals" } = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
@@ -50,6 +52,7 @@ export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
   const SECTIONS = ["findings", "overview", "trends", "signals"] as const;
   type Section = typeof SECTIONS[number];
   const [section, setSection] = useState<Section>(() => {
+    if (only) return only;
     try {
       const stored = localStorage.getItem("memap_patterns_section") as Section | null;
       if (stored && SECTIONS.includes(stored)) return stored;
@@ -293,7 +296,7 @@ export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
       {/* Section tabs — turns the old long scroll into 4 destinations,
           each one screen-sized. The tab list stays sticky under the app
           header so long tracker lists don't hide the nav. */}
-      <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
+      {!only && <Tabs value={section} onValueChange={handleSectionChange} className="w-full">
         <div className="sticky top-0 z-30 -mx-4 px-4 py-1.5 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-sm">
           {/* Underline-style tabs — no outer container pill, no inner
               pill. Active state is just bolder text + a thin
@@ -337,7 +340,7 @@ export const PatternsTab = ({ focusIds }: { focusIds?: string[] } = {}) => {
             </TabsTrigger>
           </TabsList>
         </div>
-      </Tabs>
+      </Tabs>}
 
       {/* Section content — only the active section mounts (no
           carousel mounting all four at once). Tap a tab above to

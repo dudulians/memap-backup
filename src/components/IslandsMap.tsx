@@ -55,7 +55,7 @@ export const IslandsMap = ({
   // Two columns, staggered, so every island has room for its name.
   const pos = islands.map((_, i) => ({
     x: Math.round((i % 2 === 0 ? 0.28 : 0.72) * width),
-    y: 70 + i * 128 + (i % 2) * 18,
+    y: 40 + i * 142 + (i % 2) * 18,
   }));
   const height = (pos.length ? pos[pos.length - 1].y : 0) + PIC + 70;
   const where = new Map(islands.map((isl, i) => [isl.id, pos[i]]));
@@ -103,7 +103,7 @@ export const IslandsMap = ({
           <button key={isl.id} type="button" onClick={() => { haptics.tap(); onOpen(isl.id); }}
             className="absolute flex flex-col items-center active:scale-[0.97] transition-transform"
             style={{ left: p.x - PIC / 2 - 10, top: p.y, width: PIC + 20 }}
-            aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.legend.${isl.weather}`)}` : ""}`}>
+            aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.weather.${isl.weather}`)}` : ""}`}>
             <span className="relative">
               <IslandPicture id={isl.id} width={PIC} />
               {lit?.has(isl.id) && (
@@ -115,7 +115,7 @@ export const IslandsMap = ({
                   className="pointer-events-none absolute -right-3 -top-1 object-contain" />
               )}
             </span>
-            <span className="surface -mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-3">
+            <span className="surface relative z-[1] -mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-3">
               <span className="relative flex h-8 w-8 items-center justify-center">
                 <svg width={32} height={32} className="absolute inset-0 -rotate-90" aria-hidden="true">
                   <circle cx={16} cy={16} r={14} fill="none" stroke="hsl(var(--foreground) / 0.08)" strokeWidth={3} />
@@ -126,7 +126,11 @@ export const IslandsMap = ({
                 </svg>
                 <img src={mapPic("icon_" + isl.def.icon)} alt="" width={22} height={22} decoding="async" draggable={false} />
               </span>
-              <span className="truncate text-[15px] font-bold text-foreground">{islandName(t, isl.id)}</span>
+              <span className="min-w-0 text-left">
+                <span className="block truncate text-[15px] font-bold leading-tight text-foreground">{islandName(t, isl.id)}</span>
+                {/* What the weather sign means, said under the name (no legend to decode). */}
+                <span className="block truncate text-[12px] font-semibold leading-tight text-muted-foreground">{t(isl.weather ? `map.weather.${isl.weather}` : "map.tooEarly")}</span>
+              </span>
             </span>
           </button>
         );

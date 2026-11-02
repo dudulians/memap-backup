@@ -15,7 +15,8 @@ import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
 import { haptics } from "@/lib/haptics";
-import { IslandsMap, WeatherLegend } from "./IslandsMap";
+import { IslandsMap } from "./IslandsMap";
+import { WorldMap } from "./WorldMap";
 import { IslandStats, WorldStats } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
@@ -32,6 +33,10 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen);
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
+  // One switch: the flat map or the rolling globe (her note: one place to switch).
+  const [view, setView] = useState<"map" | "globe">("map");
+  // Calendar / chart / lighthouses straight away, no tabs inside (her note).
+  const [only, setOnly] = useState<"overview" | "trends" | "signals" | null>(null);
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
   useEffect(() => { if (initialOpen) { setOpen(initialOpen); onOpened?.(); } }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -82,33 +87,48 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
 
   return (
     <div ref={boxRef} className="map-sea relative h-full overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
-      {/* One view only (her note: two ways into the map were confusing). */}
-      <>
-          <div className="flex items-start justify-between gap-3 px-4 pt-3">
-            <div className="min-w-0">
-              <h2 className="text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
-              <p className="text-[15px] font-semibold text-muted-foreground">{t("map.thisWeek")}</p>
-            </div>
-            {loaded && islands.length > 0 && (
-              <button type="button" onClick={() => { haptics.tap(); setOpen("all"); }}
-                className="surface mt-1 inline-flex h-11 shrink-0 items-center gap-2 rounded-full pl-2 pr-4 text-[15px] font-bold text-foreground">
-                <img src={mapPic("icon_travel")} alt="" width={28} height={28} />
-                {t("map.world")}
-              </button>
-            )}
+      <div className="flex items-start justify-between gap-3 px-4 pt-3">
+        <div className="min-w-0">
+          <h2 className="text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
+          <p className="text-[15px] font-semibold text-muted-foreground">{t("map.thisWeek")}</p>
+        </div>
+        {loaded && islands.length > 0 && (
+          <button type="button" onClick={() => { haptics.tap(); setOpen("all"); }}
+            className="surface mt-1 inline-flex h-11 shrink-0 items-center gap-2 rounded-full pl-2 pr-4 text-[15px] font-bold text-foreground">
+            <img src={mapPic("icon_growth")} alt="" width={28} height={28} />
+            {t("map.summary")}
+          </button>
+        )}
+      </div>
+
+      {/* The one switch: Map | Globe. */}
+      {loaded && islands.length > 0 && (
+        <div className="mx-4 mt-3 grid grid-cols-2 rounded-full bg-white/60 p-1 shadow-sm backdrop-blur dark:bg-[hsl(var(--surface)/0.6)]" role="tablist">
+          {(["map", "globe"] as const).map((v) => (
+            <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
+              className={`h-10 rounded-full text-[15px] font-bold transition-colors ${view === v ? "bg-white text-foreground shadow-sm dark:bg-[hsl(var(--surface))]" : "text-muted-foreground"}`}>
+              {v === "map" ? t("map.flat") : t("map.globe")}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {view === "globe" ? (
+        loaded && (
+          <div className="relative mt-3" style={{ height: "calc(100dvh - 250px)" }}>
+            <WorldMap islands={islands} routes={routes} onOpen={setOpen} />
           </div>
-          {/* Calendar, chart, lighthouses: on view, not three taps away (her note). */}
+        )
+      ) : (
+        <>
+          {/* Calendar, chart, lighthouses: on view, each opens straight to itself. */}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <DaysOverview trackers={trackers} entries={entries} onOpen={(section) => {
-                try { localStorage.setItem("memap_patterns_section", section); } catch { /* opens on Findings */ }
-                setOpen("all");
-              }} />
+              <DaysOverview trackers={trackers} entries={entries} onOpen={setOnly} />
             </div>
           )}
-          {loaded && islands.length > 0 && <div className="mt-4"><WeatherLegend /></div>}
           {loaded && islands.length > 0 && (
-            <div className="mt-2">
+            <div className="mt-3">
               <IslandsMap islands={islands} routes={routes} trackers={trackers} width={width} fill={fill} lit={lit} onOpen={setOpen} />
             </div>
           )}
@@ -118,7 +138,8 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
               <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}
             </button>
           )}
-      </>
+        </>
+      )}
 
       {loaded && islands.length === 0 && (
         <div className="absolute left-4 right-4 top-16 z-[2] rounded-[22px] bg-white/90 p-4 text-center shadow-lg">
@@ -126,11 +147,11 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           <p className="mt-1.5 text-[15px] text-muted-foreground">{t("map.emptyBody")}</p>
         </div>
       )}
-      <BottomSheet open={!!open} onOpenChange={(o) => { if (!o) setOpen(null); }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.world")}>
+      <BottomSheet open={!!open} onOpenChange={(o) => { if (!o) setOpen(null); }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <div className="flex items-center gap-3 pb-3 pr-10 pt-1">
-            <img src={mapPic(island ? "icon_" + island.def.icon : "icon_travel")} alt="" className="h-12 w-12" />
-            <h2 className="min-w-0 flex-1 truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.world")}</h2>
+            <img src={mapPic(island ? "icon_" + island.def.icon : "icon_growth")} alt="" className="h-12 w-12" />
+            <h2 className="min-w-0 flex-1 truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
             {island && isOwnIsland(island.id) && (
               <button type="button" onClick={() => setEditor({ id: island.id })} aria-label={t("islands.edit")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] text-muted-foreground">
@@ -146,7 +167,17 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           ) : open === "all" ? (
             <WorldStats islands={islands} routes={routes} trackers={trackers} entries={entries} />
           ) : null}
-          {open && (open === "all" || (island && island.trackerIds.length > 0)) && <PatternsTab key={open} focusIds={island?.trackerIds} />}
+          {island && island.trackerIds.length > 0 && <PatternsTab key={open} focusIds={island.trackerIds} />}
+        </div>
+      </BottomSheet>
+      {/* Calendar / chart / lighthouses for everything, straight away. */}
+      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) setOnly(null); }} className="h-[88vh]"
+        ariaTitle={only ? t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses") : ""}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
+          <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">
+            {only && t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses")}
+          </h2>
+          {only && <PatternsTab key={only} only={only} />}
         </div>
       </BottomSheet>
       {newOpen && (

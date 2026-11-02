@@ -143,6 +143,7 @@ const en = {
   },
   map: {
     // The clear map (Nov 2 2026)
+    summary: "Week summary",
     title: "Your world",
     thisWeek: "This week",
     world: "World",
