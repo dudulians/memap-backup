@@ -44,6 +44,8 @@ export interface Step {
   mixed?: "all" | "rest";
   /** 1-based part and parts, when an island has more than 7 questions */
   part?: [number, number];
+  /** questions of a newly added island */
+  fresh?: boolean;
   trackerIds: string[];
   task?: TaskId;
   /** questions of this step answered today */
@@ -79,6 +81,8 @@ export const activeQuestions = (trackers: Tracker[]) => trackers.filter((t) => !
 
 export interface QuestionGroup {
   island?: IslandId;
+  /** a newly added island: its own step even when small (her: "когда отвечать — не пойму") */
+  fresh?: boolean;
   mixed?: "all" | "rest";
   part: [number, number];
   ids: string[];
@@ -106,16 +110,32 @@ export const questionGroups = (trackers: Tracker[]): QuestionGroup[] => {
     [...list].sort((a, b) => (a.id === door?.trackerId ? -1 : b.id === door?.trackerId ? 1 : 0) || (a.sortIndex ?? 0) - (b.sortIndex ?? 0));
 
   if (act.length === 0) return [];
+
+  // An island added after the first days (all its questions newer than the
+  // first ones, within two weeks) keeps its own step, so its questions are
+  // easy to find on the path (her note: "когда на них отвечать — не пойму").
+  const day = (t: Tracker) => (t.createdAt ?? "").slice(0, 10);
+  const firstDay = act.map(day).filter(Boolean).sort()[0] ?? "";
+  const twoWeeks = isoLocal(new Date(Date.now() - 14 * 86_400_000));
+  const isFresh = (list: Tracker[]) => list.every((t) => day(t) > firstDay && day(t) >= twoWeeks);
+
   if (act.length <= MAX_PER_STEP) {
-    const one = order.length === 1;
-    return [{ island: one ? order[0][0] : undefined, mixed: one ? undefined : "all", part: [1, 1], ids: doorFirst(order.flatMap(([, l]) => l)).map((t) => t.id) }];
+    const fresh = order.filter(([, l]) => isFresh(l));
+    const rest = order.filter(([, l]) => !isFresh(l));
+    const groups: QuestionGroup[] = [];
+    if (rest.length > 0) {
+      const one = rest.length === 1;
+      groups.push({ island: one ? rest[0][0] : undefined, mixed: one ? undefined : "all", part: [1, 1], ids: doorFirst(rest.flatMap(([, l]) => l)).map((t) => t.id) });
+    }
+    for (const [island, l] of fresh) groups.push({ island, part: [1, 1], ids: doorFirst(l).map((t) => t.id), fresh: true });
+    return groups;
   }
 
   const out: QuestionGroup[] = [];
   const small: Tracker[] = [];
   let restAt = -1; // the mixed step sits where its first (most important) topic was
   for (const [island, list] of order) {
-    if (list.length < MIN_PER_STEP) {
+    if (list.length < MIN_PER_STEP && !isFresh(list)) {
       if (restAt < 0) restAt = out.length;
       small.push(...list);
       continue;
@@ -124,7 +144,7 @@ export const questionGroups = (trackers: Tracker[]): QuestionGroup[] => {
     const parts = Math.ceil(sorted.length / MAX_PER_STEP);
     const size = Math.ceil(sorted.length / parts);
     for (let p = 0; p < parts; p++) {
-      out.push({ island, part: [p + 1, parts], ids: sorted.slice(p * size, (p + 1) * size).map((t) => t.id) });
+      out.push({ island, part: [p + 1, parts], ids: sorted.slice(p * size, (p + 1) * size).map((t) => t.id), fresh: isFresh(list) || undefined });
     }
   }
   if (small.length > 0) {
@@ -392,6 +412,7 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
       island: g.island,
       mixed: g.mixed,
       part: g.part[1] > 1 ? g.part : undefined,
+      fresh: g.fresh,
       trackerIds: g.ids,
       answered,
       done: answered === g.ids.length,

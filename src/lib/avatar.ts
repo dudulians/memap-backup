@@ -13,6 +13,11 @@ export const avatarUrl = (id: string | null): string | null => (id ? PICS.find((
 export const avatarName = (id: string) => id.replace(/^\d+_/, "");
 
 const KEY = "memap_avatar";
+const NONE_KEY = "memap_avatar_none";
+/** She chose "No avatar" (then nothing invites her to pick one). */
+export const avatarDeclined = (): boolean => {
+  try { return localStorage.getItem(NONE_KEY) === "1"; } catch { return false; }
+};
 export const getAvatar = (): string | null => {
   try {
     const v = localStorage.getItem(KEY);
@@ -23,8 +28,8 @@ export const getAvatar = (): string | null => {
 };
 export const setAvatar = (id: string | null) => {
   try {
-    if (id) localStorage.setItem(KEY, id);
-    else localStorage.removeItem(KEY);
+    if (id) { localStorage.setItem(KEY, id); localStorage.removeItem(NONE_KEY); }
+    else { localStorage.removeItem(KEY); localStorage.setItem(NONE_KEY, "1"); }
   } catch {
     /* not saved; the picker still shows the choice until reload */
   }

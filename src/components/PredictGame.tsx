@@ -11,6 +11,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { isoLocal } from "@/lib/doors";
 import { mapPic } from "@/lib/islands";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { guessesFor, markRevealed, saveGuesses, type PredictState } from "@/lib/predict";
 import { Pressable } from "@/components/ui/pressable";
 
@@ -85,7 +86,8 @@ export const PredictGame = ({ state, trackers, entries, onClose }: {
             </div>
             {saved && (
               <div className="mt-auto flex flex-col items-center pt-8 text-center animate-fade-in">
-                <img src={mapPic("sparkles")} alt="" width={44} height={44} className="mb-3" />
+                {/* Her avatar cheers (else the sparkles). */}
+            <img src={avatarUrl(getAvatar()) ?? mapPic("sparkles")} alt="" width={avatarUrl(getAvatar()) ? 72 : 44} height={avatarUrl(getAvatar()) ? 72 : 44} className="mb-3 object-contain" />
                 <p className="text-[20px] font-bold">{t("predict.saved")}</p>
                 <p className="mt-1 text-[16px] font-medium text-muted-foreground">{t(forTomorrow ? "predict.seeTomorrow" : "predict.seeTonight")}</p>
                 <Pressable tone="teal" haptic="none" onClick={close} className="mt-6 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">

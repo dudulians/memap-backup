@@ -13,11 +13,12 @@ import { useTranslation } from "react-i18next";
 import { Clock, Crown, FlaskConical, Lightbulb, Sparkles, Target, Telescope, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
-import { buildIslands, buildRoutes, islandName, mapPic, type IslandId } from "@/lib/islands";
+import { buildIslands, buildRoutes, islandDef, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { getNotes } from "@/lib/notes";
 import { guessedRightTotal } from "@/lib/predict";
-import { ITEMS, growthLand, growthOf, islandDays, itemEarned, itemProgress, lastWorld, nextMission, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
+import { ITEMS, growthLand, growthOf, homeWord, islandDays, itemEarned, itemProgress, lastWorld, nextMission, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { getDoor, getDoorState } from "@/lib/doors";
 import { factLine } from "@/lib/echo";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -207,7 +208,8 @@ export const WeekChest = ({
       });
       byIsland.forEach((kinds, id) => {
         const pic = growthLand([kinds[0]]).front[0]?.[0] ?? growthLand([kinds[0]]).back[0]?.[0] ?? "";
-        rows.push(row(pic, islandName(t, id), kinds.map((k) => t(`growth.short.${k}`)).join(" · ")));
+        const home = homeWord(islandDef(id).land);
+        rows.push(row(kinds[0] === "house" && home === "tent" ? "camping_tent" : pic, islandName(t, id), kinds.map((k) => t(`growth.short.${k === "house" ? home : k}`)).join(" · ")));
       });
       if (fresh.bridges.length > 0) {
         const names = fresh.bridges.map((b) => b.split("|").map((x) => islandName(t, x as IslandId)).join(" ↔ "));
@@ -257,8 +259,14 @@ export const WeekChest = ({
         )}
         {r.title && (
           <div className={r.fresh ? "mt-3 flex items-center gap-3" : "mt-3 flex items-center gap-3 border-t border-foreground/[0.06] pt-3"}>
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--coin-gold)/0.18)] text-[hsl(var(--coin-gold))]">
-              <Crown className="h-7 w-7" strokeWidth={2.2} />
+            {/* The title is hers: her avatar wears the crown. */}
+            <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-gold)/0.18)] text-[hsl(var(--coin-gold))]">
+              {avatarUrl(getAvatar()) ? (
+                <>
+                  <img src={avatarUrl(getAvatar())!} alt="" className="h-12 w-12 object-contain" />
+                  <Crown className="absolute -right-1 -top-2 h-5 w-5 fill-[hsl(var(--coin-gold))]" strokeWidth={2.2} />
+                </>
+              ) : <Crown className="h-7 w-7" strokeWidth={2.2} />}
             </span>
             <p className="text-[17px] font-semibold leading-snug">{t("path.chest.newTitle", { title: t(`path.titles.${r.title}`) })}</p>
           </div>

@@ -38,6 +38,10 @@ const en = {
   // Map tab (Aurora UX, Nov 1 2026): your questions as islands on a ball.
   // Her own islands and questions (Nov 2 2026)
   islands: {
+    answerTitle_one: "{{count}} question waits for today",
+    answerTitle_other: "{{count}} questions wait for today",
+    answerWhere: "Also on Today: the step “{{name}}”",
+    answerNow: "Answer now",
     pickTopic: "Pick a topic",
     ownTopic: "My own topic",
     nQuestions_one: "{{count}} question",
@@ -142,15 +146,18 @@ const en = {
   // Her world grows with real progress (Nov 2 2026)
   growth: {
     title: "Grown here",
-    nothingYet: "Answer here on 3 days: a little house appears",
+    nothingYet: "Answer here on 3 days and something grows",
+    tent: "A tent: you started exploring",
     house: "A little house: you started exploring",
     flowers: "Flowers: 7 days here",
     garden: "A garden: you tested a change",
     flag: "A flag: 30 days here",
-    short: { house: "a little house", flowers: "flowers", garden: "a garden", flag: "a flag" },
+    short: { house: "a little house", tent: "a tent", flowers: "flowers", garden: "a garden", flag: "a flag" },
     next: {
       house_one: "{{count}} more day → a little house",
       house_other: "{{count}} more days → a little house",
+      tent_one: "{{count}} more day → a tent",
+      tent_other: "{{count}} more days → a tent",
       flowers_one: "{{count}} more day → flowers",
       flowers_other: "{{count}} more days → flowers",
       flag_one: "{{count}} more day → a flag",
@@ -238,6 +245,16 @@ const en = {
     streak: "{{goal}} days in a row",
     streakLine: "One step a day is enough",
   },
+  // Charts without the web (Nov 2 2026)
+  charts: {
+    links: "Links",
+    each: "Each question",
+    daysAWeek: "Days a week, last 8 weeks",
+    noLinks: "No links yet. They show up after a few weeks of answers.",
+    thisWeek_one: "This week: {{count}} day",
+    thisWeek_other: "This week: {{count}} days",
+    back: "All charts",
+  },
   game: {
     locked: "Opens after 3 days of answers.",
     lockedShort: "After 3 days of answers",
@@ -283,6 +300,11 @@ const en = {
     bothDays_one: "{{count}} day with answers for both",
     bothDays_other: "{{count}} days with answers for both",
     linked: "Linked",
+    maybeTitle: "Maybe linked",
+    checking: "MeMap is checking",
+    you: "You",
+    pickYou: "Choose who sails",
+    pickYouShort: "Who are you?",
     noLinkYet: "No link so far. It may still show up.",
     title: "Your world",
     thisWeek: "This week",
@@ -679,6 +701,7 @@ const en = {
     reward: { wooden_bridge: "a bridge", hot_air_balloon: "a balloon", marker_flag: "a flag", rainbow: "a rainbow" },
     titles: { explorer: "Explorer", pathfinder: "Pathfinder", navigator: "Navigator", cartographer: "Cartographer", captain: "Captain", keeper: "Lighthouse keeper", legend: "Legend of the seas" },
     noteAnother: "Write another note",
+    newIsland: "New island",
     allNotes: "All notes",
     allQuestions: "Your questions",
     mixed: "A bit of everything",

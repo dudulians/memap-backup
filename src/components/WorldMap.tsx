@@ -43,7 +43,7 @@ const SCENERY: Thing[] = (() => {
 })();
 const BOAT: Thing = { lon: 1, lat: 5, fx: 210, fy: 322, w: 46 };
 
-export const WorldMap = ({ islands, routes, growth = {}, onOpen }: { islands: Island[]; routes: Route[]; growth?: Record<string, GrowthKind[]>; onOpen: (id: IslandId) => void }) => {
+export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }: { islands: Island[]; routes: Route[]; growth?: Record<string, GrowthKind[]>; avatar?: string | null; onOpen: (id: IslandId) => void }) => {
   const { t } = useTranslation();
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
@@ -62,6 +62,8 @@ export const WorldMap = ({ islands, routes, growth = {}, onOpen }: { islands: Is
     let raf = 0, alive = true;
     const kick = () => { if (!raf && alive) raf = requestAnimationFrame(frame); };
     const pic = (n: string) => { let im = IMG.get(n); if (!im) { im = new Image(); im.onload = kick; im.src = mapPic(n); IMG.set(n, im); } return im; };
+    let av: HTMLImageElement | null = null;
+    const avatarImg = () => { if (!avatar) return null; if (!av) { av = new Image(); av.onload = kick; av.src = avatar; } return av; };
 
     const things: Thing[] = islands.map((isl) => {
       // What grew there stands on it, as on the flat map (src/lib/growth.ts).
@@ -149,7 +151,12 @@ export const WorldMap = ({ islands, routes, growth = {}, onOpen }: { islands: Is
       items.forEach(({ o, p }) => drawThing(o, p));
       // the little boat: you, among your islands
       const bp = place(BOAT, true), boat = pic("sailboat");
-      if (boat.complete && boat.naturalWidth && bp.al > .05) { const w = 46 * bp.sc, h = w * boat.naturalHeight / boat.naturalWidth; ctx.save(); ctx.globalAlpha = bp.al; ctx.drawImage(boat, bp.x - w / 2, bp.y - h / 2, w, h); ctx.restore(); }
+      if (boat.complete && boat.naturalWidth && bp.al > .05) {
+        const w = 46 * bp.sc, h = w * boat.naturalHeight / boat.naturalWidth; ctx.save(); ctx.globalAlpha = bp.al; ctx.drawImage(boat, bp.x - w / 2, bp.y - h / 2, w, h);
+        // She sails it: her avatar in the boat.
+        if (avatar) { const im = avatarImg(); if (im && im.complete && im.naturalWidth) { const a = 30 * bp.sc; ctx.drawImage(im, bp.x - w * .42, bp.y - h * .62, a, a); } }
+        ctx.restore();
+      }
       const isAway = tTarget === 0 && !spin && (bp.z < .6 || bp.x < 20 || bp.x > W - 20 || bp.y < g.top + 30 || bp.y > H - 170);
       if (isAway !== awayNow) { awayNow = isAway; setAway(isAway); }
       things.forEach((o) => {
@@ -199,7 +206,7 @@ export const WorldMap = ({ islands, routes, growth = {}, onOpen }: { islands: Is
     };
     kick();
     return () => { alive = false; cancelAnimationFrame(raf); ro.disconnect(); canvas.removeEventListener("pointerdown", onDown); canvas.removeEventListener("pointermove", onMove); canvas.removeEventListener("pointerup", onUp); canvas.removeEventListener("pointercancel", onUp); };
-  }, [islands, routes, growth, t]);
+  }, [islands, routes, growth, avatar, t]);
 
   void setFlat;
   return (

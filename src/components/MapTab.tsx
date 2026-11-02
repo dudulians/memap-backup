@@ -18,10 +18,13 @@ import { getNotes } from "@/lib/notes";
 import { guessedRightTotal } from "@/lib/predict";
 import { ITEMS, growthOf, islandDays, itemEarned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
+import { AvatarPicker } from "./AvatarPicker";
+import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
+import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { IslandsMap } from "./IslandsMap";
 import { WorldMap } from "./WorldMap";
-import { IslandStats, WorldStats } from "./IslandStats";
+import { AnswerNow, IslandStats, WorldStats } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
@@ -99,6 +102,21 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount, guessedRightTotal(entries)), [trackers, entries, islands, routes, notesCount]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
+  // Her avatar sails by the island she answered last (her note: the avatar
+  // was only an icon in the corner).
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
+  useEffect(() => {
+    const sync = () => setAvatarPic(avatarUrl(getAvatar()));
+    window.addEventListener("memap-avatar-changed", sync);
+    return () => window.removeEventListener("memap-avatar-changed", sync);
+  }, []);
+  const near = useMemo(() => {
+    const last = [...entries].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const tr = last && trackers.find((x) => x.id === last.trackerId);
+    return tr ? islandOf(tr) : undefined;
+  }, [entries, trackers]);
+  const you = { pic: avatarPic, declined: avatarDeclined(), near };
   // Islands with a lit lighthouse (a rule she set was reached).
   const lit = useMemo(() => {
     const on = litTrackers(trackers, entries);
@@ -136,7 +154,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
         // The globe runs to the bottom of the screen, under the tab bar.
         loaded && (
           <div className="relative min-h-0 flex-1">
-            <WorldMap islands={islands} routes={routes} growth={growth} onOpen={setOpen} />
+            <WorldMap islands={islands} routes={routes} growth={growth} avatar={avatarPic} onOpen={setOpen} />
           </div>
         )
       ) : (
@@ -149,7 +167,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} growth={growth} items={items} onOpen={setOpen} />
+              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} growth={growth} items={items} you={you} onYou={() => setAvatarOpen(true)} onOpen={setOpen} />
             </div>
           )}
           {loaded && (
@@ -181,8 +199,10 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           </div>
           {island ? (
             <>
+              {/* Where and when to answer this island's questions (her note). */}
+              <div className="mb-3"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
               {island.trackerIds.length > 0 && (
-                <IslandStats island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []}
+                <IslandStats island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []} islands={islands} entries={entries}
                   days={islandDays(trackers, entries).get(island.id) ?? 0} onTest={() => { const id = island.id; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }} />
               )}
               <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />
@@ -203,6 +223,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           {only && <PatternsTab key={only} only={only} />}
         </div>
       </BottomSheet>
+      <AvatarPicker open={avatarOpen} onClose={() => setAvatarOpen(false)} />
       {testFor && (
         <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
       )}

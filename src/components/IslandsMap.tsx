@@ -7,13 +7,14 @@
 // No floating numbers, no strange islands. Tap an island for its stats.
 // Nov 2 2026 (her: "сразу подсветить, что между островами потенциально
 // могут быть связи"): neighbours not linked yet get a faint route with a
-// "?" (MeMap is checking); found links are drawn stronger, "Linked".
+// dotted route (MeMap is checking; the island's sheet says so in words, her
+// note: "?" marks sat randomly, two on one island); found links are bridges.
 // Later the same day (her: "карта должна отражать реальное развитие"): what
 // grew on each island stands on it, a found link is a wooden bridge, and her
 // special items (milestones) sit in the sea beside the islands.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { HelpCircle, Link2 } from "lucide-react";
+import { Link2, Plus } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { islandName, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
@@ -35,6 +36,8 @@ export const IslandsMap = ({
   lit,
   growth = {},
   items = [],
+  you,
+  onYou,
   onOpen,
 }: {
   islands: Island[];
@@ -51,6 +54,9 @@ export const IslandsMap = ({
   growth?: Record<string, GrowthKind[]>;
   /** special items she has earned */
   items?: ItemId[];
+  /** her avatar sailing by the island she answered last (pic null = none chosen yet) */
+  you?: { pic: string | null; declined: boolean; near?: IslandId };
+  onYou?: () => void;
   onOpen: (id: IslandId) => void;
 }) => {
   const { t } = useTranslation();
@@ -73,29 +79,27 @@ export const IslandsMap = ({
     x: Math.round((i % 2 === 0 ? 0.28 : 0.72) * width),
     y: 40 + i * 142 + (i % 2) * 18,
   }));
-  const height = (pos.length ? pos[pos.length - 1].y : 0) + PIC + 70;
+  const baseHeight = (pos.length ? pos[pos.length - 1].y : 0) + PIC + 70;
   const where = new Map(islands.map((isl, i) => [isl.id, pos[i]]));
   // Neighbours on the map with no link found yet: maybe one affects the other.
   const shown = routes.slice(0, 3);
   const linked = (a: string, b: string) => shown.some((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a));
   const maybe = islands.slice(1).map((b, i) => [islands[i], b] as const).filter(([a, b]) => !linked(a.id, b.id));
-  const bothDays = (a: Island, b: Island) => {
-    const days = (ids: string[]) => new Set(entries.filter((e) => ids.includes(e.trackerId)).map((e) => e.date));
-    const da = days(a.trackerIds);
-    return [...days(b.trackerIds)].filter((d) => da.has(d)).length;
-  };
   // Where a link's button sits: along its route, clear of island names and
   // of other link buttons (several links made them pile onto the names).
   const taken: { x: number; y: number }[] = [];
   const labels = pos.map((p) => ({ x0: p.x - 98, x1: p.x + 98, y0: p.y + PIC * 0.72, y1: p.y + PIC * 0.72 + 52 }));
-  const spot = (pa: { x: number; y: number }, pb: { x: number; y: number }) => {
+  const pictures = pos.map((p) => ({ x0: p.x - PIC * 0.42, x1: p.x + PIC * 0.42, y0: p.y + 4, y1: p.y + PIC * 0.72 }));
+  const spot = (pa: { x: number; y: number }, pb: { x: number; y: number }, strict = false, half = 20) => {
     const ay = pa.y + PIC * 0.38, by = pb.y + PIC * 0.38;
-    for (const k of [0.5, 0.62, 0.38, 0.72, 0.28, 0.8, 0.2]) {
+    for (const k of [0.5, 0.62, 0.38, 0.72, 0.28]) {
       const x = pa.x + (pb.x - pa.x) * k, y = ay + (by - ay) * k;
-      const hitsLabel = labels.some((l) => x + 20 > l.x0 && x - 20 < l.x1 && y + 20 > l.y0 && y - 20 < l.y1);
-      const hitsLink = taken.some((q) => Math.hypot(q.x - x, q.y - y) < 44);
-      if (!hitsLabel && !hitsLink) { taken.push({ x, y }); return { x, y }; }
+      const hits = (r: { x0: number; x1: number; y0: number; y1: number }) => x + half > r.x0 && x - half < r.x1 && y + 20 > r.y0 && y - 20 < r.y1;
+      const hitsLink = taken.some((q) => Math.hypot(q.x - x, q.y - y) < 50);
+      if (!labels.some(hits) && !hitsLink && (!strict || !pictures.some(hits))) { taken.push({ x, y }); return { x, y }; }
     }
+    // A possible link with no free place keeps just its dotted line.
+    if (strict) return null;
     const x = (pa.x + pb.x) / 2, y = (ay + by) / 2;
     taken.push({ x, y });
     return { x, y };
@@ -111,8 +115,8 @@ export const IslandsMap = ({
   const shownItems = ITEMS.filter((it) => items.includes(it.id));
 
   const linkSpots = {
-    found: shown.map((r) => { const pa = where.get(r.a); const pb = where.get(r.b); return pa && pb ? spot(pa, pb) : null; }),
-    maybe: maybe.map(([a, b]) => ({ a, b, at: spot(where.get(a.id)!, where.get(b.id)!) })),
+    found: shown.map((r) => { const pa = where.get(r.a); const pb = where.get(r.b); return pa && pb ? spot(pa, pb, false, 32) : null; }),
+
   };
   // Special items: the first free place beside an island (the other column,
   // level with its top, then a little lower), never on an island, a name,
@@ -138,6 +142,27 @@ export const IslandsMap = ({
     }
     return null;
   });
+  const youSpot = (() => {
+    if (!you) return null;
+    const order = [...pos.keys()].sort((a, b) => (islands[a].id === you.near ? -1 : islands[b].id === you.near ? 1 : a - b));
+    for (const j of order) {
+      const p = pos[j];
+      for (const [fx, dy] of [[0.78, 30], [0.78, 96], [0.62, 104], [0.86, 0]] as const) {
+        const x = (p.x < width / 2 ? fx : 1 - fx) * width;
+        const y = p.y + dy;
+        const r = { x0: x - 34, x1: x + 34, y0: y - 6, y1: y + 70 };
+        if (r.x0 < 0 || r.x1 > width) continue;
+        if (busy.some((b) => r.x0 < b.x1 && r.x1 > b.x0 && r.y0 < b.y1 && r.y1 > b.y0)) continue;
+        busy.push(r);
+        return { x, y };
+      }
+    }
+    // Nowhere free beside the islands: below the last one.
+    const last = pos[pos.length - 1];
+    return last ? { x: width / 2, y: last.y + PIC + 58, bottom: true } : null;
+  })();
+
+  const height = baseHeight + (youSpot && "bottom" in youSpot ? 90 : 0);
 
   return (
     <div className="relative mx-auto" style={{ width, height }}>
@@ -148,7 +173,7 @@ export const IslandsMap = ({
           const pb = where.get(b.id)!;
           return (
             <line key={`m${i}`} x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
-              stroke="hsl(var(--foreground))" strokeOpacity={0.22} strokeWidth={2.5} strokeDasharray="1 8" strokeLinecap="round" />
+              stroke="hsl(var(--foreground))" strokeOpacity={0.3} strokeWidth={3} strokeDasharray="2 9" strokeLinecap="round" />
           );
         })}
         {shown.map((r, i) => {
@@ -171,6 +196,23 @@ export const IslandsMap = ({
           className="pointer-events-none absolute object-contain drop-shadow-[0_6px_8px_rgba(16,42,56,0.18)]"
           style={{ left: sp.left, top: sp.top, width: sp.w }} />
       ))}
+
+      {you && youSpot && (
+        <button type="button" onClick={() => { haptics.tap(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
+          className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: youSpot.x - 34, top: youSpot.y, width: 68 }}>
+          <span className="relative block h-[62px] w-[62px]">
+            <img src={mapPic("sailboat")} alt="" className="absolute bottom-0 left-1/2 w-[54px] -translate-x-1/2 object-contain" draggable={false} />
+            {you.pic ? (
+              <img src={you.pic} alt="" className="absolute left-[4px] top-[2px] h-[36px] w-[36px] object-contain drop-shadow-[0_3px_4px_rgba(16,42,56,0.25)]" draggable={false} />
+            ) : !you.declined ? (
+              <span className="absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white">
+                <Plus className="h-4 w-4" strokeWidth={3} />
+              </span>
+            ) : null}
+          </span>
+          <span className="surface -mt-1 rounded-full px-2.5 py-0.5 text-[12px] font-bold">{you.pic || you.declined ? t("map.you") : t("map.pickYouShort")}</span>
+        </button>
+      )}
 
       {islands.map((isl, i) => {
         const p = pos[i];
@@ -208,30 +250,6 @@ export const IslandsMap = ({
               </span>
             </span>
           </button>
-        );
-      })}
-
-      {linkSpots.maybe.map(({ a, b, at }, i) => {
-        const mx = at.x;
-        const my = at.y;
-        const key = `p${i}`;
-        return (
-          <div key={key}>
-            <button type="button" data-map-link onClick={() => { haptics.tap(); setLink((l) => (l === key ? null : key)); }}
-              aria-label={t("map.maybeAria", { a: islandName(t, a.id), b: islandName(t, b.id) })} aria-expanded={link === key}
-              className="surface absolute flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground"
-              style={{ left: mx - 16, top: my - 16 }}>
-              <HelpCircle className="h-[18px] w-[18px]" strokeWidth={2.2} />
-            </button>
-            {link === key && (
-              <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
-                style={{ left: Math.max(8, Math.min(mx - 140, width - 288)), top: my + 24, width: 280 }}>
-                <p className="text-[17px] font-bold leading-snug">{islandName(t, a.id)} ↔ {islandName(t, b.id)}</p>
-                <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t(bothDays(a, b) >= 21 ? "map.noLinkYet" : "map.maybeLine")}</p>
-                <p className="mt-2 text-[14px] font-semibold text-foreground/80">{t("map.bothDays", { count: bothDays(a, b) })}</p>
-              </div>
-            )}
-          </div>
         );
       })}
 

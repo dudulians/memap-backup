@@ -105,6 +105,13 @@ export const EveningPath = ({
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
 
+  const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
+  useEffect(() => {
+    const sync = () => setAvatarPic(avatarUrl(getAvatar()));
+    window.addEventListener("memap-avatar-changed", sync);
+    return () => window.removeEventListener("memap-avatar-changed", sync);
+  }, []);
+
   // Width of the path box: the screen minus its 16pt gutters.
   const boxRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(358);
@@ -144,10 +151,11 @@ export const EveningPath = ({
 
   const stops = useMemo(() => {
     const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 26);
-    // The current step sits further left, so its pill has room for the name and "Start".
-    if (currentNode >= 0) out[currentNode] = { ...out[currentNode], x: Math.round(Math.max(R_CURRENT + 14, width * 0.2)) };
+    // The current step sits further left, so its pill has room for the name
+    // and "Start"; with an avatar, a little right of it so she stands beside it.
+    if (currentNode >= 0) out[currentNode] = { ...out[currentNode], x: Math.round(Math.max(R_CURRENT + 14 + (avatarPic ? 48 : 0), width * 0.2)) };
     return out;
-  }, [nodes, width, currentNode]);
+  }, [nodes, width, currentNode, avatarPic]);
   const height = stops[chestIndex].y + R_CHEST + 30;
 
   // --- Words ---------------------------------------------------------------
@@ -211,7 +219,7 @@ export const EveningPath = ({
     const icon = s.done && !s.skipped ? <Check className="h-5 w-5" strokeWidth={3} /> : <Icon className={current ? "h-8 w-8" : "h-5 w-5"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "predict" ? predictSub(s.predict) : undefined };
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "predict" ? predictSub(s.predict) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
     if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: t("game.stepSub"), action: t("game.play") };
@@ -232,8 +240,8 @@ export const EveningPath = ({
     return { x: p.x - p.r - 6, y: p.y - (i === currentNode ? 35 : 21) - 4, w: width - p.x + p.r + 6, h: h + 8 };
   };
   const f = stops[focus];
-  // Her avatar (optional) stands to the left of the step to do, if there is room.
-  const avatar: Rect | null = f.x - f.r - 64 >= 0 ? { x: f.x - f.r - 64, y: f.y - 28, w: 56, h: 56 } : null;
+  // Her avatar (optional) stands to the left of the step to do.
+  const avatar: Rect | null = f.x - f.r - 50 >= 0 ? { x: f.x - f.r - 50, y: f.y - 22, w: 48, h: 48 } : null;
 
   const scenery = useMemo(() => {
     const blocked: Rect[] = stops.map((_, i) => pillRect(i));
@@ -264,12 +272,6 @@ export const EveningPath = ({
   const [pastShown, setPastShown] = useState(1);
   const chests = useMemo(() => getChests(), [chestOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
-  useEffect(() => {
-    const sync = () => setAvatarPic(avatarUrl(getAvatar()));
-    window.addEventListener("memap-avatar-changed", sync);
-    return () => window.removeEventListener("memap-avatar-changed", sync);
-  }, []);
 
   // The flame lives in the header (Index renders an empty slot there).
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
@@ -525,9 +527,9 @@ export const EveningPath = ({
           <Scenery pieces={scenery} />
 
           {avatarPic && avatar && (
-            <div aria-hidden="true" className="pointer-events-none absolute" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
+            <div aria-hidden="true" className="path-avatar pointer-events-none absolute z-[4]" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
               <span className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
-              <img src={avatarPic} alt="" width={56} height={56} className="relative h-[56px] w-[56px] object-contain" />
+              <img src={avatarPic} alt="" width={48} height={48} className="relative h-[48px] w-[48px] object-contain" />
             </div>
           )}
 

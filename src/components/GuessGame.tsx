@@ -16,6 +16,7 @@ import { computeCorrelations } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { isoLocal } from "@/lib/doors";
 import { mapPic } from "@/lib/islands";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { markGamePlayed } from "@/lib/pathSteps";
 import { Pressable } from "@/components/ui/pressable";
 
@@ -125,7 +126,8 @@ export const GuessGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
         )}
         {guess !== null && (
           <div className="mt-auto flex flex-col items-center pt-8">
-            <img src={mapPic("sparkles")} alt="" width={44} height={44} className="mb-3" />
+            {/* Her avatar cheers (else the sparkles). */}
+            <img src={avatarUrl(getAvatar()) ?? mapPic("sparkles")} alt="" width={avatarUrl(getAvatar()) ? 72 : 44} height={avatarUrl(getAvatar()) ? 72 : 44} className="mb-3 object-contain" />
             <Pressable tone="teal" haptic="none" onClick={() => { haptics.success(); onClose(true); }} className="h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
               {t("path.continue")}
             </Pressable>

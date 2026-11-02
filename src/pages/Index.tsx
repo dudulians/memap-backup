@@ -72,7 +72,16 @@ const Index = () => {
       }
     };
     window.addEventListener("memap-switch-tab", handler);
-    return () => window.removeEventListener("memap-switch-tab", handler);
+    // An island's "Answer now": Today opens its questions (TodayTab reads it on mount).
+    const answer = (e: Event) => {
+      try { sessionStorage.setItem("memap_answer_now", JSON.stringify((e as CustomEvent).detail ?? {})); } catch { /* Today just opens */ }
+      setActiveTab("cards");
+    };
+    window.addEventListener("memap-answer-now", answer);
+    return () => {
+      window.removeEventListener("memap-switch-tab", handler);
+      window.removeEventListener("memap-answer-now", answer);
+    };
   }, []);
 
   const [notesTargetDate, setNotesTargetDate] = useState<string | undefined>();

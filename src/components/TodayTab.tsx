@@ -183,6 +183,20 @@ export const TodayTab = () => {
   const today = isoLocal(new Date());
   const isViewingToday = selectedDate === today;
 
+  // "Answer now" on an island's sheet (Index stores which questions).
+  useEffect(() => {
+    if (trackers.length === 0) return;
+    let wanted: { ids?: string[]; title?: string } | null = null;
+    try {
+      wanted = JSON.parse(sessionStorage.getItem("memap_answer_now") || "null");
+      sessionStorage.removeItem("memap_answer_now");
+    } catch { /* nothing to open */ }
+    if (!wanted?.ids?.length) return;
+    setStep({ ids: wanted.ids, title: wanted.title });
+    setSelectedDate(isoLocal(new Date()));
+    setDailySessionOpen(true);
+  }, [trackers.length]);
+
   useEffect(() => {
     loadData();
   }, []);

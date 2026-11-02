@@ -44,6 +44,10 @@ export const growthOf = (id: IslandId, days: number): GrowthKind[] => {
   return out;
 };
 
+/** An island whose landmark is already a house grows a tent instead. */
+export const homeWord = (land: [string, number, number, number][] = []): "house" | "tent" =>
+  land.some(([n]) => n === "house" || n === "city_buildings") ? "tent" : "house";
+
 /** Pictures for the growth, placed on the island picture: [picture, width
  *  share, dx, dy] like IslandDef.land. "back" pieces stand behind the
  *  island's own landmark, "front" ones before it. An island that already

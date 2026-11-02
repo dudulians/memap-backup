@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
 import { FindingsView } from "./FindingsView";
-import { TrendChart } from "./TrendChart";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
+import { ChartViews } from "./ChartViews";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -367,7 +367,8 @@ export const PatternsTab = ({ focusIds, only }: { focusIds?: string[]; only?: "f
         {/* --- CHARTS: the line chart over time, back from 1.7.9. */}
         {section === "trends" && (
           <div className="animate-fade-in">
-            <TrendChart trackers={visible} entries={entries} roomy />
+            {/* One chart per link or per question, not a web of lines (her note). */}
+            <ChartViews trackers={trackers} entries={entries} focusIds={focusIds} />
           </div>
         )}
 
