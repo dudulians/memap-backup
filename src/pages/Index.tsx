@@ -216,7 +216,7 @@ const Index = () => {
           (which sits at bottom 6.5rem + h-14, so its top is ~10rem)
           so they don't overlap. On tabs without a "+" FAB the arrow
           ends up a bit higher than strictly needed, which is fine. */}
-      {showBackToTop && (
+      {showBackToTop && activeTab !== "cards" && (
         <button
           onClick={scrollMainToTop}
           aria-label="Scroll to top"

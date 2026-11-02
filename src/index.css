@@ -1862,15 +1862,15 @@
   --scenery-shadow: rgba(20, 60, 80, 0.14);
   --ground-shadow: rgba(16, 42, 56, 0.22);
 
-  --coin-teal: 173 72% 36%;
-  --coin-teal-hi: 170 66% 44%;
-  --lip-teal: 175 76% 25%;
+  --coin-teal: 174 44% 42%;
+  --coin-teal-hi: 172 40% 50%;
+  --lip-teal: 176 46% 30%;
   --coin-slate: 0 0% 100%;
   --coin-slate-hi: 0 0% 100%;
   --lip-slate: 200 26% 80%;
-  --coin-gold: 38 92% 56%;
-  --coin-gold-hi: 44 96% 66%;
-  --lip-gold: 30 80% 40%;
+  --coin-gold: 40 70% 62%;
+  --coin-gold-hi: 44 78% 72%;
+  --lip-gold: 32 54% 46%;
   --coin-sky: 205 78% 46%;
   --coin-sky-hi: 200 80% 56%;
   --lip-sky: 210 70% 32%;

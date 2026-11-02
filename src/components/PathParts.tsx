@@ -10,11 +10,13 @@ import { placeScenery, type Piece, type Rect } from "@/lib/pathScenery";
 import { DAYS_PER_WEEK, type ChestRecord } from "@/lib/pathSteps";
 import { Pressable, type PressTone } from "@/components/ui/pressable";
 
-export const XS = [140, 220, 250, 200, 120, 90, 150, 205];
+// Nodes lean left so every label sits on the right (one rule, her note:
+// "подписи выглядят случайно расположенными").
+export const XS = [110, 160, 185, 150, 95, 70, 115, 160];
 export const DESIGN_W = 340;
-export const R_DAY = 30;
-export const R_CHEST = 46;
-export const LIP = 6;
+export const R_DAY = 25;
+export const R_CHEST = 38;
+export const LIP = 5;
 export const GAP = 26;
 export const WEEK_TONES: PressTone[] = ["teal", "gold", "sky", "lilac"];
 export const WEEK_TITLES = 4;
@@ -58,10 +60,11 @@ export const Road = ({ stops, width, height, walked }: { stops: Stop[]; width: n
   const road = curveThrough(stops, 0, last);
   return (
     <svg width={width} height={height} className="path-road absolute inset-0 overflow-visible" aria-hidden="true">
-      <path d={road} transform="translate(0 3)" fill="none" stroke="hsl(var(--path-under))" strokeWidth={18} strokeLinecap="round" />
-      <path d={road} fill="none" stroke="hsl(var(--path-ribbon))" strokeWidth={16} strokeLinecap="round" />
-      {walked < last && <path d={curveThrough(stops, Math.max(walked, 0), last)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3} strokeDasharray="7 9" strokeLinecap="round" />}
-      {walked > 0 && <path d={curveThrough(stops, 0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="7 9" strokeLinecap="round" />}
+      {/* The road's side: same width, 6px down, the same depth as the coins' lip. */}
+      <path d={road} transform={`translate(0 ${LIP})`} fill="none" stroke="hsl(var(--path-under))" strokeWidth={22} strokeLinecap="round" />
+      <path d={road} fill="none" stroke="hsl(var(--path-ribbon))" strokeWidth={22} strokeLinecap="round" />
+      {walked < last && <path d={curveThrough(stops, Math.max(walked, 0), last)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3.5} strokeDasharray="2 10" strokeLinecap="round" />}
+      {walked > 0 && <path d={curveThrough(stops, 0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={4} strokeDasharray="2 10" strokeLinecap="round" />}
     </svg>
   );
 };
@@ -83,6 +86,63 @@ export const Scenery = ({ pieces }: { pieces: Piece[] }) => (
     ))}
   </>
 );
+
+/** The tile inside every node: white, rounded, a soft shadow, like her
+ *  category icons, so art and line icons read as one family. */
+export const NodeTile = ({ size, children }: { size: number; children: React.ReactNode }) => (
+  <span className="pointer-events-none flex items-center justify-center rounded-[30%] bg-white shadow-[0_1px_3px_rgba(16,42,56,0.18)]"
+    style={{ width: Math.round(size * 0.56), height: Math.round(size * 0.56) }}>
+    {children}
+  </span>
+);
+
+/** One label style for every node: a name, and under it what it means in
+ *  words ("6 questions", "Done"). The current step's second line is its
+ *  action. Labels sit on the right of the node unless there is no room. */
+export const NodeLabel = ({ x, y, w, right, title, sub, action, muted, onClick }: {
+  x: number; y: number; w: number; right: boolean; title: string; sub?: string; action?: boolean; muted?: boolean; onClick?: () => void;
+}) => {
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag type={onClick ? "button" : undefined} onClick={onClick} aria-hidden={onClick ? undefined : true}
+      className={cn("absolute z-[2] flex flex-col", right ? "items-start text-left" : "items-end text-right", !onClick && "pointer-events-none")}
+      style={{ left: x, top: y - 20, width: w, minHeight: 40 }}>
+      <span className={cn("line-clamp-2 text-[15px] font-bold leading-tight", muted ? "text-muted-foreground" : "text-foreground")}>{title}</span>
+      {sub && (
+        <span className={cn("mt-0.5 text-[13px] font-semibold leading-tight", action ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")}>
+          {sub}{action ? " →" : ""}
+        </span>
+      )}
+    </Tag>
+  );
+};
+
+/** The week, calm: a white slab with a coloured dot, the title and the
+ *  seven-day ring with the chest. */
+export const WeekBanner = ({ week, tone, done, onClick, expanded, ...rest }: {
+  week: number; tone: PressTone; done: number; onClick?: () => void; expanded?: boolean; [k: string]: unknown;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Pressable tone="slate" haptic={onClick ? "tap" : "none"} onClick={onClick} aria-expanded={expanded} {...rest}
+      className="h-[62px] w-full rounded-[18px]" faceClassName="justify-between gap-3 px-4 text-left !text-foreground">
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span className={cn("h-3 w-3 shrink-0 rounded-full", `tone-${tone}`)} style={{ background: "hsl(var(--p3-face))" }} />
+        <span className="min-w-0">
+          <span className="block text-[12px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("path.weekN", { n: week + 1 })}</span>
+          <span className="block truncate text-[17px] font-bold leading-tight">{t(`path.title${week % WEEK_TITLES}`)}</span>
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className="text-[14px] font-bold tabular-nums text-muted-foreground">{done}/{DAYS_PER_WEEK}</span>
+        <span className="relative h-[40px] w-[40px]">
+          <WeekRing size={40} done={done} width={3} on="hsl(var(--coin-gold))" off="hsl(var(--foreground) / 0.12)" />
+          <img src={mapPic("chest_closed")} alt="" width={24} height={20} decoding="async" draggable={false} className="pointer-events-none absolute left-[8px] top-[10px]" />
+        </span>
+      </span>
+    </Pressable>
+  );
+};
 
 /** A whole week that isn't today's: finished (above, with its chest) or
  *  coming (below, quiet at 45%). Seven day coins and the chest. */
@@ -128,7 +188,7 @@ export const WeekStrip = ({
     // Room for the notes beside the past days.
     if (kind === "past") stops.slice(0, DAYS_PER_WEEK).forEach((p) => {
       const right = width - (p.x + p.r) >= p.x - p.r;
-      blocked.push({ x: right ? p.x + p.r + 12 : p.x - p.r - 12 - 96, y: p.y - 12, w: 96, h: 24 });
+      blocked.push({ x: right ? p.x + p.r + 12 : p.x - p.r - 12 - 104, y: p.y - 20, w: 104, h: 40 });
     });
     return placeScenery(week, stops, width, blocked, kind === "past" ? [0, 1, 2, 3, 4, 5, 6] : []);
   }, [stops, width, week, kind]);
@@ -144,14 +204,7 @@ export const WeekStrip = ({
 
   return (
     <div className={cn(kind === "coming" && "path-coming")} aria-hidden={kind === "coming" ? true : undefined}>
-      <Pressable tone={tone} haptic={kind === "past" ? "tap" : "none"} onClick={kind === "past" ? onOpenChest : undefined}
-        className="h-[70px] w-full rounded-[20px]" faceClassName="justify-between gap-3 px-[18px] text-left">
-        <span className="min-w-0">
-          <span className="block text-[13px] font-semibold uppercase tracking-[0.06em] opacity-85">{t("path.weekN", { n: week + 1 })}</span>
-          <span className="mt-0.5 block truncate text-[19px] font-bold leading-tight tracking-[-0.015em]">{t(`path.title${week % WEEK_TITLES}`)}</span>
-        </span>
-        {kind === "past" && <span className="text-[15px] font-bold tabular-nums">{DAYS_PER_WEEK}/{DAYS_PER_WEEK}</span>}
-      </Pressable>
+      <WeekBanner week={week} tone={tone} done={kind === "past" ? DAYS_PER_WEEK : 0} onClick={kind === "past" ? onOpenChest : undefined} />
       <div className="relative mx-auto mt-1" style={{ width, height }}>
         <Road stops={stops} width={width} height={height} walked={kind === "past" ? DAYS_PER_WEEK : 0} />
         <Scenery pieces={pieces} />
@@ -172,12 +225,9 @@ export const WeekStrip = ({
             return (
               <div key={i}>
                 <Pressable shape="coin" tone="teal" className="absolute" style={place} onClick={() => dates?.[i] && onOpenDay?.(dates[i])} aria-label={d.toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long" })}>
-                  <Check className="h-6 w-6" strokeWidth={3.2} />
+                  <NodeTile size={p.r * 2}><Check className="h-[55%] w-[55%] text-[hsl(var(--coin-teal))]" strokeWidth={3} /></NodeTile>
                 </Pressable>
-                <p aria-hidden="true" className={cn("pointer-events-none absolute text-[14px] font-semibold leading-tight text-muted-foreground", right ? "text-left" : "text-right")}
-                  style={{ left: right ? p.x + p.r + 12 : p.x - p.r - 12 - 96, top: p.y - 9, width: 96 }}>
-                  {short(d)} {d.getDate()}
-                </p>
+                <NodeLabel x={right ? p.x + p.r + 12 : p.x - p.r - 12 - 104} y={p.y} w={104} right={right} title={`${short(d)} ${d.getDate()}`} sub={t("path.done")} muted />
               </div>
             );
           }

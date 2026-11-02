@@ -483,6 +483,7 @@ const ru: Translation = {
     logNow: "Случилось только что?",
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
+    taskLabel: "Задание",
     priorDays_one: "Уже {{count}} день позади",
     priorDays_few: "Уже {{count}} дня позади",
     priorDays_many: "Уже {{count}} дней позади",

@@ -453,6 +453,7 @@ const en = {
     logNow: "Happened just now?",
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
+    taskLabel: "Small task",
     priorDays_one: "{{count}} day so far",
     priorDays_other: "{{count}} days so far",
     earlierWeeks_one: "Earlier week · {{count}}",

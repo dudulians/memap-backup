@@ -6,24 +6,26 @@ import { isOwnIsland, type BuiltinIsland, type IslandId } from "@/lib/islands";
 import { getOwnIslands } from "@/lib/ownIslands";
 
 export const ISLAND_HSL: Record<BuiltinIsland, [number, number, number]> = {
-  me: [262, 50, 60],
-  love: [334, 60, 62],
-  kids: [142, 42, 42],
-  health: [172, 64, 36],
-  body: [205, 70, 48],
-  pet: [30, 68, 50],
-  parents: [222, 52, 56],
-  world: [190, 58, 38],
-  work: [215, 30, 46],
-  mine: [48, 70, 44],
-  other: [24, 78, 55],
+  // Muted toward the sea-and-sky background (her note: "цвета слишком
+  // насыщенные"), still telling the topics apart.
+  me: [258, 30, 66],
+  love: [338, 38, 68],
+  kids: [145, 26, 50],
+  health: [174, 38, 44],
+  body: [204, 40, 56],
+  pet: [28, 40, 58],
+  parents: [222, 32, 62],
+  world: [192, 34, 46],
+  work: [214, 20, 54],
+  mine: [42, 46, 56],
+  other: [24, 46, 60],
 };
 
 /** Her own islands take a colour from their icon. */
 const ICON_HSL: Record<string, [number, number, number]> = {
-  career: [215, 30, 46], home: [30, 55, 50], books: [48, 70, 44], music: [280, 40, 58], food: [18, 70, 54],
-  coffee: [28, 40, 42], hobbies: [24, 78, 55], growth: [142, 42, 42], travel: [190, 58, 38], family: [222, 52, 56],
-  love: [334, 60, 62], health: [172, 64, 36], fitness: [205, 70, 48], pets: [30, 68, 50], wellbeing: [262, 50, 60],
+  career: [214, 20, 54], home: [28, 36, 58], books: [42, 46, 56], music: [282, 26, 64], food: [16, 44, 60],
+  coffee: [28, 28, 50], hobbies: [24, 46, 60], growth: [145, 26, 50], travel: [192, 34, 46], family: [222, 32, 62],
+  love: [338, 38, 68], health: [174, 38, 44], fitness: [204, 40, 56], pets: [28, 40, 58], wellbeing: [258, 30, 66],
 };
 const hslOf = (id: IslandId): [number, number, number] => {
   if (!isOwnIsland(id)) return ISLAND_HSL[id] ?? ISLAND_HSL.other;
@@ -37,7 +39,7 @@ export const islandStyle = (id: IslandId): CSSProperties => {
   return {
     "--p3-face": `${h} ${s}% ${l}%`,
     "--p3-face-hi": `${h} ${s}% ${Math.min(l + 9, 80)}%`,
-    "--p3-lip": `${h} ${Math.min(s + 6, 90)}% ${l - 15}%`,
+    "--p3-lip": `${h} ${Math.min(s + 6, 90)}% ${l - 13}%`,
     "--p3-ink": "#fff",
   } as CSSProperties;
 };

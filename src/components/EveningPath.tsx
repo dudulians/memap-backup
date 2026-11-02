@@ -17,7 +17,7 @@ import { islandStyle } from "@/lib/islandColors";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
 import { Pressable, type PressTone } from "@/components/ui/pressable";
-import { DESIGN_W, GAP, LIP, R_CHEST, R_DAY, Road, Scenery, WEEK_TITLES, WEEK_TONES, WeekRing, WeekStrip, XS } from "@/components/PathParts";
+import { DESIGN_W, GAP, LIP, NodeLabel, NodeTile, R_CHEST, R_DAY, Road, Scenery, WEEK_TITLES, WEEK_TONES, WeekBanner, WeekRing, WeekStrip, XS } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
@@ -26,8 +26,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 // to the screen.
 const PATH_MAX = 440;
 const TOP = 34;
-const R_STEP = 36;
-const R_CURRENT = 42;
+const R_STEP = 30;
+const R_CURRENT = 34;
 const LABEL_W = 140;
 
 const TASK_ICON: Record<TaskId, LucideIcon> = {
@@ -180,30 +180,33 @@ export const EveningPath = ({
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
   };
 
-  // Short notes beside the coins (her ask: "ставить ноутсы что было сделано").
-  const noteFor = (n: PNode, i: number): string | null => {
-    if (i === focus) return null; // the focus coin gets the bigger label
-    if (n.kind === "past") return `${weekdayShort(new Date(n.date + "T00:00:00"))} · ${answersOn(n.date)}`;
-    if (n.kind === "step") {
-      const s = n.step;
-      if (s.kind === "questions" && !s.done) return `${stepName(s)} · ${s.trackerIds.length - s.answered}`;
-      return stepName(s);
-    }
-    return null;
+  // One label per node, one style (her notes: "ставить ноутсы что было
+  // сделано", "неочевидно что означают числа"): a name, and under it what
+  // it means in words. The current step's second line is its action.
+  const labelOf = (n: PNode, i: number): { title: string; sub?: string; action?: boolean; muted?: boolean } | null => {
+    if (n.kind === "past") return { title: weekdayShort(new Date(n.date + "T00:00:00")), sub: t("path.answers", { count: answersOn(n.date) }), muted: true };
+    if (n.kind === "future") return i === focus ? { title: t("path.tomorrow") } : null;
+    if (n.kind === "chest") return m.weekComplete ? { title: reportLabel, sub: t("path.openReport"), action: true } : null;
+    const s = n.step;
+    const left = s.trackerIds.length - s.answered;
+    if (s.done) return { title: stepName(s), sub: s.kind === "questions" ? t("path.answers", { count: s.answered }) : t("path.done"), muted: true };
+    if (s.kind === "task") return { title: stepName(s), sub: i === currentNode ? t("path.go") : t("path.taskLabel"), action: i === currentNode };
+    const what = s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left });
+    return { title: stepName(s), sub: i === currentNode ? `${s.answered > 0 ? t("path.continue") : t("path.start")} · ${what}` : what, action: i === currentNode };
   };
+  const noteFor = (n: PNode, i: number) => labelOf(n, i);
 
   // Labels go on the side with more room; the focus coin's other side stays
   // free for the avatar (plan §3.2.7).
-  const labels = useMemo(() => stops.map((p, i) => {
-    const right = width - (p.x + p.r) >= p.x - p.r;
-    const room = right ? width - p.x - p.r - 12 : p.x - p.r - 12;
-    const w = Math.max(84, Math.min(LABEL_W, room));
-    const x = right ? p.x + p.r + 12 : p.x - p.r - 12 - w;
-    const isFocus = i === focus && focus !== chestIndex;
-    return { right, rect: { x, y: p.y - (isFocus ? 34 : 18), w, h: isFocus ? 76 : 40 } as Rect };
-  }), [stops, width, focus, chestIndex]);
+  const labels = useMemo(() => stops.map((p) => {
+    const roomRight = width - p.x - p.r - 14;
+    const right = roomRight >= 96 || roomRight >= p.x - p.r - 14;
+    const w = Math.max(84, Math.min(LABEL_W, right ? roomRight : p.x - p.r - 14));
+    const x = right ? p.x + p.r + 14 : p.x - p.r - 14 - w;
+    return { right, rect: { x, y: p.y - 22, w, h: 46 } as Rect };
+  }), [stops, width]);
   const f = stops[focus];
-  const avatar: Rect = { x: labels[focus].right ? f.x - f.r - 68 : f.x + f.r + 8, y: f.y - 30, w: 60, h: 60 };
+  const avatar: Rect = { x: labels[focus].right ? f.x - f.r - 66 : f.x + f.r + 8, y: f.y - 30, w: 56, h: 56 };
 
   const scenery = useMemo(() => {
     const blocked: Rect[] = stops.map((p) => ({ x: p.x - p.r - 4, y: p.y - p.r - 4, w: p.r * 2 + 8, h: p.r * 2 + LIP + 10 }));
@@ -412,13 +415,13 @@ export const EveningPath = ({
           behind={
             <>
               {m.weekComplete && <span aria-hidden="true" className="pointer-events-none absolute -inset-5 rounded-full bg-[radial-gradient(closest-side,hsl(44_96%_60%/0.55),transparent)]" />}
-              <span className="absolute" style={{ left: -9, top: -9 }}>
-                <WeekRing size={size + 18} done={daysDone} on="hsl(var(--coin-gold))" off="hsl(var(--path-under))" />
+              <span className="absolute" style={{ left: -12, top: -12 + LIP / 2 }}>
+                <WeekRing size={size + 24} done={daysDone} on="hsl(var(--coin-gold))" off="hsl(var(--path-under))" />
               </span>
             </>
           }
         >
-          <img src={mapPic(thisChest ? "chest_open_map" : "chest_closed")} alt="" width={thisChest ? 56 : 60} height={thisChest ? 58 : 51} decoding="async" draggable={false} className="pointer-events-none" />
+          <img src={mapPic(thisChest ? "chest_open_map" : "chest_closed")} alt="" width={thisChest ? 46 : 50} height={thisChest ? 48 : 42} decoding="async" draggable={false} className="pointer-events-none" />
           {m.weekComplete && !thisChest && <img src={mapPic("sparkles")} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none absolute -right-2 -top-2" />}
         </Pressable>
       );
@@ -426,7 +429,7 @@ export const EveningPath = ({
     if (n.kind === "past") {
       return (
         <Pressable key={i} {...common} style={place} shape="coin" tone="teal" aria-label={dayTitle(n.date)}>
-          <Check className="h-6 w-6" strokeWidth={3.2} />
+          <NodeTile size={size}><Check className="h-[55%] w-[55%] text-[hsl(var(--coin-teal))]" strokeWidth={3} /></NodeTile>
         </Pressable>
       );
     }
@@ -447,76 +450,36 @@ export const EveningPath = ({
     const tone: PressTone = s.kind === "task" ? "gold" : "teal";
     const style = s.island ? { ...place, ...islandStyle(s.island) } : place;
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "questions" ? Layers : s.auto === "topic" ? Compass : Sparkles;
-    const ringR = p.r + 7;
+    // Rings and the halo centre on the whole coin, face and lip together
+    // (her note: "обводки кривые", the lip used to touch the ring).
+    const cy = p.r + LIP / 2;
+    const ringR = p.r + LIP / 2 + 5;
+    const box = (ringR + 3) * 2;
     const circ = 2 * Math.PI * ringR;
     const part = s.kind === "questions" && s.trackerIds.length > 0 ? s.answered / s.trackerIds.length : 0;
     return (
       <Pressable key={i} {...common} style={style} shape="coin" tone={tone} aria-label={stepName(s)}
         behind={current ? (
           <>
-            <span aria-hidden="true" className="path-halo pointer-events-none absolute -inset-[18px] rounded-full bg-[hsl(var(--p3-face)/0.22)]" style={{ bottom: LIP - 18 }} />
-            <svg aria-hidden="true" className="pointer-events-none absolute" style={{ left: -9, top: -9 }} width={size + 18} height={size + 18}>
-              <circle cx={p.r + 9} cy={p.r + 9} r={ringR} fill="none" stroke="hsl(var(--path-ribbon))" strokeWidth={5} />
+            <svg aria-hidden="true" className="path-halo pointer-events-none absolute overflow-visible" style={{ left: p.r - box / 2, top: cy - box / 2, filter: "drop-shadow(0 0 6px hsl(var(--p3-face) / 0.55))" }} width={box} height={box}>
+              <circle cx={box / 2} cy={box / 2} r={ringR} fill="none" stroke="hsl(var(--p3-face) / 0.32)" strokeWidth={4} />
               {part > 0 && (
-                <circle cx={p.r + 9} cy={p.r + 9} r={ringR} fill="none" stroke="hsl(var(--p3-face))" strokeWidth={5} strokeLinecap="round"
-                  strokeDasharray={`${circ * part} ${circ}`} transform={`rotate(-90 ${p.r + 9} ${p.r + 9})`} />
+                <circle cx={box / 2} cy={box / 2} r={ringR} fill="none" stroke="hsl(var(--p3-face))" strokeWidth={4} strokeLinecap="round"
+                  strokeDasharray={`${circ * part} ${circ}`} transform={`rotate(-90 ${box / 2} ${box / 2})`} />
               )}
             </svg>
           </>
         ) : undefined}
       >
         {s.island ? (
-          <img src={mapPic("icon_" + islandDef(s.island!).icon)} alt="" width={Math.round(p.r * 1.25)} height={Math.round(p.r * 1.25)} decoding="async" draggable={false} className="pointer-events-none" />
+          <img src={mapPic("icon_" + islandDef(s.island!).icon)} alt="" width={Math.round(size * 0.62)} height={Math.round(size * 0.62)} decoding="async" draggable={false} className="pointer-events-none" />
         ) : (
-          <Icon className={current ? "h-9 w-9" : "h-7 w-7"} strokeWidth={2.3} />
+          <NodeTile size={size}><Icon className="h-[55%] w-[55%] text-[hsl(var(--p3-face))]" strokeWidth={2.4} /></NodeTile>
         )}
         {s.done && <DoneBadge />}
       </Pressable>
     );
   };
-
-  // The focus coin's label: what to do now, without a tap.
-  const focusLabel = (() => {
-    const l = labels[focus];
-    const align = l.right ? "items-start text-left" : "items-end text-right";
-    const pos: CSSProperties = { left: l.rect.x, top: f.y - 30, width: l.rect.w };
-    if (currentNode >= 0) {
-      const s = m.steps[m.current];
-      if (open === currentNode) return null; // its bubble has the same button
-      if (s.kind === "task") {
-        return (
-          <div className={cn("absolute z-10 flex flex-col gap-1.5", align)} style={pos}>
-            <Pressable tone="gold" onClick={() => doTask(s.task!)} className="h-[42px] rounded-xl" faceClassName="px-4 text-[14px] font-extrabold uppercase tracking-[0.06em]">{t("path.go")}</Pressable>
-            <span className="text-[15px] font-semibold leading-tight text-foreground">{stepName(s)}</span>
-          </div>
-        );
-      }
-      const left = s.trackerIds.length - s.answered;
-      return (
-        <div className={cn("absolute z-10 flex flex-col gap-1.5", align)} style={pos}>
-          <Pressable tone="teal" haptic="medium" onClick={() => startStep(s)} style={s.island ? islandStyle(s.island) : undefined} className="h-[42px] rounded-xl" faceClassName="px-4 text-[14px] font-extrabold uppercase tracking-[0.06em]">
-            {s.answered > 0 ? t("path.continue") : t("path.start")}
-          </Pressable>
-          <span className="text-[15px] font-semibold leading-tight text-foreground">
-            {stepName(s)} · {s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left })}
-          </span>
-        </div>
-      );
-    }
-    if (m.weekComplete) {
-      return (
-        <div className={cn("absolute z-10 flex flex-col gap-1.5", align)} style={pos}>
-          <Pressable tone="gold" haptic="medium" onClick={openThisChest} className="h-[42px] rounded-xl" faceClassName="px-4 text-[14px] font-extrabold uppercase tracking-[0.06em]">{t("path.openReport")}</Pressable>
-          <span className="text-[15px] font-semibold leading-tight text-foreground">{reportLabel}</span>
-        </div>
-      );
-    }
-    return (
-      <p className={cn("absolute z-10 text-[15px] font-semibold leading-tight text-foreground", l.right ? "text-left" : "text-right")} style={{ left: l.rect.x, top: f.y - 10, width: l.rect.w }}>
-        {t("path.tomorrow")}
-      </p>
-    );
-  })();
 
   // A fragment, so the banner's sticky range is all of Today (it stays on
   // top while the question list scrolls under it), not just the path.
@@ -556,20 +519,8 @@ export const EveningPath = ({
       {/* The week: a raised banner. Tap: how far along, and last week's report.
           Stuck flush with the top of the scroll area, so nothing peeks above. */}
       <div className="sticky -top-4 z-[5] animate-fade-in">
-        <Pressable tone={tone} onClick={() => setOpen((o) => (o === "banner" ? null : "banner"))} data-path-stop="banner"
-          aria-expanded={open === "banner"} className="h-[82px] w-full rounded-[20px]" faceClassName="justify-between gap-3 px-[18px] text-left">
-          <span className="min-w-0">
-            <span className="block text-[13px] font-semibold uppercase tracking-[0.06em] opacity-85">{t("path.weekN", { n: m.week + 1 })}</span>
-            <span className="mt-0.5 block truncate text-[22px] font-bold leading-tight tracking-[-0.015em]">{title}</span>
-          </span>
-          <span className="flex shrink-0 items-center gap-2">
-            <span className="text-[15px] font-bold tabular-nums">{daysDone}/{DAYS_PER_WEEK}</span>
-            <span className="relative h-[52px] w-[52px]">
-              <WeekRing size={52} done={daysDone} width={3.5} on="currentColor" off="color-mix(in srgb, currentColor 30%, transparent)" />
-              <img src={mapPic("chest_closed")} alt="" width={32} height={27} decoding="async" draggable={false} className="pointer-events-none absolute left-[10px] top-[12px]" />
-            </span>
-          </span>
-        </Pressable>
+        <WeekBanner week={m.week} tone={tone} done={daysDone} expanded={open === "banner"} data-path-stop="banner"
+          onClick={() => setOpen((o) => (o === "banner" ? null : "banner"))} />
         {open === "banner" && (
           <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute left-0 right-0 top-full z-20 mt-2 rounded-[20px] px-4 py-3.5" style={{ transformOrigin: "50% 0" }}>
             {head(t("path.weekProgress", { k: daysDone }), m.weekComplete ? t("path.reportReady") : `${reportLabel} · ${t("path.toGo", { count: toGo })}`)}
@@ -589,19 +540,15 @@ export const EveningPath = ({
           {/* Her art beside the coins: static, seeded by the week. */}
           <Scenery pieces={scenery} />
 
-          {/* Notes beside the coins: what each one was or is. */}
+          {/* One label per node, one style, on the right. */}
           {nodes.map((n, i) => {
-            const note = noteFor(n, i);
-            if (note === null) return null;
+            const lab = labelOf(n, i);
+            if (!lab) return null;
+            if (i === currentNode && open === currentNode) return null; // its bubble says the same
             const l = labels[i];
-            const done = n.kind === "past" || (n.kind === "step" && n.step.done);
-            return (
-              <p key={`note${i}`} aria-hidden="true"
-                className={cn("pointer-events-none absolute z-[1] line-clamp-2 text-[14px] font-semibold leading-tight", done ? "text-muted-foreground" : "text-foreground", l.right ? "text-left" : "text-right")}
-                style={{ left: l.rect.x, top: stops[i].y - 9, width: l.rect.w }}>
-                {note}
-              </p>
-            );
+            const act = i === currentNode && n.kind === "step" ? () => (n.step.kind === "task" ? doTask(n.step.task!) : startStep(n.step))
+              : n.kind === "chest" && m.weekComplete ? openThisChest : undefined;
+            return <NodeLabel key={`note${i}`} x={l.rect.x} y={stops[i].y} w={l.rect.w} right={l.right} {...lab} onClick={act} />;
           })}
 
           {avatarPic && (
@@ -611,7 +558,6 @@ export const EveningPath = ({
             </div>
           )}
           {nodes.map((n, i) => coin(n, i))}
-          {focusLabel}
           {typeof open === "number" && bubble(open)}
         </div>
       </section>
