@@ -122,6 +122,8 @@ const ru: Translation = {
   },
   // "Guess", the daily mini-game (Nov 2 2026)
   game: {
+    locked: "Откроется после 3 дней с ответами.",
+    lockedShort: "После 3 дней с ответами",
     step: "Угадай",
     stepSub: "Мини-игра",
     play: "Играть",
@@ -554,6 +556,7 @@ const ru: Translation = {
     earlierWeeks_many: "Прошлые недели · {{count}}",
     earlierWeeks_other: "Прошлые недели · {{count}}",
     chest: {
+    openReward: "Открыть награду",
       ready: "Сундук готов",
       open: "Открыть",
       mapOfWeek: "Карта твоей недели",

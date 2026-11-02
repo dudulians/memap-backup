@@ -108,6 +108,8 @@ const en = {
   },
   // "Guess", the daily mini-game (Nov 2 2026)
   game: {
+    locked: "Opens after 3 days of answers.",
+    lockedShort: "After 3 days of answers",
     step: "Guess",
     stepSub: "Mini-game",
     play: "Play",
@@ -506,6 +508,7 @@ const en = {
     earlierWeeks_one: "Earlier week · {{count}}",
     earlierWeeks_other: "Earlier weeks · {{count}}",
     chest: {
+    openReward: "Open your reward",
       ready: "Your chest is ready",
       open: "Open",
       mapOfWeek: "A map of your week",

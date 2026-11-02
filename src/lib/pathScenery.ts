@@ -13,16 +13,16 @@ const ART: Record<string, { px: [number, number]; max: number }> = {
   island_waterfall: { px: [240, 155], max: 96 },
   pine_tree: { px: [127, 149], max: 64 },
   green_tree: { px: [155, 154], max: 72 },
-  flowering_bush: { px: [126, 85], max: 60 },
+  flowering_bush: { px: [126, 85], max: 50 },
   cherry_blossom_tree: { px: [215, 155], max: 88 },
   orange_tree: { px: [169, 148], max: 76 },
   palm_trees: { px: [137, 142], max: 68 },
   sailboat: { px: [123, 128], max: 62 },
-  lavender: { px: [143, 105], max: 72 },
-  round_bush: { px: [111, 67], max: 56 },
-  single_rock: { px: [79, 48], max: 40 },
+  lavender: { px: [143, 105], max: 44 },
+  round_bush: { px: [111, 67], max: 48 },
+  single_rock: { px: [79, 48], max: 36 },
   cloud_small: { px: [106, 59], max: 53 },
-  zen_stones: { px: [127, 121], max: 60 },
+  zen_stones: { px: [127, 121], max: 40 },
   camping_tent: { px: [201, 119], max: 90 },
   wooden_signpost: { px: [107, 131], max: 54 },
 };
@@ -36,11 +36,13 @@ const FLOATS = new Set(["cloud_small"]);
  *  (seven gaps: six between stops, one before the chest). Earned things
  *  (lighthouse, bridge, flag, balloon, rainbow, chest) are never scenery.
  *  rock_cluster is left out: its art is cut off at the top. */
+// Since her reference picture (Nov 2): only small, quiet pieces (bushes,
+// stones, clouds), so nothing looks thrown in at random.
 const SETS: string[][] = [
-  ["island_plain", "pine_tree", "round_bush", "cloud_small", "single_rock", "island_lotus", "flowering_bush"],
-  ["green_tree", "flowering_bush", "lavender", "single_rock", "sailboat", "cloud_small", "pine_tree"],
-  ["cherry_blossom_tree", "orange_tree", "zen_stones", "round_bush", "island_rocky", "cloud_small", "lavender"],
-  ["palm_trees", "lavender", "zen_stones", "camping_tent", "island_waterfall", "wooden_signpost", "round_bush"],
+  ["round_bush", "cloud_small", "single_rock", "flowering_bush", "cloud_small", "lavender", "single_rock"],
+  ["lavender", "cloud_small", "round_bush", "single_rock", "flowering_bush", "cloud_small", "zen_stones"],
+  ["flowering_bush", "single_rock", "cloud_small", "round_bush", "lavender", "cloud_small", "round_bush"],
+  ["single_rock", "round_bush", "cloud_small", "lavender", "flowering_bush", "cloud_small", "round_bush"],
 ];
 
 export interface Rect { x: number; y: number; w: number; h: number }

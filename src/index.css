@@ -2085,3 +2085,6 @@
 /* The Map tab's own calm sea (Nov 2 2026). */
 .map-sea { background: linear-gradient(180deg, #e3f3f8 0%, #c8e9f2 35%, #b2dfec 100%); }
 [data-theme="aurora"] .map-sea { background: linear-gradient(180deg, hsl(200 40% 16%) 0%, hsl(195 45% 20%) 50%, hsl(190 45% 22%) 100%); }
+
+/* A not-yet tap on a flat path node: a short wiggle. */
+.path-wiggle-flat { animation: pathWiggle 420ms ease-in-out 1; }
