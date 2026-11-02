@@ -12,7 +12,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Dices, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Telescope, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, Compass, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Telescope, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
@@ -29,7 +29,8 @@ import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
 import { DAY_AHEAD, NodePill, PathNode, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, Scenery, WEEK_TITLES, WeekBanner, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
-import { GuessGame, hasGame } from "@/components/GuessGame";
+import { HunchGame } from "@/components/HunchGame";
+import { hunchTarget, readyHunch } from "@/lib/hunches";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 
@@ -127,9 +128,11 @@ export const EveningPath = ({
   }, []);
 
   // --- Nodes and where they sit --------------------------------------------
-  // The game step always shows (her: "а где игра?"); until there is a round
+  // The game step always shows (her: "а где игра?"); until there are two questions
   // to play it waits, saying when it opens.
-  const canPlay = useMemo(() => hasGame(trackers, entries), [trackers, entries]);
+  // "Your hunch" works from day 1: any two questions will do.
+  const canPlay = useMemo(() => hunchTarget(trackers, entries) !== null, [trackers, entries]);
+  const hunchReady = useMemo(() => !!readyHunch(trackers, entries), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
     for (const step of m.steps) out.push({ kind: "step", step });
@@ -172,7 +175,7 @@ export const EveningPath = ({
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "fill") return t("path.fillTitle", { day: weekdayName(s.date!) });
-    if (s.kind === "game") return t("game.step");
+    if (s.kind === "game") return t("hunch.step");
     if (s.kind === "predict") return t(s.predict && s.predict.date !== isoDay(new Date()) ? "predict.stepTomorrow" : "predict.stepTonight");
     if (s.kind === "act") return t("act.step");
     if (s.kind === "test") return t("experiment.stepDone");
@@ -215,7 +218,7 @@ export const EveningPath = ({
         : { look: "gold", icon: <Gift className="h-6 w-6" strokeWidth={2.2} />, title: reportLabel };
     }
     const s = n.step;
-    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Dices : s.kind === "fill" ? CalendarDays
+    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "predict" ? Telescope : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
       : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
@@ -223,10 +226,10 @@ export const EveningPath = ({
     const icon = s.done && !s.skipped && !replay ? <Check className="h-5 w-5" strokeWidth={3} /> : <Icon className={current ? "h-8 w-8" : "h-5 w-5"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "unload" ? t("unload.sub") : s.kind === "predict" ? predictSub(s.predict) : s.fresh && !s.done ? t("path.newIsland") : undefined };
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.kind === "predict" ? predictSub(s.predict) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
-    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: t("game.stepSub"), action: t("game.play") };
+    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("predict.see") : t("hunch.go") };
     if (s.kind === "predict") return { look, icon, hue, title: stepName(s), sub: predictSub(s.predict), action: s.predict?.stage === "reveal" ? t("predict.see") : t("game.play") };
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
     if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("predict.see") };
@@ -408,10 +411,10 @@ export const EveningPath = ({
       );
     }
     if (s.kind === "game") {
-      if (!canPlay) return head(t("game.step"), t("game.locked"));
+      if (!canPlay) return head(t("hunch.step"), t("hunch.needTwo"));
       return (
         <>
-          {head(t("game.step"), s.done ? t("path.done") : t("game.line"))}
+          {head(t("hunch.step"), s.done ? t("hunch.doneToday") : t("hunch.sub"))}
           {!s.done && button(t("game.play"), () => startStep(s))}
         </>
       );
@@ -551,7 +554,7 @@ export const EveningPath = ({
             return (
               <div key={i}>
                 {!(i === currentNode && open === currentNode) && (
-                  <NodePill stop={p} title={v.title} sub={lockedGame ? t("game.lockedShort") : v.sub} action={v.action} onAction={act}
+                  <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}
                     maxRight={width} big={i === currentNode} muted={v.look === "done" || v.look === "todo"}
                     second={i === currentNode && n.kind === "step" && n.step.kind === "task" ? t("path.skip") : undefined}
                     onSecond={() => { if (n.kind === "step" && n.step.task) { skipTask(n.step.task); setTick((k) => k + 1); } }} />
@@ -596,7 +599,7 @@ export const EveningPath = ({
       )}
 
       {gameOpen && (
-        <GuessGame trackers={trackers} entries={entries} onClose={() => { setGameOpen(false); setTick((k) => k + 1); }} />
+        <HunchGame trackers={trackers} entries={entries} onClose={() => { setGameOpen(false); setTick((k) => k + 1); }} />
       )}
 
       {chestOpen && (

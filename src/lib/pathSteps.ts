@@ -12,6 +12,7 @@ import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { predictState, type PredictState } from "@/lib/predict";
 import { litTrackers } from "@/lib/lighthouses";
 import { currentExperiment, experimentOver, getExperiments } from "@/lib/experiments";
+import { hunchDoneToday, readyHunch } from "@/lib/hunches";
 
 export const DAYS_PER_WEEK = 7;
 const MAX_PER_STEP = 7;
@@ -27,7 +28,7 @@ const TASKS_LATER: TaskId[] = ["experiment", "newIsland"];
 export interface Step {
   id: string;
   /** "fill": a missed day (yesterday or the day before) to answer first */
-  /** "game": the day's "Guess" round (src/components/GuessGame.tsx) */
+  /** "game": the day's hunch (src/components/HunchGame.tsx; was "Guess") */
   /** "predict": guess tonight's answers, then see (src/lib/predict.ts) */
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
   /** "test": her week of trying one change is over: see how it went */
@@ -229,14 +230,6 @@ export const markUnloadPlayed = () => {
   try { localStorage.setItem(UNLOAD_KEY, isoLocal(new Date())); } catch { /* plays again, harmless */ }
 };
 
-const GAME_KEY = "memap_game_played";
-/** The day's "Guess" round was played. */
-export const gamePlayedToday = () => {
-  try { return localStorage.getItem(GAME_KEY) === isoLocal(new Date()); } catch { return false; }
-};
-export const markGamePlayed = () => {
-  try { localStorage.setItem(GAME_KEY, isoLocal(new Date())); } catch { /* plays again, harmless */ }
-};
 
 /** Mark a task done today (she opened the calendar, the chart, the map). */
 export const markTaskDone = (task: TaskId) => {
@@ -445,7 +438,8 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.
   if (steps.some((s) => s.kind === "questions")) {
-    steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: gamePlayedToday() });
+    // The day's hunch: done once made (or "not now"), unless a checked one waits.
+    steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: hunchDoneToday() && !readyHunch(trackers, entries) });
     // Her "разгрузи свой мозг": a calm game any time, from day 1.
     steps.push({ id: "unload", kind: "unload", trackerIds: [], answered: 0, done: unloadPlayedToday() });
   }
