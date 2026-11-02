@@ -151,6 +151,7 @@ export const EveningPath = ({
   const height = stops[chestIndex].y + R_CHEST + LIP + 28;
 
   // --- Words ---------------------------------------------------------------
+  const reportLabel = m.week === 0 ? t("path.firstReport") : t("path.weekReport");
   const lang = i18n.language?.startsWith("ru") ? "ru-RU" : "en-US";
   const weekdayShort = (d: Date) => {
     const w = d.toLocaleDateString(lang, { weekday: "short" }).replace(".", "").slice(0, 3);
@@ -266,7 +267,6 @@ export const EveningPath = ({
 
   const tone = WEEK_TONES[m.week % WEEK_TONES.length];
   const title = t(`path.title${m.week % WEEK_TITLES}`);
-  const reportLabel = m.week === 0 ? t("path.firstReport") : t("path.weekReport");
   const daysDone = m.pastInWeek.length + (m.todayCounted ? 1 : 0);
   const toGo = DAYS_PER_WEEK - daysDone;
 
