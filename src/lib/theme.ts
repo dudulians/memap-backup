@@ -64,6 +64,10 @@ export const applyTheme = (theme: AppTheme): void => {
   document.documentElement.setAttribute("data-theme", theme);
 };
 
+/** Night or day on the new screens: dark Aurora with her night pack, or Aurora Light. */
+export const isNight = (): boolean => getTheme() === "aurora";
+export const toggleNight = (): void => setTheme(isNight() ? "aurora-light" : "aurora");
+
 export const setTheme = (theme: AppTheme): void => {
   localStorage.setItem(THEME_KEY, theme);
   applyTheme(theme);

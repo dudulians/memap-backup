@@ -9,6 +9,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandOf, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
+import { predictState, type PredictState } from "@/lib/predict";
+import { litTrackers } from "@/lib/lighthouses";
 
 export const DAYS_PER_WEEK = 7;
 const MAX_PER_STEP = 7;
@@ -24,7 +26,10 @@ export interface Step {
   id: string;
   /** "fill": a missed day (yesterday or the day before) to answer first */
   /** "game": the day's "Guess" round (src/components/GuessGame.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game";
+  /** "predict": guess tonight's answers, then see (src/lib/predict.ts) */
+  /** "act": a rule she set was reached: time for her plan (lighthouses) */
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "predict" | "act";
+  predict?: PredictState;
   /** fill: the day */
   date?: string;
   /** task: skipped for today */
@@ -182,6 +187,15 @@ export const skipTask = (task: TaskId) => {
   writeTasks(s);
 };
 
+const ACT_KEY = "memap_act_seen";
+/** She looked at her lit rules today. */
+export const markActSeen = () => {
+  try { localStorage.setItem(ACT_KEY, isoLocal(new Date())); } catch { /* shows again, harmless */ }
+};
+const actSeenToday = () => {
+  try { return localStorage.getItem(ACT_KEY) === isoLocal(new Date()); } catch { return false; }
+};
+
 const GAME_KEY = "memap_game_played";
 /** The day's "Guess" round was played. */
 export const gamePlayedToday = () => {
@@ -268,11 +282,22 @@ export const pathStart = (today: string): string => {
 const CHESTS_KEY = "memap_week_chests";
 /** What a week's chest showed when it was opened: saved once, reopened as is. */
 export interface ChestLine { label: string; k: number; n: number; main?: boolean; calm?: boolean }
-export interface ChestRecord { openedAt: string; lines: ChestLine[]; fact?: string; reward: string; placed?: boolean }
+export interface ChestRecord {
+  openedAt: string; lines: ChestLine[]; fact?: string; reward: string; placed?: boolean;
+  /** the week's insight, said in words when opened */
+  insight?: string; insightOther?: string; insightEarly?: boolean;
+  /** "Predict" this week: guessed k of n */
+  guesses?: { hit: number; n: number };
+  /** a new title for her (CHEST_TITLES) */
+  title?: string;
+}
 
 /** Things a chest gives, one per week in turn. They go on the Map, never on the path. */
 export const CHEST_REWARDS = ["wooden_bridge", "hot_air_balloon", "marker_flag", "rainbow"];
 export const rewardFor = (week: number) => CHEST_REWARDS[week % CHEST_REWARDS.length];
+/** A new title each week, the last one kept. */
+export const CHEST_TITLES = ["explorer", "pathfinder", "navigator", "cartographer", "captain", "keeper", "legend"];
+export const titleFor = (week: number) => CHEST_TITLES[Math.min(week, CHEST_TITLES.length - 1)];
 
 export const getChests = (): Record<number, ChestRecord> => {
   try {
@@ -335,6 +360,16 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     break;
   }
 
+  // "Predict" (works from day 1): in the morning, before anything is
+  // answered, it comes first; otherwise after the day's task.
+  const predict = activeQuestions(trackers).length > 0 ? predictState(trackers, entries, now) : null;
+  const predictStep = (p: PredictState): Step => ({ id: "predict", kind: "predict", predict: p, trackerIds: [], answered: 0, done: p.stage === "done" });
+  let predictFirst = false;
+  if (predict?.stage === "guess" && predict.date === today && answeredToday.size === 0) {
+    steps.push(predictStep(predict));
+    predictFirst = true;
+  }
+
   let leftToday = 0;
   for (const g of questionGroups(trackers)) {
     const answered = g.ids.filter((id) => answeredToday.has(id)).length;
@@ -355,6 +390,12 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   if (task && steps.some((s) => s.kind === "questions")) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
+  // A rule she set was reached (a lit lighthouse): her plan, once a day.
+  const lit = litTrackers(trackers, entries);
+  if (lit.size > 0) {
+    steps.push({ id: "act", kind: "act", trackerIds: [...lit], answered: 0, done: actSeenToday() });
+  }
+  if (predict && !predictFirst) steps.push(predictStep(predict));
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.
   if (steps.some((s) => s.kind === "questions")) {

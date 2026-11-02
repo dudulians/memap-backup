@@ -4,13 +4,14 @@ import { TodayTab } from "@/components/TodayTab";
 import { MapTab } from "@/components/MapTab";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { NotesTab } from "@/components/NotesTab";
-import { CalendarDays, Map as MapIcon, NotebookPen, Settings, ArrowUp } from "lucide-react";
+import { CalendarDays, Map as MapIcon, Moon, NotebookPen, Settings, Sun, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
-import { applyTheme, getTheme } from "@/lib/theme";
+import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 import seaDawn from "@/assets/bg/sea-dawn.webp";
+import seaNight from "@/assets/bg/sea-night.webp";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -37,7 +38,15 @@ const Index = () => {
   const [tourOpen, setTourOpen] = useState(false);
   // Report buttons ask the Map to open a sheet straight away (Findings for
   // all questions) instead of landing on the bare globe.
-  const [mapOpen, setMapOpen] = useState<"all" | null>(null);
+  const [mapOpen, setMapOpen] = useState<"all" | "overview" | "trends" | "signals" | null>(null);
+  // Night or day (her night pack, Nov 2 2026): a moon/sun in the header.
+  // Pictures are picked per theme, so the tabs redraw on a switch.
+  const [night, setNight] = useState(() => isNight());
+  useEffect(() => {
+    const sync = () => { setNight(isNight()); setRefreshKey((k) => k + 1); };
+    window.addEventListener("memap-theme-changed", sync);
+    return () => window.removeEventListener("memap-theme-changed", sync);
+  }, []);
   useEffect(() => {
     applyTheme(getTheme());
     if (shouldShowTour()) {
@@ -57,7 +66,7 @@ const Index = () => {
         if (tab === "patterns" && (e as CustomEvent).detail?.open === "all") {
           const section = (e as CustomEvent).detail?.section ?? "findings";
           try { localStorage.setItem("memap_patterns_section", section); } catch { /* ignore */ }
-          setMapOpen("all");
+          setMapOpen(section === "overview" || section === "trends" || section === "signals" ? section : "all");
         }
         setActiveTab(tab);
       }
@@ -159,7 +168,7 @@ const Index = () => {
 
   // Content fades in under the header and out behind the floating tab bar.
   // On Today the week banner sticks to the top and covers what scrolls.
-  const CONTENT_MASK = activeTab === "cards"
+  const CONTENT_MASK = activeTab === "cards" || activeTab === "notes"
     ? "linear-gradient(to bottom, #000 0, #000 calc(100% - 120px), transparent calc(100% - 24px))"
     : "linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 120px), transparent calc(100% - 24px))";
 
@@ -169,7 +178,7 @@ const Index = () => {
           only (index.css); the Map tab draws its own sea. Fixed: the tab
           content scrolls over it. */}
       {activeTab !== "patterns" && (
-        <div aria-hidden="true" className="memap-sea-bg pointer-events-none absolute inset-0 -z-10" style={{ backgroundImage: `url(${seaDawn})` }} />
+        <div aria-hidden="true" className="memap-sea-bg pointer-events-none absolute inset-0 -z-10" style={{ backgroundImage: `url(${night ? seaNight : seaDawn})` }} />
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
@@ -177,6 +186,14 @@ const Index = () => {
         {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
         <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
         <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
+        <button
+          type="button"
+          onClick={() => { haptics.tap(); toggleNight(); }}
+          aria-label={night ? t("common.dayMode") : t("common.nightMode")}
+          className="absolute right-12 bottom-1.5 h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {night ? <Sun className="h-5 w-5" strokeWidth={2} /> : <Moon className="h-5 w-5" strokeWidth={2} />}
+        </button>
         <button
           data-coachmark="settings-button"
           onClick={() => setSettingsModalOpen(true)}

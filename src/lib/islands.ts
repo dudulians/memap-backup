@@ -15,7 +15,17 @@ const PICS = new Map(
   Object.entries(import.meta.glob("@/assets/map/*.webp", { eager: true, import: "default" }) as Record<string, string>)
     .map(([path, url]) => [path.split("/").pop()!.replace(".webp", ""), url]),
 );
-export const mapPic = (name: string): string => PICS.get(name) ?? "";
+// Her night pack (Nov 2 2026): the same names, drawn for the night sea.
+const NIGHT = new Map(
+  Object.entries(import.meta.glob("@/assets/map-night/*.webp", { eager: true, import: "default" }) as Record<string, string>)
+    .map(([path, url]) => [path.split("/").pop()!.replace(".webp", ""), url]),
+);
+/** Night on the new screens (classic keeps its own look). */
+export const isNightMap = (): boolean =>
+  typeof document !== "undefined" &&
+  document.documentElement.getAttribute("data-theme") === "aurora" &&
+  document.documentElement.getAttribute("data-ui") === "new";
+export const mapPic = (name: string): string => (isNightMap() && NIGHT.get(name)) || PICS.get(name) || "";
 
 export type BuiltinIsland = "me" | "love" | "kids" | "health" | "body" | "pet" | "parents" | "world" | "work" | "mine" | "other";
 /** A built-in island, or one she made ("own-…"). */

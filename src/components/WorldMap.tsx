@@ -20,20 +20,26 @@ const ease = (x: number) => (x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 
 interface Thing { lon: number; lat: number; w: number; base?: string; land?: [string, number, number, number][]; cloud?: boolean; locked?: boolean; fx?: number; fy?: number; island?: Island }
 
 // Scenery all over the ball so rolling always brings something new; kept away from her islands.
+const UNEXPLORED: Thing[] = [{ lon: 30, lat: 36, fx: 318, fy: 64, w: 104 }, { lon: -38, lat: 31, w: 104 }, { lon: -32, lat: -38, w: 104 }, { lon: -150, lat: 2, w: 116 }, { lon: 122, lat: -12, w: 116 }, { lon: 178, lat: 50, w: 104 }]
+  .map((l) => ({ ...l, locked: true }));
+/** Angle between two points on the ball, in degrees. */
+const apart = (a: { lon: number; lat: number }, b: { lon: number; lat: number }) => {
+  const va = vec(a.lon, a.lat), vb = vec(b.lon, b.lat);
+  return Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2]))) * 180 / Math.PI;
+};
 const SCENERY: Thing[] = (() => {
   const kinds: Omit<Thing, "lon" | "lat">[] = [{ w: 130, base: "island_waterfall" }, { w: 120, base: "island_plain", land: [["palm_trees", .6, .02, -.46]] }, { w: 110, base: "island_rocky", land: [["pine_tree", .42, .06, -.5]] },
-    { w: 110, cloud: true }, { w: 120, base: "island_plain", land: [["green_tree", .45, .04, -.44]] }, { w: 110, base: "island_mountain" }, { w: 100, base: "island_rocky" }, { w: 100, cloud: true }];
+    { w: 120, base: "island_plain", land: [["green_tree", .45, .04, -.44]] }, { w: 110, base: "island_mountain" }, { w: 100, base: "island_rocky" }];
   const out: Thing[] = [], N = 72;
   for (let i = 0; i < N; i++) {
     const y = 1 - 2 * (i + .5) / N, lat = Math.asin(y) * 180 / Math.PI, lon = ((i * 137.508) % 360) - 180;
     const c = Math.cos(lat * Math.PI / 180) * Math.cos(lon * Math.PI / 180);
     if (Math.acos(Math.max(-1, Math.min(1, c))) * 180 / Math.PI < 36) continue;
-    out.push({ lon, lat, ...kinds[i % kinds.length] });
+    if (UNEXPLORED.some((u) => apart(u, { lon, lat }) < 17)) continue;
+    out.push({ lon, lat, ...kinds[out.length % kinds.length] });
   }
   return out;
 })();
-const UNEXPLORED: Thing[] = [{ lon: 30, lat: 36, fx: 318, fy: 64, w: 104 }, { lon: -38, lat: 31, w: 104 }, { lon: -32, lat: -38, w: 104 }, { lon: -150, lat: 2, w: 116 }, { lon: 122, lat: -12, w: 116 }, { lon: 178, lat: 50, w: 104 }]
-  .map((l) => ({ ...l, locked: true }));
 const BOAT: Thing = { lon: 1, lat: 5, fx: 210, fy: 322, w: 46 };
 
 export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; routes: Route[]; onOpen: (id: IslandId) => void }) => {
@@ -194,7 +200,7 @@ export const WorldMap = ({ islands, routes, onOpen }: { islands: Island[]; route
       <canvas ref={cv} className="absolute inset-0 h-full w-full touch-none" aria-label={t("map.aria")} />
       {/* One switch only, in the Map tab's header (her note, Nov 2). */}
       {hint && !flat && (
-        <div className="pointer-events-none absolute left-1/2 top-[60px] z-[2] -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-3.5 py-2 text-sm font-bold text-muted-foreground shadow-sm">{t("map.hint")}</div>
+        <div className="pointer-events-none absolute left-1/2 top-[40px] z-[2] -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-3.5 py-2 text-sm font-bold text-muted-foreground shadow-sm">{t("map.hint")}</div>
       )}
       <button type="button" onClick={() => api.current?.home()} aria-label={t("map.backToMe")}
         className={`absolute right-4 z-[3] flex h-12 items-center gap-2 rounded-full bg-white pl-2 pr-4 text-[15px] font-extrabold text-primary shadow-lg transition-all duration-200 ${away && !flat ? "opacity-100" : "pointer-events-none translate-y-2 opacity-0"}`}

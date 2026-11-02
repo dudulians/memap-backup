@@ -7,7 +7,7 @@
 // note, Nov 2: two ways into the map were confusing).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus } from "lucide-react";
+import { ChevronRight, Pencil, Plus } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
@@ -25,21 +25,27 @@ import { DaysOverview } from "./DaysOverview";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
-export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" | null; onOpened?: () => void } = {}) => {
+type Only = "overview" | "trends" | "signals";
+export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" | Only | null; onOpened?: () => void } = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen);
+  const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen === "all" ? "all" : null);
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
   // One switch: the flat map or the rolling globe (her note: one place to switch).
   const [view, setView] = useState<"map" | "globe">("map");
   // Calendar / chart / lighthouses straight away, no tabs inside (her note).
-  const [only, setOnly] = useState<"overview" | "trends" | "signals" | null>(null);
+  const [only, setOnly] = useState<Only | null>(initialOpen && initialOpen !== "all" ? initialOpen : null);
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
-  useEffect(() => { if (initialOpen) { setOpen(initialOpen); onOpened?.(); } }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!initialOpen) return;
+    if (initialOpen === "all") setOpen("all");
+    else setOnly(initialOpen);
+    onOpened?.();
+  }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const load = async () => {
@@ -86,36 +92,36 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   }, [islands, trackers, entries]);
 
   return (
-    <div ref={boxRef} className="map-sea relative h-full overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
-      <div className="flex items-start justify-between gap-3 px-4 pt-3">
-        <div className="min-w-0">
-          <h2 className="text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
-          <p className="text-[15px] font-semibold text-muted-foreground">{t("map.thisWeek")}</p>
+    <div ref={boxRef} className={`map-sea relative h-full overscroll-contain ${view === "globe" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+      style={view === "globe" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
+      {/* The header stays at the top (her note): the name, this week's
+          summary, and a small Map | Globe switch. */}
+      <div className="map-head sticky top-0 z-[6] px-4 pb-2.5 pt-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="min-w-0 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
+          {loaded && islands.length > 0 && (
+            <div className="inline-flex shrink-0 rounded-full bg-foreground/[0.06] p-0.5" role="tablist" aria-label={t("map.viewAria")}>
+              {(["map", "globe"] as const).map((v) => (
+                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
+                  className={`h-8 rounded-full px-3.5 text-[14px] font-bold transition-colors ${view === v ? "surface text-foreground" : "text-muted-foreground"}`}>
+                  {v === "map" ? t("map.flat") : t("map.globe")}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {loaded && islands.length > 0 && (
           <button type="button" onClick={() => { haptics.tap(); setOpen("all"); }}
-            className="surface mt-1 inline-flex h-11 shrink-0 items-center gap-2 rounded-full pl-2 pr-4 text-[15px] font-bold text-foreground">
-            <img src={mapPic("icon_growth")} alt="" width={28} height={28} />
-            {t("map.summary")}
+            className="-ml-0.5 mt-0.5 inline-flex h-8 items-center gap-0.5 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
+            {t("map.summary")} <ChevronRight className="h-4 w-4" strokeWidth={2.6} />
           </button>
         )}
       </div>
 
-      {/* The one switch: Map | Globe. */}
-      {loaded && islands.length > 0 && (
-        <div className="mx-4 mt-3 grid grid-cols-2 rounded-full bg-white/60 p-1 shadow-sm backdrop-blur dark:bg-[hsl(var(--surface)/0.6)]" role="tablist">
-          {(["map", "globe"] as const).map((v) => (
-            <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
-              className={`h-10 rounded-full text-[15px] font-bold transition-colors ${view === v ? "bg-white text-foreground shadow-sm dark:bg-[hsl(var(--surface))]" : "text-muted-foreground"}`}>
-              {v === "map" ? t("map.flat") : t("map.globe")}
-            </button>
-          ))}
-        </div>
-      )}
-
       {view === "globe" ? (
+        // The globe runs to the bottom of the screen, under the tab bar.
         loaded && (
-          <div className="relative mt-3" style={{ height: "calc(100dvh - 250px)" }}>
+          <div className="relative min-h-0 flex-1">
             <WorldMap islands={islands} routes={routes} onOpen={setOpen} />
           </div>
         )
@@ -129,7 +135,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <IslandsMap islands={islands} routes={routes} trackers={trackers} width={width} fill={fill} lit={lit} onOpen={setOpen} />
+              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} onOpen={setOpen} />
             </div>
           )}
           {loaded && (

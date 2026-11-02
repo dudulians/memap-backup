@@ -234,8 +234,8 @@ export const CalendarAnswerEditor = ({
           {/* Notes section */}
           <div className="space-y-3">
             {notes.length > 0 && (
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <StickyNote className="h-3 w-3" />
+              <p className="text-[15px] font-semibold text-muted-foreground flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-[hsl(var(--coin-gold))]" />
                 {t("calendarEditor.notesForDay")}
               </p>
             )}
@@ -244,12 +244,14 @@ export const CalendarAnswerEditor = ({
             {notes.length > 0 && (
               <div className="space-y-2">
                 {notes.map(note => (
-                  <div
+                  <button
                     key={note.id}
-                    className="p-3 rounded-xl bg-muted/40 border border-border/60"
+                    type="button"
+                    onClick={() => { onClose(); window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date } })); }}
+                    className="block w-full text-left px-4 py-3 rounded-[18px] bg-foreground/[0.06] border border-foreground/[0.1] active:scale-[0.99] transition-transform"
                   >
-                    <p className="text-xs text-foreground/80 leading-relaxed">{note.text}</p>
-                  </div>
+                    <p className="text-[16px] leading-snug text-foreground whitespace-pre-line line-clamp-5">{note.text}</p>
+                  </button>
                 ))}
               </div>
             )}

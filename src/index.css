@@ -1841,6 +1841,9 @@
   background-position: top center;
   background-size: cover;
 }
+/* Her night sea (Nov 2 2026) on the new screens: already dark, no veil. */
+html[data-ui="new"][data-theme="aurora"] .memap-sea-bg { background-color: #141c39; background-size: cover; background-position: top center; }
+html[data-ui="new"][data-theme="aurora"] .memap-sea-bg::after { display: none; }
 [data-theme="aurora"] .memap-sea-bg::after {
   content: "";
   position: absolute;
@@ -2084,7 +2087,65 @@
 
 /* The Map tab's own calm sea (Nov 2 2026). */
 .map-sea { background: linear-gradient(180deg, #e3f3f8 0%, #c8e9f2 35%, #b2dfec 100%); }
+/* The Map's header stays at the top over the sea (her note, Nov 2 2026). */
+.map-head { background: linear-gradient(180deg, #e3f3f8 0%, #e3f3f8 70%, rgba(227, 243, 248, 0.85) 100%); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+html[data-ui="new"][data-theme="aurora"] .map-head { background: linear-gradient(180deg, #141c39 0%, #141c39 70%, rgba(20, 28, 57, 0.85) 100%); }
+[data-theme="aurora"]:not([data-ui="new"]) .map-head { background: hsl(200 40% 16% / 0.92); }
 [data-theme="aurora"] .map-sea { background: linear-gradient(180deg, hsl(200 40% 16%) 0%, hsl(195 45% 20%) 50%, hsl(190 45% 22%) 100%); }
+html[data-ui="new"][data-theme="aurora"] .map-sea { background: linear-gradient(180deg, #141c39 0%, #1b2550 45%, #2a3470 100%); }
 
 /* A not-yet tap on a flat path node: a short wiggle. */
 .path-wiggle-flat { animation: pathWiggle 420ms ease-in-out 1; }
+
+/* ---------- Night (her night pack, Nov 2 2026) ----------
+   The new screens at night: midnight lavender with teal, her reference
+   #141C39. Classic keeps the old dark Aurora (these only match data-ui="new"). */
+html[data-ui="new"][data-theme="aurora"] {
+  --background: 229 48% 15%;
+  --foreground: 232 60% 96%;
+  --card: 231 38% 21%;
+  --card-foreground: 232 60% 96%;
+  --popover: 231 38% 21%;
+  --popover-foreground: 232 60% 96%;
+  --primary: 172 58% 52%;
+  --primary-foreground: 230 50% 12%;
+  --secondary: 231 30% 28%;
+  --secondary-foreground: 232 60% 96%;
+  --muted: 231 30% 25%;
+  --muted-foreground: 231 32% 78%;
+  --accent: 172 50% 48%;
+  --accent-foreground: 230 50% 12%;
+  --border: 231 26% 34%;
+  --input: 231 26% 34%;
+  --ring: 172 58% 52%;
+
+  --surface: 231 36% 21%;
+  --surface-alpha: 0.9;
+  --surface-border: rgba(255, 255, 255, 0.06);
+  --surface-shadow: 0 10px 26px -12px rgba(4, 8, 30, 0.7);
+  --path-ribbon: 232 32% 27%;
+  --path-ahead: 232 22% 52%;
+  --scenery-shadow: rgba(4, 8, 30, 0.45);
+  --coin-teal: 172 50% 44%;
+  --coin-teal-hi: 170 52% 52%;
+  --coin-gold: 40 72% 60%;
+}
+html[data-ui="new"][data-theme="aurora"] .nav-floating {
+  background: hsl(231 38% 19% / 0.92);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+/* White pills and cards that were written as bg-white. */
+html[data-ui="new"][data-theme="aurora"] .bg-white\/90,
+html[data-ui="new"][data-theme="aurora"] .bg-white\/60,
+html[data-ui="new"][data-theme="aurora"] .bg-white\/40,
+html[data-ui="new"][data-theme="aurora"] .bg-white { background-color: hsl(var(--surface) / 0.92); }
+
+/* The mic while it listens: one soft ring breathing out. */
+.dictate-pulse { animation: dictatePulse 1.6s ease-out infinite; box-shadow: 0 0 0 0 hsl(var(--coin-teal) / 0.45); }
+@keyframes dictatePulse { 0% { box-shadow: 0 0 0 0 hsl(var(--coin-teal) / 0.45); } 100% { box-shadow: 0 0 0 16px hsl(var(--coin-teal) / 0); } }
+@media (prefers-reduced-motion: reduce) { .dictate-pulse { animation: none; box-shadow: 0 0 0 4px hsl(var(--coin-teal) / 0.25); } }
+
+/* The chest's cards rise in one by one (calm, no bounce). */
+.chest-card { animation: chestCard 320ms ease-out both; }
+@keyframes chestCard { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .chest-card { animation: none; } }

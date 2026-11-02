@@ -85,11 +85,9 @@ export const OverviewCard = ({
     [notes, activeTrackerId]
   );
 
-  const noteDatesSet = useMemo(() => {
-    const s = new Set<string>();
-    notesForActiveTracker.forEach(n => s.add(n.date));
-    return s;
-  }, [notesForActiveTracker]);
+  // Every day with a note gets a dot, whatever the note is about (her
+  // note: you should see on the calendar which days have notes).
+  const noteDatesSet = useMemo(() => new Set(notes.map((n) => n.date)), [notes]);
 
   const notesForSelectedDate = useMemo(
     () => notesForActiveTracker.filter(n => n.date === selectedDate),
@@ -462,7 +460,7 @@ export const OverviewCard = ({
                     </span>
                   )}
                   {noteDatesSet.has(day.dateStr) && (
-                    <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-[1.5px] bg-foreground/60 rounded-full" />
+                    <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-[hsl(var(--coin-gold))] ring-2 ring-background" />
                   )}
                 </button>
               ) : (
@@ -471,6 +469,13 @@ export const OverviewCard = ({
             </div>
           ))}
         </div>
+
+        {calendarDays.some((d) => d.isCurrentMonth && noteDatesSet.has(d.dateStr)) && (
+          <p className="mt-3 flex items-center justify-center gap-2 text-[15px] font-medium text-muted-foreground">
+            <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[hsl(var(--coin-gold))]" />
+            {t("overview.noteDayKey")}
+          </p>
+        )}
 
         {/* Select several days: one answer for many days at once. */}
         {onBulkAnswer && !multi && (

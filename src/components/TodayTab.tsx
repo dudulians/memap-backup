@@ -651,7 +651,6 @@ export const TodayTab = () => {
     };
 
     await createTrackerDirectly(newTracker);
-    toast({ title: t("today.trackerAdded"), description: t("today.trackerAddedDesc", { title: localizeTrackerTitle(newTracker.title) }) });
   };
 
   const handleOpenExisting = () => {
@@ -668,7 +667,6 @@ export const TodayTab = () => {
     setDuplicateDialogOpen(false);
     if (pendingTracker) {
       await createTrackerDirectly(pendingTracker);
-      toast({ title: t("today.trackerAdded"), description: t("today.trackerAddedDesc", { title: localizeTrackerTitle(pendingTracker.title) }) });
       setPendingTracker(null);
       setDuplicateTracker(null);
     }

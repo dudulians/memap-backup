@@ -5,10 +5,13 @@
 // button that says the whole thing in words ("Short night → headache next
 // day · 11 of 14 times"); what her chests gave stands by the islands.
 // No floating numbers, no strange islands. Tap an island for its stats.
+// Nov 2 2026 (her: "сразу подсветить, что между островами потенциально
+// могут быть связи"): neighbours not linked yet get a faint route with a
+// "?" (MeMap is checking); found links are drawn stronger, "Linked".
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { Link2 } from "lucide-react";
-import { Tracker } from "@/types/tracker";
+import { HelpCircle, Link2 } from "lucide-react";
+import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { islandName, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -23,6 +26,7 @@ export const IslandsMap = ({
   islands,
   routes,
   trackers,
+  entries = [],
   width,
   fill = {},
   lit,
@@ -31,6 +35,8 @@ export const IslandsMap = ({
   islands: Island[];
   routes: Route[];
   trackers: Tracker[];
+  /** for "days with answers on both" under a possible link */
+  entries?: TrackerEntry[];
   width: number;
   /** answered today, 0..1 per island: a calm ring around its icon */
   fill?: Record<string, number>;
@@ -39,7 +45,8 @@ export const IslandsMap = ({
   onOpen: (id: IslandId) => void;
 }) => {
   const { t } = useTranslation();
-  const [link, setLink] = useState<number | null>(null);
+  // Open bubble: a found link (its index) or a possible one ("p" + index).
+  const [link, setLink] = useState<number | string | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (link === null) return;
@@ -59,6 +66,31 @@ export const IslandsMap = ({
   }));
   const height = (pos.length ? pos[pos.length - 1].y : 0) + PIC + 70;
   const where = new Map(islands.map((isl, i) => [isl.id, pos[i]]));
+  // Neighbours on the map with no link found yet: maybe one affects the other.
+  const shown = routes.slice(0, 3);
+  const linked = (a: string, b: string) => shown.some((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a));
+  const maybe = islands.slice(1).map((b, i) => [islands[i], b] as const).filter(([a, b]) => !linked(a.id, b.id));
+  const bothDays = (a: Island, b: Island) => {
+    const days = (ids: string[]) => new Set(entries.filter((e) => ids.includes(e.trackerId)).map((e) => e.date));
+    const da = days(a.trackerIds);
+    return [...days(b.trackerIds)].filter((d) => da.has(d)).length;
+  };
+  // Where a link's button sits: along its route, clear of island names and
+  // of other link buttons (several links made them pile onto the names).
+  const taken: { x: number; y: number }[] = [];
+  const labels = pos.map((p) => ({ x0: p.x - 98, x1: p.x + 98, y0: p.y + PIC * 0.72, y1: p.y + PIC * 0.72 + 52 }));
+  const spot = (pa: { x: number; y: number }, pb: { x: number; y: number }) => {
+    const ay = pa.y + PIC * 0.38, by = pb.y + PIC * 0.38;
+    for (const k of [0.5, 0.62, 0.38, 0.72, 0.28, 0.8, 0.2]) {
+      const x = pa.x + (pb.x - pa.x) * k, y = ay + (by - ay) * k;
+      const hitsLabel = labels.some((l) => x + 20 > l.x0 && x - 20 < l.x1 && y + 20 > l.y0 && y - 20 < l.y1);
+      const hitsLink = taken.some((q) => Math.hypot(q.x - x, q.y - y) < 44);
+      if (!hitsLabel && !hitsLink) { taken.push({ x, y }); return { x, y }; }
+    }
+    const x = (pa.x + pb.x) / 2, y = (ay + by) / 2;
+    taken.push({ x, y });
+    return { x, y };
+  };
   const title = (id: string) => {
     const tr = trackers.find((x) => x.id === id);
     return tr ? localizeTrackerTitle(tr.title) : "";
@@ -77,17 +109,34 @@ export const IslandsMap = ({
     return null;
   };
 
+  const linkSpots = {
+    found: shown.map((r) => { const pa = where.get(r.a); const pb = where.get(r.b); return pa && pb ? spot(pa, pb) : null; }),
+    maybe: maybe.map(([a, b]) => ({ a, b, at: spot(where.get(a.id)!, where.get(b.id)!) })),
+  };
+
   return (
     <div className="relative mx-auto" style={{ width, height }}>
       {/* Links: a dotted line and one button that says it in words. */}
       <svg width={width} height={height} className="pointer-events-none absolute inset-0" aria-hidden="true">
-        {routes.slice(0, 3).map((r, i) => {
+        {maybe.map(([a, b], i) => {
+          const pa = where.get(a.id)!;
+          const pb = where.get(b.id)!;
+          return (
+            <line key={`m${i}`} x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
+              stroke="hsl(var(--foreground))" strokeOpacity={0.22} strokeWidth={2.5} strokeDasharray="1 8" strokeLinecap="round" />
+          );
+        })}
+        {shown.map((r, i) => {
           const pa = where.get(r.a);
           const pb = where.get(r.b);
           if (!pa || !pb) return null;
           return (
-            <line key={i} x1={pa.x} y1={pa.y + PIC * 0.45} x2={pb.x} y2={pb.y + PIC * 0.45}
-              stroke="hsl(var(--coin-teal))" strokeOpacity={0.55} strokeWidth={3} strokeDasharray="1 9" strokeLinecap="round" />
+            <g key={i}>
+              <line x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
+                stroke="hsl(var(--coin-teal))" strokeOpacity={0.18} strokeWidth={12} strokeLinecap="round" />
+              <line x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
+                stroke="hsl(var(--coin-teal))" strokeWidth={4} strokeDasharray="2 8" strokeLinecap="round" />
+            </g>
           );
         })}
       </svg>
@@ -136,19 +185,42 @@ export const IslandsMap = ({
         );
       })}
 
-      {routes.slice(0, 3).map((r, i) => {
-        const pa = where.get(r.a);
-        const pb = where.get(r.b);
-        if (!pa || !pb) return null;
-        const mx = (pa.x + pb.x) / 2;
-        const my = (pa.y + pb.y) / 2 + PIC * 0.45;
+      {linkSpots.maybe.map(({ a, b, at }, i) => {
+        const mx = at.x;
+        const my = at.y;
+        const key = `p${i}`;
+        return (
+          <div key={key}>
+            <button type="button" data-map-link onClick={() => { haptics.tap(); setLink((l) => (l === key ? null : key)); }}
+              aria-label={t("map.maybeAria", { a: islandName(t, a.id), b: islandName(t, b.id) })} aria-expanded={link === key}
+              className="surface absolute flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground"
+              style={{ left: mx - 16, top: my - 16 }}>
+              <HelpCircle className="h-[18px] w-[18px]" strokeWidth={2.2} />
+            </button>
+            {link === key && (
+              <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
+                style={{ left: Math.max(8, Math.min(mx - 140, width - 288)), top: my + 24, width: 280 }}>
+                <p className="text-[17px] font-bold leading-snug">{islandName(t, a.id)} ↔ {islandName(t, b.id)}</p>
+                <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t(bothDays(a, b) >= 21 ? "map.noLinkYet" : "map.maybeLine")}</p>
+                <p className="mt-2 text-[14px] font-semibold text-foreground/80">{t("map.bothDays", { count: bothDays(a, b) })}</p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {shown.map((r, i) => {
+        const at = linkSpots.found[i];
+        if (!at) return null;
+        const mx = at.x;
+        const my = at.y;
         return (
           <div key={i}>
             <button type="button" data-map-link onClick={() => { haptics.tap(); setLink((l) => (l === i ? null : i)); }}
-              aria-label={t("map.linkAria")} aria-expanded={link === i}
-              className="surface absolute flex h-9 w-9 items-center justify-center rounded-full text-[hsl(var(--coin-teal))]"
-              style={{ left: mx - 18, top: my - 18 }}>
-              <Link2 className="h-[18px] w-[18px]" strokeWidth={2.4} />
+              aria-label={`${t("map.linked")} · ${t("map.linkAria")}`} aria-expanded={link === i}
+              className="absolute flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white shadow-[0_6px_16px_-6px_hsl(var(--coin-teal))]"
+              style={{ left: mx - 20, top: my - 20 }}>
+              <Link2 className="h-[18px] w-[18px]" strokeWidth={2.6} />
             </button>
             {link === i && (
               <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"

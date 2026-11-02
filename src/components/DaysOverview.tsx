@@ -125,7 +125,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
           <img src={mapPic("lighthouse")} alt="" width={34} height={44} className={lit > 0 ? "drop-shadow-[0_0_8px_hsl(44_96%_60%/0.8)]" : "opacity-60 grayscale"} />
           <span className="text-[22px] font-bold tabular-nums">{lit}</span>
         </span>
-        <span className="mt-1 text-[12px] font-semibold text-muted-foreground">{t("overviewCards.litOf", { count: rules })}</span>
+        <span className="mt-1 text-[12px] font-semibold text-muted-foreground">{lit > 0 ? t("overviewCards.litOf", { count: rules }) : t("overviewCards.noneLit", { count: rules })}</span>
       </button>
     </div>
   );

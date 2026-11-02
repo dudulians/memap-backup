@@ -430,11 +430,7 @@ export const AddTrackerModal = ({
       total_active: trackers.filter((t) => !t.archived).length + 1,
     });
 
-    // Show success toast
-    toast({
-      title: t("today.trackerAdded"),
-      description: t("today.trackerAddedDesc", { title: newTracker.title }),
-    });
+    // No "Question added" popup: the tick on the question shows it.
 
     onTrackerAdded();
   };
@@ -584,11 +580,7 @@ export const AddTrackerModal = ({
     const trackers = await getTrackers();
     await saveTrackers([...trackers, newTracker]);
     
-    // Show success toast
-    toast({
-      title: t("today.trackerAdded"),
-      description: t("today.trackerAddedDesc", { title: newTracker.title }),
-    });
+    // No "Question added" popup: the tick on the question shows it.
 
     setFormData({
       title: "",

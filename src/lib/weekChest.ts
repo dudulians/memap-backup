@@ -6,9 +6,24 @@
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, strongestContextFact, type ContextFact } from "@/lib/doors";
 import { activeQuestions } from "@/lib/pathSteps";
+import { computeCorrelations } from "@/lib/correlations";
 
 export interface ChestStat { trackerId: string; door: boolean; k: number; n: number }
-export interface ChestContent { main: ChestStat | null; rows: ChestStat[]; fact: ContextFact | null }
+export interface ChestInsight { a: string; b: string; nextDay: boolean; k: number; n: number; otherK: number; otherN: number }
+export interface ChestContent { main: ChestStat | null; rows: ChestStat[]; fact: ContextFact | null; insight: ChestInsight | null }
+
+/** The strongest link in her answers so far, read like the map's links
+ *  ("After A, the next day B on k of n days"). */
+const strongestLink = (trackers: Tracker[], entries: TrackerEntry[]): ChestInsight | null => {
+  const c = computeCorrelations(trackers, entries, 6).find((x) => x.counts.bothYes + x.counts.aYesBNo >= 3);
+  if (!c) return null;
+  const flip = c.lag === -1;
+  const { bothYes, aYesBNo, aNoBYes, bothNo } = c.counts;
+  const n = flip ? bothYes + aNoBYes : bothYes + aYesBNo;
+  const otherK = flip ? aYesBNo : aNoBYes;
+  const otherN = flip ? aYesBNo + bothNo : aNoBYes + bothNo;
+  return { a: flip ? c.trackerB.id : c.trackerA.id, b: flip ? c.trackerA.id : c.trackerB.id, nextDay: c.lag !== 0, k: bothYes, n, otherK, otherN };
+};
 
 export const chestContent = (trackers: Tracker[], entries: TrackerEntry[], dates: string[]): ChestContent => {
   const inWeek = new Set(dates);
@@ -26,5 +41,5 @@ export const chestContent = (trackers: Tracker[], entries: TrackerEntry[], dates
     null;
   const rows = stats.filter((s) => s !== main && s.k > 0).sort(byCount).slice(0, 3);
   const fact = door ? strongestContextFact(door, trackers, entries) : null;
-  return { main, rows, fact };
+  return { main, rows, fact, insight: strongestLink(trackers, entries) };
 };
