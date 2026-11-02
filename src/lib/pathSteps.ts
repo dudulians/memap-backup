@@ -22,7 +22,12 @@ const TASKS_LATER: TaskId[] = ["newIsland"];
 
 export interface Step {
   id: string;
-  kind: "auto" | "questions" | "task";
+  /** "fill": a missed day (yesterday or the day before) to answer first */
+  kind: "auto" | "fill" | "questions" | "task";
+  /** fill: the day */
+  date?: string;
+  /** task: skipped for today */
+  skipped?: boolean;
   auto?: "topic" | "firstAnswer";
   /** the topic; none for a mixed step */
   island?: IslandId;
@@ -150,7 +155,7 @@ export const countedDays = (trackers: Tracker[], entries: TrackerEntry[], today 
 // task first showed up. Stored per install; nothing about answers.
 
 const TASKS_KEY = "memap_path_tasks";
-type TaskRecord = { shown?: string; done?: string; base?: number };
+type TaskRecord = { shown?: string; done?: string; base?: number; skipped?: string };
 type TaskStore = Partial<Record<TaskId, TaskRecord>>;
 
 const readTasks = (): TaskStore => {
@@ -166,6 +171,14 @@ const writeTasks = (s: TaskStore) => {
   } catch {
     /* not fatal: the task just shows again */
   }
+};
+
+/** Not today (her note: "нужно иметь возможность скипнуть"): today shows it
+ *  as skipped; it comes back after the other tasks. */
+export const skipTask = (task: TaskId) => {
+  const s = readTasks();
+  s[task] = { ...s[task], skipped: isoLocal(new Date()) };
+  writeTasks(s);
 };
 
 /** Mark a task done today (she opened the calendar, the chart, the map). */
@@ -204,13 +217,20 @@ export const syncTasks = (trackers: Tracker[], noteDays: string[], week: number)
 
 /** Today's task: the first one not done before today (one done today stays
  *  visible as a done step). Week 1 teaches the app; later weeks add islands. */
-const taskForToday = (week: number, today: string): { task: TaskId; done: boolean } | null => {
+const taskForToday = (week: number, today: string): { task: TaskId; done: boolean; skipped?: boolean } | null => {
   const s = readTasks();
   const list = week === 0 ? TASKS_WEEK1 : [...TASKS_WEEK1, ...TASKS_LATER];
-  for (const task of list) {
-    const done = s[task]?.done;
-    if (!done) return { task, done: false };
-    if (done === today) return { task, done: true };
+  // Tasks skipped on an earlier day wait at the end.
+  const later = (t: TaskId) => !!s[t]?.skipped && s[t]!.skipped !== today;
+  const order = [...list.filter((t) => !later(t)), ...list.filter(later)];
+  for (const task of order) {
+    const r = s[task];
+    if (r?.done) {
+      if (r.done === today) return { task, done: true };
+      continue;
+    }
+    if (r?.skipped === today) return { task, done: true, skipped: true };
+    return { task, done: false };
   }
   return null;
 };
@@ -289,6 +309,22 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     }
   }
 
+  // A missed day first (her note: someone opening the app in the morning
+  // should be able to fill in yesterday): yesterday, else the day before,
+  // never before the path or onboarding began, only if answering already.
+  const started = door?.startedAt ?? start;
+  const firstEntry = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
+  const counted = new Set(all);
+  for (const back of [1, 2]) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
+    const iso = isoLocal(d);
+    if (iso < started || !firstEntry || firstEntry >= iso || counted.has(iso)) continue;
+    const ids = activeQuestions(trackers).map((t) => t.id);
+    const got = new Set(entries.filter((e) => e.date === iso).map((e) => e.trackerId));
+    steps.push({ id: `fill:${iso}`, kind: "fill", date: iso, trackerIds: ids, answered: ids.filter((id) => got.has(id)).length, done: false });
+    break;
+  }
+
   let leftToday = 0;
   for (const g of questionGroups(trackers)) {
     const answered = g.ids.filter((id) => answeredToday.has(id)).length;
@@ -307,7 +343,7 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
 
   const task = taskForToday(week, today);
   if (task && steps.some((s) => s.kind === "questions")) {
-    steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done });
+    steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
 
   return {

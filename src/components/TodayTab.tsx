@@ -165,7 +165,7 @@ export const TodayTab = () => {
   const [addTrackerModalOpen, setAddTrackerModalOpen] = useState(false);
   const [dailySessionOpen, setDailySessionOpen] = useState(false);
   // A step on Today's path answers one topic only (Aurora, Nov 2 2026).
-  const [step, setStep] = useState<{ ids: string[]; title: string } | null>(null);
+  const [step, setStep] = useState<{ ids?: string[]; title?: string; redo?: boolean } | null>(null);
   // When true, the next session opens in random-play mode (10 random new
   // templates, saved as source="play" trackers). Reset after the session
   // closes so the next manual ▶ tap goes back to normal mode.
@@ -945,9 +945,10 @@ export const TodayTab = () => {
           playMode={playMode}
           onlyIds={step?.ids}
           stepTitle={step?.title}
+          includeAnswered={!!step?.redo}
           // Re-mount the session whenever play mode turns on or a new
           // round is requested, so each round gets a fresh shuffle.
-          key={playMode ? `play-${playRoundNonce}` : step ? `step-${step.ids.join(",")}` : "normal"}
+          key={playMode ? `play-${playRoundNonce}` : step ? `step-${(step.ids ?? []).join(",")}-${step.redo ? "redo" : ""}` : "normal"}
         />
       )}
 
@@ -959,8 +960,8 @@ export const TodayTab = () => {
       <EveningPath
         trackers={trackers}
         entries={entries}
-        onStartStep={(s: Step, title: string) => {
-          setStep({ ids: s.trackerIds, title });
+        onStartStep={(s: Step, title: string, redo?: boolean) => {
+          setStep({ ids: s.trackerIds, title, redo });
           setSelectedDate(isoLocal(new Date()));
           setDailySessionOpen(true);
         }}
@@ -978,8 +979,8 @@ export const TodayTab = () => {
           window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } }));
         }}
         onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
-        onFillDay={(date) => {
-          setStep(null);
+        onFillDay={(date, redo) => {
+          setStep(redo ? { redo: true } : null);
           setSelectedDate(date);
           setDailySessionOpen(true);
         }}

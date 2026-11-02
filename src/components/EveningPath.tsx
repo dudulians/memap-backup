@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Flame, Layers, Map as MapIcon, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
-import { countedDays, DAYS_PER_WEEK, getChests, pathModel, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, getChests, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { placeScenery, type Rect } from "@/lib/pathScenery";
 import { islandDef, islandName, mapPic } from "@/lib/islands";
 import { islandStyle } from "@/lib/islandColors";
@@ -74,15 +74,16 @@ export const EveningPath = ({
 }: {
   trackers: Tracker[];
   entries: TrackerEntry[];
-  /** Answer one step's questions (one topic); title names it in the deck. */
-  onStartStep: (step: Step, title: string) => void;
+  /** Answer one step's questions (one topic); title names it in the deck;
+   *  redo = go through answered ones again to change them. */
+  onStartStep: (step: Step, title: string, redo?: boolean) => void;
   /** Do today's small task (write a note, see the calendar…). */
   onTask: (task: TaskId) => void;
   onOpenReport: () => void;
   /** After a chest's reward goes on the map: show the Map. */
   onOpenMap: () => void;
-  /** Answer a missed day (one of the last two). */
-  onFillDay: (date: string) => void;
+  /** Answer a missed day; redo = change a day's answers. */
+  onFillDay: (date: string, redo?: boolean) => void;
   /** Look at a past day. */
   onOpenDay: (date: string) => void;
 }) => {
@@ -95,29 +96,16 @@ export const EveningPath = ({
       .then((ns) => setNoteDays(ns.map((n) => isoDay(new Date(n.createdAt))).sort()))
       .catch(() => setNoteDays([]));
   }, []);
+  // Bumped when a task is skipped (stored outside React).
+  const [tick, setTick] = useState(0);
   const m = useMemo(() => {
     const draft = pathModel(trackers, entries);
     if (noteDays === null) return draft;
     syncTasks(trackers, noteDays, draft.week);
     return pathModel(trackers, entries);
-  }, [trackers, entries, noteDays]);
+  }, [trackers, entries, noteDays, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
-
-  // A missed day to fill in from the current step's bubble: yesterday, else
-  // the day before, only for someone who was already answering before it.
-  const fillDay = useMemo(() => {
-    const counted = new Set(countedDays(trackers, entries));
-    const first = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
-    // Onboarding may log the door thing days back; nothing before install day.
-    const started = getDoorState()?.startedAt;
-    for (const n of [1, 2]) {
-      const d = isoDay(addDays(new Date(), -n));
-      if (started && d < started) continue;
-      if (first && first < d && !counted.has(d)) return d;
-    }
-    return null;
-  }, [trackers, entries]);
 
   // Width of the path box: the screen minus its 16pt gutters.
   const boxRef = useRef<HTMLDivElement>(null);
@@ -175,6 +163,7 @@ export const EveningPath = ({
   };
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
+    if (s.kind === "fill") return t("path.fillTitle", { day: weekdayName(s.date!) });
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
@@ -189,7 +178,7 @@ export const EveningPath = ({
     if (n.kind === "chest") return m.weekComplete ? { title: reportLabel, sub: t("path.openReport"), action: true } : null;
     const s = n.step;
     const left = s.trackerIds.length - s.answered;
-    if (s.done) return { title: stepName(s), sub: s.kind === "questions" ? t("path.answers", { count: s.answered }) : t("path.done"), muted: true };
+    if (s.done) return { title: stepName(s), sub: s.kind === "questions" ? t("path.answers", { count: s.answered }) : s.skipped ? t("path.skipped") : t("path.done"), muted: true };
     if (s.kind === "task") return { title: stepName(s), sub: i === currentNode ? t("path.go") : t("path.taskLabel"), action: i === currentNode };
     const what = s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left });
     return { title: stepName(s), sub: i === currentNode ? `${s.answered > 0 ? t("path.continue") : t("path.start")} · ${what}` : what, action: i === currentNode };
@@ -219,7 +208,7 @@ export const EveningPath = ({
   }, [stops, labels, nodes, focus, m.week, width]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Bubbles ---------------------------------------------------------------
-  const [open, setOpen] = useState<Open>(() => (fillDay && currentNode >= 0 ? currentNode : null));
+  const [open, setOpen] = useState<Open>(null);
   const [wiggle, setWiggle] = useState<number | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -279,7 +268,8 @@ export const EveningPath = ({
 
   const startStep = (s: Step) => {
     setOpen(null);
-    onStartStep(s, stepName(s));
+    if (s.kind === "fill") onFillDay(s.date!);
+    else onStartStep(s, stepName(s));
   };
   const doTask = (task: TaskId) => {
     setOpen(null);
@@ -328,7 +318,8 @@ export const EveningPath = ({
         <>
           {head(dayTitle(n.date), t("path.answers", { count: answersOn(n.date) }))}
           {dots(active.map((tr) => tr.id), n.date)}
-          {bigButton(t("path.openDay"), () => { setOpen(null); onOpenDay(n.date); }, "slate")}
+          {bigButton(t("path.changeAnswers"), () => { setOpen(null); onFillDay(n.date, true); }, "slate")}
+          <button type="button" onClick={() => { setOpen(null); onOpenDay(n.date); }} className="mt-2 h-10 w-full text-[15px] font-semibold text-muted-foreground">{t("path.openDay")}</button>
         </>
       );
     }
@@ -353,6 +344,11 @@ export const EveningPath = ({
         <>
           {head(t(`path.task.${s.task}.title`), s.done ? t("path.done") : t(`path.task.${s.task}.line`))}
           {!s.done && bigButton(t("path.go"), () => doTask(s.task!), "gold")}
+          {!s.done && (
+            <button type="button" onClick={() => { setOpen(null); skipTask(s.task!); setTick((k) => k + 1); }} className="mt-2 h-10 w-full text-[15px] font-semibold text-muted-foreground">
+              {t("path.skip")}
+            </button>
+          )}
         </>
       );
     }
@@ -366,12 +362,12 @@ export const EveningPath = ({
             : `${s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left })} · ${t("path.minutes", { count: minutesFor(left) })}`,
         )}
         {s.answered > 0 && dots(s.trackerIds, isoDay(new Date()))}
-        {i === currentNode && fillDay && (
-          <button type="button" onClick={() => { setOpen(null); onFillDay(fillDay); }} className="mt-3 inline-flex h-9 items-center gap-1 rounded-xl bg-primary/10 px-3 text-[14px] font-semibold text-[hsl(var(--coin-teal))]">
-            {t("path.fillIn", { day: weekdayName(fillDay) })} <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
-          </button>
+        {/* Early in the day: answer what already happened, the rest tonight. */}
+        {!s.done && s.kind === "questions" && new Date().getHours() < 17 && (
+          <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("path.earlyHint")}</p>
         )}
         {!s.done && bigButton(s.answered > 0 ? t("path.continue") : t("path.start"), () => startStep(s), "teal", "medium", s.island ? islandStyle(s.island) : undefined)}
+        {s.done && s.kind === "questions" && bigButton(t("path.changeAnswers"), () => { setOpen(null); onStartStep(s, stepName(s), true); }, "slate")}
       </>
     );
   };
@@ -449,7 +445,7 @@ export const EveningPath = ({
     const current = i === currentNode;
     const tone: PressTone = s.kind === "task" ? "gold" : "teal";
     const style = s.island ? { ...place, ...islandStyle(s.island) } : place;
-    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "questions" ? Layers : s.auto === "topic" ? Compass : Sparkles;
+    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "fill" ? CalendarDays : s.kind === "questions" ? Layers : s.auto === "topic" ? Compass : Sparkles;
     // Rings and the halo centre on the whole coin, face and lip together
     // (her note: "обводки кривые", the lip used to touch the ring).
     const cy = p.r + LIP / 2;

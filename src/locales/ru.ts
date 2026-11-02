@@ -483,6 +483,12 @@ const ru: Translation = {
     logNow: "Случилось только что?",
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
+    fillTitle: "Заполнить {{day}}",
+    skip: "Не сегодня",
+    skipped: "Пропущено",
+    changeAnswers: "Изменить ответы",
+    nowAnswer: "Сейчас: {{answer}}",
+    earlyHint: "День только начался? Отметь то, что уже было, остальное — вечером.",
     taskLabel: "Задание",
     priorDays_one: "Уже {{count}} день позади",
     priorDays_few: "Уже {{count}} дня позади",

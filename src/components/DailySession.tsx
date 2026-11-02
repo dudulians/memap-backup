@@ -74,6 +74,9 @@ interface DailySessionProps {
   // session then ends on a small "Done" card instead of the evening's.
   onlyIds?: string[];
   stepTitle?: string;
+  // Change answers (her note: "если заполнил в 9 вечера, а потом заболела
+  // голова"): answered questions come too, each card shows the answer now.
+  includeAnswered?: boolean;
 }
 
 interface SessionQuestion {
@@ -163,6 +166,7 @@ export const DailySession = ({
   playMode = false,
   onlyIds,
   stepTitle,
+  includeAnswered = false,
 }: DailySessionProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
@@ -362,7 +366,7 @@ export const DailySession = ({
           isNew: false,
         };
       })
-      .filter(q => q.existingAnswer === undefined);
+      .filter(q => includeAnswered || q.existingAnswer === undefined);
 
     // Auto-injected "new suggestion" cards have been removed. The user
     // gets new ideas only via:
@@ -372,7 +376,7 @@ export const DailySession = ({
     // Daily session now contains only the user's own trackers — no
     // surprise cards appear without the user asking for them.
     return unansweredQuestions;
-  }, [trackers, entries, selectedDate, onlyIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trackers, entries, selectedDate, onlyIds, includeAnswered]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Deck rebuilds when selectedDate changes — that lets the date-strip in
   // the header navigate to other days without unmounting the session.
@@ -748,7 +752,7 @@ export const DailySession = ({
 
   // A step (one topic) ends on a small card: what was done, then back to
   // the path, where the next step is waiting.
-  if (completed && onlyIds) {
+  if (completed && (onlyIds || includeAnswered)) {
     return createPortal(
       <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center animate-fade-in">
         <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white shadow-[0_6px_0_hsl(var(--lip-teal))]">
@@ -1461,6 +1465,11 @@ const DeckCard = ({ question, stamp }: { question: SessionQuestion; stamp?: { ye
       <div className="flex items-center gap-2 px-5 pt-5">
         <img src={mapPic("icon_" + islandDef(island).icon)} alt="" width={30} height={30} decoding="async" draggable={false} className="pointer-events-none" />
         <span className="text-[15px] font-bold text-foreground/80">{islandName(t, island)}</span>
+        {question.existingAnswer !== undefined && (
+          <span className="ml-auto rounded-full bg-foreground/[0.06] px-2.5 py-1 text-[13px] font-semibold text-muted-foreground">
+            {t("path.nowAnswer", { answer: question.existingAnswer ? t("common.yes") : t("common.no") })}
+          </span>
+        )}
         {question.isNew && (
           <Badge className="ml-auto bg-primary/20 text-primary border-primary/30 text-[13px] px-3 py-1">
             <Sparkles className="h-3.5 w-3.5 mr-1" />
