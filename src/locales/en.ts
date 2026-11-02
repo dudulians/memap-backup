@@ -130,6 +130,15 @@ const en = {
     weekA_one: "“{{x}}”: {{count}} day of the {{n}} you answered.",
     weekA_other: "“{{x}}”: {{count}} days of the {{n}} you answered.",
   },
+  // Calendar, chart, lighthouses on the Map (Nov 2 2026)
+  overviewCards: {
+    calendar: "Calendar",
+    chart: "Chart",
+    hardPerWeek: "hard days a week",
+    lighthouses: "Lighthouses",
+    litOf_one: "lit of {{count}} rule",
+    litOf_other: "lit of {{count}} rules",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Your world",

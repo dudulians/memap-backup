@@ -152,6 +152,17 @@ const ru: Translation = {
     weekA_many: "«{{x}}»: {{count}} дней из {{n}} с ответами.",
     weekA_other: "«{{x}}»: {{count}} дня из {{n}} с ответами.",
   },
+  // Calendar, chart, lighthouses on the Map (Nov 2 2026)
+  overviewCards: {
+    calendar: "Календарь",
+    chart: "График",
+    hardPerWeek: "тяжёлых дней в неделю",
+    lighthouses: "Маяки",
+    litOf_one: "горит из {{count}} правила",
+    litOf_few: "горят из {{count}} правил",
+    litOf_many: "горят из {{count}} правил",
+    litOf_other: "горят из {{count}} правила",
+  },
   map: {
     // The clear map (Nov 2 2026)
     title: "Твой мир",

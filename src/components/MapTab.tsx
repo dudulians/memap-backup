@@ -20,6 +20,7 @@ import { IslandStats, WorldStats } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
+import { DaysOverview } from "./DaysOverview";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
@@ -96,7 +97,16 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
               </button>
             )}
           </div>
-          {loaded && islands.length > 0 && <div className="mt-3"><WeatherLegend /></div>}
+          {/* Calendar, chart, lighthouses: on view, not three taps away (her note). */}
+          {loaded && islands.length > 0 && (
+            <div className="mt-3">
+              <DaysOverview trackers={trackers} entries={entries} onOpen={(section) => {
+                try { localStorage.setItem("memap_patterns_section", section); } catch { /* opens on Findings */ }
+                setOpen("all");
+              }} />
+            </div>
+          )}
+          {loaded && islands.length > 0 && <div className="mt-4"><WeatherLegend /></div>}
           {loaded && islands.length > 0 && (
             <div className="mt-2">
               <IslandsMap islands={islands} routes={routes} trackers={trackers} width={width} fill={fill} lit={lit} onOpen={setOpen} />
