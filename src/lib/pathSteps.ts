@@ -31,7 +31,8 @@ export interface Step {
   /** "predict": guess tonight's answers, then see (src/lib/predict.ts) */
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
   /** "test": her week of trying one change is over: see how it went */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "predict" | "act" | "test";
+  /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "predict" | "act" | "test" | "unload";
   predict?: PredictState;
   /** fill: the day */
   date?: string;
@@ -217,6 +218,15 @@ export const markActSeen = () => {
 };
 const actSeenToday = () => {
   try { return localStorage.getItem(ACT_KEY) === isoLocal(new Date()); } catch { return false; }
+};
+
+const UNLOAD_KEY = "memap_unload_played";
+/** "Unload your mind" was played today (it stays open to play again). */
+export const unloadPlayedToday = () => {
+  try { return localStorage.getItem(UNLOAD_KEY) === isoLocal(new Date()); } catch { return false; }
+};
+export const markUnloadPlayed = () => {
+  try { localStorage.setItem(UNLOAD_KEY, isoLocal(new Date())); } catch { /* plays again, harmless */ }
 };
 
 const GAME_KEY = "memap_game_played";
@@ -436,6 +446,8 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // back for during the day). Shown only when there is a round to play.
   if (steps.some((s) => s.kind === "questions")) {
     steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: gamePlayedToday() });
+    // Her "разгрузи свой мозг": a calm game any time, from day 1.
+    steps.push({ id: "unload", kind: "unload", trackerIds: [], answered: 0, done: unloadPlayedToday() });
   }
 
   return {
