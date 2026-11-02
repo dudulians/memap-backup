@@ -7,7 +7,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Flame, Layers, Map as MapIcon, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, Compass, Dices, Flame, Layers, Map as MapIcon, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, getChests, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
@@ -19,6 +19,7 @@ import { getNotes } from "@/lib/notes";
 import { Pressable, type PressTone } from "@/components/ui/pressable";
 import { DESIGN_W, GAP, LIP, NodeLabel, NodeTile, R_CHEST, R_DAY, Road, Scenery, WEEK_TITLES, WEEK_TONES, WeekBanner, WeekRing, WeekStrip, XS } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
+import { GuessGame, hasGame } from "@/components/GuessGame";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 
@@ -121,19 +122,22 @@ export const EveningPath = ({
   }, []);
 
   // --- Nodes and where they sit --------------------------------------------
+  const canPlay = useMemo(() => hasGame(trackers, entries), [trackers, entries]);
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
-    for (const step of m.steps) out.push({ kind: "step", step });
+    for (const step of m.steps) if (step.kind !== "game" || canPlay) out.push({ kind: "step", step });
     const coming = m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length;
     for (let o = 1; o <= coming; o++) out.push({ kind: "future", offset: o });
     out.push({ kind: "chest" });
     return out;
-  }, [m]);
+  }, [m, canPlay]);
   const firstStep = m.pastInWeek.length;
-  const currentNode = m.current >= 0 ? firstStep + m.current : -1;
+  const shownSteps = m.steps.filter((s) => s.kind !== "game" || canPlay);
+  const cur = shownSteps.findIndex((s) => !s.done);
+  const currentNode = cur >= 0 ? firstStep + cur : -1;
   const chestIndex = nodes.length - 1;
   // The coin to bring into view and label: the current step, else tomorrow, else the chest.
-  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + m.steps.length;
+  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + shownSteps.length;
 
   const stops = useMemo(() => {
     const out: { x: number; y: number; r: number }[] = [];
@@ -164,6 +168,7 @@ export const EveningPath = ({
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "fill") return t("path.fillTitle", { day: weekdayName(s.date!) });
+    if (s.kind === "game") return t("game.step");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
@@ -180,6 +185,7 @@ export const EveningPath = ({
     const left = s.trackerIds.length - s.answered;
     if (s.done) return { title: stepName(s), sub: s.kind === "questions" ? t("path.answers", { count: s.answered }) : s.skipped ? t("path.skipped") : t("path.done"), muted: true };
     if (s.kind === "task") return { title: stepName(s), sub: i === currentNode ? t("path.go") : t("path.taskLabel"), action: i === currentNode };
+    if (s.kind === "game") return { title: stepName(s), sub: i === currentNode ? t("game.play") : t("game.stepSub"), action: i === currentNode };
     const what = s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left });
     return { title: stepName(s), sub: i === currentNode ? `${s.answered > 0 ? t("path.continue") : t("path.start")} · ${what}` : what, action: i === currentNode };
   };
@@ -224,6 +230,7 @@ export const EveningPath = ({
 
   // A week's chest, open in its own sheet; and how many finished weeks show.
   const [chestOpen, setChestOpen] = useState<{ week: number; dates: string[] } | null>(null);
+  const [gameOpen, setGameOpen] = useState(false);
   const [pastShown, setPastShown] = useState(1);
   const chests = useMemo(() => getChests(), [chestOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -268,7 +275,8 @@ export const EveningPath = ({
 
   const startStep = (s: Step) => {
     setOpen(null);
-    if (s.kind === "fill") onFillDay(s.date!);
+    if (s.kind === "game") setGameOpen(true);
+    else if (s.kind === "fill") onFillDay(s.date!);
     else onStartStep(s, stepName(s));
   };
   const doTask = (task: TaskId) => {
@@ -338,6 +346,14 @@ export const EveningPath = ({
     if (s.kind === "auto") {
       const door = getDoorState();
       return head(s.auto === "topic" ? t("path.auto.topicBubble", { name: door ? t(`doors.${door.id}.name`) : "" }) : t("path.auto.firstBubble"));
+    }
+    if (s.kind === "game") {
+      return (
+        <>
+          {head(t("game.step"), s.done ? t("path.done") : t("game.line"))}
+          {bigButton(t("game.play"), () => startStep(s), "lilac")}
+        </>
+      );
     }
     if (s.kind === "task") {
       return (
@@ -434,7 +450,7 @@ export const EveningPath = ({
       return (
         <Pressable key={i} {...common} style={place} shape="coin" tone="slate" aria-label={n.offset === 1 ? t("path.opensTomorrow") : t("path.inDays", { count: n.offset })}
           faceClassName="text-[12px] font-bold uppercase tracking-[0.06em]">
-          {n.offset === 1 && m.current < 0
+          {n.offset === 1 && currentNode < 0
             ? <img src={mapPic("moon_and_stars")} alt="" width={40} height={20} decoding="async" draggable={false} className="pointer-events-none" />
             : weekdayShort(day)}
         </Pressable>
@@ -443,9 +459,9 @@ export const EveningPath = ({
 
     const s = n.step;
     const current = i === currentNode;
-    const tone: PressTone = s.kind === "task" ? "gold" : "teal";
+    const tone: PressTone = s.kind === "task" ? "gold" : s.kind === "game" ? "lilac" : "teal";
     const style = s.island ? { ...place, ...islandStyle(s.island) } : place;
-    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "fill" ? CalendarDays : s.kind === "questions" ? Layers : s.auto === "topic" ? Compass : Sparkles;
+    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Dices : s.kind === "fill" ? CalendarDays : s.kind === "questions" ? Layers : s.auto === "topic" ? Compass : Sparkles;
     // Rings and the halo centre on the whole coin, face and lip together
     // (her note: "обводки кривые", the lip used to touch the ring).
     const cy = p.r + LIP / 2;
@@ -562,6 +578,10 @@ export const EveningPath = ({
       {[1, 2].map((n) => (
         <WeekStrip key={`c${n}`} week={m.week + n} width={width} kind="coming" firstOffset={comingAfter + (n - 1) * DAYS_PER_WEEK} />
       ))}
+
+      {gameOpen && (
+        <GuessGame trackers={trackers} entries={entries} onClose={() => { setGameOpen(false); setTick((k) => k + 1); }} />
+      )}
 
       {chestOpen && (
         <WeekChest week={chestOpen.week} dates={chestOpen.dates} trackers={trackers} entries={entries}

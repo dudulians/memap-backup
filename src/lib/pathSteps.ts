@@ -23,7 +23,8 @@ const TASKS_LATER: TaskId[] = ["newIsland"];
 export interface Step {
   id: string;
   /** "fill": a missed day (yesterday or the day before) to answer first */
-  kind: "auto" | "fill" | "questions" | "task";
+  /** "game": the day's "Guess" round (src/components/GuessGame.tsx) */
+  kind: "auto" | "fill" | "questions" | "task" | "game";
   /** fill: the day */
   date?: string;
   /** task: skipped for today */
@@ -179,6 +180,15 @@ export const skipTask = (task: TaskId) => {
   const s = readTasks();
   s[task] = { ...s[task], skipped: isoLocal(new Date()) };
   writeTasks(s);
+};
+
+const GAME_KEY = "memap_game_played";
+/** The day's "Guess" round was played. */
+export const gamePlayedToday = () => {
+  try { return localStorage.getItem(GAME_KEY) === isoLocal(new Date()); } catch { return false; }
+};
+export const markGamePlayed = () => {
+  try { localStorage.setItem(GAME_KEY, isoLocal(new Date())); } catch { /* plays again, harmless */ }
 };
 
 /** Mark a task done today (she opened the calendar, the chart, the map). */
@@ -344,6 +354,11 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   const task = taskForToday(week, today);
   if (task && steps.some((s) => s.kind === "questions")) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
+  }
+  // One short game a day, after the questions (her ask: something to come
+  // back for during the day). Shown only when there is a round to play.
+  if (steps.some((s) => s.kind === "questions")) {
+    steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: gamePlayedToday() });
   }
 
   return {
