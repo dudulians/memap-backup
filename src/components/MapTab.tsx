@@ -3,10 +3,11 @@
 // относится"). A calm flat map of her islands with a legend for the weather
 // signs; tap an island for its stats first, then its Findings / Calendar /
 // Charts / Limits (the old Patterns, just for that island). "World" shows
-// the same for everything. The rolling globe stays one tap away, for beauty.
+// the same for everything. One view only: the rolling globe is gone (her
+// note, Nov 2: two ways into the map were confusing).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe2, Map as MapIcon, Pencil, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
@@ -14,7 +15,6 @@ import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
 import { haptics } from "@/lib/haptics";
-import { WorldMap } from "./WorldMap";
 import { IslandsMap, WeatherLegend } from "./IslandsMap";
 import { IslandStats, WorldStats } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
@@ -28,7 +28,6 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen);
-  const [globe, setGlobe] = useState(false);
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
   useEffect(() => { if (initialOpen) { setOpen(initialOpen); onOpened?.(); } }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -79,10 +78,8 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
 
   return (
     <div ref={boxRef} className="map-sea relative h-full overflow-y-auto overscroll-contain" style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
-      {globe ? (
-        loaded && <WorldMap islands={islands} routes={routes} onOpen={setOpen} />
-      ) : (
-        <>
+      {/* One view only (her note: two ways into the map were confusing). */}
+      <>
           <div className="flex items-start justify-between gap-3 px-4 pt-3">
             <div className="min-w-0">
               <h2 className="text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
@@ -108,17 +105,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
               <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}
             </button>
           )}
-        </>
-      )}
-
-      {/* The rolling globe, for beauty: one round button. */}
-      {loaded && islands.length > 0 && (
-        <button type="button" onClick={() => { haptics.tap(); setGlobe((g) => !g); }} aria-label={globe ? t("map.flat") : t("map.globe")}
-          className="surface fixed right-4 z-[3] flex h-12 w-12 items-center justify-center rounded-full text-foreground"
-          style={{ bottom: "calc(6.75rem + env(safe-area-inset-bottom, 0px))" }}>
-          {globe ? <MapIcon className="h-5 w-5" strokeWidth={2} /> : <Globe2 className="h-5 w-5" strokeWidth={2} />}
-        </button>
-      )}
+      </>
 
       {loaded && islands.length === 0 && (
         <div className="absolute left-4 right-4 top-16 z-[2] rounded-[22px] bg-white/90 p-4 text-center shadow-lg">

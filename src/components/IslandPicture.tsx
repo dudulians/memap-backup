@@ -1,5 +1,5 @@
 // An island as a picture: her base art plus what stands on it, the same
-// composition the Map draws on its ball (WorldMap drawThing). Used on the
+// composition the Map uses for every island. Used on the
 // evening cards (Aurora step 3) and on island sheets.
 import { islandDef, mapPic, type IslandId } from "@/lib/islands";
 
