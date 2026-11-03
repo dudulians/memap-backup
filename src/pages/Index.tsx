@@ -4,7 +4,7 @@ import { TodayTab } from "@/components/TodayTab";
 import { MapTab } from "@/components/MapTab";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { NotesTab } from "@/components/NotesTab";
-import { CalendarDays, Map as MapIcon, Moon, NotebookPen, Settings, Sun, ArrowUp } from "lucide-react";
+import { CalendarDays, ListChecks, Map as MapIcon, Moon, NotebookPen, Settings, Sun, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
@@ -19,7 +19,7 @@ import pathNight from "@/assets/bg/path-night.webp";
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
 // bottom bar is Today / Patterns / Notes. Aurora UX (Nov 1 2026): the
 // "patterns" tab is now the Map (islands); Patterns open inside an island.
-type Tab = "cards" | "patterns" | "notes";
+type Tab = "cards" | "patterns" | "questions" | "notes";
 
 const Index = () => {
   const { t } = useTranslation();
@@ -74,7 +74,7 @@ const Index = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const tab = (e as CustomEvent).detail?.tab as Tab | undefined;
-      if (tab === "cards" || tab === "patterns" || tab === "notes") {
+      if (tab === "cards" || tab === "patterns" || tab === "questions" || tab === "notes") {
         if (tab === "patterns" && (e as CustomEvent).detail?.open === "all") {
           const section = (e as CustomEvent).detail?.section ?? "findings";
           try { localStorage.setItem("memap_patterns_section", section); } catch { /* ignore */ }
@@ -207,7 +207,7 @@ const Index = () => {
 
   // Content fades in under the header and out behind the floating tab bar.
   // On Today the week banner sticks to the top and covers what scrolls.
-  const CONTENT_MASK = activeTab === "cards" || activeTab === "notes"
+  const CONTENT_MASK = activeTab === "cards" || activeTab === "notes" || activeTab === "questions"
     ? "linear-gradient(to bottom, #000 0, #000 calc(100% - 120px), transparent calc(100% - 24px))"
     : "linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 120px), transparent calc(100% - 24px))";
 
@@ -259,6 +259,7 @@ const Index = () => {
         style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK }}
       >
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
+        {activeTab === "questions" && <TodayTab key={`questions-${refreshKey}`} view="questions" />}
         {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} initialIsland={mapIsland} onOpened={() => { setMapOpen(null); setMapIsland(null); }} />}
         {activeTab === "notes" && (
           <NotesTab
@@ -296,10 +297,11 @@ const Index = () => {
           notification taps still open it directly (App.tsx). */}
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
-          <div className="nav-floating grid grid-cols-3 overflow-hidden">
+          <div className="nav-floating grid grid-cols-4 overflow-hidden">
             {([
               { tab: "cards", icon: CalendarDays, label: t("common.today") },
               { tab: "patterns", icon: MapIcon, label: t("common.map") },
+              { tab: "questions", icon: ListChecks, label: t("common.questions") },
               { tab: "notes", icon: NotebookPen, label: t("common.notes") },
             ] as const).map(({ tab, icon: Icon, label }) => (
               <button

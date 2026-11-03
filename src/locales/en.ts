@@ -5,6 +5,7 @@ const en = {
   common: {
     dayMode: "Day",
     nightMode: "Night",
+    questions: "Questions",
     back: "Back",
     off: "Off",
     skip: "Skip",
@@ -1097,6 +1098,7 @@ const en = {
     questionOf: "Question {{current}} of {{total}}",
     tonight: "Tonight",
     countOf: "{{current}} of {{total}}",
+    aboutToday: "About today",
     missedDayHint: "Missed a day? Tap it and answer for then.",
     orSwipe: "or swipe the card left or right",
     fillingInFor: "Filling in for {{date}}",

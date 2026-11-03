@@ -66,7 +66,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { uuid } from "@/lib/uuid";
 
-export const TodayTab = () => {
+/** "today": the path only (her note, Nov 3 2026: nothing below it).
+ *  "questions": her own tab with all her questions, always open, and the
+ *  reminder (her: "список вопросов должен быть где-то, не мозолить глаза,
+ *  но чтобы было очевидно", like the old main screen). */
+export const TodayTab = ({ view = "today" }: { view?: "today" | "questions" } = {}) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const { toast } = useToast();
@@ -185,7 +189,7 @@ export const TodayTab = () => {
 
   // "Answer now" on an island's sheet (Index stores which questions).
   useEffect(() => {
-    if (trackers.length === 0) return;
+    if (view !== "today" || trackers.length === 0) return;
     let wanted: { ids?: string[]; title?: string } | null = null;
     try {
       wanted = JSON.parse(sessionStorage.getItem("memap_answer_now") || "null");
@@ -972,6 +976,7 @@ export const TodayTab = () => {
           tonight's N" button. Each topic step starts its own short deck;
           the gold task opens the thing it teaches; the chest opens the
           report on the Map. */}
+      {view === "today" && (
       <EveningPath
         trackers={trackers}
         entries={entries}
@@ -1003,36 +1008,12 @@ export const TodayTab = () => {
           window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date } }));
         }}
       />
+      )}
 
       {/* "Answer for yesterday" lives in tonight's bubble on the path now
           (Aurora step 2): a "Fill in Tuesday?" chip when one of the last
           two days is empty. */}
 
-      {/* Notif opt-in banner — shown only when reminders are off, the
-          user hasn't dismissed it, and there are answers on at least two
-          days (so it never stacks on top of a brand-new Today). */}
-      {!notifsEnabled && !notifBannerDismissed && trackers.length > 0 && new Set(entries.map((e) => e.date)).size >= 2 && pathModel(trackers, entries).todayCounted && (
-        <div className="surface rounded-[20px] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
-          <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
-          {/* One short line (1.8.0): the title and the sentence under it
-              were two ways of saying "turn on the reminder". */}
-          <p className="flex-1 min-w-0 text-base font-semibold leading-snug">{t("today.notifBannerShort")}</p>
-          <Button
-            size="sm"
-            onClick={handleEnableNotifs}
-            className="rounded-full h-9 px-4 text-[15px] font-semibold"
-          >
-            {t("today.notifBannerEnable")}
-          </Button>
-          <button
-            onClick={handleDismissNotifBanner}
-            aria-label={t("today.notifBannerDismiss")}
-            className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
       {/* "Happened just now?" (DoorQuickLog) left Today in Aurora step 2;
           it moves into the mystery's island on the Map as "Log a fight"
@@ -1042,7 +1023,7 @@ export const TodayTab = () => {
           "Play round" cards (created by random-play mode). Play cards
           live in their own section so users can prune/promote them
           without polluting their real tracking surface. */}
-      {(() => {
+      {(view === "questions" || !trackers.some((tr) => !tr.archived)) && (() => {
         // Belt-and-braces: also exclude archived here even though
         // loadData should have already filtered them out. Defends
         // against any future code path that puts an archived tracker
@@ -1126,24 +1107,17 @@ export const TodayTab = () => {
           );
         };
 
-        const listShown = listOpen || selectionMode;
+        const listShown = view === "questions" || listOpen || selectionMode;
         return (
           <>
             {/* "My questions": the list is folded by default (1.8.0) so
                 Today is just the count and tonight's button. Opening it
                 shows the old list (drag, edit, bulk) plus Add question. */}
             {regularTrackers.length + playTrackers.length > 0 && (
-              <div className="surface flex items-center gap-2 rounded-[20px] pl-4 pr-2 py-2">
-                <button
-                  type="button"
-                  onClick={() => setListOpen((v) => !v)}
-                  aria-expanded={listShown}
-                  className="flex-1 min-w-0 flex items-center gap-3 py-2 text-left"
-                >
-                  <span className="flex-1 text-[17px] font-semibold">{t("today.myQuestions")}</span>
-                  <span className="text-[16px] text-muted-foreground tabular-nums">{regularTrackers.length + playTrackers.length}</span>
-                  <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform", listShown && "rotate-180")} />
-                </button>
+              <div className="flex items-center gap-3 pt-1">
+                <h2 className="flex-1 min-w-0 text-[28px] font-bold leading-tight tracking-tight">
+                  {t("today.myQuestions")} <span className="font-semibold text-muted-foreground tabular-nums">{regularTrackers.length + playTrackers.length}</span>
+                </h2>
                 {/* Adding stays visible without opening the list (phone
                     testing: "couldn't see where to add a question"). */}
                 <button
@@ -1157,6 +1131,20 @@ export const TodayTab = () => {
                   className="h-11 w-11 shrink-0 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
                 >
                   <Plus className="h-5 w-5" strokeWidth={2.6} />
+                </button>
+              </div>
+            )}
+            {/* The daily reminder lives here now, not under the path. */}
+            {!notifsEnabled && !notifBannerDismissed && regularTrackers.length > 0 && (
+              <div className="surface rounded-[20px] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
+                <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
+                <p className="flex-1 min-w-0 text-base font-semibold leading-snug">{t("today.notifBannerShort")}</p>
+                <Button size="sm" onClick={handleEnableNotifs} className="rounded-full h-9 px-4 text-[15px] font-semibold">
+                  {t("today.notifBannerEnable")}
+                </Button>
+                <button onClick={handleDismissNotifBanner} aria-label={t("today.notifBannerDismiss")}
+                  className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             )}

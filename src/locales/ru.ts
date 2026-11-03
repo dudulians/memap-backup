@@ -7,6 +7,7 @@ const ru: Translation = {
   common: {
     dayMode: "День",
     nightMode: "Ночь",
+    questions: "Вопросы",
     back: "Назад",
     off: "Выкл",
     skip: "Пропустить",
@@ -1237,6 +1238,7 @@ const ru: Translation = {
     questionOf: "Вопрос {{current}} из {{total}}",
     tonight: "Вечер",
     countOf: "{{current}} из {{total}}",
+    aboutToday: "Про сегодня",
     missedDayHint: "Пропущен день? Нажми на него и ответь за тот день.",
     orSwipe: "или смахни карточку влево или вправо",
     fillingInFor: "Заполняешь за {{date}}",

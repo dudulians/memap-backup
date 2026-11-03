@@ -1252,6 +1252,12 @@ export const DailySession = ({
               </span>
               {onDateChange && <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showDates && "rotate-180")} strokeWidth={2.4} />}
             </button>
+            {/* Which day the questions are about (her note, Nov 3 2026: a
+                card says "Felt anxious", and it wasn't clear: today? ever?).
+                A past day is already named in the title. */}
+            {selectedDate === todayLocal() && (
+              <p className="text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("dailySession.aboutToday")}</p>
+            )}
           </div>
           <div className="w-9 h-9" />
         </div>
