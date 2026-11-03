@@ -400,6 +400,7 @@ const en = {
     bothDays_one: "{{count}} day with answers for both",
     bothDays_other: "{{count}} days with answers for both",
     linked: "Linked",
+    bridgeTip: "A bridge: these often go together",
     maybeTitle: "Maybe linked",
     checking: "MeMap is checking",
     you: "You",

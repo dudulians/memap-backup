@@ -2086,13 +2086,18 @@ html[data-ui="new"][data-theme="aurora"] .memap-sea-bg::after { display: none; }
 .chest-drop { animation: chestDrop 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* The Map tab's own calm sea (Nov 2 2026). */
-.map-sea { background: linear-gradient(180deg, #e3f3f8 0%, #c8e9f2 35%, #b2dfec 100%); }
+.map-sea { background: radial-gradient(120% 60% at 15% 0%, rgba(255, 255, 255, .55), transparent 60%), linear-gradient(180deg, #e3f3f8 0%, #c8e9f2 35%, #b2dfec 100%); }
 /* The Map's header stays at the top over the sea (her note, Nov 2 2026). */
 .map-head { background: linear-gradient(180deg, #e3f3f8 0%, #e3f3f8 70%, rgba(227, 243, 248, 0.85) 100%); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 html[data-ui="new"][data-theme="aurora"] .map-head { background: linear-gradient(180deg, #141c39 0%, #141c39 70%, rgba(20, 28, 57, 0.85) 100%); }
 [data-theme="aurora"]:not([data-ui="new"]) .map-head { background: hsl(200 40% 16% / 0.92); }
 [data-theme="aurora"] .map-sea { background: linear-gradient(180deg, hsl(200 40% 16%) 0%, hsl(195 45% 20%) 50%, hsl(190 45% 22%) 100%); }
-html[data-ui="new"][data-theme="aurora"] .map-sea { background: linear-gradient(180deg, #141c39 0%, #1b2550 45%, #2a3470 100%); }
+html[data-ui="new"][data-theme="aurora"] .map-sea { background: radial-gradient(120% 60% at 15% 0%, rgba(120, 150, 255, .14), transparent 60%), linear-gradient(180deg, #141c39 0%, #1b2550 45%, #2a3470 100%); }
+/* The flat map: each island's shallows breathe a little; a new bridge builds itself once. */
+.map-shore { animation: shoreBreathe 4s ease-in-out infinite; }
+@keyframes shoreBreathe { 50% { transform: scale(1.03); } }
+.bridge-build { animation: bridgeBuild 600ms ease-out both; }
+@keyframes bridgeBuild { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 
 /* A not-yet tap on a flat path node: a short wiggle. */
 .path-wiggle-flat { animation: pathWiggle 420ms ease-in-out 1; }
@@ -2202,7 +2207,7 @@ header h1 { transition: opacity 200ms ease; }
 
 @media (prefers-reduced-motion: reduce) {
   main.snap-y { scroll-snap-type: none; }
-  .globe-in, .treasure-new { animation: none; }
+  .globe-in, .treasure-new, .map-shore, .bridge-build { animation: none; }
   .island-press, .island-press:active { transition: none; transform: none; }
   .island-ripple { animation: none; opacity: 0; }
 }

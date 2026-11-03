@@ -482,6 +482,7 @@ const ru: Translation = {
     bothDays_many: "{{count}} дней с ответами на оба",
     bothDays_other: "{{count}} дня с ответами на оба",
     linked: "Связаны",
+    bridgeTip: "Мостик: это часто бывает вместе",
     maybeTitle: "Может быть, связаны",
     checking: "MeMap проверяет",
     you: "Ты",
