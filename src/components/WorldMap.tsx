@@ -4,9 +4,14 @@
 // top of the ball shows; it must roll calmly and stop (it made her dizzy);
 // no idle spinning; a "Back to me" pill when you roll away; unexplored land
 // is her plain cloud. "Map" melts the ball into a flat map.
+// Nov 3 2026 (the "Improve Map & Globe" brief she brought): a sea sphere with
+// depth (bright where it faces you, a light edge of air at the horizon, no
+// dark rim); islands sink behind the horizon instead of standing in the sky;
+// fewer waves and filler islands, so hers lead; a found link is a line on
+// the ball (no flat bridge pictures); weather sits on its island's corner.
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Island, IslandId, Route, islandName, mapPic } from "@/lib/islands";
+import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { growthLand, type GrowthKind } from "@/lib/growth";
 import { haptics } from "@/lib/haptics";
 
@@ -31,13 +36,14 @@ const apart = (a: { lon: number; lat: number }, b: { lon: number; lat: number })
 const SCENERY: Thing[] = (() => {
   const kinds: Omit<Thing, "lon" | "lat">[] = [{ w: 130, base: "island_waterfall" }, { w: 120, base: "island_plain", land: [["palm_trees", .6, .02, -.46]] }, { w: 110, base: "island_rocky", land: [["pine_tree", .42, .06, -.5]] },
     { w: 120, base: "island_plain", land: [["green_tree", .45, .04, -.44]] }, { w: 110, base: "island_mountain" }, { w: 100, base: "island_rocky" }];
-  const out: Thing[] = [], N = 72;
+  const out: Thing[] = [], N = 36;
   for (let i = 0; i < N; i++) {
     const y = 1 - 2 * (i + .5) / N, lat = Math.asin(y) * 180 / Math.PI, lon = ((i * 137.508) % 360) - 180;
     const c = Math.cos(lat * Math.PI / 180) * Math.cos(lon * Math.PI / 180);
     if (Math.acos(Math.max(-1, Math.min(1, c))) * 180 / Math.PI < 36) continue;
     if (UNEXPLORED.some((u) => apart(u, { lon, lat }) < 17)) continue;
-    out.push({ lon, lat, ...kinds[out.length % kinds.length] });
+    const kind = kinds[out.length % kinds.length];
+    out.push({ lon, lat, ...kind, w: Math.round(kind.w * 0.85) });
   }
   return out;
 })();
@@ -58,6 +64,8 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
   useEffect(() => {
     const canvas = cv.current!, box = wrap.current!, ctx = canvas.getContext("2d")!;
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const night = isNightMap();
+    const FONT = `"DM Sans", "Onest", system-ui, -apple-system, sans-serif`;
     const IMG = new Map<string, HTMLImageElement>();
     let raf = 0, alive = true;
     const kick = () => { if (!raf && alive) raf = requestAnimationFrame(frame); };
@@ -104,14 +112,14 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
     };
     const pill = (x: number, y: number, text: string, icon: string | null, a: number, small: boolean) => {
       if (a <= .02) return;
-      ctx.save(); ctx.globalAlpha = a; ctx.font = `700 ${small ? 12 : 14}px system-ui, -apple-system, sans-serif`;
+      ctx.save(); ctx.globalAlpha = a; ctx.font = `700 ${small ? 12 : 14}px ${FONT}`;
       const ih = icon ? 24 : 0, w = ctx.measureText(text).width + (icon ? ih + 16 : 20), h = small ? 24 : 30;
       ctx.shadowColor = "rgba(20,60,80,.28)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 3; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, h / 2); ctx.fill(); ctx.shadowColor = "transparent";
       if (icon) { const im = pic(icon); if (im.complete && im.naturalWidth) ctx.drawImage(im, x - w / 2 + 4, y - ih / 2, ih, ih); }
       ctx.fillStyle = small ? "#128373" : "#13303D"; ctx.textBaseline = "middle"; ctx.fillText(text, x - w / 2 + (icon ? ih + 8 : 10), y + 1); ctx.restore();
     };
-    const SKY: Record<string, [string, number]> = { storm: ["thunder_cloud", 80], clouds: ["partly_cloudy", 60], sun: ["sun", 56] };
-    const WAVES: V3[] = []; { const N = 260; for (let i = 0; i < N; i++) { const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), th = i * 2.399963; WAVES.push([r * Math.sin(th), y, r * Math.cos(th)]); } }
+    const SKY: Record<string, [string, number]> = { storm: ["thunder_cloud", 52], clouds: ["partly_cloudy", 46], sun: ["sun", 42] };
+    const WAVES: V3[] = []; { const N = 110; for (let i = 0; i < N; i++) { const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), th = i * 2.399963; WAVES.push([r * Math.sin(th), y, r * Math.cos(th)]); } }
 
     let dragging = false, awayNow = false;
     function frame() {
@@ -125,25 +133,38 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
       if (e > .01) { const fb = flatBox(); ctx.save(); ctx.globalAlpha = e; const sea = ctx.createLinearGradient(0, fb.oy, 0, fb.oy + 600 * fb.s); sea.addColorStop(0, "#DDF2FA"); sea.addColorStop(1, "#BCDDED"); ctx.fillStyle = sea; ctx.beginPath(); ctx.roundRect(fb.ox, fb.oy, 370 * fb.s, 600 * fb.s, 24 * fb.s); ctx.fill(); ctx.restore(); }
       if (ga > .01) {
         ctx.save(); ctx.globalAlpha = ga;
-        const glow = ctx.createRadialGradient(g.cx, g.cy, g.R * .97, g.cx, g.cy, g.R * 1.09); glow.addColorStop(0, "rgba(155,227,238,.7)"); glow.addColorStop(1, "rgba(155,227,238,0)"); ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R * 1.09, 0, 7); ctx.fill();
-        const sea = ctx.createRadialGradient(g.cx, g.cy - g.R * .35, g.R * .05, g.cx, g.cy, g.R); sea.addColorStop(0, "#BDEEF6"); sea.addColorStop(.6, "#6CC4DA"); sea.addColorStop(.92, "#3A93B2"); sea.addColorStop(1, "#2C7896");
+        // the air around the ball: a light halo above the horizon
+        const glow = ctx.createRadialGradient(g.cx, g.cy, g.R * .985, g.cx, g.cy, g.R * 1.08);
+        glow.addColorStop(0, night ? "rgba(120,190,240,.42)" : "rgba(196,240,250,.9)"); glow.addColorStop(1, night ? "rgba(120,190,240,0)" : "rgba(196,240,250,0)");
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R * 1.08, 0, 7); ctx.fill();
+        // the sea: brightest where it faces you, a little deeper toward the edge
+        const sea = ctx.createRadialGradient(g.cx, g.cy, g.R * .15, g.cx, g.cy, g.R);
+        if (night) { sea.addColorStop(0, "#3C9CB8"); sea.addColorStop(.72, "#2B82A2"); sea.addColorStop(1, "#246F93"); }
+        else { sea.addColorStop(0, "#9BE1EE"); sea.addColorStop(.72, "#62C3DA"); sea.addColorStop(1, "#4AAFCC"); }
         ctx.fillStyle = sea; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.fill();
+        // a soft sheen from the light above-left
+        const sx0 = g.cx - g.R * .32, sy0 = g.top + g.R * .22;
+        const sheen = ctx.createRadialGradient(sx0, sy0, 0, sx0, sy0, g.R * .75);
+        sheen.addColorStop(0, night ? "rgba(255,255,255,.12)" : "rgba(255,255,255,.3)"); sheen.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = sheen; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.fill();
         ctx.strokeStyle = "#fff"; ctx.lineCap = "round";
-        for (const v of WAVES) { const [x, y, z] = app(M, v); if (z < .04) continue; const sx = g.cx + g.R * x, sy = g.cy - g.R * y; if (sy > H + 20 || sx < -20 || sx > W + 20) continue; const s = (4 + 9 * z) * W / 390; ctx.globalAlpha = ga * .5 * Math.min(1, z * 2); ctx.lineWidth = 1.4 + 1.2 * z; ctx.beginPath(); ctx.moveTo(sx - s, sy); ctx.quadraticCurveTo(sx - s / 2, sy - s * .55 * z, sx, sy); ctx.quadraticCurveTo(sx + s / 2, sy + s * .55 * z, sx + s, sy); ctx.stroke(); }
+        for (const v of WAVES) { const [x, y, z] = app(M, v); if (z < .04) continue; const sx = g.cx + g.R * x, sy = g.cy - g.R * y; if (sy > H + 20 || sx < -20 || sx > W + 20) continue; const s = (4 + 9 * z) * W / 390; ctx.globalAlpha = ga * (night ? .16 : .26) * Math.min(1, z * 2); ctx.lineWidth = 1.4 + 1.2 * z; ctx.beginPath(); ctx.moveTo(sx - s, sy); ctx.quadraticCurveTo(sx - s / 2, sy - s * .55 * z, sx, sy); ctx.quadraticCurveTo(sx + s / 2, sy + s * .55 * z, sx + s, sy); ctx.stroke(); }
         ctx.restore();
       }
       const P = new Map<IslandId, P>(); things.forEach((o) => P.set(o.island!.id, place(o, true)));
+      const onBall = ga > .99;
+      if (onBall) { ctx.save(); ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.clip(); }
       // sea routes: along the ball, curves on the flat map
       routes.forEach(({ a, b, k, n }, i) => {
         const label = "🔗"; // numbers live in the island sheet now (her Nov 2 note)
         const A = byId.get(a), B = byId.get(b); if (!A || !B) return;
         if (ga > .01) {
           const va = vec(A.lon, A.lat), vb = vec(B.lon, B.lat), om = Math.acos(Math.max(-1, Math.min(1, va[0] * vb[0] + va[1] * vb[1] + va[2] * vb[2])));
-          ctx.save(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 3.2; ctx.setLineDash([1, 9]); ctx.lineCap = "round"; ctx.beginPath(); let pen = false, mid: number[] | null = null;
-          for (let j = 0; j <= 40; j++) { const s = j / 40, k1 = Math.sin((1 - s) * om) / Math.sin(om), k2 = Math.sin(s * om) / Math.sin(om); const [x, y, z] = app(M, [va[0] * k1 + vb[0] * k2, va[1] * k1 + vb[1] * k2, va[2] * k1 + vb[2] * k2]); const sx = g.cx + g.R * x, sy = g.cy - g.R * y; if (z > .02) { if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); pen = true; } else pen = false; if (j === 20) mid = [sx, sy, z]; }
-          ctx.globalAlpha = ga * .9; ctx.stroke(); ctx.restore();
-          // A found link is a bridge (her: "между островами построился мост").
-          if (mid && mid[2] > .3 && mid[1] < H - 140) { const im = pic("wooden_bridge"); if (im.complete && im.naturalWidth) { const w = 64 * (W / 390) * (.6 + .4 * mid[2]), h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = ga * Math.min(1, (mid[2] - .3) * 3); ctx.drawImage(im, mid[0] - w / 2, mid[1] - h / 2, w, h); ctx.restore(); } }
+          ctx.save(); ctx.beginPath(); let pen = false;
+          for (let j = 0; j <= 48; j++) { const s = j / 48, k1 = Math.sin((1 - s) * om) / Math.sin(om), k2 = Math.sin(s * om) / Math.sin(om); const [x, y, z] = app(M, [va[0] * k1 + vb[0] * k2, va[1] * k1 + vb[1] * k2, va[2] * k1 + vb[2] * k2]); const sx = g.cx + g.R * x, sy = g.cy - g.R * y; if (z > .02) { if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); pen = true; } else pen = false; }
+          ctx.lineCap = "round"; ctx.lineJoin = "round";
+          ctx.globalAlpha = ga * (night ? .35 : .45); ctx.strokeStyle = "#1E9C8C"; ctx.lineWidth = 8 * (W / 390); ctx.stroke();
+          ctx.globalAlpha = ga * .95; ctx.strokeStyle = "#fff"; ctx.lineWidth = 3.2; ctx.setLineDash([1, 9]); ctx.stroke(); ctx.restore();
         }
         if (e > .01) { const fb = flatBox(), pa = P.get(a)!, pb = P.get(b)!, bend = (i % 2 ? -40 : 36) * fb.s, mx = (pa.x + pb.x) / 2 + bend, my = (pa.y + pb.y) / 2; ctx.save(); ctx.globalAlpha = e * .85; ctx.strokeStyle = "#2A8F80"; ctx.lineWidth = 3.5; ctx.setLineDash([1, 10]); ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.quadraticCurveTo(mx, my, pb.x, pb.y); ctx.stroke(); ctx.restore(); pill((pa.x + pb.x) / 2 + bend / 2, my, label, null, e, true); }
       });
@@ -157,15 +178,16 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
         if (avatar) { const im = avatarImg(); if (im && im.complete && im.naturalWidth) { const a = 30 * bp.sc; ctx.drawImage(im, bp.x - w * .42, bp.y - h * .62, a, a); } }
         ctx.restore();
       }
+      if (onBall) ctx.restore();
       const isAway = tTarget === 0 && !spin && (bp.z < .6 || bp.x < 20 || bp.x > W - 20 || bp.y < g.top + 30 || bp.y > H - 170);
       if (isAway !== awayNow) { awayNow = isAway; setAway(isAway); }
       things.forEach((o) => {
         const isl = o.island!, p = P.get(isl.id)!, sk = isl.weather ? SKY[isl.weather] : null;
-        if (sk) { const im = pic(sk[0]), a = p.al * Math.max(e, Math.min(1, (p.z - .3) * 3)); if (im.complete && im.naturalWidth && a > .03) { const w = sk[1] * p.sc, h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = a; ctx.drawImage(im, p.x + (o.lon > 0 ? .3 : -.28) * o.w * p.sc - w / 2, p.y - o.w * p.sc * .62 - h, w, h); ctx.restore(); } }
+        if (sk) { const im = pic(sk[0]), a = p.al * Math.max(e, Math.min(1, (p.z - .3) * 3)); if (im.complete && im.naturalWidth && a > .03) { const w = sk[1] * p.sc, h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = a; ctx.drawImage(im, p.x + .3 * o.w * p.sc - w / 2, p.y - o.w * p.sc * .34 - h * .8, w, h); ctx.restore(); } }
       });
       // names last, so no weather picture covers them
       things.forEach((o) => { const isl = o.island!, p = P.get(isl.id)!; pill(p.x, p.y + o.w * p.sc * .34, islandName(t, isl.id), "icon_" + isl.def.icon, Math.max(e, Math.min(1, (p.z - .3) * 3)) * p.al, false); });
-      if (ga > .01) { ctx.save(); ctx.globalAlpha = ga; const rim = ctx.createRadialGradient(g.cx, g.cy, g.R * .86, g.cx, g.cy, g.R); rim.addColorStop(0, "rgba(11,42,53,0)"); rim.addColorStop(1, "rgba(11,42,53,.22)"); ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.fill(); ctx.restore(); }
+      if (ga > .01) { ctx.save(); ctx.globalAlpha = ga; const rim = ctx.createRadialGradient(g.cx, g.cy, g.R * .9, g.cx, g.cy, g.R); rim.addColorStop(0, "rgba(255,255,255,0)"); rim.addColorStop(1, night ? "rgba(170,220,255,.22)" : "rgba(255,255,255,.42)"); ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.fill(); ctx.restore(); }
       if (moving || dragging) kick();
     }
 

@@ -1,41 +1,52 @@
-// The Map, made clear (Aurora, Nov 2 2026; her note: "как будто просто
-// накиданы разные элементы, планки, непонятные цифры, непонятно что к чему
-// относится"). Only her islands, each with its name and one weather sign;
-// a legend says what the signs mean; links are dotted lines with a link
-// button that says the whole thing in words ("Short night → headache next
-// day · 11 of 14 times"); what her chests gave stands by the islands.
-// No floating numbers, no strange islands. Tap an island for its stats.
-// Nov 2 2026 (her: "сразу подсветить, что между островами потенциально
-// могут быть связи"): neighbours not linked yet get a faint route with a
-// dotted route (MeMap is checking; the island's sheet says so in words, her
-// note: "?" marks sat randomly, two on one island); found links are bridges.
-// Later the same day (her: "карта должна отражать реальное развитие"): what
-// grew on each island stands on it, a found link is a wooden bridge, and her
-// special items (milestones) sit in the sea beside the islands.
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+// The Map (Aurora). Nov 2 2026, her notes: only her islands, each with its
+// name and weather said in words; links said in words when tapped; what grew
+// on an island stands on it.
+// Nov 3 2026 (the "Improve Map & Globe" brief she brought: composition,
+// scale and hierarchy, not more decoration): the islands are larger and keep
+// one even rhythm down a calm zigzag; one sea route joins them in order,
+// behind them; two islands with a link found sit side by side and her
+// wooden bridge stands from shore to shore, its button above it; any other
+// link is a brighter route; nothing floats in the sea any more (her special
+// items are in Week summary → treasures); the weather sits on each island's
+// corner; her boat waits on the route by the island she answered last.
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link2, Plus } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
-import { islandName, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
+import { islandName, isNightMap, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
-import { ITEMS, type GrowthKind, type ItemId } from "@/lib/growth";
+import { type GrowthKind, type ItemId } from "@/lib/growth";
 import { IslandPicture } from "@/components/IslandPicture";
 import { islandHsl } from "@/lib/islandColors";
 
-const PIC = 132;
 const WEATHER_PIC: Record<Exclude<Weather, null>, string> = { storm: "thunder_cloud", clouds: "partly_cloudy", sun: "sun" };
+/** wooden_bridge.webp is 205 x 120, its feet at the bottom corners. */
+const BRIDGE_ASPECT = 120 / 205;
+
+type Pt = { x: number; y: number };
+type Seg = readonly [Pt, Pt, Pt, Pt];
+type Box = { x0: number; x1: number; y0: number; y1: number };
+/** A smooth curve through the points (Catmull-Rom as cubic Béziers), one segment per pair. */
+const segments = (pts: Pt[]): Seg[] => pts.slice(0, -1).map((p1, i) => {
+  const p0 = pts[i - 1] ?? p1, p2 = pts[i + 1], p3 = pts[i + 2] ?? p2;
+  return [p1, { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 }, { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 }, p2] as const;
+});
+const bez = ([a, b, c, d]: Seg, t: number): Pt => {
+  const u = 1 - t;
+  return { x: u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x, y: u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y };
+};
+const curve = ([a, b, c, d]: Seg) => `M${a.x},${a.y} C${b.x.toFixed(1)},${b.y.toFixed(1)} ${c.x.toFixed(1)},${c.y.toFixed(1)} ${d.x},${d.y}`;
+const hit = (a: Box, b: Box) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
 export const IslandsMap = ({
   islands,
   routes,
   trackers,
-  entries = [],
   width,
   fill = {},
   lit,
   growth = {},
-  items = [],
   you,
   onYou,
   onOpen,
@@ -43,7 +54,7 @@ export const IslandsMap = ({
   islands: Island[];
   routes: Route[];
   trackers: Tracker[];
-  /** for "days with answers on both" under a possible link */
+  /** kept for callers; the map no longer counts days itself */
   entries?: TrackerEntry[];
   width: number;
   /** answered today, 0..1 per island: a calm ring around its icon */
@@ -52,7 +63,7 @@ export const IslandsMap = ({
   lit?: Set<string>;
   /** what has grown on each island */
   growth?: Record<string, GrowthKind[]>;
-  /** special items she has earned */
+  /** kept for callers; special items now live in Week summary */
   items?: ItemId[];
   /** her avatar sailing by the island she answered last (pic null = none chosen yet) */
   you?: { pic: string | null; declined: boolean; near?: IslandId };
@@ -60,8 +71,9 @@ export const IslandsMap = ({
   onOpen: (id: IslandId) => void;
 }) => {
   const { t } = useTranslation();
-  // Open bubble: a found link (its index) or a possible one ("p" + index).
-  const [link, setLink] = useState<number | string | null>(null);
+  const night = isNightMap();
+  // The bubble of a found link (its index).
+  const [link, setLink] = useState<number | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (link === null) return;
@@ -74,136 +86,126 @@ export const IslandsMap = ({
     return () => document.removeEventListener("pointerdown", close);
   }, [link]);
 
-  // Two columns, staggered, so every island has room for its name.
-  const pos = islands.map((_, i) => ({
-    x: Math.round((i % 2 === 0 ? 0.28 : 0.72) * width),
-    y: 40 + i * 142 + (i % 2) * 18,
-  }));
-  const baseHeight = (pos.length ? pos[pos.length - 1].y : 0) + PIC + 70;
-  const where = new Map(islands.map((isl, i) => [isl.id, pos[i]]));
-  // Neighbours on the map with no link found yet: maybe one affects the other.
-  const shown = routes.slice(0, 3);
+  // One scale for everything: islands 10-15% larger than before, as the screen allows.
+  const PIC = Math.round(Math.max(132, Math.min(152, width * 0.42)));
+  const BOX_H = Math.round(PIC * 0.9); // IslandPicture's box
+  const ROW = BOX_H + 64; // an island and its name
+  const ZIG = Math.round(ROW * 0.7); // the next island, on the other side
+  const LABEL_W = Math.min(176, Math.round(width * 0.48));
+  const TOP = 20;
+
+  // The strongest found links; a pair of linked islands sits side by side.
+  const shown = useMemo(() => routes.slice(0, 3), [routes]);
   const linked = (a: string, b: string) => shown.some((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a));
-  const maybe = islands.slice(1).map((b, i) => [islands[i], b] as const).filter(([a, b]) => !linked(a.id, b.id));
-  // Where a link's button sits: along its route, clear of island names and
-  // of other link buttons (several links made them pile onto the names).
-  const taken: { x: number; y: number }[] = [];
-  const labels = pos.map((p) => ({ x0: p.x - 98, x1: p.x + 98, y0: p.y + PIC * 0.72, y1: p.y + PIC * 0.72 + 52 }));
-  const pictures = pos.map((p) => ({ x0: p.x - PIC * 0.42, x1: p.x + PIC * 0.42, y0: p.y + 4, y1: p.y + PIC * 0.72 }));
-  const spot = (pa: { x: number; y: number }, pb: { x: number; y: number }, strict = false, half = 20) => {
-    const ay = pa.y + PIC * 0.38, by = pb.y + PIC * 0.38;
-    for (const k of [0.5, 0.62, 0.38, 0.72, 0.28]) {
-      const x = pa.x + (pb.x - pa.x) * k, y = ay + (by - ay) * k;
-      const hits = (r: { x0: number; x1: number; y0: number; y1: number }) => x + half > r.x0 && x - half < r.x1 && y + 20 > r.y0 && y - 20 < r.y1;
-      const hitsLink = taken.some((q) => Math.hypot(q.x - x, q.y - y) < 50);
-      if (!labels.some(hits) && !hitsLink && (!strict || !pictures.some(hits))) { taken.push({ x, y }); return { x, y }; }
+  const order = useMemo(() => {
+    const byId = new Map(islands.map((i) => [i.id, i]));
+    const seq: Island[] = [];
+    const used = new Set<string>();
+    for (const isl of islands) {
+      if (used.has(isl.id)) continue;
+      seq.push(isl);
+      used.add(isl.id);
+      // its strongest linked island comes right after it
+      const mate = shown.map((r) => (r.a === isl.id ? r.b : r.b === isl.id ? r.a : null)).map((id) => (id ? byId.get(id) : undefined))
+        .find((x): x is Island => !!x && !used.has(x.id));
+      if (mate) { seq.push(mate); used.add(mate.id); }
     }
-    // A possible link with no free place keeps just its dotted line.
-    if (strict) return null;
-    const x = (pa.x + pb.x) / 2, y = (ay + by) / 2;
-    taken.push({ x, y });
-    return { x, y };
-  };
+    return seq;
+  }, [islands, shown]);
+  // pairWithPrev[i]: island i shares a row with island i-1 (a bridge between them)
+  const pairWithPrev = order.map(() => false);
+  for (let i = 1; i < order.length; i++) if (!pairWithPrev[i - 1] && linked(order[i - 1].id, order[i].id)) pairWithPrev[i] = true;
+
+  const pos: Pt[] = [];
+  order.forEach((_, i) => {
+    const inPair = pairWithPrev[i] || pairWithPrev[i + 1];
+    const right = i % 2 === 1;
+    const y = i === 0 ? TOP : pairWithPrev[i] ? pos[i - 1].y : pairWithPrev[i - 1] ? pos[i - 1].y + ROW : pos[i - 1].y + ZIG;
+    pos.push({ x: Math.round((right ? (inPair ? 0.75 : 0.7) : (inPair ? 0.25 : 0.3)) * width), y });
+  });
+  // Where the route meets each island: the middle of its shore.
+  const shore = pos.map((p) => ({ x: p.x, y: p.y + BOX_H * 0.64 }));
+  const segs = segments(shore);
+  const at = new Map(order.map((isl, i) => [isl.id, i]));
+
+  // What's already on the map, so her boat and the link buttons keep clear.
+  const taken: Box[] = [
+    ...pos.map((p) => ({ x0: p.x - PIC * 0.44, x1: p.x + PIC * 0.44, y0: p.y + BOX_H * 0.08, y1: p.y + BOX_H * 0.9 })),
+    ...pos.map((p) => ({ x0: p.x - LABEL_W * 0.45, x1: p.x + LABEL_W * 0.45, y0: p.y + BOX_H - 10, y1: p.y + BOX_H + 42 })),
+  ];
+
+  // Bridges between side-by-side islands; any other link is a brighter route.
+  const links = shown.map((r) => {
+    const i = at.get(r.a), j = at.get(r.b);
+    if (i === undefined || j === undefined) return null;
+    const lo = Math.min(i, j), hi = Math.max(i, j);
+    if (hi - lo === 1 && pairWithPrev[hi]) {
+      const L = shore[pos[lo].x < pos[hi].x ? lo : hi], R = shore[pos[lo].x < pos[hi].x ? hi : lo];
+      const x0 = L.x + PIC * 0.3, x1 = R.x - PIC * 0.3;
+      const w = Math.max(56, x1 - x0), h = w * BRIDGE_ASPECT;
+      const box = { left: (x0 + x1) / 2 - w / 2, top: L.y - h * 0.62, w, h };
+      const mid = { x: (x0 + x1) / 2, y: box.top - 4 };
+      taken.push({ x0: mid.x - 22, x1: mid.x + 22, y0: mid.y - 20, y1: box.top + h });
+      return { r, bridge: box, mid, seg: lo };
+    }
+    const s: Seg = hi - lo === 1 ? segs[lo] : [shore[lo], { x: shore[lo].x + (shore[hi].x - shore[lo].x) * 0.2 + (lo % 2 ? -40 : 40), y: shore[lo].y + (shore[hi].y - shore[lo].y) * 0.3 }, { x: shore[hi].x - (shore[hi].x - shore[lo].x) * 0.2 + (lo % 2 ? -40 : 40), y: shore[hi].y - (shore[hi].y - shore[lo].y) * 0.3 }, shore[hi]];
+    // its button: the first free place along it
+    const mid = [0.5, 0.4, 0.6, 0.3, 0.7].map((k) => bez(s, k)).find((p) => !taken.some((b) => hit(b, { x0: p.x - 18, x1: p.x + 18, y0: p.y - 18, y1: p.y + 18 }))) ?? bez(s, 0.5);
+    taken.push({ x0: mid.x - 18, x1: mid.x + 18, y0: mid.y - 18, y1: mid.y + 18 });
+    return { r, curve: s, mid, seg: hi - lo === 1 ? lo : -1 };
+  });
+  const special = new Set(links.map((l) => l?.seg ?? -1));
+
+  // Her boat: on a free stretch of the route next to the island she answered last.
+  const boat = (() => {
+    if (!you || order.length === 0) return null;
+    const k = Math.max(0, order.findIndex((isl) => isl.id === you.near));
+    const fits = (p: Pt) => p.x > 40 && p.x < width - 40 && !taken.some((b) => hit(b, { x0: p.x - 34, x1: p.x + 34, y0: p.y - 52, y1: p.y + 22 }));
+    for (const s of [k, k - 1, k + 1, k - 2, k + 2]) {
+      if (s < 0 || s >= segs.length || special.has(s)) continue;
+      for (const t of [0.5, 0.38, 0.62, 0.28, 0.72]) { const p = bez(segs[s], t); if (fits(p)) return p; }
+    }
+    const p = pos[pos.length - 1];
+    return { x: width / 2, y: p.y + BOX_H + 96 };
+  })();
+
+  const last = pos[pos.length - 1];
+  const height = Math.max(last ? last.y + BOX_H + 56 : 0, boat ? boat.y + 34 : 0);
   const title = (id: string) => {
     const tr = trackers.find((x) => x.id === id);
     return tr ? localizeTrackerTitle(tr.title) : "";
   };
 
-  // Special items sit in the free sea beside each island (the other column,
-  // level with its top), a second one a little lower.
-  const ITEM_W: Record<string, number> = { hot_air_balloon: 46, camera: 42, wooden_signpost: 40, books: 46, sparkles: 34, art_easel: 42, bicycle: 54, rainbow: 86, airplane: 62 };
-  const shownItems = ITEMS.filter((it) => items.includes(it.id));
-
-  const linkSpots = {
-    found: shown.map((r) => { const pa = where.get(r.a); const pb = where.get(r.b); return pa && pb ? spot(pa, pb, false, 32) : null; }),
-
-  };
-  // Special items: the first free place beside an island (the other column,
-  // level with its top, then a little lower), never on an island, a name,
-  // a link or another item.
-  const busy = [
-    ...pos.map((p) => ({ x0: p.x - PIC / 2, x1: p.x + PIC / 2, y0: p.y - 6, y1: p.y + PIC * 0.78 })),
-    ...labels,
-    ...taken.map((q) => ({ x0: q.x - 42, x1: q.x + 42, y0: q.y - 30, y1: q.y + 30 })),
-  ];
-  const itemSpots = shownItems.map((it) => {
-    const w = ITEM_W[it.pic] ?? 44;
-    for (let j = 0; j < pos.length; j++) {
-      const p = pos[j];
-      for (const [fx, dy] of [[0.76, 4], [0.76, 70], [0.9, 30], [0.76, -40]] as const) {
-        const x = (p.x < width / 2 ? fx : 1 - fx) * width;
-        const y = p.y + dy;
-        const r = { x0: x - w / 2 - 4, x1: x + w / 2 + 4, y0: y - 4, y1: y + w * 0.9 + 4 };
-        if (r.x0 < 0 || r.x1 > width || r.y0 < 0) continue;
-        if (busy.some((b) => r.x0 < b.x1 && r.x1 > b.x0 && r.y0 < b.y1 && r.y1 > b.y0)) continue;
-        busy.push(r);
-        return { it, w, left: x - w / 2, top: y };
-      }
-    }
-    return null;
-  });
-  const youSpot = (() => {
-    if (!you) return null;
-    const order = [...pos.keys()].sort((a, b) => (islands[a].id === you.near ? -1 : islands[b].id === you.near ? 1 : a - b));
-    for (const j of order) {
-      const p = pos[j];
-      for (const [fx, dy] of [[0.78, 30], [0.78, 96], [0.62, 104], [0.86, 0]] as const) {
-        const x = (p.x < width / 2 ? fx : 1 - fx) * width;
-        const y = p.y + dy;
-        const r = { x0: x - 34, x1: x + 34, y0: y - 6, y1: y + 70 };
-        if (r.x0 < 0 || r.x1 > width) continue;
-        if (busy.some((b) => r.x0 < b.x1 && r.x1 > b.x0 && r.y0 < b.y1 && r.y1 > b.y0)) continue;
-        busy.push(r);
-        return { x, y };
-      }
-    }
-    // Nowhere free beside the islands: below the last one.
-    const last = pos[pos.length - 1];
-    return last ? { x: width / 2, y: last.y + PIC + 58, bottom: true } : null;
-  })();
-
-  const height = baseHeight + (youSpot && "bottom" in youSpot ? 90 : 0);
-
   return (
     <div className="relative mx-auto" style={{ width, height }}>
-      {/* Links: a dotted line and one button that says it in words. */}
+      {/* Behind everything: the route, the brighter links, the bridges. */}
       <svg width={width} height={height} className="pointer-events-none absolute inset-0" aria-hidden="true">
-        {maybe.map(([a, b], i) => {
-          const pa = where.get(a.id)!;
-          const pb = where.get(b.id)!;
-          return (
-            <line key={`m${i}`} x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
-              stroke="hsl(var(--foreground))" strokeOpacity={0.3} strokeWidth={3} strokeDasharray="2 9" strokeLinecap="round" />
-          );
-        })}
-        {shown.map((r, i) => {
-          const pa = where.get(r.a);
-          const pb = where.get(r.b);
-          if (!pa || !pb) return null;
-          return (
-            <g key={i}>
-              <line x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
-                stroke="hsl(var(--coin-teal))" strokeOpacity={0.18} strokeWidth={12} strokeLinecap="round" />
-              <line x1={pa.x} y1={pa.y + PIC * 0.38} x2={pb.x} y2={pb.y + PIC * 0.38}
-                stroke="hsl(var(--coin-teal))" strokeWidth={4} strokeDasharray="2 8" strokeLinecap="round" />
-            </g>
-          );
-        })}
+        {segs.map((s, i) => !pairWithPrev[i + 1] && (
+          <g key={i}>
+            <path d={curve(s)} fill="none" stroke="#fff" strokeOpacity={night ? 0.07 : 0.32} strokeWidth={10} strokeLinecap="round" />
+            <path d={curve(s)} fill="none" stroke={night ? "hsl(200 60% 85%)" : "#fff"} strokeOpacity={night ? 0.45 : 0.95} strokeWidth={3.2} strokeDasharray="0.1 11" strokeLinecap="round" />
+          </g>
+        ))}
+        {links.map((l, i) => l?.curve && (
+          <g key={i}>
+            <path d={curve(l.curve)} fill="none" stroke="hsl(var(--coin-teal))" strokeOpacity={0.16} strokeWidth={10} strokeLinecap="round" />
+            <path d={curve(l.curve)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="0.1 9" strokeLinecap="round" />
+          </g>
+        ))}
       </svg>
-
-      {itemSpots.map((sp) => sp && (
-        <img key={sp.it.id} src={mapPic(sp.it.pic)} alt={t(`items.${sp.it.id}.name`)} decoding="async" draggable={false}
-          className="pointer-events-none absolute object-contain drop-shadow-[0_6px_8px_rgba(16,42,56,0.18)]"
-          style={{ left: sp.left, top: sp.top, width: sp.w }} />
+      {links.map((l, i) => l?.bridge && (
+        <img key={i} src={mapPic("wooden_bridge")} alt="" aria-hidden="true" decoding="async" draggable={false}
+          className="pointer-events-none absolute object-contain drop-shadow-[0_5px_6px_rgba(16,42,56,0.2)]"
+          style={{ left: l.bridge.left, top: l.bridge.top, width: l.bridge.w, height: l.bridge.h }} />
       ))}
 
-      {you && youSpot && (
+      {you && boat && (
         <button type="button" onClick={() => { haptics.soft(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
-          className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: youSpot.x - 60, top: youSpot.y, width: 120 }}>
-          <span className="relative block h-[62px] w-[62px]">
-            <img src={mapPic("sailboat")} alt="" className="absolute bottom-0 left-1/2 w-[54px] -translate-x-1/2 object-contain" draggable={false} />
+          className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: boat.x - 50, top: boat.y - 52, width: 100 }}>
+          <span className="relative block h-[54px] w-[54px]">
+            <img src={mapPic("sailboat")} alt="" className="absolute bottom-0 left-1/2 w-[48px] -translate-x-1/2 object-contain drop-shadow-[0_4px_5px_rgba(16,42,56,0.2)]" draggable={false} />
             {you.pic ? (
-              <img src={you.pic} alt="" className="absolute left-[4px] top-[2px] h-[36px] w-[36px] object-contain drop-shadow-[0_3px_4px_rgba(16,42,56,0.25)]" draggable={false} />
+              <img src={you.pic} alt="" className="absolute left-[3px] top-[1px] h-[32px] w-[32px] object-contain drop-shadow-[0_3px_4px_rgba(16,42,56,0.25)]" draggable={false} />
             ) : !you.declined ? (
               <span className="absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white">
                 <Plus className="h-4 w-4" strokeWidth={3} />
@@ -214,26 +216,29 @@ export const IslandsMap = ({
         </button>
       )}
 
-      {islands.map((isl, i) => {
+      {order.map((isl, i) => {
         const p = pos[i];
+        const w = Math.max(PIC, LABEL_W);
         return (
           <button key={isl.id} type="button" onClick={() => { haptics.tap(); onOpen(isl.id); }}
-            className="absolute flex flex-col items-center active:scale-[0.97] transition-transform"
-            style={{ left: p.x - PIC / 2 - 10, top: p.y, width: PIC + 20 }}
+            className="absolute z-[1] flex flex-col items-center active:scale-[0.97] transition-transform"
+            style={{ left: p.x - w / 2, top: p.y, width: w }}
             aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.weather.${isl.weather}`)}` : ""}`}>
             <span className="relative">
               <IslandPicture id={isl.id} width={PIC} growth={growth[isl.id]} />
               {lit?.has(isl.id) && (
-                <img src={mapPic("lighthouse")} alt="" aria-hidden="true" width={40} height={52} decoding="async" draggable={false}
-                  className="pointer-events-none absolute -left-2 bottom-3 object-contain drop-shadow-[0_0_10px_hsl(44_96%_60%/0.8)]" />
+                <img src={mapPic("lighthouse")} alt="" aria-hidden="true" decoding="async" draggable={false}
+                  className="pointer-events-none absolute object-contain drop-shadow-[0_0_10px_hsl(44_96%_60%/0.8)]"
+                  style={{ width: Math.round(PIC * 0.28), left: -Math.round(PIC * 0.04), bottom: Math.round(PIC * 0.1) }} />
               )}
               {isl.weather && (
-                <img src={mapPic(WEATHER_PIC[isl.weather])} alt="" aria-hidden="true" width={46} height={46} decoding="async" draggable={false}
-                  className="pointer-events-none absolute -right-3 -top-1 object-contain" />
+                <img src={mapPic(WEATHER_PIC[isl.weather])} alt="" aria-hidden="true" decoding="async" draggable={false}
+                  className="pointer-events-none absolute object-contain"
+                  style={{ width: Math.round(PIC * 0.3), right: -Math.round(PIC * 0.05), top: 0 }} />
               )}
             </span>
-            <span className="surface relative z-[1] -mt-1 inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-3">
-              <span className="relative flex h-8 w-8 items-center justify-center">
+            <span className="surface relative z-[1] -mt-2 inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3" style={{ maxWidth: LABEL_W }}>
+              <span className="relative flex h-8 w-8 shrink-0 items-center justify-center">
                 <svg width={32} height={32} className="absolute inset-0 -rotate-90" aria-hidden="true">
                   <circle cx={16} cy={16} r={14} fill="none" stroke="hsl(var(--foreground) / 0.08)" strokeWidth={3} />
                   {(fill[isl.id] ?? 0) > 0 && (
@@ -253,35 +258,27 @@ export const IslandsMap = ({
         );
       })}
 
-      {shown.map((r, i) => {
-        const at = linkSpots.found[i];
-        if (!at) return null;
-        const mx = at.x;
-        const my = at.y;
-        return (
-          <div key={i}>
-            <button type="button" data-map-link onClick={() => { haptics.land(); setLink((l) => (l === i ? null : i)); }}
-              aria-label={`${t("map.linked")} · ${t("map.linkAria")}`} aria-expanded={link === i}
-              className="absolute flex items-center justify-center active:scale-95 transition-transform"
-              style={{ left: mx - 30, top: my - 20, width: 60, height: 40 }}>
-              <img src={mapPic("wooden_bridge")} alt="" width={60} height={35} draggable={false} className="pointer-events-none object-contain drop-shadow-[0_5px_6px_rgba(16,42,56,0.22)]" />
-              <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white">
-                <Link2 className="h-2.5 w-2.5" strokeWidth={3} />
-              </span>
-            </button>
-            {link === i && (
-              <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
-                style={{ left: Math.max(8, Math.min(mx - 140, width - 288)), top: my + 26, width: 280 }}>
-                <p className="text-[17px] font-bold leading-snug">
-                  {title(r.first)} → {title(r.second)}{r.nextDay ? ` ${t("map.nextDay")}` : ""}
-                </p>
-                <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t("map.timesOf", { k: r.k, count: r.n })}</p>
-                <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {/* A link's button: what the link is, in words. */}
+      {links.map((l, i) => l && (
+        <div key={i}>
+          <button type="button" data-map-link onClick={() => { haptics.land(); setLink((v) => (v === i ? null : i)); }}
+            aria-label={`${t("map.linked")} · ${t("map.linkAria")}`} aria-expanded={link === i}
+            className="surface absolute z-[2] flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--coin-teal))] active:scale-95 transition-transform"
+            style={{ left: l.mid.x - 16, top: l.mid.y - 16 }}>
+            <Link2 className="h-4 w-4" strokeWidth={2.6} />
+          </button>
+          {link === i && (
+            <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
+              style={{ left: Math.max(8, Math.min(l.mid.x - 140, width - 288)), top: l.mid.y + 22, width: 280 }}>
+              <p className="text-[17px] font-bold leading-snug">
+                {title(l.r.first)} → {title(l.r.second)}{l.r.nextDay ? ` ${t("map.nextDay")}` : ""}
+              </p>
+              <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t("map.timesOf", { k: l.r.k, count: l.r.n })}</p>
+              <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

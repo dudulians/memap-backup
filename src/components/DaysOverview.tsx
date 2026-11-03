@@ -5,6 +5,7 @@
 // the Map. Each first plays how it fills (the month fills cell by cell, the
 // line runs as a wave), then settles on her real days. Tap opens the full
 // one. Reduce Motion: the real state at once.
+// Nov 3 2026 (her brief): about 12% more compact, less empty space.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
@@ -80,7 +81,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   const wave = useProgress(1100, 300);
   const toReal = useProgress(700, 1500);
 
-  const W = 96, H = 44;
+  const W = 88, H = 38;
   const max = Math.max(4, ...weeks);
   const pts = weeks.map((v, i) => {
     const x = (i / (weeks.length - 1)) * W;
@@ -93,14 +94,14 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   const d = smooth(pts.map(([x, y]) => [x, y] as [number, number]));
   const len = useRef(260);
 
-  const card = "surface flex flex-1 flex-col items-start rounded-[20px] px-3 pb-3 pt-2.5 text-left active:scale-[0.98] transition-transform";
+  const card = "surface flex min-w-0 flex-1 flex-col items-start rounded-[18px] px-2.5 pb-2.5 pt-2 text-left active:scale-[0.98] transition-transform";
   const open = (s: "overview" | "trends" | "signals") => { haptics.tap(); onOpen(s); };
 
   return (
     <div className="flex gap-2.5 px-4">
       <button type="button" className={card} onClick={() => open("overview")}>
-        <span className="text-[14px] font-bold">{t("overviewCards.calendar")}</span>
-        <span className="mt-2 grid grid-cols-7 gap-[3px]" aria-hidden="true">
+        <span className="text-[13px] font-bold leading-tight">{t("overviewCards.calendar")}</span>
+        <span className="mt-1.5 grid grid-cols-7 gap-[3px]" aria-hidden="true">
           {month.map((m, i) => {
             const on = fill * 28 > i;
             const real = settle > 0 ? m : "calm";
@@ -108,26 +109,26 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
               : real === "hard" ? "hsl(var(--coin-gold))"
               : real === "calm" ? "hsl(var(--coin-teal))"
               : "hsl(var(--foreground) / 0.07)";
-            return <span key={i} className="h-[11px] w-[11px] rounded-[3px] transition-colors duration-300" style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
+            return <span key={i} className="h-[10px] w-[10px] rounded-[3px] transition-colors duration-300" style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
           })}
         </span>
       </button>
       <button type="button" className={card} onClick={() => open("trends")}>
-        <span className="text-[14px] font-bold">{t("overviewCards.chart")}</span>
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mt-2 overflow-visible" aria-hidden="true">
+        <span className="text-[13px] font-bold leading-tight">{t("overviewCards.chart")}</span>
+        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mt-1.5 overflow-visible" aria-hidden="true">
           <path d={d} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
             strokeDasharray={len.current} strokeDashoffset={len.current * (1 - ease(wave))} />
           {toReal >= 1 && pts.map(([x, y], i) => i === pts.length - 1 && <circle key={i} cx={x} cy={y} r={3.5} fill="hsl(var(--coin-teal))" />)}
         </svg>
-        <span className="mt-1 text-[12px] font-semibold text-muted-foreground">{t("overviewCards.hardPerWeek")}</span>
+        <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{t("overviewCards.hardPerWeek")}</span>
       </button>
       <button type="button" className={card} onClick={() => open("signals")}>
-        <span className="text-[14px] font-bold">{t("overviewCards.lighthouses")}</span>
+        <span className="text-[13px] font-bold leading-tight">{t("overviewCards.lighthouses")}</span>
         <span className="mt-1 flex items-center gap-1.5">
-          <img src={mapPic("lighthouse")} alt="" width={34} height={44} className={lit > 0 ? "drop-shadow-[0_0_8px_hsl(44_96%_60%/0.8)]" : "opacity-60 grayscale"} />
-          <span className="text-[22px] font-bold tabular-nums">{lit}</span>
+          <img src={mapPic("lighthouse")} alt="" width={28} height={36} className={lit > 0 ? "drop-shadow-[0_0_8px_hsl(44_96%_60%/0.8)]" : "opacity-60 grayscale"} />
+          <span className="text-[20px] font-bold tabular-nums">{lit}</span>
         </span>
-        <span className="mt-1 text-[12px] font-semibold text-muted-foreground">{lit > 0 ? t("overviewCards.litOf", { count: rules }) : t("overviewCards.noneLit", { count: rules })}</span>
+        <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{lit > 0 ? t("overviewCards.litOf", { count: rules }) : t("overviewCards.noneLit", { count: rules })}</span>
       </button>
     </div>
   );
