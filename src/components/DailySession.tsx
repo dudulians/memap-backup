@@ -15,7 +15,7 @@ import { LIFE_STREAMS, LifeStreamTemplate } from "@/lib/lifeStreams";
 import { getRelatedQuestions, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
-import { playSwipeSound } from "@/lib/feedback";
+import { playSwipeSound, preloadSounds } from "@/lib/feedback";
 import { haptics } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
@@ -169,6 +169,8 @@ export const DailySession = ({
   includeAnswered = false,
 }: DailySessionProps) => {
   const { t } = useTranslation();
+  // The swipe sounds, ready before the first card goes.
+  useEffect(() => { preloadSounds("swipeYes", "swipeNo", "swipeSkip"); }, []);
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const settings = getSessionSettings();
   

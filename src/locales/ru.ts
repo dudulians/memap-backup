@@ -315,6 +315,9 @@ const ru: Translation = {
     more: "Ещё полопать",
     soundOn: "Включить звук",
     soundOff: "Выключить звук",
+    toNotes: "В заметки",
+    savedOne: "Сохранено",
+    speed: "Скорость {{n}}×",
   },
   // «Твоя догадка» вместо Guess (2 ноября 2026)
   hunch: {

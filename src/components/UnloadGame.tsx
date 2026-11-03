@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Archive, ArrowUp, Volume2, VolumeX, X } from "lucide-react";
+import { Archive, ArrowUp, FastForward, NotebookPen, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
 import { playBurst, playKeep, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
@@ -52,6 +52,19 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   const [hint, setHint] = useState(true);
   const [done, setDone] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Faster when she wants it (her note, Nov 3 2026: "смена скорости, чтобы
+  // быстрее и активнее поднимались"): 1x, 2x, 3x, remembered.
+  const [pace, setPace] = useState<number>(() => {
+    try { return Math.min(3, Math.max(1, Number(localStorage.getItem("memap_unload_pace")) || 1)); } catch { return 1; }
+  });
+  const paceRef = useRef(pace);
+  paceRef.current = pace;
+  // A thought said out loud (or a long one): offer to keep it in Notes (her
+  // note: "когда наговариваю, предложить сохранить в заметки").
+  const [offer, setOffer] = useState<{ text: string; saved: boolean } | null>(null);
+  const offerTimer = useRef(0);
+  const voiced = useRef(false);
+  useEffect(() => () => window.clearTimeout(offerTimer.current), []);
   // The loop reads these through a ref (no re-render per frame).
   const api = useRef<{ add: (s: string) => void } | null>(null);
   // Pop sounds (her ask), with their own mute here; Settings → sounds mutes them too.
@@ -212,7 +225,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       if (!alive) return;
       // Keep the sea lively: small bubbles rise every ~0.7 s, never too many.
       const generic = bubbles.filter((b) => !b.text).length;
-      if (now - lastSpawn > (reduce ? 1300 : 700) && generic < 18) { spawn(); lastSpawn = now; }
+      if (now - lastSpawn > (reduce ? 1300 : 700) / paceRef.current && generic < 18 + 8 * (paceRef.current - 1)) { spawn(); lastSpawn = now; }
       // Squished long enough: pop.
       for (const b of bubbles.filter((x) => x.popAt && now >= x.popAt)) burst(b);
       for (const b of bubbles) {
@@ -221,7 +234,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
         if (b.text && b.target !== undefined && b.y <= b.target) {
           // A thought waits in the middle, bobbing gently.
           b.y += Math.sin(now / 900 + b.phase) * 0.12 * speed;
-        } else b.y += b.vy;
+        } else b.y += b.vy * paceRef.current;
         if (!reduce) b.x += Math.sin(now / 1400 + b.phase) * 0.18;
         b.x = Math.max(b.r * 0.6, Math.min(W - b.r * 0.6, b.x));
       }
@@ -338,6 +351,30 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
     haptics.tap();
     api.current?.add(s.slice(0, 80));
     setText("");
+    const spoken = voiced.current;
+    voiced.current = false;
+    if (spoken || s.length >= 30) {
+      window.clearTimeout(offerTimer.current);
+      setOffer({ text: s, saved: false });
+      offerTimer.current = window.setTimeout(() => setOffer(null), 9000);
+    }
+  };
+  const saveOffer = async () => {
+    if (!offer || offer.saved) return;
+    await addNote({ date: isoLocal(new Date()), text: offer.text });
+    window.dispatchEvent(new CustomEvent("memap-notes-changed"));
+    haptics.success();
+    setOffer({ ...offer, saved: true });
+    window.clearTimeout(offerTimer.current);
+    offerTimer.current = window.setTimeout(() => setOffer(null), 1600);
+  };
+  const nextPace = () => {
+    haptics.tap();
+    setPace((p) => {
+      const n = p >= 3 ? 1 : p + 1;
+      try { localStorage.setItem("memap_unload_pace", String(n)); } catch { /* ignore */ }
+      return n;
+    });
   };
   const saveKept = async () => {
     if (kept.length === 0) return;
@@ -383,6 +420,19 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
 
       {/* What's on her mind: typed or spoken, one thought per bubble. */}
       <div className="surface mx-3 mb-[max(env(safe-area-inset-bottom),12px)] rounded-[24px] px-3 pb-3 pt-3">
+        {offer && (
+          <div className="mb-2 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] py-1.5 pl-3 pr-1.5 animate-fade-in">
+            <NotebookPen className="h-4 w-4 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
+            <span className="min-w-0 flex-1 truncate text-[14px] font-medium">“{offer.text}”</span>
+            {offer.saved ? (
+              <span className="shrink-0 px-2 text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("unload.savedOne")}</span>
+            ) : (
+              <button type="button" onClick={saveOffer} className="h-9 shrink-0 rounded-full bg-[hsl(var(--coin-teal))] px-3.5 text-[14px] font-bold text-white">
+                {t("unload.toNotes")}
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }}
             placeholder={t("unload.placeholder")} maxLength={80} enterKeyHint="send"
@@ -393,7 +443,11 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
           </button>
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <DictateButton text={text} onText={setText} />
+          <DictateButton text={text} onText={(next) => { voiced.current = true; setText(next); }} />
+          <button type="button" onClick={nextPace} aria-label={t("unload.speed", { n: pace })}
+            className="surface inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[15px] font-bold tabular-nums">
+            <FastForward className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} /> {pace}×
+          </button>
           <button type="button" onClick={() => { haptics.success(); setDone(true); }} className="h-11 shrink-0 rounded-full px-4 text-[15px] font-bold text-[hsl(var(--coin-teal))]">
             {t("unload.done")}
           </button>

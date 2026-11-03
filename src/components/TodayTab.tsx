@@ -6,7 +6,7 @@ import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storag
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { getDoorState } from "@/lib/doors";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
@@ -70,7 +70,7 @@ import { uuid } from "@/lib/uuid";
  *  "questions": her own tab with all her questions, always open, and the
  *  reminder (her: "список вопросов должен быть где-то, не мозолить глаза,
  *  но чтобы было очевидно", like the old main screen). */
-export const TodayTab = ({ view = "today" }: { view?: "today" | "questions" } = {}) => {
+export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questions"; onBack?: () => void } = {}) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
   const { toast } = useToast();
@@ -1065,7 +1065,8 @@ export const TodayTab = ({ view = "today" }: { view?: "today" | "questions" } = 
               )}
             >
               <span className="flex-1 min-w-0 text-[17px] font-semibold leading-snug">
-                {doorNameOf(tracker.id) ?? localizeTrackerTitle(tracker.title)}
+                {/* the question itself, not a short label (her note, Nov 3 2026) */}
+                {localizeTrackerQuestion(tracker.questionText, tracker.title)}
               </span>
               {inSelectMode ? (
                 <span
@@ -1113,6 +1114,11 @@ export const TodayTab = ({ view = "today" }: { view?: "today" | "questions" } = 
             {/* "My questions": the list is folded by default (1.8.0) so
                 Today is just the count and tonight's button. Opening it
                 shows the old list (drag, edit, bulk) plus Add question. */}
+            {view === "questions" && onBack && (
+              <button type="button" onClick={onBack} className="-mb-3 -ml-1 inline-flex h-10 items-center gap-1 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
+                <ChevronLeft className="h-5 w-5" strokeWidth={2.4} /> {t("common.back")}
+              </button>
+            )}
             {regularTrackers.length + playTrackers.length > 0 && (
               <div className="flex items-center gap-3 pt-1">
                 <h2 className="flex-1 min-w-0 text-[28px] font-bold leading-tight tracking-tight">

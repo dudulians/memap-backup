@@ -162,10 +162,17 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
         </div>
         {loaded && islands.length > 0 && (
-          <button type="button" onClick={() => { haptics.tap(); setOpen("all"); }}
-            className="-ml-0.5 mt-0.5 inline-flex h-8 items-center gap-0.5 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
-            {t("map.summary")} <ChevronRight className="h-4 w-4" strokeWidth={2.6} />
-          </button>
+          <div className="-ml-0.5 mt-0.5 flex flex-wrap items-center gap-x-5">
+            <button type="button" onClick={() => { haptics.tap(); setOpen("all"); }}
+              className="inline-flex h-8 items-center gap-0.5 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
+              {t("map.summary")} <ChevronRight className="h-4 w-4" strokeWidth={2.6} />
+            </button>
+            {/* All her questions in one list (edit, reorder, delete). */}
+            <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new Event("memap-open-questions")); }}
+              className="inline-flex h-8 items-center gap-0.5 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
+              {t("today.myQuestions")} <ChevronRight className="h-4 w-4" strokeWidth={2.6} />
+            </button>
+          </div>
         )}
       </div>
 

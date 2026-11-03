@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { FlaskConical, X } from "lucide-react";
+import { Check, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playSparkle } from "@/lib/feedback";
@@ -15,6 +15,11 @@ import { islandHsl } from "@/lib/islandColors";
 import { EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, startExperiment, type Experiment } from "@/lib/experiments";
 import { IslandPicture } from "@/components/IslandPicture";
 import { Pressable } from "@/components/ui/pressable";
+
+const GREEN = "hsl(152 36% 44%)";
+/** Chosen: a green rim, a light tint and a tick (her note, Nov 3 2026: the
+ *  choice "didn't press"; the old ring didn't show at all). */
+const chosenLook = { boxShadow: `0 0 0 2.5px ${GREEN}`, background: "hsl(152 36% 44% / 0.1)" };
 
 export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, onClose }: {
   mode: "pick" | "result";
@@ -82,15 +87,23 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
             {/* Which change */}
             {island && (
               <div className="mt-4 space-y-2.5">
-                {ideasFor(island).map((k) => (
-                  <button key={k} type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={idea === k}
-                    className={cn("surface flex min-h-14 w-full items-center rounded-2xl px-5 py-3 text-left text-[17px] font-semibold",
-                      idea === k && "ring-2 ring-[hsl(152_36%_44%)]")}>
-                    {t(`experiment.idea.${k}.change`)}
-                  </button>
-                ))}
+                {ideasFor(island).map((k) => {
+                  const on = idea === k;
+                  return (
+                    <button key={k} type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={on}
+                      className={cn("surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3 text-left text-[17px] outline-none transition-[box-shadow,background-color] duration-150 active:scale-[0.99]", on ? "font-bold" : "font-semibold")}
+                      style={on ? chosenLook : undefined}>
+                      <span className="min-w-0 flex-1">{t(`experiment.idea.${k}.change`)}</span>
+                      <span aria-hidden="true" className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2", on ? "text-white" : "border-foreground/20")}
+                        style={on ? { background: GREEN, borderColor: GREEN } : undefined}>
+                        {on && <Check className="h-4 w-4" strokeWidth={3} />}
+                      </span>
+                    </button>
+                  );
+                })}
                 <input value={own} onChange={(e) => { setOwn(e.target.value); setIdea(null); }} placeholder={t("experiment.own")} maxLength={60}
-                  className="h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none focus:ring-2 focus:ring-[hsl(152_36%_44%)]" />
+                  className="h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none"
+                  style={own.trim() ? chosenLook : undefined} />
               </div>
             )}
             <div className="mt-auto pt-8">

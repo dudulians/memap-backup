@@ -14,4 +14,8 @@ Trimmed, levelled and made mono for the app.
 - `sea.mp3`: "Gentle Waves - Quiet Beach 2" by amholma, https://freesound.org/people/amholma/sounds/376796
   (20 s from 0:04, its end crossfaded into its start so it loops)
 
+- `swipe-yes.mp3`: "Playing Card Slide Right" by el_boss, https://freesound.org/people/el_boss/sounds/571581
+- `swipe-no.mp3`: "Playing Card Slide Left" by el_boss, https://freesound.org/people/el_boss/sounds/571574
+- `swipe-skip.mp3`: "Quiet Page Turn - 7" by SpaceJoe, https://freesound.org/people/SpaceJoe/sounds/484967
+
 Used in src/lib/feedback.ts (the bubble game, Your hunch, the week chest, Test one change).

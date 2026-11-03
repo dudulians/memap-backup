@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
 import { MapTab } from "@/components/MapTab";
@@ -14,6 +14,10 @@ import seaDawn from "@/assets/bg/sea-dawn.webp";
 import seaNight from "@/assets/bg/sea-night.webp";
 import pathDay from "@/assets/bg/path-day.webp";
 import pathNight from "@/assets/bg/path-night.webp";
+import pathDayTop from "@/assets/bg/path-day-top.webp";
+import pathDayTile from "@/assets/bg/path-day-tile.webp";
+import pathNightTop from "@/assets/bg/path-night-top.webp";
+import pathNightTile from "@/assets/bg/path-night-tile.webp";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -36,6 +40,9 @@ const Index = () => {
   });
   const tabRef = useRef(activeTab);
   tabRef.current = activeTab;
+  // Her questions open from the Map (her note, Nov 3 2026: in the tab bar
+  // they looked like a place she must visit); Back returns there.
+  const [questionsFrom, setQuestionsFrom] = useState<Tab>("patterns");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -103,7 +110,14 @@ const Index = () => {
       setActiveTab(tr.back);
     };
     window.addEventListener("memap-trip-done", done);
+    const questions = () => {
+      const from = tabRef.current;
+      if (from !== "questions") setQuestionsFrom(from);
+      setActiveTab("questions");
+    };
+    window.addEventListener("memap-open-questions", questions);
     return () => {
+      window.removeEventListener("memap-open-questions", questions);
       window.removeEventListener("memap-switch-tab", handler);
       window.removeEventListener("memap-answer-now", answer);
       window.removeEventListener("memap-trip-done", done);
@@ -162,10 +176,24 @@ const Index = () => {
   // list and the user asked for a consistent return-to-top affordance.
   const mainRef = useRef<HTMLElement>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  // Today's picture scrolls with the path and continues the one behind the
+  // header; once she scrolls, the header turns frosted over it.
+  const [scrolled, setScrolled] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const [headerH, setHeaderH] = useState(56);
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setHeaderH(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
-    const handler = () => setShowBackToTop(el.scrollTop > 300);
+    const handler = () => { setShowBackToTop(el.scrollTop > 300); setScrolled(el.scrollTop > 4); };
     el.addEventListener("scroll", handler, { passive: true });
     return () => el.removeEventListener("scroll", handler);
   }, []);
@@ -174,6 +202,7 @@ const Index = () => {
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
     setShowBackToTop(false);
+    setScrolled(false);
   }, [activeTab]);
   // Same treatment for sub-section switches inside Patterns — dispatched
   // by PatternsTab.handleSectionChange. Without this, scrolling deep
@@ -224,7 +253,7 @@ const Index = () => {
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2 border-b ${activeTab === "patterns" ? "backdrop-blur-lg bg-background/60 border-border/40" : "bg-transparent border-transparent"}`}>
+      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2 border-b transition-colors duration-300 ${activeTab === "patterns" || (activeTab === "cards" && scrolled) ? "backdrop-blur-lg bg-background/60 border-border/40" : "bg-transparent border-transparent"}`}>
         {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
         <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
         <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
@@ -258,8 +287,22 @@ const Index = () => {
         className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : "flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4"}
         style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK }}
       >
-        {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
-        {activeTab === "questions" && <TodayTab key={`questions-${refreshKey}`} view="questions" />}
+        {activeTab === "cards" && (
+          <div className="relative">
+            {/* Her picture moves with the path (her note, Nov 3 2026): the sky
+                once, then her sea with islands repeating (make-path-tiles.cjs). */}
+            <div aria-hidden="true" className="pointer-events-none absolute -z-10"
+              style={{
+                left: -16, right: -16, top: -16, bottom: "calc(-7rem - env(safe-area-inset-bottom, 0px))",
+                backgroundImage: `url(${night ? pathNightTop : pathDayTop}), url(${night ? pathNightTile : pathDayTile})`,
+                backgroundRepeat: "no-repeat, repeat-y",
+                backgroundSize: "100% auto, 100% auto",
+                backgroundPosition: `center ${-headerH}px, center ${-headerH}px`,
+              }} />
+            <TodayTab key={`cards-${refreshKey}`} />
+          </div>
+        )}
+        {activeTab === "questions" && <TodayTab key={`questions-${refreshKey}`} view="questions" onBack={() => setActiveTab(questionsFrom)} />}
         {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} initialIsland={mapIsland} onOpened={() => { setMapOpen(null); setMapIsland(null); }} />}
         {activeTab === "notes" && (
           <NotesTab
@@ -297,11 +340,10 @@ const Index = () => {
           notification taps still open it directly (App.tsx). */}
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
-          <div className="nav-floating grid grid-cols-4 overflow-hidden">
+          <div className="nav-floating grid grid-cols-3 overflow-hidden">
             {([
               { tab: "cards", icon: CalendarDays, label: t("common.today") },
               { tab: "patterns", icon: MapIcon, label: t("common.map") },
-              { tab: "questions", icon: ListChecks, label: t("common.questions") },
               { tab: "notes", icon: NotebookPen, label: t("common.notes") },
             ] as const).map(({ tab, icon: Icon, label }) => (
               <button
@@ -314,10 +356,10 @@ const Index = () => {
                   setNotesSourceTab(null);
                   setNotesTargetDate(undefined);
                 }}
-                aria-current={activeTab === tab ? "page" : undefined}
+                aria-current={(activeTab === "questions" ? questionsFrom : activeTab) === tab ? "page" : undefined}
                 className={`
                   flex flex-col items-center justify-center py-2.5 px-2 m-1 rounded-[20px] transition-all duration-300
-                  ${activeTab === tab ? "text-foreground bg-muted shadow-sm" : "text-muted-foreground hover:text-foreground"}
+                  ${(activeTab === "questions" ? questionsFrom : activeTab) === tab ? "text-foreground bg-muted shadow-sm" : "text-muted-foreground hover:text-foreground"}
                 `}
               >
                 <Icon className="h-5 w-5 mb-0.5" />

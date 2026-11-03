@@ -4,8 +4,10 @@
 // - Single shared AudioContext (browsers cap ~6 contexts per tab).
 // - Sine waves with a smooth attack/decay envelope — no harsh square-edged
 //   clicks, no exponentialRamp to 0 (which causes a hard cut on some devices).
-// - Pleasant intervals: Yes = rising major 3rd, No = falling minor 3rd, Skip
-//   = soft single tone. All pitched in a mellow mid register.
+// - Swipes (Nov 3 2026, her: "старый звук очень плохой"): a card sliding off
+//   to the right (Yes) or left (No) and a soft page turn (Skip), real CC0
+//   recordings; the old tones (Yes a rising third, No a falling one) stay as
+//   the fallback until they load.
 //
 // Haptics
 // - Native (iOS/Android via Capacitor): uses @capacitor/haptics Impact, which
@@ -23,6 +25,9 @@ import drop from "@/assets/sounds/drop.mp3";
 import sparkle from "@/assets/sounds/sparkle.mp3";
 import thump from "@/assets/sounds/thump.mp3";
 import sea from "@/assets/sounds/sea.mp3";
+import swipeYes from "@/assets/sounds/swipe-yes.mp3";
+import swipeNo from "@/assets/sounds/swipe-no.mp3";
+import swipeSkip from "@/assets/sounds/swipe-skip.mp3";
 
 type FeedbackKind = "yes" | "no" | "skip";
 
@@ -131,6 +136,8 @@ export const playSwipeSound = (kind: FeedbackKind) => {
     ctx.resume().catch(() => { /* ignore */ });
   }
   try {
+    const name = kind === "yes" ? "swipeYes" : kind === "no" ? "swipeNo" : "swipeSkip";
+    if (sample(ctx, name, { rate: vary(0.04), pan: kind === "yes" ? 0.35 : kind === "no" ? -0.35 : 0 })) return;
     if (kind === "yes") playYes(ctx);
     else if (kind === "no") playNo(ctx);
     else playSkip(ctx);
@@ -220,10 +227,10 @@ const plip = (ctx: AudioContext, size: number, pan: number, start = 0, peak = 1)
 };
 
 // The recordings (CC0, Freesound; src/assets/sounds/CREDITS.md).
-const FILES = { pop1, pop2, pop3, pop4, drop, sparkle, thump, sea } as const;
+const FILES = { pop1, pop2, pop3, pop4, drop, sparkle, thump, sea, swipeYes, swipeNo, swipeSkip } as const;
 type Sound = keyof typeof FILES;
 /** How loud each file sits next to the others. */
-const LEVEL: Record<Sound, number> = { pop1: 1, pop2: 1, pop3: 0.7, pop4: 1.3, drop: 0.9, sparkle: 0.35, thump: 1, sea: 1 };
+const LEVEL: Record<Sound, number> = { pop1: 1, pop2: 1, pop3: 0.7, pop4: 1.3, drop: 0.9, sparkle: 0.35, thump: 1, sea: 1, swipeYes: 0.35, swipeNo: 0.38, swipeSkip: 0.6 };
 const decoded = new Map<Sound, AudioBuffer | null>();
 const loading = new Map<Sound, Promise<AudioBuffer | null>>();
 
