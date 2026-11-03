@@ -226,7 +226,7 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
     // you; just past the horizon it sinks, bottom first.
     const place = (o: Thing) => {
       const g = geom(), [x, y, z] = app(M, vec(o.lon, o.lat));
-      return { x: g.cx + g.R * x, y: g.cy - g.R * y, z, sc: (W / 390) * (.28 + .62 * Math.max(z, 0)), al: z >= 0 ? 1 : clamp(1 + z / .4, 0, 1) };
+      return { x: g.cx + g.R * x, y: g.cy - g.R * y, z, sc: (W / 390) * (.28 + .62 * Math.max(z, 0)), al: smooth(0, .12, z) };
     };
     type P = ReturnType<typeof place>;
     const shown = (p: P) => p.al > .01 && p.y < H + 80 && p.x > -140 && p.x < W + 140;
@@ -315,7 +315,8 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
     let dragging = false, awayNow = false, lastT = 0, anim: { y0: number; p0: number; y1: number; p1: number; t0: number; then?: () => void } | null = null;
     let snapBack: { from: number; to: number; t0: number } | null = null;
     let lastNear: IslandId | null = null, lastTick = 0;
-    const idleLife = () => !reduce && !pausedRef.current && !document.hidden;
+    // (any sheet or dialog over it: You, Settings, the island sheets)
+    const idleLife = () => !reduce && !pausedRef.current && !document.hidden && !document.querySelector('[role="dialog"]');
 
     function frame() {
       raf = 0;
@@ -367,7 +368,7 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
       const breathe = 1 + (life ? .015 * (1 + Math.sin(clock / 4000 * Math.PI * 2)) : 0);
       const ground = (o: Thing, p: P, k: number, haze = 0) => {
         if (p.z < 0 || !shown(p)) return;
-        const w = o.w * p.sc, wl = p.y + w * .12, flat = .45 + .55 * p.z;
+        const w = o.w * p.sc, wl = p.y, flat = .45 + .55 * p.z;
         // a soft contact shadow, then her shallows
         const rx = w * .42 * (1 - .25 * k), ry = rx * .25 * flat, sh = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
         sh.addColorStop(0, night ? "rgba(5,8,30,.30)" : "rgba(16,42,56,.16)"); sh.addColorStop(1, "rgba(16,42,56,0)");
@@ -384,7 +385,7 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
         const r = rings[i], dur = reduce ? 300 : 780, u = (now - r.t0) / dur;
         if (u >= 1) { rings.splice(i, 1); continue; }
         let x: number, y: number, w: number, z = 1;
-        if (r.o) { const p = at(r.o); if (p.z < 0) continue; w = r.o.w * p.sc; x = p.x; y = p.y + w * .12; z = p.z; } else { x = r.x!; y = r.y!; w = r.w!; }
+        if (r.o) { const p = at(r.o); if (p.z < 0) continue; w = r.o.w * p.sc; x = p.x; y = p.y; z = p.z; } else { x = r.x!; y = r.y!; w = r.w!; }
         const grow = reduce ? 1 : .35 + 1.15 * (1 - Math.pow(1 - u, 2.4));
         ctx.save(); ctx.globalAlpha = .95 * (1 - u); ctx.strokeStyle = night ? "rgba(190,215,255,.55)" : "rgba(255,255,255,.9)"; ctx.lineWidth = 2.5;
         ctx.beginPath(); ctx.ellipse(x, y, w * grow / 2, w * grow / 2 * .33 * (.45 + .55 * z), 0, 0, 7); ctx.stroke(); ctx.restore();
@@ -393,14 +394,16 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
       if (rings.length || press) moving = true;
 
       // the pictures, back to front: upright; past the horizon only what
-      // sticks up above it shows (bottom first), hazed
+      // sticks up above it shows (bottom first), hazed. Since her note on v23
+      // ("как будто левитируют"): each stands on its spot, its waterline on the
+      // water, leaning with the ball, and fades out before the horizon.
       const sprite = (o: Thing, p: P, k: number) => {
         if (!shown(p)) return;
-        const w = o.w * p.sc, behind = p.z < 0;
+        const w = o.w * p.sc;
         ctx.save();
-        if (behind) { ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.arc(g.cx, g.cy, g.R, 0, 7, true); ctx.clip("evenodd"); }
-        ctx.globalAlpha = p.al; ctx.translate(p.x, p.y + 5 * k * (W / 390)); ctx.scale(1 - .07 * k, 1 - .07 * k);
-        const haze = o.islet ? .25 : 0, fog = behind ? .6 : Math.max(haze, .45 * (1 - smooth(.08, .45, p.z)));
+        const lean = (Math.atan2(p.y - g.cy, p.x - g.cx) + Math.PI / 2) * .8;
+        ctx.globalAlpha = p.al; ctx.translate(p.x, p.y + 5 * k * (W / 390)); ctx.rotate(lean); ctx.scale(1 - .07 * k, 1 - .07 * k);
+        const haze = o.islet ? .25 : 0, fog = Math.max(haze, .45 * (1 - smooth(.08, .45, p.z)));
         const draw = (n: string, cx: number, cy: number, dw: number, flip = false) => {
           const im = pic(n); if (!ready(im)) return; const dh = dw * im.naturalHeight / im.naturalWidth;
           ctx.save(); if (flip) { ctx.translate(cx, 0); ctx.scale(-1, 1); ctx.translate(-cx, 0); }
@@ -410,7 +413,11 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
         };
         if (o.locked) draw("unexplored", 0, -w * .28, w);
         else if (o.islet) draw(o.islet, 0, -w * .1, w, o.flip);
-        else if (o.base) { draw(o.base, 0, 0, w); (o.land ?? []).forEach(([n, lw, dx, dy]) => draw(n, dx * w, dy * w, lw * w)); }
+        else if (o.base) {
+          // the base picture's waterline (about 68% down) on the spot
+          const im = pic(o.base), up = -(ready(im) ? w * im.naturalHeight / im.naturalWidth : w * .7) * .18;
+          draw(o.base, 0, up, w); (o.land ?? []).forEach(([n, lw, dx, dy]) => draw(n, dx * w, up + dy * w, lw * w));
+        }
         ctx.restore();
       };
       const items = [...ISLETS, ...UNEXPLORED, ...things].map((o) => ({ o, p: at(o) })).sort((m, n) => m.p.z - n.p.z);
@@ -439,13 +446,13 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
         const isl = o.island!, p = at(o), sk = isl.weather ? SKY[isl.weather] : null;
         if (!sk || !shown(p) || p.z < .3) continue;
         const im = pic(sk[0]), a = Math.min(1, (p.z - .3) * 3);
-        if (ready(im)) { const w = sk[1] * p.sc, h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = a; ctx.drawImage(im, p.x + .3 * o.w * p.sc - w / 2, p.y - o.w * p.sc * .34 - h * .8, w, h); ctx.restore(); }
+        if (ready(im)) { const w = sk[1] * p.sc, h = w * im.naturalHeight / im.naturalWidth; ctx.save(); ctx.globalAlpha = a; ctx.drawImage(im, p.x + .3 * o.w * p.sc - w / 2, p.y - o.w * p.sc * .47 - h * .8, w, h); ctx.restore(); }
       }
       for (const o of things) {
         const isl = o.island!, p = at(o); if (!shown(p) || p.z < .3) continue;
         const c = pillCanvas(islandName(t, isl.id), "icon_" + isl.def.icon); if (!c) continue;
         const cw = c.width / dpr, ch = c.height / dpr, hot = lit && lit.id === isl.id ? Math.max(0, 1 - (now - lit.t0) / 300) : 0;
-        ctx.save(); ctx.globalAlpha = Math.min(1, (p.z - .3) * 3); ctx.translate(p.x, p.y + o.w * p.sc * .34); ctx.scale(1 + .06 * hot, 1 + .06 * hot);
+        ctx.save(); ctx.globalAlpha = Math.min(1, (p.z - .3) * 3); ctx.translate(p.x, p.y + o.w * p.sc * .22); ctx.scale(1 + .06 * hot, 1 + .06 * hot);
         ctx.drawImage(c, -cw / 2, -ch / 2, cw, ch);
         if (hot > 0) { ctx.strokeStyle = "#1E9C8C"; ctx.lineWidth = 2; roundPath(ctx, -cw / 2 + 11, -ch / 2 + 11, cw - 22, ch - 22, (ch - 22) / 2); ctx.stroke(); moving = true; }
         ctx.restore();
@@ -475,7 +482,7 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
       let best: Thing | null = null, bd = 1e9;
       for (const o of [...things, ...UNEXPLORED, ...ISLETS, BOAT]) {
         const p = place(o); if (p.z < .05 || !shown(p)) continue;
-        const cy = o.locked ? p.y - o.w * p.sc * .3 : p.y, d = Math.hypot(p.x - x, cy - y), r = Math.max(22, .6 * o.w * p.sc);
+        const cy = o.locked ? p.y - o.w * p.sc * .3 : o.islet || o === BOAT ? p.y : p.y - o.w * p.sc * .13, d = Math.hypot(p.x - x, cy - y), r = Math.max(22, .6 * o.w * p.sc);
         if (d < r && d < bd) { bd = d; best = o; }
       }
       return best;

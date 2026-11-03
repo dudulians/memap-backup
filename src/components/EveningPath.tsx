@@ -26,7 +26,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, SnapDot, type Stop, WEEK_TITLES, WeekBanner, WeekStrip, curveThrough, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, SnapDot, type Stop, WEEK_TITLES, WeekStrip, curveThrough, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -59,7 +59,7 @@ type PNode =
   | { kind: "step"; step: Step }
   | { kind: "future"; offset: number }
   | { kind: "chest" };
-type Open = number | "banner" | null;
+type Open = number | null;
 
 export const EveningPath = ({
   trackers,
@@ -282,9 +282,8 @@ export const EveningPath = ({
   // as each step passes the band. Once the week card has rolled away, "Week N
   // · k/7" takes the header's title. Reduce Motion: a flat page, no band, no
   // snap.
-  const BAND = 96;
+  const BAND = 120;
   const focusRef = useRef<HTMLButtonElement>(null);
-  const bannerRef = useRef<HTMLDivElement>(null);
   const openRef = useRef<Open>(null);
   openRef.current = open;
   // who is turning it: her hand (ticks; an open bubble closes), a tap on a
@@ -299,8 +298,6 @@ export const EveningPath = ({
   const [spacer, setSpacer] = useState(0);
   const [away, setAway] = useState<"up" | "down" | null>(null);
   const awayRef = useRef<"up" | "down" | null>(null);
-  const [compact, setCompact] = useState(false);
-  const compactRef = useRef(false);
   const hasPath = trackers.length > 0;
   const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderTitle(document.getElementById("memap-header-center")), []);
@@ -379,11 +376,11 @@ export const EveningPath = ({
           // not rewritten every frame and VoiceOver still finds it in place
           tr = ""; op = "0"; far = true;
         } else if (on) {
-          // on a cylinder of radius R: up the arc by the angle, closer to the
-          // middle (sin), further back (1 - cos), turned away, fainter
+          // along a wheel of radius R: closer to the middle (sin), smaller and
+          // fainter, but never turned flat (her note: "дёшево плоские")
           const th = d / R;
           const c = Math.cos(th);
-          tr = `translate3d(0,${(R * Math.sin(th) - d).toFixed(1)}px,0) perspective(900px) translateZ(${(-R * (1 - c)).toFixed(1)}px) rotateX(${(-th).toFixed(3)}rad)`;
+          tr = `translate3d(0,${(R * Math.sin(th) - d).toFixed(1)}px,0) scale(${(1 - 0.42 * (1 - c)).toFixed(3)})`;
           op = Math.pow(c, 1.3).toFixed(3);
           far = c < 0.3;
         }
@@ -426,10 +423,6 @@ export const EveningPath = ({
       const lim = on ? R : off - 120;
       const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd > lim ? "down" : null;
       if (nowAway !== awayRef.current) { awayRef.current = nowAway; setAway(nowAway); }
-      // the week card rolled away: its line goes to the header
-      const bk = bannerRef.current ? items.indexOf(bannerRef.current) : -1;
-      const nowCompact = bk >= 0 && ys[bk] < mid - (on ? R : off - 20);
-      if (nowCompact !== compactRef.current) { compactRef.current = nowCompact; setCompact(nowCompact); }
     };
     frameRef.current = frame;
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(frame); };
@@ -515,7 +508,6 @@ export const EveningPath = ({
   const daysDone = m.pastInWeek.length + (m.todayCounted ? 1 : 0);
   const toGo = DAYS_PER_WEEK - daysDone;
   const openThisChest = () => setChestOpen({ week: m.week, dates: [...m.pastInWeek, isoDay(new Date())] });
-  const thisChest = chests[m.week];
 
   const openActionPoints = () =>
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
@@ -732,7 +724,7 @@ export const EveningPath = ({
         </span>,
         headerSlot,
       )}
-      {headerTitle && compact && createPortal(
+      {headerTitle && createPortal(
         <span className="animate-fade-in whitespace-nowrap text-[16px] font-bold leading-[1.5] tracking-tight text-foreground">
           {t("path.weekN", { n: m.week + 1 })}
           <span className="font-semibold tabular-nums text-muted-foreground"> · {daysDone}/{DAYS_PER_WEEK}</span>
@@ -740,22 +732,11 @@ export const EveningPath = ({
         headerTitle,
       )}
 
-      {/* The week card, on the drum like the rest (pinned, it hid the path
-          rolling). Tap: how far along, and last week's report. */}
-      <div className="relative mt-2 animate-fade-in" style={open === "banner" ? { zIndex: 6 } : undefined}>
-        <div ref={bannerRef} data-wheel className="relative">
-          <WeekBanner week={m.week} done={daysDone} opened={!!thisChest} expanded={open === "banner"} data-path-stop="banner"
-            onClick={() => setOpen((o) => (o === "banner" ? null : "banner"))} />
-          {open === "banner" && (
-            <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute left-0 right-0 top-full z-20 mt-2 rounded-[20px] px-4 py-3.5" style={{ transformOrigin: "50% 0" }}>
-              {head(t("path.weekProgress", { k: daysDone }), m.weekComplete ? t("path.reportReady") : `${reportLabel} · ${t("path.toGo", { count: toGo })}`)}
-              {m.week > 0 && (
-                <button type="button" onClick={() => { setOpen(null); onOpenReport(); }} className="mt-2 inline-flex h-10 items-center gap-1 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
-                  {t("path.lastReport")} <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
-                </button>
-              )}
-            </div>
-          )}
+      {/* The week starts with its name, plain (her note: the card that
+          rolled with the path was "уродская плашка"). */}
+      <div className="mt-2">
+        <div data-wheel>
+          <p className="path-week-label">{t("path.weekN", { n: m.week + 1 })} · {title}</p>
         </div>
       </div>
 

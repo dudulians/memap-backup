@@ -1401,6 +1401,7 @@ const en = {
 
   you: {
     change: "Change",
+    changeAria: "Change your animal",
   },
   coachmark: {
     next: "Next",

@@ -10,7 +10,6 @@ import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gi
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playTick } from "@/lib/feedback";
-import { mapPic } from "@/lib/islands";
 import { DAYS_PER_WEEK, type ChestRecord } from "@/lib/pathSteps";
 
 // Nodes sit in the left half, a gentle zigzag, so every pill fits on the right.
@@ -69,6 +68,7 @@ export const Road = ({ stops, width, height, walked }: { stops: Stop[]; width: n
   return (
     <svg width={width} height={height} className="path-road absolute inset-0 overflow-visible" aria-hidden="true"
       data-stops={stops.map((p) => `${p.x},${p.y}`).join(" ")} data-h={height}>
+      <path data-from={0} data-to={last} d={curveThrough(stops, 0, last)} fill="none" stroke="var(--path-shadow)" strokeWidth={22} strokeLinecap="round" transform="translate(0 4)" />
       <path data-from={0} data-to={last} d={curveThrough(stops, 0, last)} fill="none" stroke="hsl(var(--path-ribbon))" strokeOpacity={0.85} strokeWidth={16} strokeLinecap="round" />
       {walked < last && <path data-from={ahead} data-to={last} d={curveThrough(stops, ahead, last)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3} strokeDasharray="7 8" strokeLinecap="round" />}
       {walked > 0 && <path data-from={0} data-to={walked} d={curveThrough(stops, 0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="7 8" strokeLinecap="round" />}
@@ -228,33 +228,6 @@ export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, 
   );
 };
 
-/** The week card: "Week 1", its title, a progress bar, days done, the chest
- *  and a round arrow (her reference picture). */
-export const WeekBanner = ({ week, done, onClick, expanded, opened, ...rest }: {
-  week: number; done: number; onClick?: () => void; expanded?: boolean; opened?: boolean; [k: string]: unknown;
-}) => {
-  const { t } = useTranslation();
-  return (
-    <button type="button" onClick={() => { if (onClick) { haptics.tap(); onClick(); } }} aria-expanded={expanded} {...rest}
-      className="surface flex w-full items-center gap-3 rounded-[24px] bg-[hsl(var(--surface))] px-5 py-4 text-left active:scale-[0.99] transition-transform">
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-medium text-muted-foreground">{t("path.weekN", { n: week + 1 })}</span>
-        <span className="mt-0.5 block truncate text-[24px] font-bold leading-tight tracking-[-0.015em]">{t(`path.title${week % WEEK_TITLES}`)}</span>
-        <span className="mt-3 block h-2.5 overflow-hidden rounded-full bg-foreground/[0.08]">
-          <span className="block h-full rounded-full bg-[hsl(var(--coin-teal))] transition-all duration-700" style={{ width: `${(done / DAYS_PER_WEEK) * 100}%` }} />
-        </span>
-      </span>
-      <span className="text-[18px] font-semibold tabular-nums text-foreground/80">{done} / {DAYS_PER_WEEK}</span>
-      <img src={mapPic(opened ? "chest_open_map" : "chest_closed")} alt="" width={52} height={44} decoding="async" draggable={false} className="pointer-events-none" />
-      {onClick && (
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.1)] text-[hsl(var(--coin-teal))]">
-          <ChevronRight className="h-5 w-5" strokeWidth={2.6} />
-        </span>
-      )}
-    </button>
-  );
-};
-
 /** Stops for a week of eight nodes (seven days and the reward). */
 export const weekStops = (width: number, radii: number[], top = 24) => {
   const out: Stop[] = [];
@@ -305,10 +278,10 @@ export const WeekStrip = ({
 
   return (
     <div className={cn("mt-4", kind === "coming" && "path-coming")} aria-hidden={kind === "coming" ? true : undefined}>
-      {/* on Today's drum too: the card rolls with the week (EveningPath) */}
+      {/* the week's name, plain, rolling with its days (EveningPath) */}
       <div>
         <div data-wheel>
-          <WeekBanner week={week} done={kind === "past" ? DAYS_PER_WEEK : 0} opened={!!chest} onClick={kind === "past" ? onOpenChest : undefined} />
+          <p className="path-week-label">{t("path.weekN", { n: week + 1 })}</p>
         </div>
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>

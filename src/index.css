@@ -1977,7 +1977,7 @@ html[data-ui="new"][data-theme="aurora"] .memap-sea-bg::after { display: none; }
 .tone-lilac { --p3-face: var(--coin-lilac); --p3-face-hi: var(--coin-lilac-hi); --p3-lip: var(--lip-lilac); --p3-ink: #fff; }
 
 /* The road: an under-stroke for thickness, a pale ribbon, dashes on top. */
-.path-road { filter: drop-shadow(0 4px 10px var(--path-shadow)); }
+/* .path-road: its shadow is a path of its own (PathParts Road), no filter */
 
 /* Tonight's halo: the one loop on Today, breathing once every 4s. */
 @keyframes pathHalo {
@@ -2088,15 +2088,18 @@ html[data-ui="new"][data-theme="aurora"] .memap-sea-bg::after { display: none; }
 /* The Map tab's own calm sea (Nov 2 2026). */
 .map-sea { background: radial-gradient(120% 60% at 15% 0%, rgba(255, 255, 255, .55), transparent 60%), linear-gradient(180deg, #e3f3f8 0%, #c8e9f2 35%, #b2dfec 100%); }
 /* The Map's header stays at the top over the sea (her note, Nov 2 2026). */
-.map-head { background: linear-gradient(180deg, #e3f3f8 0%, #e3f3f8 70%, rgba(227, 243, 248, 0.85) 100%); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-html[data-ui="new"][data-theme="aurora"] .map-head { background: linear-gradient(180deg, #141c39 0%, #141c39 70%, rgba(20, 28, 57, 0.85) 100%); }
+.map-head { background: linear-gradient(180deg, #e3f3f8 0%, #e3f3f8 78%, rgba(227, 243, 248, 0) 100%); }
+html[data-ui="new"][data-theme="aurora"] .map-head { background: linear-gradient(180deg, #141c39 0%, #141c39 78%, rgba(20, 28, 57, 0) 100%); }
+/* the app's header over the Map: the same colour as the map's head, no line */
+.app-head-map { background: #e3f3f8; }
+html[data-ui="new"][data-theme="aurora"] .app-head-map { background: #141c39; }
 [data-theme="aurora"]:not([data-ui="new"]) .map-head { background: hsl(200 40% 16% / 0.92); }
 [data-theme="aurora"] .map-sea { background: linear-gradient(180deg, hsl(200 40% 16%) 0%, hsl(195 45% 20%) 50%, hsl(190 45% 22%) 100%); }
 html[data-ui="new"][data-theme="aurora"] .map-sea { background: radial-gradient(120% 60% at 15% 0%, rgba(120, 150, 255, .14), transparent 60%), linear-gradient(180deg, #141c39 0%, #1b2550 45%, #2a3470 100%); }
 /* The flat map: each island's shallows breathe a little; a new bridge builds itself once. */
 .map-shore { animation: shoreBreathe 4s ease-in-out infinite; }
 @keyframes shoreBreathe { 50% { transform: scale(1.03); } }
-.bridge-build { animation: bridgeBuild 600ms ease-out both; }
+.bridge-build { animation: bridgeBuild 600ms ease-out backwards; }
 @keyframes bridgeBuild { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 
 /* A not-yet tap on a flat path node: a short wiggle. */
@@ -2140,6 +2143,7 @@ html[data-ui="new"][data-theme="aurora"] .nav-floating {
   border-color: rgba(255, 255, 255, 0.06);
 }
 /* White pills and cards that were written as bg-white. */
+html[data-ui="new"][data-theme="aurora"] .bg-white\/95,
 html[data-ui="new"][data-theme="aurora"] .bg-white\/90,
 html[data-ui="new"][data-theme="aurora"] .bg-white\/60,
 html[data-ui="new"][data-theme="aurora"] .bg-white\/40,
@@ -2180,17 +2184,12 @@ html[data-theme="aurora"] .island-ripple { border-color: rgba(190, 215, 255, .55
 /* Today's drum (EveningPath): the band in the middle, where a step lies flat
    (her note: "путь подсвечивался", like a picker); steps nearly gone at the
    drum's edge can't be tapped; the header's title gives way to the week. */
-:root {
-  --path-band: linear-gradient(180deg, rgba(255, 255, 255, .68), rgba(255, 255, 255, .5));
-  --path-band-edge: rgba(255, 255, 255, .92);
-  --path-band-shadow: 0 16px 34px -22px rgba(16, 42, 56, .5), inset 0 1px 0 rgba(255, 255, 255, .6);
-}
-html[data-theme="aurora"] {
-  --path-band: linear-gradient(180deg, rgba(170, 200, 255, .17), rgba(170, 200, 255, .09));
-  --path-band-edge: rgba(255, 255, 255, .16);
-  --path-band-shadow: 0 16px 34px -20px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
-}
-.path-band { border-radius: 30px; background: var(--path-band); border: 1px solid var(--path-band-edge); box-shadow: var(--path-band-shadow); }
+:root { --path-band: rgba(255, 255, 255, .55); }
+html[data-theme="aurora"] { --path-band: rgba(170, 200, 255, .14); }
+/* a soft light, no edges (her note: no see-through plates) */
+.path-band { background: radial-gradient(closest-side, var(--path-band), transparent); }
+/* a week's name on the path, plain (no card) */
+.path-week-label { margin: 0 auto; width: fit-content; padding: 4px 0; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: hsl(var(--foreground) / .55); }
 [data-far], [data-far] * { pointer-events: none !important; }
 header h1 { transition: opacity 200ms ease; }
 /* A day/night switch cross-fades (switchTheme in src/lib/theme.ts). */

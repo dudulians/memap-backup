@@ -42,6 +42,8 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
   const [visit, setVisit] = useState(0);
   useEffect(() => {
     if (!open) return;
+    // not last visit's numbers (the shelf's "New" counts from this look)
+    setData(null);
     let live = true;
     Promise.all([getTrackers(), getEntries(), getNotes().catch(() => [])])
       .then(([trackers, entries, notes]) => { if (live) { setData({ trackers, entries, notes: notes.length }); setVisit((v) => v + 1); } })
@@ -76,7 +78,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
                 ? <img src={pic} alt="" width={76} height={76} className="h-[76px] w-[76px] object-contain" />
                 : <CircleUser className="h-12 w-12 text-muted-foreground" strokeWidth={1.6} />}
             </span>
-            <button type="button" onClick={() => { haptics.tap(); setPicking(true); }}
+            <button type="button" onClick={() => { haptics.tap(); setPicking(true); }} aria-label={t("you.changeAria")}
               className="mt-3 h-11 rounded-full bg-foreground/[0.06] px-5 text-[16px] font-bold text-foreground">
               {t("you.change")}
             </button>

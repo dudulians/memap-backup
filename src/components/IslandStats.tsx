@@ -205,7 +205,7 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
               const isNew = fresh.includes(it.id);
               return (
                 <div key={it.id} className={cn("relative flex flex-col items-center px-1 text-center", isNew && "treasure-new")}>
-                  {isNew && <span className="absolute -top-1 right-1 rounded-full bg-[hsl(var(--coin-teal))] px-2 py-0.5 text-[11px] font-bold text-white">{t("items.new")}</span>}
+                  {isNew && <span className="absolute -top-1 right-1 rounded-full bg-foreground px-2 py-0.5 text-[12px] font-bold text-background">{t("items.new")}</span>}
                   <img src={mapPic(it.pic)} alt="" width={52} height={52} className={`h-[52px] w-[52px] object-contain ${got ? "" : "opacity-30 grayscale"}`} />
                   <p className={`mt-1 text-[13px] font-bold leading-tight ${got ? "" : "text-muted-foreground"}`}>{t(`items.${it.id}.name`)}</p>
                   <p className="text-[12px] font-medium leading-tight text-muted-foreground">{got ? t(`items.${it.id}.how`) : `${t(`items.${it.id}.how`)} · ${k}/${n}`}</p>

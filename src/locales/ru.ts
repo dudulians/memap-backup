@@ -1573,6 +1573,7 @@ const ru: Translation = {
 
   you: {
     change: "Изменить",
+    changeAria: "Сменить животное",
   },
   coachmark: {
     next: "Дальше",

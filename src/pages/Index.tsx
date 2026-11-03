@@ -110,6 +110,12 @@ const Index = () => {
       if (tab === "cards" || tab === "patterns" || tab === "questions" || tab === "notes") {
         if (tab === "patterns" && (e as CustomEvent).detail?.open === "all") {
           const section = (e as CustomEvent).detail?.section ?? "findings";
+          // her week and treasures live in You: it opens right here
+          if (section !== "overview" && section !== "trends" && section !== "signals") {
+            youTrip.current = false;
+            setYouOpen(true);
+            return;
+          }
           try { localStorage.setItem("memap_patterns_section", section); } catch { /* ignore */ }
           setMapOpen(section === "overview" || section === "trends" || section === "signals" ? section : "all");
         }
@@ -204,7 +210,6 @@ const Index = () => {
   const [showBackToTop, setShowBackToTop] = useState(false);
   // Today's picture scrolls with the path and continues the one behind the
   // header; once she scrolls, the header turns frosted over it.
-  const [scrolled, setScrolled] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const [headerH, setHeaderH] = useState(56);
   useLayoutEffect(() => {
@@ -219,7 +224,7 @@ const Index = () => {
   useEffect(() => {
     const el = mainRef.current;
     if (!el) return;
-    const handler = () => { setShowBackToTop(el.scrollTop > 300); setScrolled(el.scrollTop > 4); };
+    const handler = () => { setShowBackToTop(el.scrollTop > 300); };
     el.addEventListener("scroll", handler, { passive: true });
     return () => el.removeEventListener("scroll", handler);
   }, []);
@@ -230,7 +235,6 @@ const Index = () => {
   useLayoutEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
     setShowBackToTop(false);
-    setScrolled(false);
   }, [activeTab]);
   // Same treatment for sub-section switches inside Patterns — dispatched
   // by PatternsTab.handleSectionChange. Without this, scrolling deep
@@ -265,7 +269,7 @@ const Index = () => {
   // Content fades in under the header and out behind the floating tab bar.
   // On Today the week banner sticks to the top and covers what scrolls.
   const CONTENT_MASK = activeTab === "cards" || activeTab === "notes" || activeTab === "questions"
-    ? "linear-gradient(to bottom, #000 0, #000 calc(100% - 120px), transparent calc(100% - 24px))"
+    ? "linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 120px), transparent calc(100% - 24px))"
     : "linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 120px), transparent calc(100% - 24px))";
 
   return (
@@ -281,7 +285,7 @@ const Index = () => {
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2 border-b transition-colors duration-300 ${activeTab === "patterns" || (activeTab === "cards" && scrolled) ? "backdrop-blur-lg bg-background/60 border-border/40" : "bg-transparent border-transparent"}`}>
+      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2${activeTab === "patterns" ? " app-head-map" : ""}`}>
         {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
         <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
         {/* Today puts "Week N · k/7" here once its week card has rolled away;

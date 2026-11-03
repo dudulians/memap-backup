@@ -165,11 +165,14 @@ export const IslandsMap = ({
     if (fresh.size && !matchMedia("(prefers-reduced-motion: reduce)").matches) playSparkle(0.3);
   }, [keys]); // eslint-disable-line react-hooks/exhaustive-deps
   const firstBridge = links.find(Boolean);
+  const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!tip || !firstBridge) return;
+    const el = mapRef.current;
+    if (!tip || !firstBridge || !el) return;
+    // a tap on the map (not the start of a scroll, not a touch elsewhere)
     const off = () => { setTip(false); try { localStorage.setItem(BRIDGE_TIP, "1"); } catch { /* ignore */ } };
-    document.addEventListener("pointerdown", off, { once: true });
-    return () => document.removeEventListener("pointerdown", off);
+    el.addEventListener("click", off, { once: true });
+    return () => el.removeEventListener("click", off);
   }, [tip, !!firstBridge]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Her boat: on free water beside the island she answered last (right, left, below).
@@ -178,7 +181,7 @@ export const IslandsMap = ({
     const k = Math.max(0, order.findIndex((isl) => isl.id === you.near));
     const p = pos[k], wl = waterline[k];
     const fits = (q: Pt) => q.x > 40 && q.x < width - 40 && !taken.some((b) => hit(b, { x0: q.x - 34, x1: q.x + 34, y0: q.y - 52, y1: q.y + 22 }));
-    for (const q of [{ x: p.x + PIC * 0.62, y: wl }, { x: p.x - PIC * 0.62, y: wl }, { x: p.x, y: p.y + BOX_H + 96 }, { x: p.x + PIC * 0.62, y: wl + 70 }, { x: p.x - PIC * 0.62, y: wl + 70 }]) if (fits(q)) return q;
+    for (const q of [{ x: p.x + PIC * 0.8, y: wl + 12 }, { x: p.x - PIC * 0.8, y: wl + 12 }, { x: p.x + PIC * 0.5, y: p.y + BOX_H + 84 }, { x: p.x - PIC * 0.5, y: p.y + BOX_H + 84 }, { x: p.x, y: p.y + BOX_H + 96 }]) if (fits(q)) return q;
     const last = pos[pos.length - 1];
     return { x: width / 2, y: last.y + BOX_H + 96 };
   })();
@@ -191,7 +194,7 @@ export const IslandsMap = ({
   };
 
   return (
-    <div className="relative mx-auto" style={{ width, height }}>
+    <div ref={mapRef} className="relative mx-auto" style={{ width, height }}>
       {/* Under each island: its shallows and a soft contact shadow. */}
       {order.map((isl, i) => {
         const p = pos[i], wl = waterline[i], sw = PIC * 1.25, sh = sw * 0.33;
