@@ -436,6 +436,20 @@ export const playThump = () => {
   if (!ctx) return;
   try { if (!sample(ctx, "thump", { gain: 0.45, rate: vary(0.05) })) tone(ctx, [196], { duration: 0.12, peak: 0.06 }); } catch { /* ignore */ }
 };
+/** The path rolling past a step: a tiny crisp tick, like a picker wheel. */
+export const playWheelTick = () => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try { if (!sample(ctx, "pop4", { gain: 0.07, rate: 2.1 * vary(0.03) })) plip(ctx, 0, 0, 0, 0.35); } catch { /* ignore */ }
+};
+/** An island pressed: a soft round "bloop" in the water, where it is. */
+export const playBloop = (x = 0.5) => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try { if (!sample(ctx, "drop", { gain: 0.3, rate: 0.82 * vary(0.05), pan: (x - 0.5) * 1.2, lowpass: 1900 })) plip(ctx, 0.7, (x - 0.5) * 1.2); } catch { /* ignore */ }
+};
 /** A choice ticked (higher) or unticked (lower): a tiny pop. */
 export const playTick = (on = true) => {
   if (!soundOn()) return;

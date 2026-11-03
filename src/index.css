@@ -2160,3 +2160,26 @@ html[data-theme="aurora"] { --path-locked: 234 26% 28%; }
 .memap-sea-bg.memap-path-bg { background-size: cover !important; background-position: center top !important; }
 html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { background-color: #d2dde3; }
 html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #504a9b; }
+
+/* Tactile islands (her note, Nov 3 2026: "чтобы остров как кнопка отжимался,
+   с ощущением"): pressed, it sinks and its shadow tightens; let go, it springs
+   back a little past where it was; a ring spreads on the water. */
+.island-press { transition: transform 460ms cubic-bezier(.34, 1.56, .64, 1); -webkit-tap-highlight-color: transparent; }
+.island-press:active { transform: translateY(5px) scale(.93); transition: transform 90ms ease-out; }
+.island-press .island-art { filter: drop-shadow(0 12px 12px rgba(16, 42, 56, .16)); transition: filter 300ms ease; }
+.island-press:active .island-art { filter: drop-shadow(0 3px 3px rgba(16, 42, 56, .2)) brightness(.97); transition-duration: 90ms; }
+.island-ripple { position: absolute; z-index: 0; border-radius: 9999px; border: 2.5px solid rgba(255, 255, 255, .9); pointer-events: none; animation: islandRipple 780ms cubic-bezier(.2, .7, .3, 1) forwards; }
+html[data-theme="aurora"] .island-ripple { border-color: rgba(190, 215, 255, .55); }
+@keyframes islandRipple { from { transform: scale(.35); opacity: .95; } to { transform: scale(1.5); opacity: 0; } }
+
+/* The light on the path where the middle of the screen is (her note: "путь
+   подсвечивался", like a picker wheel). */
+:root { --path-lens: rgba(255, 255, 255, .6); }
+html[data-theme="aurora"] { --path-lens: rgba(150, 190, 255, .18); }
+.path-lens { background: radial-gradient(closest-side, var(--path-lens), transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  main.snap-y { scroll-snap-type: none; }
+  .island-press, .island-press:active { transition: none; transform: none; }
+  .island-ripple { animation: none; opacity: 0; }
+}

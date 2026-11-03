@@ -954,6 +954,7 @@ const ru: Translation = {
     answers_other: "{{count}} ответа",
     openDay: "Открыть день",
     dayAnswers: "Посмотреть или изменить ответы",
+    backToStep: "К моему шагу",
     opensTomorrow: "Откроется завтра",
     tomorrow: "Завтра",
     toGo_one: "Ещё {{count}} день",

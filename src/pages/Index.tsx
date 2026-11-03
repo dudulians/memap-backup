@@ -284,7 +284,7 @@ const Index = () => {
           devices with a tall home indicator still clear the nav. */}
       <main
         ref={mainRef}
-        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : "flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4"}
+        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : `flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4${activeTab === "cards" ? " snap-y snap-proximity overflow-x-hidden" : ""}`}
         style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK }}
       >
         {activeTab === "cards" && (
@@ -358,7 +358,7 @@ const Index = () => {
                 }}
                 aria-current={(activeTab === "questions" ? questionsFrom : activeTab) === tab ? "page" : undefined}
                 className={`
-                  flex flex-col items-center justify-center py-2.5 px-2 m-1 rounded-[20px] transition-all duration-300
+                  flex flex-col items-center justify-center py-2.5 px-2 m-1 rounded-[20px] transition-all duration-300 active:scale-90
                   ${(activeTab === "questions" ? questionsFrom : activeTab) === tab ? "text-foreground bg-muted shadow-sm" : "text-muted-foreground hover:text-foreground"}
                 `}
               >

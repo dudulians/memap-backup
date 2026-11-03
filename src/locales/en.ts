@@ -834,6 +834,7 @@ const en = {
     answers_other: "{{count}} answers",
     openDay: "Open the day",
     dayAnswers: "See or change answers",
+    backToStep: "My step",
     opensTomorrow: "Opens tomorrow",
     tomorrow: "Tomorrow",
     toGo_one: "{{count}} day to go",

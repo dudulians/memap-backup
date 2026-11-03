@@ -12,8 +12,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, Compass, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronUp, Compass, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptics } from "@/lib/haptics";
+import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -267,20 +269,104 @@ export const EveningPath = ({
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderSlot(document.getElementById("memap-header-start")), []);
 
-  // Bring the focus node to 42% of the screen once laid out, after Index
-  // has reset the scroll for the tab.
+  // Her step sits in the middle of the scroller once laid out, after Index
+  // has reset the scroll for the tab (the same middle the wheel and the snap use).
   const focusRef = useRef<HTMLButtonElement>(null);
+  const middleOf = (main: Element) => { const mr = main.getBoundingClientRect(); return mr.top + mr.height / 2; };
   useEffect(() => {
     const id = window.setTimeout(() => {
       const el = focusRef.current;
       const main = el?.closest("main");
       if (!el || !main) return;
       const r = el.getBoundingClientRect();
-      const delta = r.top + r.height / 2 - window.innerHeight * 0.42;
+      const delta = r.top + r.height / 2 - middleOf(main);
       if (delta > 0) main.scrollTop += delta;
     }, 90);
     return () => window.clearTimeout(id);
   }, []);
+
+  // The path rolls like a picker wheel (her note, Nov 3 2026: "как при выборе
+  // даты рождения или времени — такой ролик"; "путь подсвечивался"): the step
+  // in the middle of the scroller is full size over a soft light (the sticky
+  // .path-lens), the others ease smaller and paler with distance, a light
+  // detent as each step passes the middle (her own scrolling only), and the
+  // scroll settles on a step (snap in Index, on the same middle). Reduce
+  // Motion: no tilt, no snap, no smooth scroll. Away from her step, a pill
+  // brings her back. An independent review the same night caught the light
+  // widening the page, two different middles and a 50 ms Android buzz per
+  // tick; fixed here.
+  const [away, setAway] = useState<"up" | "down" | null>(null);
+  const awayRef = useRef<"up" | "down" | null>(null);
+  const byHandRef = useRef(false);
+  const [lensTop, setLensTop] = useState(260);
+  useEffect(() => {
+    preloadSounds("pop4", "pop1", "drop");
+    const main = document.querySelector("main");
+    if (!main) return;
+    const mq = matchMedia("(prefers-reduced-motion: reduce)");
+    let raf = 0, last = -1, lastTick = 0;
+    const frame = () => {
+      raf = 0;
+      const H = window.innerHeight, mid = middleOf(main), reduce = mq.matches;
+      let best = -1, bestD = 1e9;
+      main.querySelectorAll<HTMLElement>("[data-wheel]").forEach((el, i) => {
+        const node = el.querySelector<HTMLElement>(".path-node");
+        if (!node) return;
+        const r = node.getBoundingClientRect();
+        const d = (r.top + r.height / 2 - mid) / (H * 0.55);
+        const a = Math.min(1, Math.abs(d));
+        if (reduce) { el.style.transform = ""; el.style.opacity = ""; }
+        else {
+          el.style.transform = `perspective(900px) rotateX(${(-Math.max(-1, Math.min(1, d)) * 12).toFixed(2)}deg) scale(${(1 - 0.14 * a * a).toFixed(3)})`;
+          el.style.opacity = (1 - 0.45 * a * a).toFixed(3);
+        }
+        if (Math.abs(d) < bestD) { bestD = Math.abs(d); best = i; }
+      });
+      if (best !== last) {
+        const now = performance.now();
+        if (last !== -1 && byHandRef.current && now - lastTick > 70) { haptics.tick(); playWheelTick(); lastTick = now; }
+        last = best;
+      }
+      // her step out of sight: the way back
+      const f = focusRef.current?.getBoundingClientRect();
+      const nowAway = !f ? null : f.bottom < 150 ? "up" : f.top > H - 170 ? "down" : null;
+      if (nowAway !== awayRef.current) { awayRef.current = nowAway; setAway(nowAway); }
+    };
+    // the light's place: the middle of the scroller
+    // (sticky offsets start below the scroller's top padding)
+    const place = () => setLensTop(Math.round(main.clientHeight / 2 - 90 - (parseFloat(getComputedStyle(main).paddingTop) || 0)));
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(frame); };
+    const onResize = () => { place(); onScroll(); };
+    const byHand = () => { byHandRef.current = true; };
+    main.addEventListener("scroll", onScroll, { passive: true });
+    main.addEventListener("touchstart", byHand, { passive: true });
+    main.addEventListener("wheel", byHand, { passive: true });
+    window.addEventListener("resize", onResize);
+    mq.addEventListener?.("change", onScroll);
+    place();
+    const first = window.setTimeout(frame, 160);
+    return () => {
+      main.removeEventListener("scroll", onScroll);
+      main.removeEventListener("touchstart", byHand);
+      main.removeEventListener("wheel", byHand);
+      window.removeEventListener("resize", onResize);
+      mq.removeEventListener?.("change", onScroll);
+      window.clearTimeout(first);
+      cancelAnimationFrame(raf);
+    };
+  }, [nodes.length, width]);
+  const backToStep = () => {
+    const el = focusRef.current, main = el?.closest("main");
+    if (!el || !main) return;
+    haptics.tap();
+    // a scroll she didn't drag: no ticks on the way
+    byHandRef.current = false;
+    const r = el.getBoundingClientRect();
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    main.scrollBy({ top: r.top + r.height / 2 - middleOf(main), behavior: reduce ? "auto" : "smooth" });
+    // focus goes to her step instead of being lost with the pill
+    el.focus({ preventScroll: true });
+  };
 
   if (trackers.length === 0) return null;
 
@@ -511,7 +597,13 @@ export const EveningPath = ({
 
       {/* The path. */}
       <section aria-label={title} className="animate-fade-in" style={{ marginTop: 14 }}>
-        <div ref={boxRef} className="relative mx-auto" style={{ width, height }}>
+        {/* overflow-x clip: the wheel's tilt must never widen the page (the
+            review found a sideways pan); nothing visible is cut. */}
+        <div ref={boxRef} className="relative mx-auto [overflow-x:clip]" style={{ width, height }}>
+          {/* The light in the middle of the scroller: sticky, so it stays put
+              while the path rolls under it, and only over today's stretch;
+              as wide as the path, so the page never pans sideways. */}
+          <div aria-hidden="true" className="path-lens pointer-events-none sticky" style={{ top: lensTop, height: 180, marginBottom: -180 }} />
           <Road stops={stops} width={width} height={height} walked={focus} />
 
           {avatarPic && avatar && (
@@ -529,7 +621,7 @@ export const EveningPath = ({
               : undefined;
             const lockedGame = n.kind === "step" && n.step.kind === "game" && !canPlay && !n.step.done;
             return (
-              <div key={i}>
+              <div key={i} data-wheel style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                 {!(i === currentNode && open === currentNode) && (
                   <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}
                     maxRight={width} big={i === currentNode} muted={v.look === "done"}
@@ -566,6 +658,20 @@ export const EveningPath = ({
           </div>
         } />
 
+
+      {/* Away from her step: back to it, her avatar on the button. */}
+      {away && createPortal(
+        <button type="button" onClick={backToStep}
+          className="fixed right-4 z-[30] flex h-12 items-center gap-2 rounded-full bg-white pl-1.5 pr-3.5 text-[15px] font-extrabold text-foreground shadow-lg animate-fade-in active:scale-95 transition-transform dark:bg-[hsl(var(--surface))]"
+          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          {avatarPic
+            ? <img src={avatarPic} alt="" className="h-9 w-9 rounded-full bg-sky-50 object-contain p-0.5 ring-2 ring-[hsl(var(--coin-teal))] dark:bg-[hsl(var(--surface))]" />
+            : <span className="h-9 w-9 rounded-full bg-[hsl(var(--coin-teal)/0.12)]" />}
+          {t("path.backToStep")}
+          {away === "up" ? <ChevronUp className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} /> : <ChevronDown className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />}
+        </button>,
+        document.body,
+      )}
 
       {unloadOpen && <UnloadGame onClose={() => { setUnloadOpen(false); setTick((k) => k + 1); }} />}
 

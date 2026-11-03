@@ -130,6 +130,9 @@ const pattern = (beats: Beat[], android: ImpactStyle[], web: number[]) => {
   webVibrate(web.length === 1 ? web[0] : web);
 };
 
+// Last Android wheel detent (see haptics.tick).
+let lastDetent = 0;
+
 export const haptics = {
   /** Light swipe-commit pulse. */
   swipe: () => {
@@ -199,6 +202,21 @@ export const haptics = {
   land: () => pattern([{ t: 0, i: 0.6, s: 0.35 }], [ImpactStyle.Medium], [14]),
   /** Barely there: theme switch, a quiet choice. */
   soft: () => pattern([{ t: 0, i: 0.22, s: 0.2 }], [ImpactStyle.Light], [4]),
+  /** A picker-wheel detent (the path rolling past a step): the lightest
+   *  transient on iOS; on Android an 8 ms buzz at most every 120 ms (a Light
+   *  impact there is a 50 ms pulse, too much for a fling). */
+  tick: () => {
+    if (!isHapticsEnabled()) return;
+    if (isIOS) { CoreHaptics.play({ events: [{ t: 0, i: 0.22, s: 0.2 }] }).catch(() => undefined); return; }
+    if (isAndroid) {
+      const now = performance.now();
+      if (now - lastDetent < 120) return;
+      lastDetent = now;
+      safe(Haptics.vibrate({ duration: 8 }));
+      return;
+    }
+    webVibrate(4);
+  },
 
   /** Error pattern — failed action that the user should notice. */
   error: () => {

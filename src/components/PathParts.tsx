@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, Lock, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
+import { playTick } from "@/lib/feedback";
 import { mapPic } from "@/lib/islands";
 import { DAYS_PER_WEEK, type ChestRecord } from "@/lib/pathSteps";
 
@@ -120,9 +121,9 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
   const radius = shape === "square" ? "32%" : "9999px";
   return (
     <button ref={refEl} type="button" data-path-stop={dataStop} data-shape={shape} aria-label={label} aria-expanded={expanded}
-      onClick={() => { if (onClick) { haptics.tap(); onClick(); } }}
+      onClick={() => { if (onClick) { haptics.tap(); playTick(true); onClick(); } }}
       className={cn(
-        "path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.94]",
+        "path-node absolute z-[3] flex snap-center items-center justify-center transition-transform duration-150 active:scale-[0.92]",
         filled ? "text-white" : locked ? !badge && "bg-[hsl(var(--path-locked))]" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
         wiggle && "path-wiggle-flat",
       )}
@@ -294,12 +295,12 @@ export const WeekStrip = ({
   return (
     <div className={cn("mt-4", kind === "coming" && "path-coming")} aria-hidden={kind === "coming" ? true : undefined}>
       <WeekBanner week={week} done={kind === "past" ? DAYS_PER_WEEK : 0} opened={!!chest} onClick={kind === "past" ? onOpenChest : undefined} />
-      <div className="relative mx-auto mt-2" style={{ width, height }}>
+      <div className="relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
         <Road stops={stops} width={width} height={height} walked={kind === "past" ? DAYS_PER_WEEK : 0} />
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
             return (
-              <div key={i}>
+              <div key={i} data-wheel style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                 <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"}
                   onTap={kind === "past" ? onOpenChest : undefined} />
                 <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
@@ -310,7 +311,7 @@ export const WeekStrip = ({
           }
           const d = day(i);
           return (
-            <div key={i}>
+            <div key={i} data-wheel style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
               <NodePill stop={p} title={dayName(d)} maxRight={width} muted={kind === "past"} dim={kind === "coming"}
                 onTap={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined} />
               <PathNode stop={p} look={kind === "past" ? "done" : "locked"} lock={false} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}

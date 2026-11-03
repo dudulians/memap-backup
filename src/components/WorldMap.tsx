@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { growthLand, type GrowthKind } from "@/lib/growth";
 import { haptics } from "@/lib/haptics";
+import { playBloop } from "@/lib/feedback";
 
 type V3 = [number, number, number];
 type M3 = number[];
@@ -200,7 +201,8 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
       let best: Thing | null = null, bd = 1e9;
       for (const o of [...things, ...UNEXPLORED]) { const p = place(o, true); if (p.al < .4) continue; const cy = o.locked ? p.y - o.w * p.sc * .3 : p.y, d = Math.hypot(p.x - x, cy - y); if (d < o.w * p.sc * .6 && d < bd) { bd = d; best = o; } }
       if (!best) return;
-      haptics.tap();
+      haptics.pop(0.55);
+      playBloop(x / W);
       if (best.locked) { setNote(t("map.unexplored")); return; }
       const id = best.island!.id;
       if (tTarget === 1) onOpenRef.current(id); else turnTo(best.lon, best.lat, () => onOpenRef.current(id));

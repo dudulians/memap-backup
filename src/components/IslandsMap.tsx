@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Link2, Plus } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
+import { playBloop, preloadSounds } from "@/lib/feedback";
 import { islandName, isNightMap, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { type GrowthKind, type ItemId } from "@/lib/growth";
@@ -85,6 +86,12 @@ export const IslandsMap = ({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [link]);
+
+  // An island pressed (her note, Nov 3 2026: "чтобы остров как кнопка
+  // отжимался, с ощущением"): it sinks and springs back (.island-press), a
+  // ring spreads on the water, a soft bloop where it is.
+  const [ripples, setRipples] = useState<{ id: number; x: number; y: number; w: number }[]>([]);
+  useEffect(() => { preloadSounds("drop"); }, []);
 
   // One scale for everything: islands 10-15% larger than before, as the screen allows.
   const PIC = Math.round(Math.max(132, Math.min(152, width * 0.42)));
@@ -199,6 +206,10 @@ export const IslandsMap = ({
           style={{ left: l.bridge.left, top: l.bridge.top, width: l.bridge.w, height: l.bridge.h }} />
       ))}
 
+      {ripples.map((r) => (
+        <span key={r.id} aria-hidden="true" className="island-ripple" style={{ left: r.x - r.w / 2, top: r.y - r.w * 0.16, width: r.w, height: r.w * 0.32 }} />
+      ))}
+
       {you && boat && (
         <button type="button" onClick={() => { haptics.soft(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
           className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: boat.x - 50, top: boat.y - 52, width: 100 }}>
@@ -220,11 +231,21 @@ export const IslandsMap = ({
         const p = pos[i];
         const w = Math.max(PIC, LABEL_W);
         return (
-          <button key={isl.id} type="button" onClick={() => { haptics.tap(); onOpen(isl.id); }}
-            className="absolute z-[1] flex flex-col items-center active:scale-[0.97] transition-transform"
+          <button key={isl.id} type="button"
+            onClick={() => {
+              // a finished tap only, never the start of a scroll (the CSS
+              // :active sink still shows at touch-down)
+              haptics.pop(0.55);
+              playBloop(p.x / width);
+              const id = Date.now() + i;
+              setRipples((r) => [...r, { id, x: p.x, y: p.y + BOX_H * 0.7, w: PIC * 0.95 }]);
+              window.setTimeout(() => setRipples((r) => r.filter((q) => q.id !== id)), 800);
+              window.setTimeout(() => onOpen(isl.id), 140);
+            }}
+            className="island-press absolute z-[1] flex flex-col items-center"
             style={{ left: p.x - w / 2, top: p.y, width: w }}
             aria-label={`${islandName(t, isl.id)}${isl.weather ? ` · ${t(`map.weather.${isl.weather}`)}` : ""}`}>
-            <span className="relative">
+            <span className="island-art relative">
               <IslandPicture id={isl.id} width={PIC} growth={growth[isl.id]} />
               {lit?.has(isl.id) && (
                 <img src={mapPic("lighthouse")} alt="" aria-hidden="true" decoding="async" draggable={false}
