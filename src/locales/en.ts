@@ -38,6 +38,10 @@ const en = {
   // Map tab (Aurora UX, Nov 1 2026): your questions as islands on a ball.
   // Her own islands and questions (Nov 2 2026)
   islands: {
+    more: "More",
+    remove: "Remove question",
+    removeAsk: "Remove it from your questions? Your answers stay.",
+    removeYes: "Remove",
     answerTitle_one: "{{count}} question waits for today",
     answerTitle_other: "{{count}} questions wait for today",
     answerWhere: "Also on Today: the step “{{name}}”",
@@ -113,30 +117,7 @@ const en = {
     oldLook: "Old look",
   },
   // "Guess", the daily mini-game (Nov 2 2026)
-  // "Predict" and "Time to act" on the path (Nov 2 2026)
-  predict: {
-    title: "Predict",
-    stepTonight: "Predict tonight",
-    stepTomorrow: "Predict tomorrow",
-    askTonight: "How will tonight's answers go?",
-    askTomorrow: "How will tomorrow's answers go?",
-    saved: "Saved!",
-    seeTonight: "Answer tonight and see what you guessed",
-    seeTomorrow: "Answer tomorrow and see what you guessed",
-    sub_one: "Guess {{count}} answer",
-    sub_other: "Guess {{count}} answers",
-    waitTonight: "See it tonight",
-    waitTomorrow: "See it tomorrow",
-    ready: "See what you guessed",
-    see: "See",
-    score_one: "{{k}} of {{count}} guessed",
-    score_other: "{{k}} of {{count}} guessed",
-    allRight: "You know your days well!",
-    someRight: "Some days surprise you",
-    allSurprise: "Today surprised you",
-    row: "You said {{guess}} · it was {{real}}",
-    surprised: "a surprise",
-  },
+  // "Time to act" on the path (Nov 2 2026)
   act: {
     step: "Time to act",
     sub_one: "{{count}} rule reached",
@@ -170,7 +151,7 @@ const en = {
     camera: { name: "Camera", how: "First link" },
     signpost: { name: "Signpost", how: "Your own island" },
     books: { name: "Books", how: "10 notes" },
-    sparkles: { name: "Stars", how: "10 right guesses" },
+    sparkles: { name: "Stars", how: "A hunch checked" },
     easel: { name: "Easel", how: "First test" },
     bicycle: { name: "Bicycle", how: "14 days in a row" },
     rainbow: { name: "Rainbow", how: "Storm turned calm" },
@@ -247,6 +228,14 @@ const en = {
   },
   // Charts without the web (Nov 2 2026)
   charts: {
+    now: "now",
+    weekTo: "Week to {{day}}",
+    days_one: "{{count}} day",
+    days_other: "{{count}} days",
+    months6: "6 months",
+    weeks8: "8 weeks",
+    daysAWeekShort: "Days a week",
+    touch: "touch the chart to see a week",
     links: "Links",
     each: "Each question",
     daysAWeek: "Days a week, last 8 weeks",
@@ -280,6 +269,7 @@ const en = {
   },
   // "Your hunch" instead of Guess (Nov 2 2026)
   hunch: {
+    see: "See",
     title: "Your hunch",
     step: "Your hunch",
     sub: "What's behind it?",
@@ -305,6 +295,47 @@ const en = {
     onto: "You were onto something!",
     notYet: "No link so far. Good to know too.",
     next: "Next hunch",
+  },
+  // Action points in plain words; the island in plain words (Nov 3 2026)
+  rules: {
+    title: "Action point",
+    whenHard: "When it happens this often, it's time to act:",
+    whenGood: "When it's missing this often, it's time to act:",
+    week3: "3 days a week",
+    month10: "10 days a month",
+    off: "Not needed",
+    custom_one: "{{n}} of {{count}} day",
+    custom_other: "{{n}} of {{count}} days",
+    plan: "What will you do then?",
+    planPh: "For example: go to bed earlier",
+    noPlan: "Choose what you'll do",
+    timeToAct: "Time to act",
+    whyHard_one: "{{name}}: {{k}} days in the last {{count}}",
+    whyHard_other: "{{name}}: {{k}} days in the last {{count}}",
+    whyGood_one: "Missing “{{name}}”: {{k}} days in the last {{count}}",
+    whyGood_other: "Missing “{{name}}”: {{k}} days in the last {{count}}",
+    watching: "Watching",
+    allCalm: "All calm: nothing to act on now",
+    noneTitle: "No action points yet",
+    noneLine: "When you add a question, choose when it's time to act and what you'll do.",
+    didIt: "Done: count from today",
+  },
+  isle: {
+    early: "This week: too early to tell",
+    hard: "This week: {{k}} hard days of {{count}}",
+    answered: "This week: answered on {{k}} of 7 days",
+    usual: { rougher: "more than usual", usual: "about as usual", calmer: "fewer than usual" },
+    grows: {
+      house_one: "Grows as you answer · a little house in {{count}} day",
+      house_other: "Grows as you answer · a little house in {{count}} days",
+      tent_one: "Grows as you answer · a tent in {{count}} day",
+      tent_other: "Grows as you answer · a tent in {{count}} days",
+      flowers_one: "Grows as you answer · flowers in {{count}} day",
+      flowers_other: "Grows as you answer · flowers in {{count}} days",
+      flag_one: "Grows as you answer · a flag in {{count}} day",
+      flag_other: "Grows as you answer · a flag in {{count}} days",
+    },
+    grown: "Fully grown: a home, flowers and a flag",
   },
   game: {
     locked: "Opens after 3 days of answers.",
@@ -343,6 +374,8 @@ const en = {
     noneLit_other: "all calm · {{count}} rules",
   },
   map: {
+    filterAria: "Which island",
+    allIslands: "All",
     // The clear map (Nov 2 2026)
     summary: "Week summary",
     viewAria: "Map or globe",
@@ -932,6 +965,7 @@ const en = {
   },
 
   addTracker: {
+    alreadyHave: "Already in your questions",
     title: "Add a question",
     search: "Search",
     all: "All",

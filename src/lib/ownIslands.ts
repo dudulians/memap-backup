@@ -108,10 +108,25 @@ export const setTrackerIsland = async (trackerId: string, island: string | undef
   window.dispatchEvent(new Event("memap-settings-changed"));
 };
 
+/** Take a question off her list (her ask: "дать возможность удалять").
+ *  It is archived, so her answers stay and Settings can bring it back. */
+export const removeQuestion = async (trackerId: string) => {
+  const trackers = await getTrackers();
+  await saveTrackers(trackers.map((t: Tracker) => (t.id === trackerId ? { ...t, archived: true } : t)));
+  window.dispatchEvent(new Event("memap-settings-changed"));
+};
+
 /** A question she writes on an island (her own words, never rewritten).
  *  "?" and a capital first letter are added; whether YES is a hard day is
- *  her pick, never guessed. */
-export const addQuestionToIsland = async (text: string, island: string, hardWhenYes: boolean): Promise<string> => {
+ *  her pick, never guessed. A rule (when it's time to act) and her plan
+ *  only if she chose one (src/lib/rules.ts); else none. */
+export const addQuestionToIsland = async (
+  text: string,
+  island: string,
+  hardWhenYes: boolean,
+  rule: { threshold: number; periodDays: number } = { threshold: 0, periodDays: 30 },
+  plan = "",
+): Promise<string> => {
   const existing = await getTrackers();
   let q = text.trim().replace(/\s+/g, " ");
   q = q.charAt(0).toUpperCase() + q.slice(1);
@@ -122,10 +137,10 @@ export const addQuestionToIsland = async (text: string, island: string, hardWhen
     category: "Curious",
     questionText: q,
     answerType: "boolean",
-    periodDays: 30,
-    threshold: 10,
+    periodDays: rule.periodDays,
+    threshold: rule.threshold,
     problemWhen: hardWhenYes ? "yes" : "no",
-    adviceAboveThreshold: "",
+    adviceAboveThreshold: rule.threshold ? plan.trim() : "",
     createdAt: new Date().toISOString(),
     sortIndex: existing.length,
     island,

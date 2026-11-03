@@ -12,12 +12,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, Compass, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Telescope, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, Compass, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
-import type { PredictState } from "@/lib/predict";
-import { PredictGame } from "@/components/PredictGame";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
@@ -142,11 +140,10 @@ export const EveningPath = ({
     return out;
   }, [m]);
   const firstStep = m.pastInWeek.length;
-  const isOpenStep = (s: Step) =>
-    !s.done && (s.kind !== "game" || canPlay) && (s.kind !== "predict" || s.predict?.stage === "guess" || s.predict?.stage === "reveal");
-  // The questions stay the main step; "Predict" sits above them in the morning
+  const isOpenStep = (s: Step) => !s.done && (s.kind !== "game" || canPlay);
+  // The questions stay the main step; "Unload your mind" is there any time
   // without taking the highlight (it is the main step only when nothing else is left).
-  const firstOpen = m.steps.findIndex((s) => isOpenStep(s) && s.kind !== "predict" && s.kind !== "unload");
+  const firstOpen = m.steps.findIndex((s) => isOpenStep(s) && s.kind !== "unload");
   const cur = firstOpen >= 0 ? firstOpen : m.steps.findIndex(isOpenStep);
   const currentNode = cur >= 0 ? firstStep + cur : -1;
   const chestIndex = nodes.length - 1;
@@ -176,7 +173,6 @@ export const EveningPath = ({
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "fill") return t("path.fillTitle", { day: weekdayName(s.date!) });
     if (s.kind === "game") return t("hunch.step");
-    if (s.kind === "predict") return t(s.predict && s.predict.date !== isoDay(new Date()) ? "predict.stepTomorrow" : "predict.stepTonight");
     if (s.kind === "act") return t("act.step");
     if (s.kind === "test") return t("experiment.stepDone");
     if (s.kind === "unload") return t("unload.step");
@@ -185,21 +181,12 @@ export const EveningPath = ({
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
   };
 
-  const predictSub = (p?: PredictState) => {
-    if (!p) return undefined;
-    const tonight = p.date === isoDay(new Date());
-    if (p.stage === "guess") return t("predict.sub", { count: p.ids.length });
-    if (p.stage === "waiting") return t(tonight ? "predict.waitTonight" : "predict.waitTomorrow");
-    if (p.stage === "reveal") return t("predict.ready");
-    return t("predict.score", { k: p.hit, count: p.n });
-  };
   /** What a node looks like and says. */
   /** A step's own calm colour: its island, else what kind of step it is. */
   const hueOf = (s: Step): string => {
     if (s.kind === "questions" && s.island) return islandHsl(s.island);
     if (s.kind === "task") return "var(--coin-gold)";
     if (s.kind === "game") return "262 40% 64%";
-    if (s.kind === "predict") return "322 30% 64%";
     if (s.kind === "act") return "34 68% 56%";
     if (s.kind === "test") return "152 36% 46%";
     if (s.kind === "unload") return "198 55% 58%";
@@ -210,7 +197,7 @@ export const EveningPath = ({
   const shapeOf = (n: PNode): NodeShape => {
     if (n.kind !== "step") return "circle";
     const k = n.step.kind;
-    if (k === "game" || k === "predict" || k === "unload") return "badge";
+    if (k === "game" || k === "unload") return "badge";
     if (k === "task" || k === "test" || k === "act") return "square";
     return "circle";
   };
@@ -218,29 +205,28 @@ export const EveningPath = ({
     const current = i === currentNode;
     if (n.kind === "past") return { look: "done", icon: <Check className="h-5 w-5" strokeWidth={3} />, title: cap(weekdayName(n.date)) };
     if (n.kind === "future") {
-      return { look: "todo", hue: DAY_AHEAD, icon: <MoonStar className="h-5 w-5" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
+      return { look: "locked", hue: DAY_AHEAD, icon: <MoonStar className="h-5 w-5" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
     }
     if (n.kind === "chest") {
       return m.weekComplete
         ? { look: "gold", icon: <Gift className="h-6 w-6" strokeWidth={2.2} />, title: t("path.chest.openReward"), action: currentNode < 0 ? t("path.openReport") : undefined }
-        : { look: "gold", icon: <Gift className="h-6 w-6" strokeWidth={2.2} />, title: reportLabel };
+        : { look: "locked", hue: "var(--coin-gold)", icon: <Gift className="h-6 w-6" strokeWidth={2.2} />, title: reportLabel };
     }
     const s = n.step;
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
-      : s.kind === "predict" ? Telescope : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
+      : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
       : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
     const icon = s.done && !s.skipped && !replay ? <Check className="h-5 w-5" strokeWidth={3} /> : <Icon className={current ? "h-8 w-8" : "h-5 w-5"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.kind === "predict" ? predictSub(s.predict) : s.fresh && !s.done ? t("path.newIsland") : undefined };
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
-    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("predict.see") : t("hunch.go") };
-    if (s.kind === "predict") return { look, icon, hue, title: stepName(s), sub: predictSub(s.predict), action: s.predict?.stage === "reveal" ? t("predict.see") : t("game.play") };
+    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("hunch.go") };
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
-    if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("predict.see") };
+    if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
     return {
       look, icon, hue, title: stepName(s),
@@ -283,7 +269,6 @@ export const EveningPath = ({
   // A week's chest, open in its own sheet; and how many finished weeks show.
   const [chestOpen, setChestOpen] = useState<{ week: number; dates: string[] } | null>(null);
   const [gameOpen, setGameOpen] = useState(false);
-  const [predictOpen, setPredictOpen] = useState<PredictState | null>(null);
   const [testOpen, setTestOpen] = useState<"pick" | "result" | null>(null);
   const [unloadOpen, setUnloadOpen] = useState(false);
   const [pastShown, setPastShown] = useState(1);
@@ -322,7 +307,6 @@ export const EveningPath = ({
   const startStep = (s: Step) => {
     setOpen(null);
     if (s.kind === "game") { if (canPlay) setGameOpen(true); }
-    else if (s.kind === "predict") { if (s.predict?.stage === "guess" || s.predict?.stage === "reveal") setPredictOpen(s.predict); }
     else if (s.kind === "act") { markActSeen(); setTick((k) => k + 1); openActionPoints(); }
     else if (s.kind === "fill") onFillDay(s.date!);
     else if (s.kind === "task" && s.task === "note") setNoteDraft(newDraft());
@@ -336,7 +320,6 @@ export const EveningPath = ({
   const doable = (n: PNode) =>
     n.kind === "step" && n.step.kind !== "auto" && (
       n.step.kind === "game" ? canPlay && !n.step.done
-        : n.step.kind === "predict" ? n.step.predict?.stage === "guess" || n.step.predict?.stage === "reveal"
         : n.step.kind === "unload" ? true
         : !n.step.done || !!n.step.skipped);
   const tap = (i: number) => {
@@ -409,7 +392,6 @@ export const EveningPath = ({
       const door = getDoorState();
       return head(s.auto === "topic" ? t("path.auto.topicBubble", { name: door ? t(`doors.${door.id}.name`) : "" }) : t("path.auto.firstBubble"));
     }
-    if (s.kind === "predict") return head(stepName(s), predictSub(s.predict));
     if (s.kind === "act") {
       return (
         <>
@@ -563,11 +545,12 @@ export const EveningPath = ({
               <div key={i}>
                 {!(i === currentNode && open === currentNode) && (
                   <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}
-                    maxRight={width} big={i === currentNode} muted={v.look === "done" || v.look === "todo"}
+                    maxRight={width} big={i === currentNode} muted={v.look === "done"}
+                    open={v.look === "todo" && !lockedGame} dim={v.look === "locked" || lockedGame}
                     second={i === currentNode && n.kind === "step" && n.step.kind === "task" ? t("path.skip") : undefined}
                     onSecond={() => { if (n.kind === "step" && n.step.task) { skipTask(n.step.task); setTick((k) => k + 1); } }} />
                 )}
-                <PathNode stop={p} look={lockedGame ? "todo" : v.look} hue={v.hue} shape={shapeOf(n)} label={v.title} onClick={() => tap(i)} dataStop={i}
+                <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} shape={shapeOf(n)} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
                 </PathNode>
@@ -595,9 +578,6 @@ export const EveningPath = ({
           </div>
         } />
 
-      {predictOpen && (predictOpen.stage === "guess" || predictOpen.stage === "reveal") && (
-        <PredictGame state={predictOpen} trackers={trackers} entries={entries} onClose={() => { setPredictOpen(null); setTick((k) => k + 1); }} />
-      )}
 
       {unloadOpen && <UnloadGame onClose={() => { setUnloadOpen(false); setTick((k) => k + 1); }} />}
 

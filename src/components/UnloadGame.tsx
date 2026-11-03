@@ -6,12 +6,16 @@
 // pop: same colours that touch merge, a big one bursts into small ones, and
 // a finger dragged across pops a whole row. No score to lose, no timer.
 // Calm motion (her rule): slow rise, no shaking; Reduce Motion slows it more.
+// Nov 3 2026 (her: "более ASMR-ное и ощущение, и графику, и звуки"): soap
+// bubbles with a slowly shifting rainbow rim and a glint, a gentle wobble when
+// they touch, a short squish before the pop, droplets and a thin ring, a wet
+// "plip" panned to where it was, and a quiet sea underneath.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Archive, ArrowUp, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
-import { playBurst, playKeep, playMerge, playPop } from "@/lib/feedback";
+import { playBurst, playKeep, playMerge, playPop, startSea } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
 import { addNote } from "@/lib/notes";
 import { isoLocal } from "@/lib/doors";
@@ -27,8 +31,15 @@ const MAX_R = 64;
 interface Bubble {
   id: number; x: number; y: number; r: number; vy: number; phase: number; c: number;
   text?: string; lines?: string[]; target?: number; grow: number;
+  /** wobble left from touching another (0..1) */
+  wob: number;
+  /** when it pops (it squishes until then) */
+  popAt?: number;
 }
-interface Burst { x: number; y: number; r: number; c: number; t: number }
+interface Drop { x: number; y: number; vx: number; vy: number; r: number; hue: number }
+interface Burst { x: number; y: number; r: number; c: number; t: number; drops: Drop[] }
+/** How long a bubble squishes before it pops, ms. */
+const SQUISH = 70;
 
 export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation();
@@ -49,6 +60,12 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   mutedRef.current = muted;
 
   useEffect(() => { markUnloadPlayed(); }, []);
+  // A quiet sea while the game is open (off when muted).
+  useEffect(() => {
+    if (muted) return;
+    const stop = startSea();
+    return stop;
+  }, [muted]);
 
   useEffect(() => {
     const canvas = cv.current!, box = wrap.current!, ctx = canvas.getContext("2d")!;
@@ -70,7 +87,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       bubbles.push({
         id: nextId++, r, x: x ?? r + Math.random() * (W - 2 * r), y: y ?? H + r,
         vy: vy ?? -(0.35 + Math.random() * 0.35) * speed, phase: Math.random() * 6.28,
-        c: c ?? Math.floor(Math.random() * COLORS.length), grow: 1,
+        c: c ?? Math.floor(Math.random() * COLORS.length), grow: 1, wob: 0,
       });
     };
     // A thought: a light bubble with her words; it rises to the middle and waits.
@@ -94,20 +111,35 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
         const r = Math.min(74, Math.max(46, wide / 2 + 18, lines.length * 11 + 22));
         bubbles.push({
           id: nextId++, r, x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: H + r, vy: -0.9 * speed, phase: Math.random() * 6.28,
-          c: Math.floor(Math.random() * COLORS.length), text: s, lines, target: H * (0.22 + Math.random() * 0.3), grow: 0.6,
+          c: Math.floor(Math.random() * COLORS.length), text: s, lines, target: H * (0.22 + Math.random() * 0.3), grow: 0.6, wob: 0,
         });
       },
     };
 
+    /** Droplets flying off a pop, in the rim's colours. */
+    const dropsFor = (b: Bubble, now: number): Drop[] => {
+      const n = 10 + Math.round(b.r / 6);
+      return Array.from({ length: n }, (_, k) => {
+        const a = (k / n) * Math.PI * 2 + Math.random() * 0.3;
+        const v = (1.2 + Math.random() * 1.6) * (0.6 + b.r / MAX_R);
+        return { x: b.x + Math.cos(a) * b.r * 0.85, y: b.y + Math.sin(a) * b.r * 0.85, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.4, r: 1.4 + Math.random() * 2.2, hue: (now / 20 + b.phase * 60 + k * 37) % 360 };
+      });
+    };
+    /** Touch: it squishes for a moment, then pops (burst()). */
     const pop = (b: Bubble) => {
+      if (b.popAt) return;
+      b.popAt = performance.now() + (reduce ? 0 : SQUISH);
+    };
+    const burst = (b: Bubble) => {
       bubbles = bubbles.filter((x) => x !== b);
-      bursts.push({ x: b.x, y: b.y, r: b.r, c: b.c, t: 0 });
       const now = performance.now();
-      // Each pop sounds and feels its size; a big one bursts.
-      if (now - lastTap > 55) {
+      bursts.push({ x: b.x, y: b.y, r: b.r, c: b.c, t: 0, drops: dropsFor(b, now) });
+      // Each pop sounds and feels its size, from where it was; a big one bursts.
+      if (now - lastTap > 45) {
         const z = b.text ? 0.65 : Math.min(1, b.r / MAX_R);
-        if (!b.text && b.r > 40) { haptics.burst(); if (sound()) playBurst(); }
-        else { haptics.pop(z); if (sound()) playPop(z); }
+        const x = W ? b.x / W : 0.5;
+        if (!b.text && b.r > 40) { haptics.burst(); if (sound()) playBurst(x); }
+        else { haptics.pop(z); if (sound()) playPop(z, x); }
         lastTap = now;
       }
       if (b.text) setLetGo((n) => n + 1);
@@ -127,30 +159,50 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       haptics.rise();
       if (sound()) playKeep();
       if (b.text) setKept((k) => [...k, b.text!]);
-      bursts.push({ x: b.x, y: b.y, r: b.r, c: -1, t: 0 });
+      bursts.push({ x: b.x, y: b.y, r: b.r, c: -1, t: 0, drops: [] });
     };
 
-    const draw = (b: Bubble) => {
+    const draw = (b: Bubble, now: number) => {
       const [h, s, l] = COLORS[b.c];
       const r = b.r * b.grow;
+      // jelly: a little wobble after touching; a squish right before the pop
+      const w = reduce ? 0 : b.wob * 0.07 * Math.sin(now / 65 + b.phase * 3);
+      const k = b.popAt ? Math.min(1, 1 - (b.popAt - now) / SQUISH) : 0;
+      const sx = 1 + w + 0.14 * k, sy = 1 - w - 0.1 * k;
       ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.scale(sx, sy);
+      // the film: almost clear in the middle, tinted toward the edge
+      const body = ctx.createRadialGradient(-r * 0.2, -r * 0.25, r * 0.1, 0, 0, r);
+      body.addColorStop(0, `hsla(${h},${s}%,${Math.min(96, l + 24)}%,${b.text ? 0.86 : 0.08})`);
+      body.addColorStop(0.72, `hsla(${h},${s}%,${Math.min(92, l + 14)}%,${b.text ? 0.82 : 0.16})`);
+      body.addColorStop(1, `hsla(${h},${s}%,${l}%,${b.text ? 0.9 : 0.42})`);
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      // the rainbow rim, slowly turning
+      const turn = now / 2600 + b.phase;
+      ctx.lineWidth = Math.max(1.6, r * 0.06);
+      for (let q = 0; q < 6; q++) {
+        ctx.strokeStyle = `hsla(${(q * 60 + now / 18 + b.phase * 50) % 360},85%,74%,${b.text ? 0.75 : 0.6})`;
+        ctx.beginPath(); ctx.arc(0, 0, r - ctx.lineWidth / 2, turn + (q * Math.PI) / 3, turn + ((q + 1) * Math.PI) / 3 + 0.02); ctx.stroke();
+      }
+      ctx.lineWidth = 1; ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.beginPath(); ctx.arc(0, 0, r - 3, 0, Math.PI * 2); ctx.stroke();
+      // the glint and a soft lower reflection
+      const gl = ctx.createRadialGradient(-r * 0.4, -r * 0.45, 0, -r * 0.4, -r * 0.45, r * 0.42);
+      gl.addColorStop(0, "rgba(255,255,255,0.9)");
+      gl.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = gl;
+      ctx.beginPath(); ctx.ellipse(-r * 0.36, -r * 0.42, r * 0.34, r * 0.22, -0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath(); ctx.arc(-r * 0.5, -r * 0.5, Math.max(1.5, r * 0.07), 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = Math.max(1.5, r * 0.07); ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(0, 0, r * 0.72, 0.35, 1.25); ctx.stroke();
       if (b.text) {
-        ctx.fillStyle = `hsla(${h},${s}%,${Math.min(96, l + 26)}%,0.94)`;
-        ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, 7); ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = `hsla(${h},${s}%,${l}%,0.9)`; ctx.stroke();
-        ctx.fillStyle = `hsl(${h},${Math.max(20, s - 10)}%,22%)`; ctx.font = "600 15px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = `hsl(${h},${Math.max(20, s - 10)}%,20%)`; ctx.font = "600 15px system-ui, -apple-system, sans-serif";
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         const lines = b.lines ?? [];
-        lines.forEach((ln, i) => ctx.fillText(ln, b.x, b.y + (i - (lines.length - 1) / 2) * 18));
-      } else {
-        const g = ctx.createRadialGradient(b.x - r * 0.35, b.y - r * 0.4, r * 0.1, b.x, b.y, r);
-        g.addColorStop(0, `hsla(${h},${s}%,${Math.min(95, l + 20)}%,0.95)`);
-        g.addColorStop(0.7, `hsla(${h},${s}%,${l}%,0.82)`);
-        g.addColorStop(1, `hsla(${h},${s}%,${l - 8}%,0.9)`);
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, 7); ctx.fill();
-        ctx.lineWidth = 1.5; ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.stroke();
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
-        ctx.beginPath(); ctx.ellipse(b.x - r * 0.38, b.y - r * 0.42, r * 0.22, r * 0.13, -0.6, 0, 7); ctx.fill();
+        lines.forEach((ln, i) => ctx.fillText(ln, 0, (i - (lines.length - 1) / 2) * 18));
       }
       ctx.restore();
     };
@@ -161,8 +213,11 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       // Keep the sea lively: small bubbles rise every ~0.7 s, never too many.
       const generic = bubbles.filter((b) => !b.text).length;
       if (now - lastSpawn > (reduce ? 1300 : 700) && generic < 18) { spawn(); lastSpawn = now; }
+      // Squished long enough: pop.
+      for (const b of bubbles.filter((x) => x.popAt && now >= x.popAt)) burst(b);
       for (const b of bubbles) {
         b.grow = Math.min(1, b.grow + 0.04);
+        b.wob *= 0.95;
         if (b.text && b.target !== undefined && b.y <= b.target) {
           // A thought waits in the middle, bobbing gently.
           b.y += Math.sin(now / 900 + b.phase) * 0.12 * speed;
@@ -181,11 +236,13 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
             big.x = (big.x * big.r ** 2 + small.x * small.r ** 2) / (big.r ** 2 + small.r ** 2);
             big.y = (big.y * big.r ** 2 + small.y * small.r ** 2) / (big.r ** 2 + small.r ** 2);
             big.r = Math.hypot(a.r, b.r); big.vy = Math.max(big.vy, small.vy) * 0.85; big.grow = 0.9;
-            if (now - lastMerge > 160) { haptics.merge(); if (sound()) playMerge(); lastMerge = now; }
+            if (now - lastMerge > 160) { haptics.merge(); if (sound()) playMerge(W ? big.x / W : 0.5); lastMerge = now; }
+            big.wob = 1;
             bubbles = bubbles.filter((x) => x !== small);
             j = bubbles.length; // restart the inner loop next frame
             continue;
           }
+          a.wob = Math.max(a.wob, 0.7); b.wob = Math.max(b.wob, 0.7);
           const nx = dx / d, ny = dy / d;
           const wa = a.text ? 0 : b.text ? 1 : 0.5, wb = 1 - wa;
           a.x -= nx * overlap * wa; a.y -= ny * overlap * wa;
@@ -195,19 +252,39 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       bubbles = bubbles.filter((b) => b.y > -b.r * 1.2);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
-      bubbles.forEach(draw);
-      // Pops: a ring and droplets that fade.
+      // Soft light moving in the water (very faint, slow).
+      for (let q = 0; q < 3; q++) {
+        const lx = W * (0.25 + 0.5 * ((Math.sin(now / (9000 + q * 2300) + q * 2) + 1) / 2));
+        const ly = H * (0.2 + 0.6 * ((Math.cos(now / (11000 + q * 1900) + q) + 1) / 2));
+        const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, W * 0.45);
+        lg.addColorStop(0, "rgba(255,255,255,0.10)");
+        lg.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = lg;
+        ctx.fillRect(0, 0, W, H);
+      }
+      bubbles.forEach((b) => draw(b, now));
+      // Pops: a thin ring opening up, and droplets that fly, fall and fade.
       bursts = bursts.filter((p) => p.t < 1);
       for (const p of bursts) {
-        p.t += 0.06;
+        p.t += 0.045;
         const [h, s, l] = p.c < 0 ? [42, 74, 60] : COLORS[p.c];
-        ctx.save(); ctx.globalAlpha = 1 - p.t;
-        ctx.strokeStyle = `hsl(${h},${s}%,${l}%)`; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + p.t * 0.6), 0, 7); ctx.stroke();
-        ctx.fillStyle = `hsl(${h},${s}%,${l}%)`;
-        for (let k = 0; k < 8; k++) {
-          const a = (k / 8) * Math.PI * 2, dist = p.r * (0.6 + p.t * 0.9);
-          ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * dist, p.y + Math.sin(a) * dist, 3 * (1 - p.t) + 1, 0, 7); ctx.fill();
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - p.t * 1.4);
+        ctx.strokeStyle = p.c < 0 ? `hsl(${h},${s}%,${l}%)` : "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + p.t * 0.5), 0, Math.PI * 2); ctx.stroke();
+        ctx.globalAlpha = Math.max(0, 1 - p.t);
+        for (const d of p.drops) {
+          d.x += d.vx; d.y += d.vy; d.vy += 0.09; d.vx *= 0.97;
+          ctx.fillStyle = `hsla(${d.hue},80%,72%,0.95)`;
+          ctx.beginPath(); ctx.arc(d.x, d.y, d.r * (1 - p.t * 0.5), 0, Math.PI * 2); ctx.fill();
+        }
+        if (p.c < 0) {
+          ctx.fillStyle = `hsl(${h},${s}%,${l}%)`;
+          for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2, dist = p.r * (0.6 + p.t * 0.9);
+            ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * dist, p.y + Math.sin(a) * dist, 3 * (1 - p.t) + 1, 0, Math.PI * 2); ctx.fill();
+          }
         }
         ctx.restore();
       }
@@ -222,7 +299,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
     // Touch: tap pops; hold a thought to keep it; drag across pops small ones.
     const at = (ev: PointerEvent) => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top] as const; };
     const hit = (x: number, y: number, words: boolean | null) =>
-      [...bubbles].reverse().find((b) => Math.hypot(b.x - x, b.y - y) < b.r * b.grow + 6 && (words === null || !!b.text === words));
+      [...bubbles].reverse().find((b) => !b.popAt && Math.hypot(b.x - x, b.y - y) < b.r * b.grow + 6 && (words === null || !!b.text === words));
     let down: { b: Bubble | undefined; timer: number; moved: boolean } | null = null;
     const onDown = (ev: PointerEvent) => {
       canvas.setPointerCapture(ev.pointerId);

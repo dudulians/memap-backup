@@ -85,7 +85,9 @@ export const Scenery = ({ pieces }: { pieces: Piece[] }) => (
   </>
 );
 
-export type NodeLook = "done" | "current" | "todo" | "gold";
+/** done: filled + check; current: the main step; todo: open now (white,
+ *  coloured rim); gold: a reward ready; locked: not yet (pale, dashed). */
+export type NodeLook = "done" | "current" | "todo" | "gold" | "locked";
 /** circle: questions and days; badge (wavy edge): games; square: practices and tasks. */
 export type NodeShape = "circle" | "badge" | "square";
 
@@ -121,7 +123,8 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
 }) => {
   const size = stop.r * 2;
   const tone = look === "gold" ? "var(--coin-gold)" : hue;
-  const filled = look !== "todo";
+  const locked = look === "locked";
+  const filled = look !== "todo" && !locked;
   const gid = `g${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const badge = shape === "badge";
   const radius = shape === "square" ? "32%" : "9999px";
@@ -130,17 +133,17 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
       onClick={() => { if (onClick) { haptics.tap(); onClick(); } }}
       className={cn(
         "path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.94]",
-        filled ? "text-white" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
+        filled ? "text-white" : locked ? !badge && "bg-white/55 dark:bg-[hsl(var(--surface)/0.5)]" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
         wiggle && "path-wiggle-flat",
       )}
       style={{
         left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: radius,
-        color: filled ? undefined : `hsl(${tone})`,
+        color: filled ? undefined : locked ? `hsl(${tone} / 0.55)` : `hsl(${tone})`,
         background: badge ? undefined : filled ? `linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 58%), hsl(${tone})` : undefined,
-        border: badge ? undefined : filled ? "3px solid hsl(var(--surface))" : `3px solid hsl(${tone} / 0.32)`,
-        boxShadow: badge ? undefined : filled
+        border: badge ? undefined : filled ? "3px solid hsl(var(--surface))" : locked ? "2.5px dashed hsl(var(--muted-foreground) / 0.35)" : `3px solid hsl(${tone} / 0.55)`,
+        boxShadow: badge || locked ? undefined : filled
           ? `0 9px 18px -9px hsl(${tone} / 0.75), inset 0 -3px 0 rgba(0,0,0,0.06)`
-          : "0 6px 16px -9px rgba(16,42,56,0.32)",
+          : `0 6px 16px -8px hsl(${tone} / 0.45)`,
       }}>
       {look === "current" && (
         <span aria-hidden="true" className="path-halo pointer-events-none absolute"
@@ -156,8 +159,9 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
               <stop offset="0.58" stopColor="#fff" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <path d={badgePath(size)} fill={filled ? `hsl(${tone})` : "hsl(var(--surface))"}
-            stroke={filled ? "hsl(var(--surface))" : `hsl(${tone} / 0.45)`} strokeWidth={3} strokeLinejoin="round" />
+          <path d={badgePath(size)} fill={filled ? `hsl(${tone})` : locked ? "hsl(var(--surface) / 0.5)" : "hsl(var(--surface))"}
+            stroke={filled ? "hsl(var(--surface))" : locked ? "hsl(var(--muted-foreground) / 0.35)" : `hsl(${tone} / 0.6)`} strokeWidth={locked ? 2.5 : 3}
+            strokeDasharray={locked ? "5 5" : undefined} strokeLinejoin="round" />
           {filled && <path d={badgePath(size)} fill={`url(#${gid})`} />}
         </svg>
       )}
@@ -169,9 +173,13 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
 /** The label: a white pill that grows out of the node to the right. The
  *  node covers its left end. The current step's pill is taller and holds a
  *  "Start" button. */
-export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, big, second, onSecond }: {
+export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, big, second, onSecond, open, dim }: {
   stop: Stop; title: string; sub?: string; action?: string; onAction?: () => void; maxRight: number; muted?: boolean; big?: boolean;
   second?: string; onSecond?: () => void;
+  /** open now: bold, with an arrow */
+  open?: boolean;
+  /** not yet: dim */
+  dim?: boolean;
 }) => {
   const left = stop.x;
   const h = big ? 70 : 42;
@@ -184,12 +192,13 @@ export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, 
         {second}
       </button>
     )}
-    <div className="pointer-events-none absolute z-[2] flex items-center rounded-full bg-white/90 shadow-[0_6px_18px_-12px_rgba(16,42,56,0.45)] backdrop-blur-sm dark:bg-[hsl(var(--surface)/0.92)]"
+    <div className={cn("pointer-events-none absolute z-[2] flex items-center rounded-full bg-white/90 shadow-[0_6px_18px_-12px_rgba(16,42,56,0.45)] backdrop-blur-sm dark:bg-[hsl(var(--surface)/0.92)]", dim && "bg-white/45 opacity-70 shadow-none dark:bg-[hsl(var(--surface)/0.45)]")}
       style={{ left, top: stop.y - h / 2, height: h, maxWidth: maxRight - left, paddingLeft: stop.r + 12, paddingRight: action ? 8 : 18 }}>
       <span className="min-w-0 flex-1">
-        <span className={cn("block font-semibold leading-tight", big ? "line-clamp-2 text-[18px]" : "truncate text-[15px]", muted ? "text-foreground/75" : "text-foreground")}>{title}</span>
+        <span className={cn("block leading-tight", big ? "line-clamp-2 text-[18px] font-semibold" : "truncate text-[15px]", open ? "font-bold text-foreground" : "font-semibold", muted || dim ? "text-foreground/65" : "text-foreground")}>{title}</span>
         {sub && <span className="mt-0.5 block truncate text-[14px] font-medium text-muted-foreground">{sub}</span>}
       </span>
+      {open && !action && <ChevronRight aria-hidden="true" className="ml-1 h-5 w-5 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />}
       {action && (
         <button type="button" onClick={() => { haptics.medium(); onAction?.(); }}
           className="pointer-events-auto ml-2 inline-flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-[hsl(var(--coin-teal))] pl-3.5 pr-2.5 text-[15px] font-bold text-white shadow-[0_6px_14px_-8px_hsl(var(--coin-teal))] active:scale-[0.96] transition-transform">
@@ -290,8 +299,8 @@ export const WeekStrip = ({
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i}>
-                <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} muted={kind === "coming"} />
-                <PathNode stop={p} look={kind === "past" ? "gold" : "todo"} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
+                <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"} />
+                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
                   <Gift className="h-6 w-6" strokeWidth={2.2} />
                 </PathNode>
               </div>
@@ -300,8 +309,8 @@ export const WeekStrip = ({
           const d = day(i);
           return (
             <div key={i}>
-              <NodePill stop={p} title={dayName(d)} maxRight={width} muted />
-              <PathNode stop={p} look={kind === "past" ? "done" : "todo"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
+              <NodePill stop={p} title={dayName(d)} maxRight={width} muted={kind === "past"} dim={kind === "coming"} />
+              <PathNode stop={p} look={kind === "past" ? "done" : "locked"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
                 onClick={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined}>
                 {kind === "past" ? <Check className="h-5 w-5" strokeWidth={3} /> : <MoonStar className="h-5 w-5" strokeWidth={2} />}
               </PathNode>

@@ -9,7 +9,6 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandOf, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
-import { predictState, type PredictState } from "@/lib/predict";
 import { litTrackers } from "@/lib/lighthouses";
 import { currentExperiment, experimentOver, getExperiments } from "@/lib/experiments";
 import { hunchDoneToday, readyHunch } from "@/lib/hunches";
@@ -29,12 +28,10 @@ export interface Step {
   id: string;
   /** "fill": a missed day (yesterday or the day before) to answer first */
   /** "game": the day's hunch (src/components/HunchGame.tsx; was "Guess") */
-  /** "predict": guess tonight's answers, then see (src/lib/predict.ts) */
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
   /** "test": her week of trying one change is over: see how it went */
   /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "predict" | "act" | "test" | "unload";
-  predict?: PredictState;
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload";
   /** fill: the day */
   date?: string;
   /** task: skipped for today */
@@ -395,16 +392,6 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     break;
   }
 
-  // "Predict" (works from day 1): in the morning, before anything is
-  // answered, it comes first; otherwise after the day's task.
-  const predict = activeQuestions(trackers).length > 0 ? predictState(trackers, entries, now) : null;
-  const predictStep = (p: PredictState): Step => ({ id: "predict", kind: "predict", predict: p, trackerIds: [], answered: 0, done: p.stage === "done" });
-  let predictFirst = false;
-  if (predict?.stage === "guess" && predict.date === today && answeredToday.size === 0) {
-    steps.push(predictStep(predict));
-    predictFirst = true;
-  }
-
   let leftToday = 0;
   for (const g of questionGroups(trackers)) {
     const answered = g.ids.filter((id) => answeredToday.has(id)).length;
@@ -434,7 +421,6 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // Her test week is over: see how it went (it grows a garden).
   const test = currentExperiment();
   if (test && experimentOver(test)) steps.push({ id: "test", kind: "test", trackerIds: [test.trackerId], answered: 0, done: false });
-  if (predict && !predictFirst) steps.push(predictStep(predict));
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.
   if (steps.some((s) => s.kind === "questions")) {

@@ -132,8 +132,9 @@ export const playSwipeSound = (kind: FeedbackKind) => {
 };
 
 // --- Bubble sounds ("Unload your mind", Nov 2026: "звуки, когда лопаются пузыри") ---
-// Made here, no files: a short "bloop" (a sine that drops in pitch), lower for
-// bigger bubbles and a little different each time so many pops don't drone.
+// Made here, no files (Nov 3 2026, her "более ASMR-ное"): a tiny wet click and
+// a short rising plip, lower for bigger bubbles, a little different each time,
+// panned to where the bubble was; a quiet sea can play underneath.
 // Ambient audio on iOS: the silent switch mutes it and music keeps playing.
 
 /** The app's sound setting (Settings → sounds), on unless she turned it off. */
@@ -157,47 +158,136 @@ const ready = (): AudioContext | null => {
   return ctx;
 };
 
-const bloop = (ctx: AudioContext, from: number, to: number, start: number, length: number, peak: number) => {
-  const t = ctx.currentTime + start;
-  const osc = ctx.createOscillator();
-  const g = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(from, t);
-  osc.frequency.exponentialRampToValueAtTime(to, t + length);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.linearRampToValueAtTime(peak, t + 0.006);
-  g.gain.linearRampToValueAtTime(0.0001, t + length);
-  osc.connect(g).connect(ctx.destination);
-  osc.start(t);
-  osc.stop(t + length + 0.03);
+/** Where a sound sits, left (-1) to right (1); plain output where panning isn't there. */
+const outAt = (ctx: AudioContext, pan: number): AudioNode => {
+  const p = (ctx as AudioContext & { createStereoPanner?: () => StereoPannerNode }).createStereoPanner?.();
+  if (!p) return ctx.destination;
+  p.pan.value = Math.max(-1, Math.min(1, pan));
+  p.connect(ctx.destination);
+  return p;
 };
 
-/** A bubble popping; size 0 (small) .. 1 (big). */
-export const playPop = (size = 0.3) => {
+let noise: AudioBuffer | null = null;
+/** One second of soft noise, made once. */
+const noiseBuffer = (ctx: AudioContext) => {
+  if (noise) return noise;
+  noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const d = noise.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return noise;
+};
+
+/** A soap bubble popping: a tiny wet click and a short rising "plip". */
+const plip = (ctx: AudioContext, size: number, pan: number, start = 0, peak = 1) => {
+  const t = ctx.currentTime + start;
+  const out = outAt(ctx, pan);
+  // the click: 25 ms of noise through a narrow band
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx);
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 3200 - 1400 * size;
+  band.Q.value = 5;
+  const cg = ctx.createGain();
+  cg.gain.setValueAtTime(0.0001, t);
+  cg.gain.linearRampToValueAtTime(0.16 * peak, t + 0.002);
+  cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.028);
+  src.connect(band).connect(cg).connect(out);
+  src.start(t, Math.random() * 0.5, 0.04);
+  // the plip: a sine that rises a little, like a drop
+  const f0 = (1150 - 520 * size) * (0.9 + Math.random() * 0.2);
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(f0 * 0.82, t);
+  osc.frequency.exponentialRampToValueAtTime(f0 * 1.28, t + 0.045);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.linearRampToValueAtTime((0.07 + 0.04 * size) * peak, t + 0.004);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + 0.07 + 0.05 * size);
+  osc.connect(og).connect(out);
+  osc.start(t);
+  osc.stop(t + 0.16);
+};
+
+/** A bubble popping; size 0 (small) .. 1 (big), x 0 (left) .. 1 (right). */
+export const playPop = (size = 0.3, x = 0.5) => {
   if (!soundOn()) return;
   const ctx = ready();
   if (!ctx) return;
-  try {
-    const z = Math.max(0, Math.min(1, size));
-    const f = (980 - 520 * z) * (0.92 + Math.random() * 0.16);
-    bloop(ctx, f, f * 0.5, 0, 0.07 + 0.05 * z, 0.09 + 0.05 * z);
-  } catch { /* audio never blocks the UI */ }
+  try { plip(ctx, Math.max(0, Math.min(1, size)), (x - 0.5) * 1.4); } catch { /* audio never blocks the UI */ }
 };
 /** Two bubbles joining: a soft low blub. */
-export const playMerge = () => {
-  if (!soundOn()) return;
-  const ctx = ready();
-  if (!ctx) return;
-  try { bloop(ctx, 260, 340, 0, 0.09, 0.05); } catch { /* ignore */ }
-};
-/** A big bubble bursting: three quick bloops going up. */
-export const playBurst = () => {
+export const playMerge = (x = 0.5) => {
   if (!soundOn()) return;
   const ctx = ready();
   if (!ctx) return;
   try {
-    [520, 700, 900].forEach((f, k) => bloop(ctx, f, f * 0.55, k * 0.045, 0.07, 0.08));
+    const t = ctx.currentTime;
+    const out = outAt(ctx, (x - 0.5) * 1.2);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(230, t);
+    osc.frequency.exponentialRampToValueAtTime(360, t + 0.09);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 900;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.06, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+    osc.connect(lp).connect(g).connect(out);
+    osc.start(t);
+    osc.stop(t + 0.18);
   } catch { /* ignore */ }
+};
+/** A big bubble bursting: a little cascade of plips. */
+export const playBurst = (x = 0.5) => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try {
+    [0.9, 0.55, 0.3, 0.15].forEach((z, k) => plip(ctx, z, (x - 0.5) * 1.4 + (k - 1.5) * 0.25, k * 0.038, 0.85));
+  } catch { /* ignore */ }
+};
+
+/** A quiet sea under the game: soft noise, low, rising and falling like
+ *  slow waves. Returns a stop function (fades out). */
+export const startSea = (): (() => void) => {
+  if (!soundOn()) return () => undefined;
+  const ctx = ready();
+  if (!ctx) return () => undefined;
+  try {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(ctx);
+    src.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 420;
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    // waves: the volume swells every ~7 s
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.14;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.012;
+    lfo.connect(depth).connect(g.gain);
+    src.connect(lp).connect(g).connect(ctx.destination);
+    const t = ctx.currentTime;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.022, t + 1.5);
+    src.start(t);
+    lfo.start(t);
+    return () => {
+      const e = ctx.currentTime;
+      g.gain.cancelScheduledValues(e);
+      g.gain.setValueAtTime(g.gain.value, e);
+      g.gain.linearRampToValueAtTime(0, e + 0.6);
+      src.stop(e + 0.7);
+      lfo.stop(e + 0.7);
+    };
+  } catch {
+    return () => undefined;
+  }
 };
 /** A thought kept for later: a small rising chime. */
 export const playKeep = () => {

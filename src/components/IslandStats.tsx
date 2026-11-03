@@ -3,9 +3,12 @@
 // words next to it; nothing floats. Island: this week's weather and how it
 // compares with her usual, hard days, days answered, what came up most, its
 // links. World: days, streak, chests, each island's week, strongest links.
-// Nov 2 2026 (her progress ideas): the island shows what has grown on it and
-// why, what grows next, and its test of one change; the world shows her
-// special items as a shelf (earned in colour, the rest with how far along).
+// Nov 2 2026 (her progress ideas): the world shows her special items as a
+// shelf (earned in colour, the rest with how far along).
+// Nov 3 2026 (her notes: "куча всего, дублируется", "flowers 7 days here —
+// непонятно", "often · as usual — что это?"): the island says its week in
+// one plain sentence; Calendar / Chart / Action points open the Map's own
+// sheets filtered to it; growth is one line.
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, type Island, type Route } from "@/lib/islands";
@@ -13,10 +16,10 @@ import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
-import { FlaskConical } from "lucide-react";
+import { BarChart3, CalendarDays, FlaskConical } from "lucide-react";
 import { GROWTH_AT, ITEMS, growthLand, homeWord, itemEarned, itemProgress, type GrowthKind, type WorldFacts } from "@/lib/growth";
+import { cn } from "@/lib/utils";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
-import { IslandPicture } from "@/components/IslandPicture";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
 
@@ -46,9 +49,6 @@ const LinkLine = ({ r, title }: { r: Route; title: (id: string) => string }) => 
   );
 };
 
-/** The picture of a growth piece (the island's own landmark aside). */
-const growthPic = (k: GrowthKind) => growthLand([k]).front[0]?.[0] ?? growthLand([k]).back[0]?.[0] ?? "";
-
 /** Her questions here that wait for today's answer, and where they are on Today. */
 export const AnswerNow = ({ island, trackers, entries }: { island: Island; trackers: Tracker[]; entries: TrackerEntry[] }) => {
   const { t } = useTranslation();
@@ -69,9 +69,33 @@ export const AnswerNow = ({ island, trackers, entries }: { island: Island; track
   );
 };
 
-export const IslandStats = ({ island, routes, trackers, growth = [], days = 0, onTest, islands = [], entries = [] }: {
+/** This week on an island, in one plain sentence. */
+export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tracker[] }) => {
+  const { t } = useTranslation();
+  const hasHard = trackers.some((tr) => island.trackerIds.includes(tr.id) && tr.problemWhen === "yes");
+  const line = island.answeredDays < 3
+    ? t("isle.early")
+    : hasHard
+      ? t("isle.hard", { k: island.hardDays, count: island.answeredDays }) + (island.usual ? ` · ${t(`isle.usual.${island.usual}`)}` : "")
+      : t("isle.answered", { k: island.answeredDays });
+  return (
+    <div className="flex items-center gap-3 px-1 pb-1">
+      {island.weather && island.answeredDays >= 3 && (
+        <img src={mapPic(WEATHER_PIC[island.weather])} alt="" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
+      )}
+      <p className="text-[17px] font-semibold leading-snug">{line}</p>
+    </div>
+  );
+};
+
+export type IslandView = "overview" | "trends" | "signals";
+
+/** Under the questions: this island's calendar, chart and action points; its
+ *  links; its test; one line on how it grows. */
+export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, onTest, onView, islands = [], entries = [] }: {
   island: Island; routes: Route[]; trackers: Tracker[];
   growth?: GrowthKind[]; days?: number; onTest?: () => void;
+  onView: (v: IslandView) => void;
   /** for "maybe linked" (islands with no link found yet) */
   islands?: Island[]; entries?: TrackerEntry[];
 }) => {
@@ -87,29 +111,39 @@ export const IslandStats = ({ island, routes, trackers, growth = [], days = 0, o
     .map((o) => ({ o, both: [...daysOf(o.trackerIds)].filter((d) => here.has(d)).length }))
     .filter((x) => x.both > 0)
     .sort((p, q) => q.both - p.both)
-    .slice(0, 2);
-  // What grows next on this island, by days answered.
+    .slice(0, 1);
+  // What grows next on this island, by days answered ("house" is a tent where a house already stands).
   const next = (["house", "flowers", "flag"] as const).find((k) => !growth.includes(k));
-  // "house" reads "tent" on an island that already has a house.
   const word = (k: GrowthKind) => (k === "house" ? homeWord(island.def.land) : k);
+  const nextPic = next ? (word(next) === "tent" ? "camping_tent" : growthLand([next]).front[0]?.[0] ?? growthLand([next]).back[0]?.[0] ?? "") : "";
   const test = currentExperiment();
+  const view = (v: IslandView, icon: React.ReactNode, label: string) => (
+    <button type="button" onClick={() => { haptics.tap(); onView(v); }}
+      className="surface flex h-[68px] flex-col items-center justify-center gap-1 rounded-[18px] text-[14px] font-semibold active:scale-[0.98] transition-transform">
+      {icon}{label}
+    </button>
+  );
   return (
-    <div className="space-y-3 pb-4">
-      {/* What has grown here, and what grows next. */}
-      <div className="surface flex items-center gap-3 rounded-[20px] px-3 py-3">
-        <IslandPicture id={island.id} width={112} growth={growth} />
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("growth.title")}</p>
-          {growth.length === 0 && <p className="mt-1 text-[15px] font-semibold leading-snug">{t("growth.nothingYet")}</p>}
-          {growth.map((k) => (
-            <p key={k} className="mt-1 flex items-center gap-1.5 text-[15px] font-semibold leading-snug">
-              <img src={mapPic(k === "house" && homeWord(island.def.land) === "tent" ? "camping_tent" : growthPic(k))} alt="" width={22} height={22} className="h-[22px] w-[22px] object-contain" />
-              {t(`growth.${word(k)}`)}
-            </p>
-          ))}
-          {next && <p className="mt-1.5 text-[14px] font-medium text-muted-foreground">{t(`growth.next.${word(next)}`, { count: Math.max(1, GROWTH_AT[next] - days) })}</p>}
-        </div>
+    <div className="space-y-3 pb-4 pt-1">
+      <div className="grid grid-cols-3 gap-2">
+        {view("overview", <CalendarDays className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />, t("overviewCards.calendar"))}
+        {view("trends", <BarChart3 className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />, t("overviewCards.chart"))}
+        {view("signals", <img src={mapPic("lighthouse")} alt="" width={20} height={24} className="h-6 w-5 object-contain" />, t("overviewCards.lighthouses"))}
       </div>
+      {(mine.length > 0 || maybe.length > 0) && (
+        <>
+          <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.links")}</p>
+          {mine.map((r, i) => <LinkLine key={i} r={r} title={title} />)}
+          {maybe.map(({ o, both }) => (
+            <div key={o.id} className="flex items-center gap-3 rounded-[20px] border-2 border-dashed border-foreground/15 px-4 py-3">
+              <img src={mapPic("icon_" + o.def.icon)} alt="" width={28} height={28} />
+              <p className="min-w-0 text-[15px] font-semibold leading-snug">
+                {islandName(t, island.id)} ↔ {islandName(t, o.id)}? <span className="font-medium text-muted-foreground">{t(both >= 21 ? "map.noLinkYet" : "map.checking")}</span>
+              </p>
+            </div>
+          ))}
+        </>
+      )}
       {test && test.island === island.id ? (
         <div className="surface flex items-center gap-3 rounded-[20px] px-4 py-3">
           <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(152_36%_44%)]" strokeWidth={2.2} />
@@ -128,48 +162,13 @@ export const IslandStats = ({ island, routes, trackers, growth = [], days = 0, o
           </span>
         </button>
       ) : null}
-      <div className="surface flex items-center gap-3 rounded-[20px] px-4 py-3">
-        {island.weather ? (
-          <img src={mapPic(WEATHER_PIC[island.weather])} alt="" width={44} height={44} className="object-contain" />
-        ) : null}
-        <div className="min-w-0">
-          <p className="text-[19px] font-bold leading-tight">{t(island.weather ? `map.legend.${island.weather}` : "map.tooEarly")}</p>
-          {island.usual && <p className="text-[15px] font-medium text-muted-foreground">{t(`map.usual.${island.usual}`)}</p>}
-        </div>
+      {/* How it grows, in one line. */}
+      <div className={cn("flex items-center gap-2.5 px-1 pt-1")}>
+        {next && <img src={mapPic(nextPic)} alt="" width={26} height={26} className="h-[26px] w-[26px] object-contain" />}
+        <p className="text-[14px] font-medium leading-snug text-muted-foreground">
+          {next ? t(`isle.grows.${word(next)}`, { count: Math.max(1, GROWTH_AT[next] - days) }) : t("isle.grown")}
+        </p>
       </div>
-      <div className="flex gap-3">
-        <Tile n={island.hardDays} label={t("map.hardDays")} />
-        <Tile n={`${island.answeredDays}/7`} label={t("map.answeredDays")} />
-      </div>
-      {island.top && (
-        <div className="surface rounded-[20px] px-4 py-3">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.mostOften")}</p>
-          <p className="mt-0.5 text-[17px] font-bold">{title(island.top.trackerId)} · {t("map.days", { count: island.top.days })}</p>
-        </div>
-      )}
-      {mine.length > 0 && (
-        <>
-          <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.links")}</p>
-          {mine.map((r, i) => <LinkLine key={i} r={r} title={title} />)}
-          <p className="text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
-        </>
-      )}
-      {maybe.length > 0 && (
-        <>
-          <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.maybeTitle")}</p>
-          {maybe.map(({ o, both }) => (
-            <div key={o.id} className="flex items-center gap-3 rounded-[20px] border-2 border-dashed border-foreground/15 px-4 py-3">
-              <img src={mapPic("icon_" + o.def.icon)} alt="" width={30} height={30} />
-              <div className="min-w-0">
-                <p className="text-[16px] font-bold leading-snug">{islandName(t, island.id)} ↔ {islandName(t, o.id)}?</p>
-                <p className="text-[14px] font-medium leading-snug text-muted-foreground">
-                  {t(both >= 21 ? "map.noLinkYet" : "map.checking")} · {t("map.bothDays", { count: both })}
-                </p>
-              </div>
-            </div>
-          ))}
-        </>
-      )}
     </div>
   );
 };

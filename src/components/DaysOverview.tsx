@@ -12,6 +12,7 @@ import { isoLocal } from "@/lib/doors";
 import { mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { haptics } from "@/lib/haptics";
+import { smooth } from "./ChartViews";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -88,7 +89,8 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
     const y = waveY + (realY - waveY) * ease(toReal);
     return [x, y] as const;
   });
-  const d = pts.reduce((acc, [x, y], i) => acc + (i === 0 ? `M${x},${y}` : ` L${x},${y}`), "");
+  // The same smooth line as the Charts (her Nov 3 note: one style everywhere).
+  const d = smooth(pts.map(([x, y]) => [x, y] as [number, number]));
   const len = useRef(260);
 
   const card = "surface flex flex-1 flex-col items-start rounded-[20px] px-3 pb-3 pt-2.5 text-left active:scale-[0.98] transition-transform";
@@ -113,7 +115,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
       <button type="button" className={card} onClick={() => open("trends")}>
         <span className="text-[14px] font-bold">{t("overviewCards.chart")}</span>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mt-2 overflow-visible" aria-hidden="true">
-          <path d={d} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"
+          <path d={d} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
             strokeDasharray={len.current} strokeDashoffset={len.current * (1 - ease(wave))} />
           {toReal >= 1 && pts.map(([x, y], i) => i === pts.length - 1 && <circle key={i} cx={x} cy={y} r={3.5} fill="hsl(var(--coin-teal))" />)}
         </svg>

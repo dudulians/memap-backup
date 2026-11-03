@@ -15,6 +15,7 @@ import { countedDays, getChests } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
 import { finishedExperiments, currentExperiment, experimentDay } from "@/lib/experiments";
 import { getOwnIslands } from "@/lib/ownIslands";
+import { getHunches } from "@/lib/hunches";
 
 // --- Island growth ---------------------------------------------------------
 
@@ -75,7 +76,7 @@ export const ITEMS: { id: ItemId; pic: string }[] = [
   { id: "camera", pic: "camera" }, // a first link found
   { id: "signpost", pic: "wooden_signpost" }, // a new island opened
   { id: "books", pic: "books" }, // 10 notes
-  { id: "sparkles", pic: "sparkles" }, // 10 answers guessed right
+  { id: "sparkles", pic: "sparkles" }, // a first hunch checked
   { id: "easel", pic: "art_easel" }, // a first test finished
   { id: "bicycle", pic: "bicycle" }, // 14 days in a row
   { id: "rainbow", pic: "rainbow" }, // a stormy island turned calm
@@ -88,7 +89,8 @@ export interface WorldFacts {
   links: number;
   ownIslands: number;
   notes: number;
-  guessedRight: number;
+  /** hunches she has seen checked */
+  hunches: number;
   tests: number;
   /** an island that was stormy in an earlier week and is calm now */
   cleared: IslandId | null;
@@ -100,7 +102,7 @@ export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
     case "camera": return f.links >= 1;
     case "signpost": return f.ownIslands >= 1;
     case "books": return f.notes >= 10;
-    case "sparkles": return f.guessedRight >= 10;
+    case "sparkles": return f.hunches >= 1;
     case "easel": return f.tests >= 1;
     case "bicycle": return f.streak >= 14;
     case "rainbow": return f.cleared !== null;
@@ -115,7 +117,7 @@ export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
     case "camera": return [Math.min(f.links, 1), 1];
     case "signpost": return [Math.min(f.ownIslands, 1), 1];
     case "books": return [Math.min(f.notes, 10), 10];
-    case "sparkles": return [Math.min(f.guessedRight, 10), 10];
+    case "sparkles": return [Math.min(f.hunches, 1), 1];
     case "easel": return [Math.min(f.tests, 1), 1];
     case "bicycle": return [Math.min(f.streak, 14), 14];
     case "rainbow": return [f.cleared ? 1 : 0, 1];
@@ -123,8 +125,8 @@ export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
   }
 };
 
-/** Facts for the items, from what's stored. Notes and guesses come in. */
-export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands: Island[], routes: Route[], notes: number, guessedRight: number): WorldFacts => {
+/** Facts for the items, from what's stored. The notes count comes in. */
+export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands: Island[], routes: Route[], notes: number): WorldFacts => {
   const days = countedDays(trackers, entries);
   const cleared = islands.find((i) => i.weather === "sun" && i.wasStormy)?.id ?? null;
   return {
@@ -133,7 +135,7 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
     links: routes.length,
     ownIslands: getOwnIslands().length,
     notes,
-    guessedRight,
+    hunches: getHunches().filter((h) => h.seen).length,
     tests: finishedExperiments().length,
     cleared,
   };

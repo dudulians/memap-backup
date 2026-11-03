@@ -15,7 +15,6 @@ import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
 import { getNotes } from "@/lib/notes";
-import { guessedRightTotal } from "@/lib/predict";
 import { ITEMS, growthOf, islandDays, itemEarned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
 import { AvatarPicker } from "./AvatarPicker";
@@ -24,7 +23,7 @@ import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { IslandsMap } from "./IslandsMap";
 import { WorldMap } from "./WorldMap";
-import { AnswerNow, IslandStats, WorldStats } from "./IslandStats";
+import { AnswerNow, IslandMore, IslandWeek, WorldStats, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
@@ -45,6 +44,8 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   const [view, setView] = useState<"map" | "globe">("map");
   // Calendar / chart / lighthouses straight away, no tabs inside (her note).
   const [only, setOnly] = useState<Only | null>(initialOpen && initialOpen !== "all" ? initialOpen : null);
+  // Which island the calendar / chart / action points show (null: all).
+  const [onlyIsland, setOnlyIsland] = useState<IslandId | null>(null);
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
   useEffect(() => {
@@ -99,7 +100,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
     const days = islandDays(trackers, entries);
     return Object.fromEntries(islands.map((i) => [i.id, growthOf(i.id, days.get(i.id) ?? 0)]));
   }, [islands, trackers, entries]);
-  const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount, guessedRightTotal(entries)), [trackers, entries, islands, routes, notesCount]);
+  const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount), [trackers, entries, islands, routes, notesCount]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
   // Her avatar sails by the island she answered last (her note: the avatar
@@ -162,7 +163,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           {/* Calendar, chart, lighthouses: on view, each opens straight to itself. */}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <DaysOverview trackers={trackers} entries={entries} onOpen={setOnly} />
+              <DaysOverview trackers={trackers} entries={entries} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
             </div>
           )}
           {loaded && islands.length > 0 && (
@@ -199,28 +200,49 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           </div>
           {island ? (
             <>
-              {/* Where and when to answer this island's questions (her note). */}
-              <div className="mb-3"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
-              {island.trackerIds.length > 0 && (
-                <IslandStats island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []} islands={islands} entries={entries}
-                  days={islandDays(trackers, entries).get(island.id) ?? 0} onTest={() => { const id = island.id; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }} />
-              )}
+              {/* In order (her note: "куча всего, дублируется"): this week in
+                  words, what to answer today, the questions, then this
+                  island's calendar / chart / action points, links, test, growth. */}
+              {island.trackerIds.length > 0 && <IslandWeek island={island} trackers={trackers} />}
+              <div className="mb-1 mt-2"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
               <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />
+              {island.trackerIds.length > 0 && (
+                <IslandMore island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []} islands={islands} entries={entries}
+                  days={islandDays(trackers, entries).get(island.id) ?? 0}
+                  onTest={() => { const id = island.id; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }}
+                  onView={(v: IslandView) => { const id = island.id; setOpen(null); window.setTimeout(() => { setOnlyIsland(id); setOnly(v); }, 250); }} />
+              )}
             </>
           ) : open === "all" ? (
             <WorldStats islands={islands} routes={routes} trackers={trackers} entries={entries} facts={facts} />
           ) : null}
-          {island && island.trackerIds.length > 0 && <PatternsTab key={open} focusIds={island.trackerIds} />}
         </div>
       </BottomSheet>
       {/* Calendar / chart / lighthouses for everything, straight away. */}
       <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) setOnly(null); }} className="h-[88vh]"
         ariaTitle={only ? t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses") : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
-          <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">
+          <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">
             {only && t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses")}
           </h2>
-          {only && <PatternsTab key={only} only={only} />}
+          {/* All islands, or one. */}
+          <div className="-mx-4 mb-3 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide" role="tablist" aria-label={t("map.filterAria")}>
+            {[null, ...islands.filter((i) => i.trackerIds.length > 0).map((i) => i.id)].map((id) => {
+              const on = onlyIsland === id;
+              const isl = id ? islands.find((i) => i.id === id) : undefined;
+              return (
+                <button key={id ?? "all"} type="button" role="tab" aria-selected={on} onClick={() => { haptics.tap(); setOnlyIsland(id); }}
+                  className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] text-[15px] font-semibold ${isl ? "pl-1 pr-3.5" : "px-4"} ${on ? "border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal)/0.12)] font-bold" : "border-foreground/[0.12] bg-foreground/[0.03]"}`}>
+                  {isl && <img src={mapPic("icon_" + isl.def.icon)} alt="" width={28} height={28} />}
+                  {isl ? islandName(t, isl.id) : t("map.allIslands")}
+                </button>
+              );
+            })}
+          </div>
+          {only && (
+            <PatternsTab key={`${only}-${onlyIsland ?? "all"}`} only={only}
+              focusIds={onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined} />
+          )}
         </div>
       </BottomSheet>
       <AvatarPicker open={avatarOpen} onClose={() => setAvatarOpen(false)} />

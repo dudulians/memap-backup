@@ -199,7 +199,7 @@ export const IslandsMap = ({
 
       {you && youSpot && (
         <button type="button" onClick={() => { haptics.soft(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
-          className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: youSpot.x - 34, top: youSpot.y, width: 68 }}>
+          className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: youSpot.x - 60, top: youSpot.y, width: 120 }}>
           <span className="relative block h-[62px] w-[62px]">
             <img src={mapPic("sailboat")} alt="" className="absolute bottom-0 left-1/2 w-[54px] -translate-x-1/2 object-contain" draggable={false} />
             {you.pic ? (
@@ -210,7 +210,7 @@ export const IslandsMap = ({
               </span>
             ) : null}
           </span>
-          <span className="surface -mt-1 rounded-full px-2.5 py-0.5 text-[12px] font-bold">{you.pic || you.declined ? t("map.you") : t("map.pickYouShort")}</span>
+          <span className="surface -mt-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold">{you.pic || you.declined ? t("map.you") : t("map.pickYouShort")}</span>
         </button>
       )}
 

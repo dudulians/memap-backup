@@ -4,18 +4,17 @@
 // What it showed is saved when opened and reopens as is.
 // Nov 2 2026 (her: "скучно, что награда — это репорт, надо инсайт + какие-то
 // новые приколы"): it opens card by card — the insight, the week in
-// numbers, how her guesses went — then what grew in her world since the
+// numbers — then what grew in her world since the
 // last chest (a house, a bridge, a special item…), next week's mission and
 // a new title.
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Clock, Crown, FlaskConical, Lightbulb, Sparkles, Target, Telescope, X } from "lucide-react";
+import { Clock, Crown, FlaskConical, Lightbulb, Sparkles, Target, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { buildIslands, buildRoutes, islandDef, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { getNotes } from "@/lib/notes";
-import { guessedRightTotal } from "@/lib/predict";
 import { ITEMS, growthLand, growthOf, homeWord, islandDays, itemEarned, itemProgress, lastWorld, nextMission, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
@@ -24,7 +23,6 @@ import { factLine } from "@/lib/echo";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { chestContent, type ChestStat } from "@/lib/weekChest";
 import { getChests, rewardFor, saveChest, titleFor, type ChestRecord } from "@/lib/pathSteps";
-import { guessScore } from "@/lib/predict";
 import { isoLocal } from "@/lib/doors";
 import { Pressable } from "@/components/ui/pressable";
 
@@ -67,7 +65,7 @@ export const WeekChest = ({
     const routes = buildRoutes(trackers, entries, islands);
     const days = islandDays(trackers, entries);
     const notes = await getNotes().then((n) => n.length).catch(() => 0);
-    const facts = worldFacts(trackers, entries, islands, routes, notes, guessedRightTotal(entries));
+    const facts = worldFacts(trackers, entries, islands, routes, notes);
     const world = {
       growth: islands.flatMap((i) => growthOf(i.id, days.get(i.id) ?? 0).map((k) => `${i.id}:${k}`)),
       items: ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id as string),
@@ -95,7 +93,6 @@ export const WeekChest = ({
     const insight = c.insight
       ? t(c.insight.nextDay ? "game.afterA" : "game.withA", { a: name(c.insight.a), b: name(c.insight.b), k: c.insight.k, count: c.insight.n })
       : undefined;
-    const g = guessScore(entries, dates);
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),
       lines,
@@ -104,7 +101,6 @@ export const WeekChest = ({
       insight,
       insightOther: c.insight ? t("game.withoutA", { k: c.insight.otherK, count: c.insight.otherN }) : undefined,
       insightEarly: !!c.insight && c.insight.n < 6,
-      guesses: g.n > 0 ? g : undefined,
       title: titleFor(week),
       world,
       mission,
@@ -180,18 +176,6 @@ export const WeekChest = ({
         ))}
       </div>,
     );
-    // 3. How her guesses went ("Predict").
-    if (r.guesses) {
-      out.push(
-        <div className="surface rounded-[22px] px-5 py-4 text-left">
-          {kicker(<Telescope className="h-4 w-4 text-[hsl(322_30%_56%)]" strokeWidth={2.4} />, t("predict.title"))}
-          <p className="mt-2 text-[20px] font-bold leading-snug">{t("path.chest.guessed", { k: r.guesses.hit, count: r.guesses.n })}</p>
-          <p className="mt-1 text-[15px] font-medium text-muted-foreground">
-            {r.guesses.hit / r.guesses.n >= 0.7 ? t("predict.allRight") : t("predict.someRight")}
-          </p>
-        </div>,
-      );
-    }
     // 4. What grew in her world since the last chest (real progress only).
     const fresh = r.fresh;
     if (fresh) {

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Tracker, ProblemWhen } from "@/types/tracker";
 import { track } from "@/lib/analytics";
 import { getTrackers, saveTrackers } from "@/lib/storage";
@@ -28,6 +29,9 @@ import { toast } from "@/hooks/use-toast";
 import { uuid } from "@/lib/uuid";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { haptics } from "@/lib/haptics";
+import { RuleChips } from "@/components/RuleChips";
+import { ruleKeyOf } from "@/lib/rules";
 
 interface AddTrackerModalProps {
   open: boolean;
@@ -68,7 +72,7 @@ const CLUSTER_TO_CATEGORY: Record<string, Tracker["category"]> = {
  */
 const TAP_SLOP_PX = 10;
 
-const AddTemplateButton = ({ label, onAdd, added }: { label: string; onAdd: () => void; added?: boolean }) => {
+const AddTemplateButton = ({ label, onAdd, added, locked }: { label: string; onAdd: () => void; added?: boolean; locked?: boolean }) => {
   const firedRef = useRef(false);
   const startPosRef = useRef<{ x: number; y: number } | null>(null);
   const resetSoon = () => {
@@ -107,13 +111,15 @@ const AddTemplateButton = ({ label, onAdd, added }: { label: string; onAdd: () =
     <button
       type="button"
       onPointerDown={handleDown}
-      onPointerUp={added ? undefined : fire}
-      onClick={added ? undefined : fire}
-      disabled={added}
+      onPointerUp={locked ? undefined : fire}
+      onClick={locked ? undefined : fire}
+      disabled={locked}
+      aria-pressed={added}
       style={{ touchAction: "manipulation" }}
       className={cn(
-        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center border transition-colors",
-        added ? "border-primary bg-primary text-primary-foreground" : "border-foreground/[0.22] bg-foreground/[0.06] active:scale-95",
+        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center border transition-colors active:scale-95",
+        locked ? "border-foreground/10 bg-foreground/[0.08] text-muted-foreground"
+          : added ? "border-primary bg-primary text-primary-foreground" : "border-foreground/[0.22] bg-foreground/[0.06]",
       )}
       aria-label={label}
     >
@@ -214,8 +220,17 @@ export const AddTrackerModal = ({
   // "More settings" on the own-question form (name, theme, limit,
   // advice). Folded by default: one field and Good/Bad is enough.
   const [moreOpen, setMoreOpen] = useState(false);
-  // Library rows added in this visit, so their "+" turns into a tick.
+  // Library rows added in this visit, so their "+" turns into a tick; a
+  // second tap takes it back (her note: "должна иметь возможность обратно
+  // отжать"). Which question each one made, to undo exactly that.
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const addedMade = useRef(new Map<string, { id: string; restored: boolean }>());
+  // Library questions she already has: a quiet tick, never a duplicate window.
+  const [existingIds, setExistingIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!open) return;
+    getTrackers().then((ts) => setExistingIds(new Set(ts.filter((x) => !x.archived).map((x) => matchTemplateIdByTitle(x.title)).filter((x): x is string => !!x))));
+  }, [open]);
 
   const [selectedTheme, setSelectedTheme] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -240,12 +255,10 @@ export const AddTrackerModal = ({
     // to category="Curious" (the default neutral bucket).
     cluster: undefined as string | undefined,
     periodDays: 30,
-    threshold: 10,
+    threshold: 0,
     problemWhen: "yes" as "yes" | "no",
     adviceAboveThreshold: "",
   });
-  const [periodDaysRaw, setPeriodDaysRaw] = useState("30");
-  const [thresholdRaw, setThresholdRaw] = useState("10");
   // Per-cluster "show all" state. When false → only featured (3 picks)
   // are shown inside the expanded cluster; user taps "Показать все N →"
   // to reveal the rest. Reset every time the modal opens so the user
@@ -268,6 +281,7 @@ export const AddTrackerModal = ({
       setMode("templates");
       setMoreOpen(false);
       setAddedIds(new Set());
+      addedMade.current.clear();
       setTitleAutocompleteOpen(false);
       setQuestionAutocompleteOpen(false);
     }
@@ -463,27 +477,16 @@ export const AddTrackerModal = ({
     const dup = await checkForDuplicate(localizedTitle, template.category, template.id);
 
     if (dup) {
-      // Store the pending tracker and show duplicate dialog
-      const newTracker: Tracker = {
-        title: localizedTitle,
-        questionText: localizedQuestion,
-        category: template.category,
-        subcategory: template.subcategory,
-        cluster: clusterId,
-        periodDays: template.periodDays,
-        threshold: template.threshold,
-        problemWhen: template.problemWhen,
-        adviceAboveThreshold: localizedAdvice,
-        answerType: "boolean",
-        id: uuid(),
-        createdAt: new Date().toISOString(),
-      };
-
-      setPendingTracker(newTracker);
-      setDuplicateTracker(dup.tracker);
-      setDuplicateIsArchived(dup.isArchived);
-      setDuplicateDialogOpen(true);
-      return false;
+      // Already hers: an archived one comes back; an active one just shows
+      // as hers (no "duplicate" window, her note on "Argued with partner").
+      if (dup.isArchived) {
+        const all = await getTrackers();
+        await saveTrackers(all.map((x) => (x.id === dup.tracker.id ? { ...x, archived: false } : x)));
+        onTrackerAdded();
+        return { id: dup.tracker.id, restored: true };
+      }
+      setExistingIds((prev) => new Set(prev).add(template.id));
+      return null;
     }
 
     // No duplicate - create directly
@@ -503,7 +506,29 @@ export const AddTrackerModal = ({
     };
 
     await createTrackerDirectly(newTracker);
-    return true;
+    return { id: newTracker.id, restored: false };
+  };
+
+  /** Tap a library question: add it; tap again: take it back. */
+  const toggleTemplate = async (template: typeof TEMPLATE_GROUPS[0]["templates"][0]) => {
+    if (existingIds.has(template.id)) return;
+    const made = addedMade.current.get(template.id);
+    if (made) {
+      haptics.soft();
+      addedMade.current.delete(template.id);
+      setAddedIds((prev) => { const n = new Set(prev); n.delete(template.id); return n; });
+      const all = await getTrackers();
+      // Made just now, so no answers yet: it simply goes (a restored one goes back to the archive).
+      await saveTrackers(made.restored ? all.map((x) => (x.id === made.id ? { ...x, archived: true } : x)) : all.filter((x) => x.id !== made.id));
+      onTrackerAdded();
+      return;
+    }
+    haptics.pop(0.35);
+    const res = await handleTemplateSelect(template);
+    if (res) {
+      addedMade.current.set(template.id, res);
+      setAddedIds((prev) => new Set(prev).add(template.id));
+    }
   };
 
   // Custom-tab autocomplete: user clicked a library suggestion → mirror
@@ -537,8 +562,6 @@ export const AddTrackerModal = ({
       problemWhen: template.problemWhen,
       adviceAboveThreshold: localizeTrackerAdviceRaw(template.adviceAboveThreshold),
     });
-    setPeriodDaysRaw(String(template.periodDays));
-    setThresholdRaw(String(template.threshold));
     setTitleAutocompleteOpen(false);
     setQuestionAutocompleteOpen(false);
   };
@@ -589,12 +612,10 @@ export const AddTrackerModal = ({
       subcategory: undefined,
       cluster: undefined,
       periodDays: 30,
-      threshold: 10,
+      threshold: 0,
       problemWhen: "yes",
       adviceAboveThreshold: "",
     });
-    setPeriodDaysRaw("30");
-    setThresholdRaw("10");
     setMoreOpen(false);
     onTrackerAdded();
     // Custom-tracker creation is an explicit form submission, so close
@@ -729,7 +750,9 @@ export const AddTrackerModal = ({
     );
   }
 
-  return (
+  // On top of everything (it used to sit inside Today's faded scroll area,
+  // under the tab bar, her Nov 3 note).
+  return createPortal(
     <>
       {/* Custom full-height sheet — swipe down handle to close, sticky header always accessible */}
       <div
@@ -843,23 +866,20 @@ export const AddTrackerModal = ({
                     >
                       <button
                         type="button"
-                        onClick={() => {
-                          handleAutocompletePick(template);
-                          setMoreOpen(true);
-                          setMode("custom");
-                          setSearchQuery("");
-                        }}
+                        onClick={() => toggleTemplate(template)}
+                        disabled={existingIds.has(template.id)}
                         className="flex-1 min-w-0 text-left text-base font-medium leading-snug"
                       >
                         {localizeTrackerTitle(template.title)}
+                        {existingIds.has(template.id) && (
+                          <span className="block text-[13px] font-medium text-muted-foreground">{t("addTracker.alreadyHave")}</span>
+                        )}
                       </button>
                       <AddTemplateButton
                         label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
-                        added={addedIds.has(template.id)}
-                        onAdd={async () => {
-                          const created = await handleTemplateSelect(template);
-                          if (created) setAddedIds((prev) => new Set(prev).add(template.id));
-                        }}
+                        added={addedIds.has(template.id) || existingIds.has(template.id)}
+                        locked={existingIds.has(template.id)}
+                        onAdd={() => toggleTemplate(template)}
                       />
                     </div>
                   ))}
@@ -879,12 +899,10 @@ export const AddTrackerModal = ({
                     subcategory: undefined,
                     cluster: undefined,
                     periodDays: 30,
-                    threshold: 10,
+                    threshold: 0,
                     problemWhen: "yes",
                     adviceAboveThreshold: "",
                   });
-                  setPeriodDaysRaw("30");
-                  setThresholdRaw("10");
                   setMoreOpen(false);
                   setMode("custom");
                 }}
@@ -956,7 +974,17 @@ export const AddTrackerModal = ({
               </div>
             </div>
 
-            {/* More settings: name, theme, limit, advice */}
+            {/* When is it time to act, and her plan (the action point). */}
+            <RuleChips
+              hard={formData.problemWhen === "yes"}
+              value={ruleKeyOf(formData)}
+              customLabel={t("rules.custom", { n: formData.threshold, count: formData.periodDays })}
+              onChange={(_, rule) => setFormData({ ...formData, ...rule })}
+              plan={formData.adviceAboveThreshold}
+              onPlan={(s) => setFormData({ ...formData, adviceAboveThreshold: s })}
+            />
+
+            {/* More settings: the name and the theme. */}
             <div>
               <button
                 type="button"
@@ -1024,66 +1052,6 @@ export const AddTrackerModal = ({
                     </Select>
                   </div>
 
-                  {/* The limit as one sentence with two numbers in it:
-                      "Limit: [10] days with Yes in [30] days". Replaces the
-                      two labelled fields and the coach tour explaining them. */}
-                  <div>
-                    <Label>{t("addTracker.limit")}</Label>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-2 text-base">
-                      <Input
-                        id="threshold"
-                        type="number"
-                        inputMode="numeric"
-                        aria-label={t("addTracker.fieldThreshold")}
-                        value={thresholdRaw}
-                        onChange={(e) => {
-                          setThresholdRaw(e.target.value);
-                          const n = parseInt(e.target.value);
-                          if (!isNaN(n) && n >= 1) setFormData({ ...formData, threshold: n });
-                        }}
-                        min={1}
-                        className="w-[68px] h-11 rounded-xl text-center text-base"
-                      />
-                      <span>
-                        {t("addTracker.limitDaysWith", {
-                          count: formData.threshold,
-                          answer: formData.problemWhen === "yes" ? t("common.yes") : t("common.no"),
-                        })}
-                      </span>
-                      <Input
-                        id="periodDays"
-                        type="number"
-                        inputMode="numeric"
-                        aria-label={t("addTracker.fieldPeriod")}
-                        value={periodDaysRaw}
-                        onChange={(e) => {
-                          setPeriodDaysRaw(e.target.value);
-                          const n = parseInt(e.target.value);
-                          if (!isNaN(n) && n >= 1) setFormData({ ...formData, periodDays: n });
-                        }}
-                        min={1}
-                        className="w-[68px] h-11 rounded-xl text-center text-base"
-                      />
-                      <span>{t("addTracker.limitDays", { count: formData.periodDays })}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="adviceAboveThreshold">{t("addTracker.fieldAdvice")}</Label>
-                    <Textarea
-                      id="adviceAboveThreshold"
-                      placeholder={t("addTracker.fieldAdvicePh")}
-                      value={formData.adviceAboveThreshold}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          adviceAboveThreshold: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      className="mt-1.5 rounded-xl text-base"
-                    />
-                  </div>
                 </div>
               )}
             </div>
@@ -1138,6 +1106,7 @@ export const AddTrackerModal = ({
           });
         }}
       />
-    </>
+    </>,
+    document.body,
   );
 };
