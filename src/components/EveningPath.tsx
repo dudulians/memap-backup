@@ -359,8 +359,8 @@ export const EveningPath = ({
         <>
           {head(dayTitle(n.date), t("path.answers", { count: answersOn(n.date) }))}
           {dots(active.map((tr) => tr.id), n.date)}
-          {button(t("path.changeAnswers"), () => { setOpen(null); onFillDay(n.date, true); }, "plain")}
-          <button type="button" onClick={() => { setOpen(null); onOpenDay(n.date); }} className="mt-1 h-10 w-full text-[15px] font-semibold text-muted-foreground">{t("path.openDay")}</button>
+          {/* One way in: the day's answers, change just the ones she wants (her note, Nov 3 2026). */}
+          {button(t("path.dayAnswers"), () => { setOpen(null); onOpenDay(n.date); }, "plain")}
         </>
       );
     }

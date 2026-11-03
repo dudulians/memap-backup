@@ -13,6 +13,7 @@ import {
   localizeGroupTitle,
   localizeTrackerTheme,
 } from "@/lib/trackerLocalize";
+import { asQuestion, templateQuestion } from "@/lib/cardText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -185,10 +186,7 @@ const AutocompleteDropdown = ({
                   question to recognize the template; title is the
                   short ID. */}
               <p className="font-medium text-sm leading-snug line-clamp-2 break-words">
-                {localizeTrackerQuestion(template.questionText)}
-              </p>
-              <p className="text-[11px] text-muted-foreground/80 truncate mt-0.5">
-                {localizeTrackerTitle(template.title)}
+                {templateQuestion(template)}
               </p>
             </div>
             <Badge
@@ -568,7 +566,7 @@ export const AddTrackerModal = ({
 
   const handleCustomSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const question = formData.questionText.trim();
+    const question = asQuestion(formData.questionText);
     if (!question) return;
     // The name defaults to the question without "?" (More settings can change it).
     const title = formData.title.trim() || question.replace(/[?？]+$/, "").slice(0, 60);
@@ -870,13 +868,13 @@ export const AddTrackerModal = ({
                         disabled={existingIds.has(template.id)}
                         className="flex-1 min-w-0 text-left text-base font-medium leading-snug"
                       >
-                        {localizeTrackerTitle(template.title)}
+                        {templateQuestion(template)}
                         {existingIds.has(template.id) && (
                           <span className="block text-[13px] font-medium text-muted-foreground">{t("addTracker.alreadyHave")}</span>
                         )}
                       </button>
                       <AddTemplateButton
-                        label={t("addTracker.addAria", { title: localizeTrackerTitle(template.title) })}
+                        label={t("addTracker.addAria", { title: templateQuestion(template) })}
                         added={addedIds.has(template.id) || existingIds.has(template.id)}
                         locked={existingIds.has(template.id)}
                         onAdd={() => toggleTemplate(template)}

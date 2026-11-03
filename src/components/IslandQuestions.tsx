@@ -14,7 +14,7 @@ import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
 import { islandName, mapPic, type Island, type IslandId } from "@/lib/islands";
 import { addQuestionToIsland, removeQuestion, setTrackerIsland } from "@/lib/ownIslands";
-import { cardQuestion } from "@/lib/cardText";
+import { cardQuestion, templateQuestion } from "@/lib/cardText";
 import { Pressable } from "@/components/ui/pressable";
 import { hasTemplate, topicTemplates } from "@/components/NewIslandSheet";
 import { ensureTemplates } from "@/lib/doors";
@@ -168,7 +168,7 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
             <button key={tpl.id} type="button"
               onClick={async () => { haptics.pop(0.35); await ensureTemplates([tpl.id]); window.dispatchEvent(new Event("memap-settings-changed")); }}
               className="surface flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left animate-fade-in">
-              <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{localizeTrackerQuestion(tpl.questionText)}</span>
+              <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{templateQuestion(tpl)}</span>
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
             </button>
           ))}

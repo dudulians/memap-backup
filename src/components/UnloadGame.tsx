@@ -6,6 +6,11 @@
 // pop: same colours that touch merge, a big one bursts into small ones, and
 // a finger dragged across pops a whole row. No score to lose, no timer.
 // Calm motion (her rule): slow rise, no shaking; Reduce Motion slows it more.
+// Nov 3 2026, later (her: "непонятно, что мысль становится шариком; Done и
+// крестик — два выхода; непонятно, когда можно сохранить"): a short "how it
+// works" the first time; holding no longer keeps a bubble; every thought can
+// go to Notes right away, and the X is the one way out: if there are
+// thoughts not saved yet, it asks once which to keep.
 // Nov 3 2026 (her: "более ASMR-ное и ощущение, и графику, и звуки"): soap
 // bubbles with a slowly shifting rainbow rim and a glint, a gentle wobble when
 // they touch, a short squish before the pop, droplets and a thin ring, a wet
@@ -13,9 +18,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Archive, ArrowUp, FastForward, NotebookPen, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUp, Check, Circle, FastForward, NotebookPen, PenLine, Pointer, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
-import { playBurst, playKeep, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
+import { playBurst, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
 import { addNote } from "@/lib/notes";
 import { isoLocal } from "@/lib/doors";
@@ -48,10 +53,14 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   const [text, setText] = useState("");
   const [popped, setPopped] = useState(0);
   const [letGo, setLetGo] = useState(0);
-  const [kept, setKept] = useState<string[]>([]);
+  // Every thought she wrote or said, and whether it's in Notes already.
+  const [thoughts, setThoughts] = useState<{ text: string; saved: boolean }[]>([]);
   const [hint, setHint] = useState(true);
+  // The end: which unsaved thoughts to keep (all ticked to start with).
   const [done, setDone] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [pick, setPick] = useState<Set<number>>(() => new Set());
+  // How it works, the first time.
+  const [intro, setIntro] = useState(() => { try { return localStorage.getItem("memap_unload_intro") !== "seen"; } catch { return true; } });
   // Faster when she wants it (her note, Nov 3 2026: "смена скорости, чтобы
   // быстрее и активнее поднимались"): 1x, 2x, 3x, remembered.
   const [pace, setPace] = useState<number>(() => {
@@ -61,7 +70,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   paceRef.current = pace;
   // A thought said out loud (or a long one): offer to keep it in Notes (her
   // note: "когда наговариваю, предложить сохранить в заметки").
-  const [offer, setOffer] = useState<{ text: string; saved: boolean } | null>(null);
+  const [offer, setOffer] = useState<{ i: number; text: string; saved: boolean } | null>(null);
   const offerTimer = useRef(0);
   const voiced = useRef(false);
   useEffect(() => () => window.clearTimeout(offerTimer.current), []);
@@ -165,14 +174,6 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
           spawn(10 + Math.random() * 8, b.x + Math.cos(a) * b.r * 0.5, b.y + Math.sin(a) * b.r * 0.5, b.c, -(0.6 + Math.random() * 0.4) * speed);
         }
       }
-      setHint(false);
-    };
-    const keep = (b: Bubble) => {
-      bubbles = bubbles.filter((x) => x !== b);
-      haptics.rise();
-      if (sound()) playKeep();
-      if (b.text) setKept((k) => [...k, b.text!]);
-      bursts.push({ x: b.x, y: b.y, r: b.r, c: -1, t: 0, drops: [] });
     };
 
     const draw = (b: Bubble, now: number) => {
@@ -318,8 +319,8 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       canvas.setPointerCapture(ev.pointerId);
       const [x, y] = at(ev);
       const b = hit(x, y, null);
-      down = { b, moved: false, timer: b?.text ? window.setTimeout(() => { if (down?.b && bubbles.includes(down.b)) keep(down.b); down = null; }, 480) : 0 };
-      if (b && !b.text) { pop(b); down.b = undefined; }
+      down = { b, moved: false, timer: 0 };
+      if (b) { pop(b); down.b = undefined; }
     };
     const onMove = (ev: PointerEvent) => {
       if (!down) return;
@@ -351,19 +352,20 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
     haptics.tap();
     api.current?.add(s.slice(0, 80));
     setText("");
-    const spoken = voiced.current;
+    setHint(false);
     voiced.current = false;
-    if (spoken || s.length >= 30) {
-      window.clearTimeout(offerTimer.current);
-      setOffer({ text: s, saved: false });
-      offerTimer.current = window.setTimeout(() => setOffer(null), 9000);
-    }
+    const i = thoughts.length;
+    setThoughts((ts) => [...ts, { text: s, saved: false }]);
+    window.clearTimeout(offerTimer.current);
+    setOffer({ i, text: s, saved: false });
+    offerTimer.current = window.setTimeout(() => setOffer(null), 9000);
   };
   const saveOffer = async () => {
     if (!offer || offer.saved) return;
     await addNote({ date: isoLocal(new Date()), text: offer.text });
     window.dispatchEvent(new CustomEvent("memap-notes-changed"));
     haptics.success();
+    setThoughts((ts) => ts.map((x, k) => (k === offer.i ? { ...x, saved: true } : x)));
     setOffer({ ...offer, saved: true });
     window.clearTimeout(offerTimer.current);
     offerTimer.current = window.setTimeout(() => setOffer(null), 1600);
@@ -376,13 +378,33 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       return n;
     });
   };
-  const saveKept = async () => {
-    if (kept.length === 0) return;
-    await addNote({ date: isoLocal(new Date()), text: kept.map((k) => `• ${k}`).join("\n") });
-    window.dispatchEvent(new CustomEvent("memap-notes-changed"));
-    haptics.success();
-    setSaved(true);
+  // The X: thoughts not in Notes yet? Ask once which to keep; else just close.
+  const finish = () => {
+    const open = thoughts.map((x, k) => (x.saved ? -1 : k)).filter((k) => k >= 0);
+    if (open.length === 0) { onClose(); return; }
+    haptics.soft();
+    setPick(new Set(open));
+    setDone(true);
   };
+  const saveAndClose = async () => {
+    const texts = thoughts.filter((_, k) => pick.has(k)).map((x) => x.text);
+    if (texts.length > 0) {
+      await addNote({ date: isoLocal(new Date()), text: texts.length === 1 ? texts[0] : texts.map((x) => `• ${x}`).join("\n") });
+      window.dispatchEvent(new CustomEvent("memap-notes-changed"));
+      haptics.success();
+    }
+    onClose();
+  };
+  const closeIntro = () => {
+    haptics.tap();
+    setIntro(false);
+    try { localStorage.setItem("memap_unload_intro", "seen"); } catch { /* shows again next time */ }
+  };
+  const tick = (on: boolean) => (
+    <span aria-hidden="true" className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ${on ? "border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal))] text-white" : "border-foreground/20"}`}>
+      {on && <Check className="h-4 w-4" strokeWidth={3} />}
+    </span>
+  );
   const night = isNightMap();
   const avatar = avatarUrl(getAvatar());
 
@@ -390,7 +412,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
     <div role="dialog" aria-modal="true" aria-label={t("unload.title")} className="fixed inset-0 z-[70] flex flex-col animate-fade-in"
       style={{ background: night ? "linear-gradient(180deg,#141c39 0%,#1b2550 55%,#2a3470 100%)" : "linear-gradient(180deg,#eef8fb 0%,#cfeaf3 55%,#b2dfec 100%)" }}>
       <div className="flex items-center gap-2 px-3 pt-[max(env(safe-area-inset-top),12px)]">
-        <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground">
+        <button type="button" onClick={finish} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground">
           <X className="h-6 w-6" />
         </button>
         <p className="min-w-0 flex-1 truncate text-[17px] font-bold">{t("unload.title")}</p>
@@ -399,11 +421,6 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
           className="surface flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
           {muted ? <VolumeX className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Volume2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}
         </button>
-        {kept.length > 0 && (
-          <span className="surface inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-bold">
-            <Archive className="h-4 w-4 text-[hsl(var(--coin-gold))]" strokeWidth={2.4} /> {kept.length}
-          </span>
-        )}
         <span className="surface inline-flex h-9 items-center rounded-full px-3 text-[14px] font-bold tabular-nums" aria-live="polite">
           {t("unload.popped", { count: popped + letGo })}
         </span>
@@ -448,35 +465,57 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
             className="surface inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[15px] font-bold tabular-nums">
             <FastForward className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} /> {pace}×
           </button>
-          <button type="button" onClick={() => { haptics.success(); setDone(true); }} className="h-11 shrink-0 rounded-full px-4 text-[15px] font-bold text-[hsl(var(--coin-teal))]">
-            {t("unload.done")}
-          </button>
         </div>
       </div>
 
-      {done && (
-        <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center bg-background/90 px-6 text-center backdrop-blur-sm animate-fade-in">
-          {avatar && <img src={avatar} alt="" width={84} height={84} className="mb-3 object-contain" />}
-          <p className="text-[28px] font-bold leading-tight tracking-tight">{t("unload.lighter")}</p>
-          <p className="mt-2 text-[17px] font-medium text-muted-foreground">
-            {[letGo > 0 && t("unload.summary", { count: letGo }), popped > 0 && t("unload.bubbles", { count: popped })].filter(Boolean).join(" · ")}
-          </p>
-          {kept.length > 0 && (
-            <div className="surface mt-5 w-full max-w-sm rounded-[20px] px-5 py-4 text-left">
-              <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("unload.later")}</p>
-              {kept.map((k, i) => <p key={i} className="mt-1.5 text-[16px] font-semibold leading-snug">{k}</p>)}
-              {saved ? (
-                <p className="mt-3 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">{t("unload.saved")}</p>
-              ) : (
-                <button type="button" onClick={saveKept} className="mt-3 h-11 rounded-full bg-foreground/[0.06] px-4 text-[15px] font-bold">{t("unload.save")}</button>
-              )}
+      {/* How it works, the first time. */}
+      {intro && (
+        <div className="absolute inset-0 z-[3] flex items-center justify-center bg-background/75 px-6 backdrop-blur-[2px] animate-fade-in">
+          <div className="surface w-full max-w-sm rounded-[24px] px-5 pb-5 pt-5">
+            <p className="text-[22px] font-bold leading-tight tracking-tight">{t("unload.howTitle")}</p>
+            <div className="mt-4 space-y-3.5">
+              {([[PenLine, "how1"], [Circle, "how2"], [Pointer, "how3"], [NotebookPen, "how4"]] as const).map(([Icon, k]) => (
+                <div key={k} className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]">
+                    <Icon className="h-5 w-5" strokeWidth={2.2} />
+                  </span>
+                  <p className="text-[17px] font-semibold leading-snug">{t(`unload.${k}`)}</p>
+                </div>
+              ))}
             </div>
-          )}
-          <div className="mt-6 w-full max-w-sm space-y-2">
-            <Pressable tone="teal" haptic="none" onClick={onClose} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-              {t("path.continue")}
+            <Pressable tone="teal" haptic="none" onClick={closeIntro} className="mt-5 h-[52px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+              {t("unload.start")}
             </Pressable>
-            <button type="button" onClick={() => setDone(false)} className="h-11 w-full text-[15px] font-semibold text-muted-foreground">{t("unload.more")}</button>
+          </div>
+        </div>
+      )}
+
+      {/* The end (from the X), only when some thoughts aren't in Notes yet. */}
+      {done && (
+        <div className="absolute inset-0 z-[3] flex flex-col bg-background/95 px-6 pb-[max(env(safe-area-inset-bottom),20px)] pt-[max(env(safe-area-inset-top),28px)] backdrop-blur-sm animate-fade-in">
+          <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto text-center">
+            {avatar && <img src={avatar} alt="" width={72} height={72} className="mb-2 mt-4 object-contain" />}
+            <p className="text-[28px] font-bold leading-tight tracking-tight">{t("unload.lighter")}</p>
+            {popped + letGo > 0 && <p className="mt-1 text-[16px] font-medium text-muted-foreground">{t("unload.popped", { count: popped + letGo })}</p>}
+            <p className="mt-6 text-[19px] font-bold leading-snug">{t("unload.keepAsk")}</p>
+            <div className="mt-3 w-full max-w-sm space-y-2 text-left">
+              {thoughts.map((x, k) => !x.saved && (
+                <button key={k} type="button" role="checkbox" aria-checked={pick.has(k)}
+                  onClick={() => { haptics.tap(); setPick((p) => { const n = new Set(p); if (n.has(k)) n.delete(k); else n.add(k); return n; }); }}
+                  className="surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left"
+                  style={pick.has(k) ? { boxShadow: "0 0 0 2.5px hsl(var(--coin-teal))" } : undefined}>
+                  <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{x.text}</span>
+                  {tick(pick.has(k))}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mx-auto w-full max-w-sm space-y-1 pt-4">
+            <Pressable tone="teal" haptic="none" onClick={saveAndClose} disabled={pick.size === 0} className="h-[58px] w-full rounded-2xl disabled:opacity-50" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+              {t("unload.save")}{pick.size > 1 ? ` · ${pick.size}` : ""}
+            </Pressable>
+            <button type="button" onClick={onClose} className="h-11 w-full text-[15px] font-semibold text-muted-foreground">{t("unload.noSave")}</button>
+            <button type="button" onClick={() => setDone(false)} className="h-11 w-full text-[15px] font-semibold text-[hsl(var(--coin-teal))]">{t("unload.more")}</button>
           </div>
         </div>
       )}

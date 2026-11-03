@@ -13,6 +13,7 @@ import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
 import { ISLAND_DEFS, islandName, mapPic, WORK_TEMPLATES, type BuiltinIsland, type Island, type IslandId } from "@/lib/islands";
 import { ensureTemplates } from "@/lib/doors";
 import { localizeTrackerQuestion, localizeTrackerTitleRaw } from "@/lib/trackerLocalize";
+import { templateQuestion } from "@/lib/cardText";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Pressable } from "@/components/ui/pressable";
 
@@ -135,7 +136,7 @@ export const NewIslandSheet = ({
                 return (
                   <button key={tpl.id} type="button" disabled={already} onClick={() => toggle(tpl.id)} aria-pressed={on}
                     className={cn("surface flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left", on && !already && "ring-2 ring-[hsl(var(--coin-teal))]", already && "opacity-60")}>
-                    <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{localizeTrackerQuestion(tpl.questionText)}</span>
+                    <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{templateQuestion(tpl)}</span>
                     <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2", on ? "border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal))] text-white" : "border-foreground/20")}>
                       {on && <Check className="h-4 w-4" strokeWidth={3.2} />}
                     </span>

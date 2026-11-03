@@ -7,7 +7,7 @@
 // featured ones. Her own typed questions are never rewritten: the short text
 // is used only while a tracker still has the library's own wording.
 import { Tracker } from "@/types/tracker";
-import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
@@ -63,4 +63,22 @@ export const cardQuestion = (tracker: Tracker): string => {
     return getLanguage() === "ru" ? short.ru : short.en;
   }
   return shown;
+};
+
+/** A library question before she adds it, in the same words its card will
+ *  use (her note, Nov 3 2026: the list said questions, the library said
+ *  statements). */
+export const templateQuestion = (tpl: Pick<LifeStreamTemplate, "id" | "title" | "questionText">): string => {
+  const short = CARD_TEXT[tpl.id];
+  if (short) return getLanguage() === "ru" ? short.ru : short.en;
+  return localizeTrackerQuestion(tpl.questionText, tpl.title);
+};
+
+/** What she typed, as a question: a capital first letter and a "?" at the
+ *  end, the same from every place she can add one. */
+export const asQuestion = (text: string): string => {
+  const q = text.trim().replace(/\s+/g, " ");
+  if (!q) return q;
+  const up = q.charAt(0).toUpperCase() + q.slice(1);
+  return /[?？]$/.test(up) ? up : `${up}?`;
 };

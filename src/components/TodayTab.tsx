@@ -23,6 +23,7 @@ import {
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { getRandomIdeas } from "@/lib/lifeStreams";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { cardQuestion } from "@/lib/cardText";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
@@ -31,6 +32,7 @@ import { TrackerDetails } from "./TrackerDetails";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
 import { EveningPath } from "./EveningPath";
+import { DaySheet } from "./DaySheet";
 import { markTaskDone, pathModel, type Step, type TaskId } from "@/lib/pathSteps";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
@@ -355,6 +357,16 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   // disappears, threshold count decrements). Best-effort error
   // handling: any storage failure surfaces as a toast but doesn't
   // block the UI which has already optimistically updated.
+  // One day's answers, changed one at a time (DaySheet): set, or clear with null.
+  const [dayOpen, setDayOpen] = useState<{ date: string; ids?: string[] } | null>(null);
+  const setDayAnswer = async (trackerId: string, date: string, value: boolean | null) => {
+    const old = entries.find((e) => e.trackerId === trackerId && e.date === date);
+    const rest = entries.filter((e) => e !== old);
+    const next = value === null ? rest : [...rest, { ...(old ?? { id: uuid(), trackerId, date }), value }];
+    setEntries(next);
+    try { await saveEntries(next); } catch (err) { console.warn("[DaySheet] save failed", err); }
+  };
+
   const handleClearEntryForDate = async (trackerId: string, date: string) => {
     const updatedEntries = entries.filter(
       (e) => !(e.trackerId === trackerId && e.date === date),
@@ -981,6 +993,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
         trackers={trackers}
         entries={entries}
         onStartStep={(s: Step, title: string, redo?: boolean) => {
+          // changing answers: just the ones she taps (DaySheet), not every card again
+          if (redo) { setDayOpen({ date: isoLocal(new Date()), ids: s.trackerIds }); return; }
           setStep({ ids: s.trackerIds, title, redo });
           setSelectedDate(isoLocal(new Date()));
           setDailySessionOpen(true);
@@ -1000,15 +1014,17 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
         }}
         onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
         onFillDay={(date, redo) => {
+          if (redo) { setDayOpen({ date }); return; }
           setStep(redo ? { redo: true } : null);
           setSelectedDate(date);
           setDailySessionOpen(true);
         }}
-        onOpenDay={(date) => {
-          window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: { date } }));
-        }}
+        onOpenDay={(date) => setDayOpen({ date })}
       />
       )}
+
+      <DaySheet date={dayOpen?.date ?? null} ids={dayOpen?.ids} trackers={trackers} entries={entries}
+        onSet={setDayAnswer} onClose={() => setDayOpen(null)} />
 
       {/* "Answer for yesterday" lives in tonight's bubble on the path now
           (Aurora step 2): a "Fill in Tuesday?" chip when one of the last
@@ -1065,8 +1081,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
               )}
             >
               <span className="flex-1 min-w-0 text-[17px] font-semibold leading-snug">
-                {/* the question itself, not a short label (her note, Nov 3 2026) */}
-                {localizeTrackerQuestion(tracker.questionText, tracker.title)}
+                {/* the question as its card asks it (her notes, Nov 3 2026) */}
+                {cardQuestion(tracker)}
               </span>
               {inSelectMode ? (
                 <span

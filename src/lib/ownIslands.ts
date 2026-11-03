@@ -4,6 +4,7 @@
 // Stored per install; a question joins an island through tracker.island.
 // The classic screens ignore all of it.
 import { Tracker } from "@/types/tracker";
+import { asQuestion } from "@/lib/cardText";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 
 export const ISLAND_ICONS = [
@@ -128,9 +129,7 @@ export const addQuestionToIsland = async (
   plan = "",
 ): Promise<string> => {
   const existing = await getTrackers();
-  let q = text.trim().replace(/\s+/g, " ");
-  q = q.charAt(0).toUpperCase() + q.slice(1);
-  if (!/[?？]$/.test(q)) q += "?";
+  const q = asQuestion(text);
   const tracker: Tracker = {
     id: `${Date.now()}-own`,
     title: q.replace(/[?？]+$/, "").slice(0, 60),
