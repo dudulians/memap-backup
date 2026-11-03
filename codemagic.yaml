@@ -113,7 +113,10 @@ workflows:
             if [ -n "$IDS" ]; then
               for cert_id in $IDS; do
                 echo "    revoke $cert_id"
-                app-store-connect certificates revoke "$cert_id" || true
+                # Newer codemagic-cli-tools call it `delete` (Nov 2026 the
+                # old `revoke` failed: "invalid choice: 'revoke'"); keep
+                # `revoke` as the fallback for older tools.
+                app-store-connect certificates delete "$cert_id" || app-store-connect certificates revoke "$cert_id" || true
               done
             else
               echo "    none found for $FILTER_TYPE"
