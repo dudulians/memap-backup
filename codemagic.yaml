@@ -49,6 +49,16 @@ workflows:
       - name: Install npm dependencies
         script: |
           npm ci
+          # @sentry/capacitor 4.0.0 asks Swift PM for sentry-cocoa
+          # `from: "9.8.0"`, so every build takes the newest 9.x. In Nov 2026
+          # the newest no longer has `PrivateSentrySDKOnly`, which the plugin
+          # calls, and the archive failed ("cannot find
+          # 'PrivateSentrySDKOnly' in scope"). Pin the version the plugin
+          # was made with; stop the build if the plugin's line changes.
+          SENTRY_PKG="$CM_BUILD_DIR/node_modules/@sentry/capacitor/Package.swift"
+          perl -pi -e 's/sentry-cocoa", from: "9\.8\.0"/sentry-cocoa", exact: "9.8.0"/' "$SENTRY_PKG"
+          grep -q 'sentry-cocoa", exact: "9.8.0"' "$SENTRY_PKG" || { echo "sentry-cocoa pin not applied:"; grep sentry-cocoa "$SENTRY_PKG"; exit 1; }
+          echo "==> sentry-cocoa pinned to 9.8.0"
 
       - name: Build the web bundle
         script: |
