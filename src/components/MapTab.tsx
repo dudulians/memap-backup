@@ -15,7 +15,7 @@ import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
 import { getNotes } from "@/lib/notes";
-import { ITEMS, growthOf, islandDays, itemEarned, worldFacts, type ItemId } from "@/lib/growth";
+import { ITEMS, growthOf, islandDays, owned, syncTreasures, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
 import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
@@ -121,7 +121,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     return Object.fromEntries(islands.map((i) => [i.id, growthOf(i.id, days.get(i.id) ?? 0)]));
   }, [islands, trackers, entries]);
   const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount), [trackers, entries, islands, routes, notesCount]);
-  const items: ItemId[] = useMemo(() => ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id), [facts]);
+  useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
+  const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
   // Her avatar sails by the island she answered last (her note: the avatar
   // was only an icon in the corner).
@@ -168,7 +169,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         // The globe runs to the bottom of the screen, under the tab bar.
         loaded && (
           <div className="relative min-h-0 flex-1">
-            <WorldMap islands={islands} routes={routes} growth={growth} avatar={avatarPic} onOpen={setOpen} />
+            <WorldMap islands={islands} routes={routes} growth={growth} avatar={avatarPic} near={near} onOpen={setOpen}
+              paused={!!open || !!only || newOpen || !!editor || !!testFor} onNewIsland={() => setNewOpen(true)} />
           </div>
         )
       ) : (

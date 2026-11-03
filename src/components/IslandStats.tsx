@@ -17,7 +17,9 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
 import { BarChart3, CalendarDays, FlaskConical } from "lucide-react";
-import { GROWTH_AT, ITEMS, growthLand, homeWord, itemEarned, itemProgress, type GrowthKind, type WorldFacts } from "@/lib/growth";
+import { GROWTH_AT, ITEMS, growthLand, homeWord, itemProgress, markTreasuresSeen, owned, unseenTreasures, type GrowthKind, type ItemId, type WorldFacts } from "@/lib/growth";
+import { playSparkle } from "@/lib/feedback";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
 import { haptics } from "@/lib/haptics";
@@ -178,6 +180,13 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
   const title = useTitles(trackers);
   const days = countedDays(trackers, entries);
   const chests = Object.keys(getChests()).length;
+  // a treasure that came since she last looked says "New", once
+  const [fresh] = useState<ItemId[]>(() => (facts ? unseenTreasures(facts) : []));
+  useEffect(() => {
+    if (!facts) return;
+    markTreasuresSeen(facts);
+    if (fresh.length) { haptics.sparkle(); playSparkle(); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="space-y-3 pb-4">
       <div className="flex gap-3">
@@ -191,10 +200,12 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
           <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("items.shelf")}</p>
           <div className="surface grid grid-cols-3 gap-y-3 rounded-[20px] px-2 py-3">
             {ITEMS.map((it) => {
-              const got = itemEarned(it.id, facts);
+              const got = owned(it.id, facts);
               const [k, n] = itemProgress(it.id, facts);
+              const isNew = fresh.includes(it.id);
               return (
-                <div key={it.id} className="flex flex-col items-center px-1 text-center">
+                <div key={it.id} className={cn("relative flex flex-col items-center px-1 text-center", isNew && "treasure-new")}>
+                  {isNew && <span className="absolute -top-1 right-1 rounded-full bg-[hsl(var(--coin-teal))] px-2 py-0.5 text-[11px] font-bold text-white">{t("items.new")}</span>}
                   <img src={mapPic(it.pic)} alt="" width={52} height={52} className={`h-[52px] w-[52px] object-contain ${got ? "" : "opacity-30 grayscale"}`} />
                   <p className={`mt-1 text-[13px] font-bold leading-tight ${got ? "" : "text-muted-foreground"}`}>{t(`items.${it.id}.name`)}</p>
                   <p className="text-[12px] font-medium leading-tight text-muted-foreground">{got ? t(`items.${it.id}.how`) : `${t(`items.${it.id}.how`)} · ${k}/${n}`}</p>

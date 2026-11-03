@@ -148,6 +148,7 @@ const en = {
   },
   items: {
     shelf: "Your treasures",
+    new: "New",
     balloon: { name: "Balloon", how: "First week" },
     camera: { name: "Camera", how: "First link" },
     signpost: { name: "Signpost", how: "Your own island" },
@@ -796,6 +797,7 @@ const en = {
       moreOnMap_one: "and {{count}} more on your map",
       moreOnMap_other: "and {{count}} more on your map",
       seeMap: "See my map",
+      seeTreasures: "See my treasures",
     },
     reward: { wooden_bridge: "a bridge", hot_air_balloon: "a balloon", marker_flag: "a flag", rainbow: "a rainbow" },
     titles: { explorer: "Explorer", pathfinder: "Pathfinder", navigator: "Navigator", cartographer: "Cartographer", captain: "Captain", keeper: "Lighthouse keeper", legend: "Legend of the seas" },

@@ -375,8 +375,9 @@ export const EveningPath = ({
         if (el.dataset.cy !== undefined && Math.abs(d) < bestD) { bestD = Math.abs(d); best = el; }
         let tr = "", op = "", far = false;
         if (on && Math.abs(d / R) >= HALF) {
-          // round the back of the drum: not drawn (and not rewritten every frame)
-          tr = "scale(0)"; op = "0"; far = true;
+          // round the back of the drum: invisible where it stands, so it is
+          // not rewritten every frame and VoiceOver still finds it in place
+          tr = ""; op = "0"; far = true;
         } else if (on) {
           // on a cylinder of radius R: up the arc by the angle, closer to the
           // middle (sin), further back (1 - cos), turned away, fainter
@@ -436,10 +437,19 @@ export const EveningPath = ({
     const byHand = () => { modeRef.current = "hand"; };
     const byKey = (e: KeyboardEvent) => { if (/^(Arrow|Page|Home$|End$| $)/.test(e.key)) modeRef.current = "hand"; };
     const onMotion = () => { setDrum(!mq.matches); onScroll(); };
+    // a step reached with the keyboard or VoiceOver rolls to the band
+    const onFocus = (e: FocusEvent) => {
+      const row = (e.target as Element | null)?.closest<HTMLElement>("[data-wheel][data-cy]");
+      const box = row?.closest(".path-box");
+      if (!row || !box || mq.matches) return;
+      const d = box.getBoundingClientRect().top + Number(row.dataset.cy) - (main.getBoundingClientRect().top + geo.current.off);
+      if (Math.abs(d) > 2) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: "smooth" }); }
+    };
     main.addEventListener("scroll", onScroll, { passive: true });
     main.addEventListener("touchstart", byHand, { passive: true });
     main.addEventListener("wheel", byHand, { passive: true });
     main.addEventListener("keydown", byKey);
+    main.addEventListener("focusin", onFocus);
     window.addEventListener("resize", onResize);
     mq.addEventListener?.("change", onMotion);
     measure(main);
@@ -449,6 +459,7 @@ export const EveningPath = ({
       main.removeEventListener("touchstart", byHand);
       main.removeEventListener("wheel", byHand);
       main.removeEventListener("keydown", byKey);
+      main.removeEventListener("focusin", onFocus);
       window.removeEventListener("resize", onResize);
       mq.removeEventListener?.("change", onMotion);
       cancelAnimationFrame(raf);

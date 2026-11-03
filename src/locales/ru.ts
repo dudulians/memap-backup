@@ -174,6 +174,7 @@ const ru: Translation = {
   },
   items: {
     shelf: "Твои сокровища",
+    new: "Новое",
     balloon: { name: "Воздушный шар", how: "Первая неделя" },
     camera: { name: "Фотоаппарат", how: "Первая связь" },
     signpost: { name: "Указатель", how: "Свой остров" },
@@ -910,6 +911,7 @@ const ru: Translation = {
       moreOnMap_many: "и ещё {{count}} на карте",
       moreOnMap_other: "и ещё {{count}} на карте",
       seeMap: "Посмотреть карту",
+      seeTreasures: "Мои сокровища",
     },
     reward: { wooden_bridge: "мост", hot_air_balloon: "воздушный шар", marker_flag: "флаг", rainbow: "радуга" },
     titles: { explorer: "Исследователь", pathfinder: "Следопыт", navigator: "Штурман", cartographer: "Картограф", captain: "Капитан", keeper: "Смотритель маяка", legend: "Легенда морей" },

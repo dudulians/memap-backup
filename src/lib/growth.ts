@@ -7,7 +7,8 @@
 //                   a garden (a finished test there), a flag (30);
 //   bridges       — between two islands once a link between them is found;
 //   special items — milestones (first week, first link, 10 notes…), each one
-//                   a picture from her set that then stays on the map;
+//                   a picture from her set, kept for good on her shelf in
+//                   You (Nov 3 2026, her note: "куда они идут?");
 //   mission       — what to go for next week, said in the chest.
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandOf, type Island, type IslandId, type Route } from "@/lib/islands";
@@ -16,6 +17,7 @@ import { eveningStreak } from "@/lib/eveningPath";
 import { finishedExperiments, currentExperiment, experimentDay } from "@/lib/experiments";
 import { getOwnIslands } from "@/lib/ownIslands";
 import { getHunches } from "@/lib/hunches";
+import { isoLocal } from "@/lib/doors";
 
 // --- Island growth ---------------------------------------------------------
 
@@ -108,6 +110,35 @@ export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
     case "rainbow": return f.cleared !== null;
     case "airplane": return f.days >= 60;
   }
+};
+
+// Treasures are kept for good: the day each was first earned is stored, so
+// one never vanishes (fewer notes after a clean-up, a broken streak) and
+// never comes back as new.
+const KEPT = "memap_treasures";
+const SEEN = "memap_treasures_seen";
+const readJson = <T,>(key: string, fallback: T): T => { try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; } catch { return fallback; } };
+/** The treasures she has, with the day each came. */
+export const keptTreasures = (): Partial<Record<ItemId, string>> => readJson(KEPT, {});
+/** Keeps the ones earned now; call it wherever the facts are worked out. */
+export const syncTreasures = (f: WorldFacts): void => {
+  const kept = keptTreasures();
+  let changed = false;
+  const today = isoLocal(new Date());
+  for (const it of ITEMS) if (!kept[it.id] && itemEarned(it.id, f)) { kept[it.id] = today; changed = true; }
+  if (changed) { try { localStorage.setItem(KEPT, JSON.stringify(kept)); } catch { /* shown, not kept */ } }
+};
+/** She has it: kept, or earned right now. */
+export const owned = (id: ItemId, f: WorldFacts): boolean => !!keptTreasures()[id] || itemEarned(id, f);
+/** Treasures she hasn't seen on her shelf yet (the first look counts all as seen). */
+export const unseenTreasures = (f: WorldFacts): ItemId[] => {
+  const have = ITEMS.filter((it) => owned(it.id, f)).map((it) => it.id);
+  const seen = readJson<ItemId[] | null>(SEEN, null);
+  if (!seen) { try { localStorage.setItem(SEEN, JSON.stringify(have)); } catch { /* ignore */ } return []; }
+  return have.filter((id) => !seen.includes(id));
+};
+export const markTreasuresSeen = (f: WorldFacts): void => {
+  try { localStorage.setItem(SEEN, JSON.stringify(ITEMS.filter((it) => owned(it.id, f)).map((it) => it.id))); } catch { /* ignore */ }
 };
 
 /** How far along to the next item, for "next up" lines: [now, goal]. */

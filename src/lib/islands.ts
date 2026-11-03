@@ -221,3 +221,17 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
   }
   return out.slice(0, 4);
 };
+
+/** The links drawn as bridges (her note, Nov 3 2026: when is it a bridge,
+ *  when a line?): strongest first, at most one per island (an island can
+ *  sit beside one neighbour), at most `max`. Every other link lives in the
+ *  island sheets. */
+export const bridgesOf = (routes: Route[], max = 3): Route[] => {
+  const used = new Set<IslandId>(), out: Route[] = [];
+  for (const r of [...routes].sort((x, y) => y.k - x.k)) {
+    if (out.length >= max) break;
+    if (used.has(r.a) || used.has(r.b)) continue;
+    used.add(r.a); used.add(r.b); out.push(r);
+  }
+  return out;
+};

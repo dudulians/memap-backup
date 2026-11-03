@@ -324,7 +324,9 @@ export interface ChestRecord {
   nextUp?: string[];
 }
 
-/** Things a chest gives, one per week in turn. They go on the Map, never on the path. */
+/** The picture a chest shows for the week, one per week in turn (a keepsake
+ *  of the week, not placed on the map; the milestone treasures are kept on
+ *  her shelf in You, src/lib/growth.ts). */
 export const CHEST_REWARDS = ["wooden_bridge", "hot_air_balloon", "marker_flag", "rainbow"];
 export const rewardFor = (week: number) => CHEST_REWARDS[week % CHEST_REWARDS.length];
 /** A new title each week, the last one kept. */

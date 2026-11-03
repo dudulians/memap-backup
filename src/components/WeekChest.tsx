@@ -16,7 +16,7 @@ import { haptics } from "@/lib/haptics";
 import { playSparkle, playThump, preloadSounds } from "@/lib/feedback";
 import { buildIslands, buildRoutes, islandDef, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { getNotes } from "@/lib/notes";
-import { ITEMS, growthLand, growthOf, homeWord, islandDays, itemEarned, itemProgress, lastWorld, nextMission, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
+import { ITEMS, growthLand, growthOf, homeWord, islandDays, itemProgress, lastWorld, nextMission, owned, syncTreasures, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { getDoor, getDoorState } from "@/lib/doors";
@@ -68,9 +68,10 @@ export const WeekChest = ({
     const days = islandDays(trackers, entries);
     const notes = await getNotes().then((n) => n.length).catch(() => 0);
     const facts = worldFacts(trackers, entries, islands, routes, notes);
+    syncTreasures(facts);
     const world = {
       growth: islands.flatMap((i) => growthOf(i.id, days.get(i.id) ?? 0).map((k) => `${i.id}:${k}`)),
-      items: ITEMS.filter((it) => itemEarned(it.id, facts)).map((it) => it.id as string),
+      items: ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id as string),
       bridges: routes.slice(0, 3).map((r) => `${r.a}|${r.b}`),
     };
     const before = lastWorld();
@@ -82,7 +83,7 @@ export const WeekChest = ({
     const m = nextMission(facts, [...days.values()].filter((d) => d >= 3).length);
     const mission = { id: m.id, n: m.id === "testRunning" ? m.day : m.id === "notes" ? m.left : m.id === "streak" ? m.goal : undefined };
     // The two items she's closest to, for "next up" when nothing new grew.
-    const nextUp = ITEMS.filter((it) => !itemEarned(it.id, facts))
+    const nextUp = ITEMS.filter((it) => !owned(it.id, facts))
       .map((it) => ({ id: it.id, p: itemProgress(it.id, facts) }))
       .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1]).slice(0, 2)
       .map((x) => `${x.id}:${x.p[0]}/${x.p[1]}`);
@@ -122,6 +123,17 @@ export const WeekChest = ({
     setRec(next);
     onPlaced();
   };
+  // a new treasure: straight to her shelf in You
+  const toTreasures = () => {
+    if (!rec) return;
+    haptics.success();
+    const next = { ...rec, placed: true };
+    saveChest(week, next);
+    setRec(next);
+    onClose();
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 250);
+  };
+  const hasTreasure = !!rec?.fresh?.items.length;
 
   const early = (
     <span className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-full border border-foreground/15 px-2.5 text-[13px] font-semibold text-muted-foreground">
@@ -298,11 +310,11 @@ export const WeekChest = ({
                 }} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                   {t("path.chest.next")}
                 </Pressable>
-              ) : rec.placed ? (
-                <p className="text-[15px] font-semibold text-muted-foreground">{t("path.chest.placed")}</p>
               ) : (
-                <Pressable tone="gold" haptic="none" onClick={place} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-                  {rec.fresh ? t("path.chest.seeMap") : t("path.chest.put")}
+                // Nothing is promised a place on the map that isn't drawn: a
+                // new treasure goes to her shelf, the rest to the map.
+                <Pressable tone="gold" haptic="none" onClick={hasTreasure ? toTreasures : place} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+                  {hasTreasure ? t("path.chest.seeTreasures") : t("path.chest.seeMap")}
                 </Pressable>
               )}
             </div>

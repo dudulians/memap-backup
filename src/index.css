@@ -2192,8 +2192,17 @@ header h1 { transition: opacity 200ms ease; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 280ms; animation-timing-function: ease-out; }
 #memap-header-center:not(:empty) ~ h1 { opacity: 0; }
 
+/* A treasure new on her shelf rises in, once (IslandStats). */
+.treasure-new { animation: treasureIn 320ms ease-out both; }
+@keyframes treasureIn { from { opacity: 0; transform: translateY(12px); } }
+
+/* The globe rises into view (WorldMap). */
+.globe-in { animation: globeIn 400ms ease-out both; }
+@keyframes globeIn { from { opacity: 0; transform: translateY(24px); } }
+
 @media (prefers-reduced-motion: reduce) {
   main.snap-y { scroll-snap-type: none; }
+  .globe-in, .treasure-new { animation: none; }
   .island-press, .island-press:active { transition: none; transform: none; }
   .island-ripple { animation: none; opacity: 0; }
 }

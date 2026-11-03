@@ -12,7 +12,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { WorldStats } from "@/components/IslandStats";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { buildIslands, buildRoutes } from "@/lib/islands";
-import { worldFacts } from "@/lib/growth";
+import { syncTreasures, worldFacts } from "@/lib/growth";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { haptics } from "@/lib/haptics";
@@ -38,17 +38,24 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ trackers: Tracker[]; entries: TrackerEntry[]; notes: number } | null>(null);
+  // each visit draws the shelf afresh, with what she has now
+  const [visit, setVisit] = useState(0);
   useEffect(() => {
     if (!open) return;
     let live = true;
     Promise.all([getTrackers(), getEntries(), getNotes().catch(() => [])])
-      .then(([trackers, entries, notes]) => { if (live) setData({ trackers, entries, notes: notes.length }); })
+      .then(([trackers, entries, notes]) => { if (live) { setData({ trackers, entries, notes: notes.length }); setVisit((v) => v + 1); } })
       .catch(() => undefined);
     return () => { live = false; };
   }, [open]);
   const islands = useMemo(() => (data ? buildIslands(data.trackers, data.entries) : []), [data]);
   const routes = useMemo(() => (data ? buildRoutes(data.trackers, data.entries, islands) : []), [data, islands]);
-  const facts = useMemo(() => (data ? worldFacts(data.trackers, data.entries, islands, routes, data.notes) : undefined), [data, islands, routes]);
+  const facts = useMemo(() => {
+    if (!data) return undefined;
+    const f = worldFacts(data.trackers, data.entries, islands, routes, data.notes);
+    syncTreasures(f);
+    return f;
+  }, [data, islands, routes]);
   const questions = data ? data.trackers.filter((tr) => !tr.archived && tr.source !== "play").length : 0;
 
   const [pic, setPic] = useState<string | null>(() => avatarUrl(getAvatar()));
@@ -81,7 +88,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
             <Row icon={Settings} label={t("common.settings")} onClick={onSettings} />
           </div>
           <div className="mt-5 shrink-0">
-            {data && <WorldStats islands={islands} routes={routes} trackers={data.trackers} entries={data.entries} facts={facts} />}
+            {data && <WorldStats key={visit} islands={islands} routes={routes} trackers={data.trackers} entries={data.entries} facts={facts} />}
           </div>
         </div>
       </BottomSheet>
