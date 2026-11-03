@@ -2162,9 +2162,9 @@ html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { bac
 html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #504a9b; }
 
 /* Tactile islands (her note, Nov 3 2026: "чтобы остров как кнопка отжимался,
-   с ощущением"): pressed, it sinks and its shadow tightens; let go, it springs
-   back a little past where it was; a ring spreads on the water. */
-.island-press { transition: transform 460ms cubic-bezier(.34, 1.56, .64, 1); -webkit-tap-highlight-color: transparent; }
+   с ощущением"): pressed, it sinks and its shadow tightens; let go, it eases
+   back up smoothly (no bounce, her calm-motion rule); a ring spreads on the water. */
+.island-press { transition: transform 420ms cubic-bezier(.16, 1, .3, 1); -webkit-tap-highlight-color: transparent; }
 .island-press:active { transform: translateY(5px) scale(.93); transition: transform 90ms ease-out; }
 .island-press .island-art { filter: drop-shadow(0 12px 12px rgba(16, 42, 56, .16)); transition: filter 300ms ease; }
 .island-press:active .island-art { filter: drop-shadow(0 3px 3px rgba(16, 42, 56, .2)) brightness(.97); transition-duration: 90ms; }
