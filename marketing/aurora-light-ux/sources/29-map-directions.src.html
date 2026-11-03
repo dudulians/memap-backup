@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Map directions</title>
+<!-- Her note, Nov 3 2026: "карты и глобус красивые, но элементы как будто
+     просто накиданы… давай вместе думать". Three ways to compose the Map,
+     drawn with her own art (src/assets/map). Rendered to 29-map-directions.png. -->
+<style>
+  @font-face { font-family: "MeMap Sans"; src: url("../../../src/assets/fonts/dm-sans-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  :root { --ink: #12303c; --muted: #5f7a86; --teal: hsl(174 44% 42%); --gold: hsl(40 70% 62%); --surface: #fff; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "MeMap Sans", system-ui, sans-serif; color: var(--ink); background: #eef3f7; width: 1400px; padding: 40px 40px 36px; }
+  h1 { font-size: 34px; letter-spacing: -0.02em; }
+  .lede { margin-top: 6px; font-size: 18px; color: var(--muted); font-weight: 500; }
+  .row { display: flex; gap: 55px; margin-top: 30px; }
+  .col { width: 390px; }
+  .label { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+  .pick { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--teal); padding: 5px 10px; border-radius: 999px; }
+  .phone { position: relative; width: 390px; height: 844px; border-radius: 46px; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(16,42,56,.45), 0 0 0 10px #fff; }
+  .note { margin-top: 26px; font-size: 16px; line-height: 1.45; font-weight: 500; color: #33505c; }
+  .note b { color: var(--ink); }
+  /* shared bits */
+  .head { position: absolute; left: 0; right: 0; top: 0; padding: 54px 20px 10px; display: flex; align-items: center; justify-content: space-between; z-index: 5; }
+  .title { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .seg { display: inline-flex; background: rgba(18,48,60,.07); border-radius: 999px; padding: 3px; }
+  .seg span { height: 32px; padding: 0 13px; display: inline-flex; align-items: center; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--muted); }
+  .seg span.on { background: #fff; color: var(--ink); box-shadow: 0 2px 6px -2px rgba(16,42,56,.25); }
+  .nav { position: absolute; left: 16px; right: 16px; bottom: 18px; height: 66px; border-radius: 26px; background: rgba(255,255,255,.95); box-shadow: 0 10px 30px -14px rgba(16,42,56,.35); display: flex; justify-content: space-around; align-items: center; font-size: 11px; font-weight: 600; color: var(--muted); z-index: 6; }
+  .nav b { color: var(--ink); background: #e9eef2; padding: 10px 26px; border-radius: 18px; }
+  .pill { position: absolute; display: inline-flex; align-items: center; gap: 6px; background: #fff; border-radius: 999px; padding: 4px 12px 4px 5px; font-size: 14px; font-weight: 700; box-shadow: 0 6px 16px -10px rgba(16,42,56,.5); white-space: nowrap; transform: translateX(-50%); z-index: 3; }
+  .pill img.ic { width: 24px; height: 24px; }
+  .pill img.wx { width: 22px; height: 22px; margin-left: 2px; }
+  .pill small { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .abs { position: absolute; }
+  /* A: one calm scene */
+  .sceneA { position: absolute; inset: 0; background: linear-gradient(180deg, #f3f9fc 0%, #e4f2f8 24%, #cfe9f2 25%, #b8deeb 70%, #a6d4e5 100%); }
+  .horizon { position: absolute; left: 0; right: 0; top: 210px; height: 1px; background: rgba(255,255,255,.9); }
+  .wave { position: absolute; height: 2px; border-radius: 2px; background: rgba(255,255,255,.55); }
+  /* B: island cards */
+  .sceneB { position: absolute; inset: 0; background: linear-gradient(180deg, #f3f9fc 0%, #eaf4f8 100%); }
+  .banner { position: absolute; left: 16px; right: 16px; top: 108px; height: 132px; border-radius: 24px; overflow: hidden; background: linear-gradient(180deg, #e7f5fa 0%, #c4e6f0 60%, #acd9e8 100%); }
+  .card { position: absolute; left: 16px; right: 16px; height: 104px; background: #fff; border-radius: 24px; box-shadow: 0 10px 24px -16px rgba(16,42,56,.35); display: flex; align-items: center; gap: 12px; padding: 0 14px 0 6px; }
+  .card img.isl { width: 96px; flex: none; }
+  .card .t { font-size: 18px; font-weight: 700; }
+  .card .s { font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 2px; }
+  .chips { display: flex; gap: 6px; margin-top: 7px; }
+  .chip { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(18,48,60,.06); }
+  .chip.gold { background: hsl(40 70% 62% / .22); color: hsl(32 70% 32%); }
+  .chev { margin-left: auto; color: #9fb1ba; font-size: 22px; }
+  /* C: islands on a route */
+  .sceneC { position: absolute; inset: 0; background: linear-gradient(180deg, #e6f4f9 0%, #c9e8f1 50%, #b0dceb 100%); }
+</style>
+</head>
+<body>
+  <h1>Map: three directions</h1>
+  <p class="lede">Your note: “the elements look thrown together”. Same islands, same art, three ways to put them together. Calendar, chart and action points move to a second tab, <b>Insights</b>, in all three.</p>
+
+  <div class="row">
+    <!-- A: one calm scene -->
+    <div class="col">
+      <div class="label">A · One calm sea <span class="pick">My pick</span></div>
+      <div class="phone">
+        <div class="sceneA"></div>
+        <div class="horizon"></div>
+        <div class="wave" style="left:40px;top:300px;width:46px"></div>
+        <div class="wave" style="left:300px;top:340px;width:38px"></div>
+        <div class="wave" style="left:60px;top:520px;width:54px"></div>
+        <div class="wave" style="left:290px;top:600px;width:44px"></div>
+        <div class="wave" style="left:150px;top:720px;width:50px"></div>
+        <div class="head"><span class="title">Your world</span><span class="seg"><span class="on">World</span><span>Insights</span></span></div>
+        <!-- far: a small island and a new-island cloud on the horizon -->
+        <img class="abs" src="../../../src/assets/map/unexplored.webp" style="left:228px;top:168px;width:92px;opacity:.9">
+        <div class="pill" style="left:274px;top:226px;font-size:12px;padding:3px 10px"><small style="color:var(--ink);font-weight:700">+ New island</small></div>
+        <img class="abs" src="../../../src/assets/map/hot_air_balloon.webp" style="left:44px;top:120px;width:30px;opacity:.9">
+        <!-- the sea route: one curve from near to far -->
+        <svg class="abs" style="left:0;top:0" width="390" height="844">
+          <path d="M210 790 C 330 700, 70 640, 150 560 S 330 430, 250 330 S 180 250, 268 230" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" opacity=".9"/>
+        </svg>
+        <!-- islands: smaller toward the horizon -->
+        <img class="abs" src="../../../src/assets/map/island_mountain.webp" style="left:186px;top:262px;width:110px">
+        <div class="pill" style="left:242px;top:338px"><img class="ic" src="../../../src/assets/map/icon_fitness.webp">Body <img class="wx" src="../../../src/assets/map/sun.webp"></div>
+        <img class="abs" src="../../../src/assets/map/wooden_bridge.webp" style="left:200px;top:418px;width:56px">
+        <img class="abs" src="../../../src/assets/map/island_lotus.webp" style="left:46px;top:440px;width:150px">
+        <img class="abs" src="../../../src/assets/map/house.webp" style="left:150px;top:470px;width:36px">
+        <div class="pill" style="left:122px;top:546px"><img class="ic" src="../../../src/assets/map/icon_health.webp">Health <img class="wx" src="../../../src/assets/map/thunder_cloud.webp"></div>
+        <img class="abs" src="../../../src/assets/map/island_plain.webp" style="left:196px;top:600px;width:176px">
+        <img class="abs" src="../../../src/assets/map/flowering_bush.webp" style="left:248px;top:568px;width:66px">
+        <img class="abs" src="../../../src/assets/map/house.webp" style="left:318px;top:606px;width:38px">
+        <div class="pill" style="left:286px;top:700px"><img class="ic" src="../../../src/assets/map/icon_wellbeing.webp">Me <img class="wx" src="../../../src/assets/map/partly_cloudy.webp"></div>
+        <!-- you, on the route -->
+        <img class="abs" src="../../../src/assets/map/sailboat.webp" style="left:120px;top:676px;width:58px">
+        <img class="abs" src="../../../src/assets/avatars/08_fox.webp" style="left:116px;top:660px;width:36px">
+        <div class="nav"><span>Today</span><b>Map</b><span>Notes</span></div>
+      </div>
+      <p class="note"><b>One scene, nothing floating.</b> Islands sit along one sea route, smaller toward the horizon. The name is right under each island, with its weather inside. Bridges, the boat and pieces live on the route or on the islands. The globe opens from a small button.</p>
+    </div>
+
+    <!-- B: island cards -->
+    <div class="col">
+      <div class="label">B · Island cards</div>
+      <div class="phone">
+        <div class="sceneB"></div>
+        <div class="head"><span class="title">Your world</span><span class="seg"><span class="on">World</span><span>Insights</span></span></div>
+        <div class="banner">
+          <img class="abs" src="../../../src/assets/map/island_plain.webp" style="left:14px;top:52px;width:110px">
+          <img class="abs" src="../../../src/assets/map/flowering_bush.webp" style="left:44px;top:34px;width:44px">
+          <img class="abs" src="../../../src/assets/map/island_lotus.webp" style="left:128px;top:38px;width:104px">
+          <img class="abs" src="../../../src/assets/map/island_mountain.webp" style="left:236px;top:44px;width:104px">
+          <img class="abs" src="../../../src/assets/map/sailboat.webp" style="left:306px;top:6px;width:34px">
+        </div>
+        <div class="card" style="top:258px"><img class="isl" src="../../../src/assets/map/island_plain.webp">
+          <div><div class="t">Me</div><div class="s">2 hard days this week · calmer</div><div class="chips"><span class="chip">6 questions</span><span class="chip">↔ Health</span></div></div><span class="chev">›</span></div>
+        <div class="card" style="top:374px"><img class="isl" src="../../../src/assets/map/island_lotus.webp">
+          <div><div class="t">Health</div><div class="s">5 hard days this week · as usual</div><div class="chips"><span class="chip">6 questions</span><span class="chip gold">1 action point</span></div></div><span class="chev">›</span></div>
+        <div class="card" style="top:490px"><img class="isl" src="../../../src/assets/map/island_mountain.webp">
+          <div><div class="t">Body &amp; habits</div><div class="s">Calm week</div><div class="chips"><span class="chip">5 questions</span></div></div><span class="chev">›</span></div>
+        <div class="card" style="top:606px;height:74px;border:2px dashed rgba(18,48,60,.18);box-shadow:none;background:transparent;justify-content:center;font-size:16px;font-weight:700;color:#33505c">+ New island</div>
+        <div class="nav"><span>Today</span><b>Map</b><span>Notes</span></div>
+      </div>
+      <p class="note"><b>The clearest to read.</b> One card per island: its week in words, its questions, its action points, who it's linked with. The world is a small picture on top. Less of a “world to explore”.</p>
+    </div>
+
+    <!-- C: islands on a route -->
+    <div class="col">
+      <div class="label">C · Islands on a route</div>
+      <div class="phone">
+        <div class="sceneC"></div>
+        <div class="head"><span class="title">Your world</span><span class="seg"><span class="on">World</span><span>Insights</span></span></div>
+        <svg class="abs" style="left:0;top:0" width="390" height="844">
+          <path d="M110 760 C 110 690, 280 680, 280 610 S 110 520, 110 450 S 280 360, 280 290 S 150 200, 150 170" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="14" stroke-linecap="round"/>
+          <path d="M110 760 C 110 690, 280 680, 280 610 S 110 520, 110 450 S 280 360, 280 290 S 150 200, 150 170" fill="none" stroke="hsl(174 44% 42%)" stroke-width="3" stroke-dasharray="7 8" stroke-linecap="round"/>
+        </svg>
+        <img class="abs" src="../../../src/assets/map/island_plain.webp" style="left:38px;top:690px;width:146px">
+        <div class="pill" style="left:196px;top:716px;transform:none"><img class="ic" src="../../../src/assets/map/icon_wellbeing.webp">Me<small>· 2 hard days</small></div>
+        <img class="abs" src="../../../src/assets/map/island_lotus.webp" style="left:206px;top:540px;width:146px">
+        <div class="pill" style="left:22px;top:574px;transform:none"><img class="ic" src="../../../src/assets/map/icon_health.webp">Health<small>· 5 hard days</small></div>
+        <img class="abs" src="../../../src/assets/map/wooden_bridge.webp" style="left:166px;top:636px;width:58px">
+        <img class="abs" src="../../../src/assets/map/island_mountain.webp" style="left:40px;top:380px;width:146px">
+        <div class="pill" style="left:212px;top:420px;transform:none"><img class="ic" src="../../../src/assets/map/icon_fitness.webp">Body<small>· calm</small></div>
+        <img class="abs" src="../../../src/assets/map/unexplored.webp" style="left:222px;top:236px;width:120px;opacity:.95">
+        <div class="pill" style="left:58px;top:262px;transform:none"><small style="color:var(--ink);font-weight:700">+ New island</small></div>
+        <img class="abs" src="../../../src/assets/map/sailboat.webp" style="left:160px;top:742px;width:46px">
+        <img class="abs" src="../../../src/assets/avatars/08_fox.webp" style="left:156px;top:728px;width:30px">
+        <div class="nav"><span>Today</span><b>Map</b><span>Notes</span></div>
+      </div>
+      <p class="note"><b>The same language as Today.</b> Islands sit on one route like steps, labels always on the other side, bridges on the route. Tidy and easy to scan, but more like a list than a free world.</p>
+    </div>
+  </div>
+</body>
+</html>
