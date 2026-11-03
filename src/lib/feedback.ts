@@ -15,6 +15,14 @@
 
 import { Capacitor } from "@capacitor/core";
 import { Haptics, ImpactStyle } from "@capacitor/haptics";
+import pop1 from "@/assets/sounds/pop-1.mp3";
+import pop2 from "@/assets/sounds/pop-2.mp3";
+import pop3 from "@/assets/sounds/pop-3.mp3";
+import pop4 from "@/assets/sounds/pop-4.mp3";
+import drop from "@/assets/sounds/drop.mp3";
+import sparkle from "@/assets/sounds/sparkle.mp3";
+import thump from "@/assets/sounds/thump.mp3";
+import sea from "@/assets/sounds/sea.mp3";
 
 type FeedbackKind = "yes" | "no" | "skip";
 
@@ -131,10 +139,12 @@ export const playSwipeSound = (kind: FeedbackKind) => {
   }
 };
 
-// --- Bubble sounds ("Unload your mind", Nov 2026: "звуки, когда лопаются пузыри") ---
-// Made here, no files (Nov 3 2026, her "более ASMR-ное"): a tiny wet click and
-// a short rising plip, lower for bigger bubbles, a little different each time,
-// panned to where the bubble was; a quiet sea can play underneath.
+// --- Game sounds ("Unload your mind", Nov 2026: "звуки, когда лопаются пузыри") ---
+// Real recordings since Nov 3 2026 (her: "звуки из баз, а не кодом"): small
+// CC0 files from Freesound in src/assets/sounds (CREDITS.md there), played
+// through Web Audio so each one is pitched by size, a little different each
+// time and panned to where it happened. Until a file has loaded, the sound
+// made here plays instead, so a tap is never silent.
 // Ambient audio on iOS: the silent switch mutes it and music keeps playing.
 
 /** The app's sound setting (Settings → sounds), on unless she turned it off. */
@@ -209,12 +219,80 @@ const plip = (ctx: AudioContext, size: number, pan: number, start = 0, peak = 1)
   osc.stop(t + 0.16);
 };
 
+// The recordings (CC0, Freesound; src/assets/sounds/CREDITS.md).
+const FILES = { pop1, pop2, pop3, pop4, drop, sparkle, thump, sea } as const;
+type Sound = keyof typeof FILES;
+/** How loud each file sits next to the others. */
+const LEVEL: Record<Sound, number> = { pop1: 1, pop2: 1, pop3: 0.7, pop4: 1.3, drop: 0.9, sparkle: 0.35, thump: 1, sea: 1 };
+const decoded = new Map<Sound, AudioBuffer | null>();
+const loading = new Map<Sound, Promise<AudioBuffer | null>>();
+
+/** A file's bytes; the tiniest come inlined as data: URLs. */
+const bytes = async (url: string): Promise<ArrayBuffer> => {
+  if (url.startsWith("data:")) {
+    const bin = atob(url.slice(url.indexOf(",") + 1));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  }
+  return (await fetch(url)).arrayBuffer();
+};
+const load = (ctx: AudioContext, name: Sound): Promise<AudioBuffer | null> => {
+  let p = loading.get(name);
+  if (!p) {
+    p = bytes(FILES[name])
+      // the callback form: older iOS WebViews return no promise here
+      .then((buf) => new Promise<AudioBuffer>((ok, no) => ctx.decodeAudioData(buf, ok, no)))
+      .then((buf) => { decoded.set(name, buf); return buf; })
+      .catch(() => { decoded.set(name, null); return null; });
+    loading.set(name, p);
+  }
+  return p;
+};
+
+/** Start loading what a game will play, so its first sound is on time. */
+export const preloadSounds = (...names: Sound[]) => {
+  const ctx = getCtx();
+  if (ctx) names.forEach((n) => void load(ctx, n));
+};
+
+/** Plays a recording now; false while it hasn't loaded (the caller falls back). */
+const sample = (ctx: AudioContext, name: Sound, o: { rate?: number; gain?: number; pan?: number; at?: number; lowpass?: number } = {}): boolean => {
+  const buf = decoded.get(name);
+  if (!buf) { void load(ctx, name); return false; }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = o.rate ?? 1;
+  const g = ctx.createGain();
+  g.gain.value = (o.gain ?? 1) * LEVEL[name];
+  let head: AudioNode = src;
+  if (o.lowpass) {
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = o.lowpass;
+    head = head.connect(lp);
+  }
+  head.connect(g).connect(outAt(ctx, o.pan ?? 0));
+  src.start(ctx.currentTime + (o.at ?? 0));
+  return true;
+};
+
+/** A little different each time: the rate ± n. */
+const vary = (n = 0.08) => 1 - n + Math.random() * 2 * n;
+const oneOf = <T>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)];
+const SMALL = ["pop1", "pop4"] as const;
+const BIG = ["pop2", "pop3"] as const;
+
 /** A bubble popping; size 0 (small) .. 1 (big), x 0 (left) .. 1 (right). */
 export const playPop = (size = 0.3, x = 0.5) => {
   if (!soundOn()) return;
   const ctx = ready();
   if (!ctx) return;
-  try { plip(ctx, Math.max(0, Math.min(1, size)), (x - 0.5) * 1.4); } catch { /* audio never blocks the UI */ }
+  const z = Math.max(0, Math.min(1, size));
+  const pan = (x - 0.5) * 1.4;
+  try {
+    if (!sample(ctx, oneOf(z > 0.5 ? BIG : SMALL), { rate: (1.3 - 0.5 * z) * vary(), gain: 0.3 + 0.2 * z, pan })) plip(ctx, z, pan);
+  } catch { /* audio never blocks the UI */ }
 };
 /** Two bubbles joining: a soft low blub. */
 export const playMerge = (x = 0.5) => {
@@ -222,6 +300,7 @@ export const playMerge = (x = 0.5) => {
   const ctx = ready();
   if (!ctx) return;
   try {
+    if (sample(ctx, "drop", { rate: 0.7 * vary(0.06), gain: 0.26, pan: (x - 0.5) * 1.2, lowpass: 1500 })) return;
     const t = ctx.currentTime;
     const out = outAt(ctx, (x - 0.5) * 1.2);
     const osc = ctx.createOscillator();
@@ -240,64 +319,122 @@ export const playMerge = (x = 0.5) => {
     osc.stop(t + 0.18);
   } catch { /* ignore */ }
 };
-/** A big bubble bursting: a little cascade of plips. */
+/** A big bubble bursting: one round pop and a spray of small ones. */
 export const playBurst = (x = 0.5) => {
   if (!soundOn()) return;
   const ctx = ready();
   if (!ctx) return;
+  const pan = (x - 0.5) * 1.4;
   try {
-    [0.9, 0.55, 0.3, 0.15].forEach((z, k) => plip(ctx, z, (x - 0.5) * 1.4 + (k - 1.5) * 0.25, k * 0.038, 0.85));
+    if (sample(ctx, oneOf(BIG), { rate: 0.85 * vary(), gain: 0.5, pan })) {
+      [0.045, 0.085, 0.13].forEach((at, k) => sample(ctx, oneOf(SMALL), { rate: (1.35 + 0.15 * k) * vary(), gain: 0.2, pan: pan + (k - 1) * 0.35, at }));
+      return;
+    }
+    [0.9, 0.55, 0.3, 0.15].forEach((z, k) => plip(ctx, z, pan + (k - 1.5) * 0.25, k * 0.038, 0.85));
   } catch { /* ignore */ }
 };
 
-/** A quiet sea under the game: soft noise, low, rising and falling like
- *  slow waves. Returns a stop function (fades out). */
+/** A recorded quiet beach, looping softly. */
+const seaFrom = (ctx: AudioContext, buf: AudioBuffer) => {
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  // past the encoder's padding at both ends; the file's end runs into its start
+  src.loopStart = 0.05;
+  src.loopEnd = buf.duration - 0.05;
+  const g = ctx.createGain();
+  const t = ctx.currentTime;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.2, t + 2);
+  src.connect(g).connect(ctx.destination);
+  src.start(t, 0.05);
+  return () => {
+    const e = ctx.currentTime;
+    g.gain.cancelScheduledValues(e);
+    g.gain.setValueAtTime(g.gain.value, e);
+    g.gain.linearRampToValueAtTime(0, e + 0.6);
+    src.stop(e + 0.7);
+  };
+};
+/** Made-here waves (soft noise rising and falling), if the file can't load. */
+const madeSea = (ctx: AudioContext) => {
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx);
+  src.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 420;
+  const g = ctx.createGain();
+  g.gain.value = 0;
+  // waves: the volume swells every ~7 s
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 0.14;
+  const depth = ctx.createGain();
+  depth.gain.value = 0.012;
+  lfo.connect(depth).connect(g.gain);
+  src.connect(lp).connect(g).connect(ctx.destination);
+  const t = ctx.currentTime;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.022, t + 1.5);
+  src.start(t);
+  lfo.start(t);
+  return () => {
+    const e = ctx.currentTime;
+    g.gain.cancelScheduledValues(e);
+    g.gain.setValueAtTime(g.gain.value, e);
+    g.gain.linearRampToValueAtTime(0, e + 0.6);
+    src.stop(e + 0.7);
+    lfo.stop(e + 0.7);
+  };
+};
+/** A quiet sea under the game. Returns a stop function (fades out). */
 export const startSea = (): (() => void) => {
   if (!soundOn()) return () => undefined;
   const ctx = ready();
   if (!ctx) return () => undefined;
-  try {
-    const src = ctx.createBufferSource();
-    src.buffer = noiseBuffer(ctx);
-    src.loop = true;
-    const lp = ctx.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = 420;
-    const g = ctx.createGain();
-    g.gain.value = 0;
-    // waves: the volume swells every ~7 s
-    const lfo = ctx.createOscillator();
-    lfo.frequency.value = 0.14;
-    const depth = ctx.createGain();
-    depth.gain.value = 0.012;
-    lfo.connect(depth).connect(g.gain);
-    src.connect(lp).connect(g).connect(ctx.destination);
-    const t = ctx.currentTime;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.022, t + 1.5);
-    src.start(t);
-    lfo.start(t);
-    return () => {
-      const e = ctx.currentTime;
-      g.gain.cancelScheduledValues(e);
-      g.gain.setValueAtTime(g.gain.value, e);
-      g.gain.linearRampToValueAtTime(0, e + 0.6);
-      src.stop(e + 0.7);
-      lfo.stop(e + 0.7);
-    };
-  } catch {
-    return () => undefined;
-  }
+  let stop: (() => void) | null = null;
+  let stopped = false;
+  void load(ctx, "sea").then((buf) => {
+    if (stopped) return;
+    try { stop = buf ? seaFrom(ctx, buf) : madeSea(ctx); } catch { /* no sea, the game goes on */ }
+  });
+  return () => { stopped = true; stop?.(); };
 };
-/** A thought kept for later: a small rising chime. */
+/** A thought kept for later: a small sparkle. */
 export const playKeep = () => {
   if (!soundOn()) return;
   const ctx = ready();
   if (!ctx) return;
   try {
+    if (sample(ctx, "sparkle", { gain: 0.45, rate: 1.1 })) return;
     tone(ctx, [659.25], { start: 0, duration: 0.1, peak: 0.07 });
     tone(ctx, [987.77], { start: 0.08, duration: 0.16, peak: 0.07 });
   } catch { /* ignore */ }
+};
+/** Something found or earned: a chest card, a checked hunch, a test's result. */
+export const playSparkle = (gain = 0.5) => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try {
+    if (sample(ctx, "sparkle", { gain })) return;
+    tone(ctx, [783.99], { start: 0, duration: 0.12, peak: 0.06 });
+    tone(ctx, [1174.66], { start: 0.09, duration: 0.2, peak: 0.06 });
+  } catch { /* ignore */ }
+};
+/** A card landing softly. */
+export const playThump = () => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try { if (!sample(ctx, "thump", { gain: 0.45, rate: vary(0.05) })) tone(ctx, [196], { duration: 0.12, peak: 0.06 }); } catch { /* ignore */ }
+};
+/** A choice ticked (higher) or unticked (lower): a tiny pop. */
+export const playTick = (on = true) => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try { if (!sample(ctx, "pop1", { gain: 0.18, rate: on ? 1.55 : 1.2 })) plip(ctx, on ? 0 : 0.4, 0, 0, 0.6); } catch { /* ignore */ }
 };
 
 export const triggerHaptic = async (kind: "light" | "medium" | "heavy") => {

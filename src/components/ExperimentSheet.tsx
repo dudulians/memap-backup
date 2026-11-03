@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
+import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
@@ -43,7 +44,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
   // The result screen: a garden grew.
-  useEffect(() => { if (result) haptics.sparkle(); }, [result]);
+  useEffect(() => { if (result) { haptics.sparkle(); playSparkle(); } }, [result]);
   const finish = async (keep: boolean) => {
     if (!experiment) return;
     haptics.success();

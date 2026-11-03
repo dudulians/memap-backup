@@ -15,7 +15,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Archive, ArrowUp, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
-import { playBurst, playKeep, playMerge, playPop, startSea } from "@/lib/feedback";
+import { playBurst, playKeep, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
 import { addNote } from "@/lib/notes";
 import { isoLocal } from "@/lib/doors";
@@ -59,7 +59,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
-  useEffect(() => { markUnloadPlayed(); }, []);
+  useEffect(() => { markUnloadPlayed(); preloadSounds("pop1", "pop2", "pop3", "pop4", "drop", "sparkle"); }, []);
   // A quiet sea while the game is open (off when muted).
   useEffect(() => {
     if (muted) return;

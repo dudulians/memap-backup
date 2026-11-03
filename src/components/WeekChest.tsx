@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Clock, Crown, FlaskConical, Lightbulb, Sparkles, Target, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
+import { playSparkle, playThump, preloadSounds } from "@/lib/feedback";
 import { buildIslands, buildRoutes, islandDef, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { getNotes } from "@/lib/notes";
 import { ITEMS, growthLand, growthOf, homeWord, islandDays, itemEarned, itemProgress, lastWorld, nextMission, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
@@ -60,6 +61,7 @@ export const WeekChest = ({
 
   const open = async () => {
     haptics.drumroll();
+    preloadSounds("sparkle", "thump");
     // Her world now, to say what grew since the last chest.
     const islands = buildIslands(trackers, entries);
     const routes = buildRoutes(trackers, entries, islands);
@@ -291,7 +293,7 @@ export const WeekChest = ({
                 <Pressable tone="gold" haptic="none" onClick={() => {
                   // The world-grew card sparkles, the others land.
                   const nextIsWorld = !!rec.fresh && shown === cards(rec).length - (rec.mission ? 3 : 2);
-                  if (nextIsWorld) haptics.sparkle(); else haptics.land();
+                  if (nextIsWorld) { haptics.sparkle(); playSparkle(); } else { haptics.land(); playThump(); }
                   setShown((n) => n + 1);
                 }} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                   {t("path.chest.next")}

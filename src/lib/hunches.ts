@@ -38,9 +38,12 @@ export const getHunches = (): Hunch[] => {
 const save = (list: Hunch[]) => {
   try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* the hunch just isn't kept */ }
 };
-export const addHunch = (target: string, suspect: string) => {
+/** Her hunch about one question: one or more suspects, each checked on its own. */
+export const addHunches = (target: string, suspects: string[]) => {
   const today = isoLocal(new Date());
-  save([...getHunches().filter((h) => !(h.target === target && h.suspect === suspect)), { id: `${Date.now()}`, target, suspect, made: today }]);
+  const now = Date.now();
+  const rest = getHunches().filter((h) => !(h.target === target && suspects.includes(h.suspect)));
+  save([...rest, ...suspects.map((suspect, i) => ({ id: `${now}-${i}`, target, suspect, made: today }))]);
   markHunchDay();
 };
 export const markHunchSeen = (id: string) => save(getHunches().map((h) => (h.id === id ? { ...h, seen: isoLocal(new Date()) } : h)));
@@ -133,15 +136,19 @@ export const hunchResult = (h: Hunch, trackers: Tracker[], entries: TrackerEntry
   return { ...c, nextDay: useNext, ready, onto: ready && c.k >= 3 && gap(c) >= 0.25 };
 };
 
-/** A hunch whose result is ready and not yet seen. */
-export const readyHunch = (trackers: Tracker[], entries: TrackerEntry[]): { hunch: Hunch; result: HunchResult } | null => {
+/** Hunches whose results are ready and not yet seen, about one question
+ *  (the first that has any), so they're shown together. */
+export const readyHunches = (trackers: Tracker[], entries: TrackerEntry[]): { hunch: Hunch; result: HunchResult }[] => {
+  const ready: { hunch: Hunch; result: HunchResult }[] = [];
   for (const h of getHunches()) {
     if (h.seen) continue;
     const result = hunchResult(h, trackers, entries);
-    if (result?.ready) return { hunch: h, result };
+    if (result?.ready) ready.push({ hunch: h, result });
   }
-  return null;
+  return ready.filter((r) => r.hunch.target === ready[0]?.hunch.target);
 };
+/** A hunch whose result is ready and not yet seen. */
+export const readyHunch = (trackers: Tracker[], entries: TrackerEntry[]) => readyHunches(trackers, entries)[0] ?? null;
 
 /** Hunches still being checked: days with both answered so far. */
 export const checking = (trackers: Tracker[], entries: TrackerEntry[]) =>
