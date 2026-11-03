@@ -2,7 +2,7 @@
 // change, try it for 7 days; then see how that island's hard days went on
 // days with the change and without. Counts only, never a verdict. Same
 // full-screen frame as the games.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { FlaskConical, X } from "lucide-react";
@@ -37,11 +37,13 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const question = idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? `${own.trim().replace(/[?？]+$/, "")}?` : "";
   const start = async () => {
     if (!island || !change) return;
-    haptics.success();
+    haptics.rise();
     setStarted(await startExperiment(island, change, question));
   };
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
+  // The result screen: a garden grew.
+  useEffect(() => { if (result) haptics.sparkle(); }, [result]);
   const finish = async (keep: boolean) => {
     if (!experiment) return;
     haptics.success();

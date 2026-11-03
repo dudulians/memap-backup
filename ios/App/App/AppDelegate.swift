@@ -83,6 +83,7 @@ public class CoreHapticsPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "warning", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "error", returnType: CAPPluginReturnNone),
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "play", returnType: CAPPluginReturnNone),
     ]
 
     private var engine: CHHapticEngine?
@@ -120,6 +121,25 @@ public class CoreHapticsPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func isAvailable(_ call: CAPPluginCall) {
         call.resolve(["available": supports])
+    }
+
+    // Any short pattern from JS (Nov 2026: "разные вибрации везде"):
+    // events = [{ t: seconds, i: intensity 0..1, s: sharpness 0..1 }],
+    // at most 16. JS builds pop / burst / sparkle / drum roll from it.
+    @objc func play(_ call: CAPPluginCall) {
+        let raw = call.getArray("events", JSObject.self) ?? []
+        let events = raw.prefix(16).map { e in
+            transientEvent(at: number(e["t"], 0), intensity: Float(number(e["i"], 0.5)), sharpness: Float(number(e["s"], 0.5)))
+        }
+        if !events.isEmpty { playPattern(Array(events)) }
+        call.resolve()
+    }
+
+    private func number(_ v: JSValue?, _ fallback: Double) -> Double {
+        if let n = v as? NSNumber { return n.doubleValue }
+        if let d = v as? Double { return d }
+        if let i = v as? Int { return Double(i) }
+        return fallback
     }
 
     // --- Single-pulse shapes -----------------------------------------

@@ -4,7 +4,7 @@
 // as a question, or writes her own; MeMap checks it as she answers and
 // shows the result when there are enough days. First, a checked hunch, if
 // one is ready. Counts only, never a cause.
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Lightbulb, Plus, X } from "lucide-react";
@@ -32,6 +32,10 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
   const [busy, setBusy] = useState(false);
   const [suspectName, setSuspectName] = useState("");
 
+  // A checked hunch: sparkles if she was onto something.
+  useEffect(() => {
+    if (stage === "result" && ready) { if (ready.result.onto) haptics.sparkle(); else haptics.soft(); }
+  }, [stage, ready]);
   const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
   const sName = (s: Suspect) => (s.kind === "tracked" ? localizeTrackerTitle(s.tracker.title) : ru ? s.template.titleRu : s.template.title);
   const sQuestion = (s: Suspect) => (s.kind === "tracked" ? s.tracker.questionText : ru ? s.template.questionTextRu : s.template.questionText);

@@ -275,6 +275,8 @@ const en = {
     save: "Save to Notes",
     saved: "Saved to Notes",
     more: "Pop some more",
+    soundOn: "Sound on",
+    soundOff: "Sound off",
   },
   // "Your hunch" instead of Guess (Nov 2 2026)
   hunch: {

@@ -198,7 +198,7 @@ export const IslandsMap = ({
       ))}
 
       {you && youSpot && (
-        <button type="button" onClick={() => { haptics.tap(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
+        <button type="button" onClick={() => { haptics.soft(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
           className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: youSpot.x - 34, top: youSpot.y, width: 68 }}>
           <span className="relative block h-[62px] w-[62px]">
             <img src={mapPic("sailboat")} alt="" className="absolute bottom-0 left-1/2 w-[54px] -translate-x-1/2 object-contain" draggable={false} />
@@ -260,7 +260,7 @@ export const IslandsMap = ({
         const my = at.y;
         return (
           <div key={i}>
-            <button type="button" data-map-link onClick={() => { haptics.tap(); setLink((l) => (l === i ? null : i)); }}
+            <button type="button" data-map-link onClick={() => { haptics.land(); setLink((l) => (l === i ? null : i)); }}
               aria-label={`${t("map.linked")} · ${t("map.linkAria")}`} aria-expanded={link === i}
               className="absolute flex items-center justify-center active:scale-95 transition-transform"
               style={{ left: mx - 30, top: my - 20, width: 60, height: 40 }}>

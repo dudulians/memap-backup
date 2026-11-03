@@ -3,7 +3,7 @@
 // shadow and a plain line icon (no 3D lip, no pasted tiles), a white pill
 // label growing out of each node to the right, a calm dashed road, a white
 // week card with a progress bar, and only a few quiet pieces of scenery.
-import { useMemo, type ReactNode } from "react";
+import { useId, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,19 @@ export const Scenery = ({ pieces }: { pieces: Piece[] }) => (
 );
 
 export type NodeLook = "done" | "current" | "todo" | "gold";
+/** circle: questions and days; badge (wavy edge): games; square: practices and tasks. */
+export type NodeShape = "circle" | "badge" | "square";
+
+/** A wavy "badge" outline (10 soft lobes) in a size×size box. */
+const badgePath = (size: number) => {
+  const c = size / 2, R = size / 2 - 1.5, pts: string[] = [];
+  for (let k = 0; k <= 120; k++) {
+    const a = (k / 120) * Math.PI * 2;
+    const r = R * (0.92 + 0.08 * Math.cos(10 * a));
+    pts.push(`${(c + r * Math.cos(a)).toFixed(2)},${(c + r * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${pts.join(" L")} Z`;
+};
 
 /** Line icons for the islands (one family with the rest of the path, her
  *  note: pasted 3D tiles looked "нелепо"). Keys are the island icon names. */
@@ -101,33 +114,52 @@ export const islandIcon = (name?: string): LucideIcon => (name && ICONS[name]) |
  *  from above; steps ahead are white with the coloured icon and a tinted
  *  rim; the reward is gold. `hue` is "h s% l%" or a var(). Pressing shrinks
  *  it a little, with a light tap. */
-export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)" }: {
+export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle" }: {
   stop: Stop; look: NodeLook; children: ReactNode; onClick?: () => void; label: string;
   refEl?: React.Ref<HTMLButtonElement>; pressedRing?: number; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
+  shape?: NodeShape;
 }) => {
   const size = stop.r * 2;
   const tone = look === "gold" ? "var(--coin-gold)" : hue;
   const filled = look !== "todo";
+  const gid = `g${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const badge = shape === "badge";
+  const radius = shape === "square" ? "32%" : "9999px";
   return (
-    <button ref={refEl} type="button" data-path-stop={dataStop} aria-label={label} aria-expanded={expanded}
+    <button ref={refEl} type="button" data-path-stop={dataStop} data-shape={shape} aria-label={label} aria-expanded={expanded}
       onClick={() => { if (onClick) { haptics.tap(); onClick(); } }}
       className={cn(
-        "path-node absolute z-[3] flex items-center justify-center rounded-full transition-transform duration-150 active:scale-[0.94]",
-        filled ? "text-white" : "bg-white dark:bg-[hsl(var(--surface))]",
+        "path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.94]",
+        filled ? "text-white" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
         wiggle && "path-wiggle-flat",
       )}
       style={{
-        left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size,
+        left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: radius,
         color: filled ? undefined : `hsl(${tone})`,
-        background: filled ? `linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 58%), hsl(${tone})` : undefined,
-        border: filled ? "3px solid hsl(var(--surface))" : `3px solid hsl(${tone} / 0.32)`,
-        boxShadow: filled
+        background: badge ? undefined : filled ? `linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 58%), hsl(${tone})` : undefined,
+        border: badge ? undefined : filled ? "3px solid hsl(var(--surface))" : `3px solid hsl(${tone} / 0.32)`,
+        boxShadow: badge ? undefined : filled
           ? `0 9px 18px -9px hsl(${tone} / 0.75), inset 0 -3px 0 rgba(0,0,0,0.06)`
           : "0 6px 16px -9px rgba(16,42,56,0.32)",
       }}>
       {look === "current" && (
-        <span aria-hidden="true" className="path-halo pointer-events-none absolute rounded-full"
-          style={{ inset: -(pressedRing ?? 11), background: `hsl(${tone} / 0.16)`, boxShadow: `0 0 0 1px hsl(${tone} / 0.2)` }} />
+        <span aria-hidden="true" className="path-halo pointer-events-none absolute"
+          style={{ inset: -(pressedRing ?? 11), borderRadius: shape === "square" ? "36%" : "9999px", background: `hsl(${tone} / 0.16)`, boxShadow: `0 0 0 1px hsl(${tone} / 0.2)` }} />
+      )}
+      {/* A game: the same colours on a wavy badge edge. */}
+      {badge && (
+        <svg aria-hidden="true" width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0"
+          style={{ filter: filled ? `drop-shadow(0 7px 8px hsl(${tone} / 0.45))` : "drop-shadow(0 5px 7px rgba(16,42,56,0.22))" }}>
+          <defs>
+            <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff" stopOpacity={filled ? 0.26 : 0} />
+              <stop offset="0.58" stopColor="#fff" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <path d={badgePath(size)} fill={filled ? `hsl(${tone})` : "hsl(var(--surface))"}
+            stroke={filled ? "hsl(var(--surface))" : `hsl(${tone} / 0.45)`} strokeWidth={3} strokeLinejoin="round" />
+          {filled && <path d={badgePath(size)} fill={`url(#${gid})`} />}
+        </svg>
       )}
       <span className="relative flex items-center justify-center">{children}</span>
     </button>

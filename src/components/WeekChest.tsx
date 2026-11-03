@@ -61,7 +61,7 @@ export const WeekChest = ({
   };
 
   const open = async () => {
-    haptics.medium();
+    haptics.drumroll();
     // Her world now, to say what grew since the last chest.
     const islands = buildIslands(trackers, entries);
     const routes = buildRoutes(trackers, entries, islands);
@@ -304,7 +304,12 @@ export const WeekChest = ({
             ))}
             <div className="mt-6 w-full max-w-sm">
               {shown < cards(rec).length ? (
-                <Pressable tone="gold" haptic="none" onClick={() => { haptics.medium(); setShown((n) => n + 1); }} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+                <Pressable tone="gold" haptic="none" onClick={() => {
+                  // The world-grew card sparkles, the others land.
+                  const nextIsWorld = !!rec.fresh && shown === cards(rec).length - (rec.mission ? 3 : 2);
+                  if (nextIsWorld) haptics.sparkle(); else haptics.land();
+                  setShown((n) => n + 1);
+                }} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                   {t("path.chest.next")}
                 </Pressable>
               ) : rec.placed ? (

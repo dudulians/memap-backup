@@ -1,7 +1,7 @@
 // "Predict" (src/lib/predict.ts): guess how up to three of tonight's
 // questions will go, then, once answered, see how well you know your days.
 // Same full-screen frame as GuessGame. Never a loss: a miss "surprised you".
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Check, Sparkles, X } from "lucide-react";
@@ -40,6 +40,11 @@ export const PredictGame = ({ state, trackers, entries, onClose }: {
     return { rows, hit: rows.filter((r) => r.guess === r.real).length };
   }, [state, entries]);
 
+  // The reveal: sparkles when most guesses were right, a soft beat if not.
+  useEffect(() => {
+    if (!result) return;
+    if (result.hit * 2 >= result.rows.length) haptics.sparkle(); else haptics.soft();
+  }, [result]);
   const pick = (id: string, v: boolean) => {
     haptics.tap();
     const next = { ...guesses, [id]: v };

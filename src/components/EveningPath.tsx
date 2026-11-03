@@ -27,7 +27,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, Scenery, WEEK_TITLES, WeekBanner, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, Scenery, WEEK_TITLES, WeekBanner, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -205,6 +205,14 @@ export const EveningPath = ({
     if (s.kind === "unload") return "198 55% 58%";
     if (s.kind === "fill") return "205 46% 58%";
     return "var(--coin-teal)";
+  };
+  /** Games wear a wavy badge, practices and tasks a rounded square, the rest is round. */
+  const shapeOf = (n: PNode): NodeShape => {
+    if (n.kind !== "step") return "circle";
+    const k = n.step.kind;
+    if (k === "game" || k === "predict" || k === "unload") return "badge";
+    if (k === "task" || k === "test" || k === "act") return "square";
+    return "circle";
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
     const current = i === currentNode;
@@ -559,7 +567,7 @@ export const EveningPath = ({
                     second={i === currentNode && n.kind === "step" && n.step.kind === "task" ? t("path.skip") : undefined}
                     onSecond={() => { if (n.kind === "step" && n.step.task) { skipTask(n.step.task); setTick((k) => k + 1); } }} />
                 )}
-                <PathNode stop={p} look={lockedGame ? "todo" : v.look} hue={v.hue} label={v.title} onClick={() => tap(i)} dataStop={i}
+                <PathNode stop={p} look={lockedGame ? "todo" : v.look} hue={v.hue} shape={shapeOf(n)} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
                 </PathNode>

@@ -115,6 +115,21 @@ export const primeHaptics = () => {
   window.addEventListener("keydown", prime, opts);
 };
 
+type Beat = { t: number; i: number; s: number };
+/** iOS: the exact pattern; Android: impacts at the same times; web: vibrate(ms…). */
+const pattern = (beats: Beat[], android: ImpactStyle[], web: number[]) => {
+  if (!isHapticsEnabled()) return;
+  if (isIOS) {
+    CoreHaptics.play({ events: beats }).catch(() => safe(CoreHaptics.tap()));
+    return;
+  }
+  if (isAndroid) {
+    beats.forEach((b, k) => window.setTimeout(() => safe(Haptics.impact({ style: android[k] ?? ImpactStyle.Light })), b.t * 1000));
+    return;
+  }
+  webVibrate(web.length === 1 ? web[0] : web);
+};
+
 export const haptics = {
   /** Light swipe-commit pulse. */
   swipe: () => {
@@ -157,6 +172,33 @@ export const haptics = {
     if (isAndroid) { safe(Haptics.notification({ type: NotificationType.Warning })); return; }
     webVibrate([20, 80, 20]);
   },
+
+  // --- Varied patterns (Nov 2026, her ask: "разные вибрации везде") ---
+  // iOS plays them through CoreHaptics.play (older builds without it fall
+  // back to a tap); Android strings light/medium impacts; the web vibrates.
+
+  /** A bubble popping: small = light and crisp, big = deeper and softer. */
+  pop: (size = 0.3) => {
+    const z = Math.max(0, Math.min(1, size));
+    pattern([{ t: 0, i: 0.35 + 0.5 * z, s: 0.85 - 0.45 * z }], z > 0.5 ? [ImpactStyle.Medium] : [ImpactStyle.Light], [6 + Math.round(z * 14)]);
+  },
+  /** Two things joining: one dull, soft thud. */
+  merge: () => pattern([{ t: 0, i: 0.3, s: 0.15 }], [ImpactStyle.Light], [8]),
+  /** A big one bursting: three quick fading taps. */
+  burst: () => pattern([{ t: 0, i: 0.8, s: 0.5 }, { t: 0.05, i: 0.45, s: 0.7 }, { t: 0.1, i: 0.25, s: 0.9 }], [ImpactStyle.Medium, ImpactStyle.Light, ImpactStyle.Light], [18, 30, 8, 30, 5]),
+  /** Something nice found: three light, rising sparkles. */
+  sparkle: () => pattern([{ t: 0, i: 0.3, s: 0.9 }, { t: 0.08, i: 0.4, s: 0.95 }, { t: 0.16, i: 0.55, s: 1 }], [ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Medium], [5, 50, 6, 50, 9]),
+  /** Kept / started: a gentle swell. */
+  rise: () => pattern([{ t: 0, i: 0.2, s: 0.3 }, { t: 0.07, i: 0.38, s: 0.4 }, { t: 0.14, i: 0.6, s: 0.5 }], [ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Medium], [6, 40, 9, 40, 14]),
+  /** Before a reveal (the chest): a drum roll and one strong beat. */
+  drumroll: () => pattern(
+    [{ t: 0, i: 0.3, s: 0.5 }, { t: 0.12, i: 0.34, s: 0.5 }, { t: 0.22, i: 0.38, s: 0.55 }, { t: 0.3, i: 0.42, s: 0.6 }, { t: 0.36, i: 0.46, s: 0.6 }, { t: 0.41, i: 0.5, s: 0.65 }, { t: 0.56, i: 1, s: 0.6 }],
+    [ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Light, ImpactStyle.Heavy],
+    [8, 110, 8, 90, 8, 70, 8, 50, 8, 40, 8, 140, 40]),
+  /** A card landing: one solid, warm beat. */
+  land: () => pattern([{ t: 0, i: 0.6, s: 0.35 }], [ImpactStyle.Medium], [14]),
+  /** Barely there: theme switch, a quiet choice. */
+  soft: () => pattern([{ t: 0, i: 0.22, s: 0.2 }], [ImpactStyle.Light], [4]),
 
   /** Error pattern — failed action that the user should notice. */
   error: () => {

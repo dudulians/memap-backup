@@ -197,7 +197,7 @@ const Index = () => {
         <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
         <button
           type="button"
-          onClick={() => { haptics.tap(); toggleNight(); }}
+          onClick={() => { haptics.soft(); toggleNight(); }}
           aria-label={night ? t("common.dayMode") : t("common.nightMode")}
           className="absolute right-12 bottom-1.5 h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
         >

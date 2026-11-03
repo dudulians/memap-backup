@@ -131,6 +131,85 @@ export const playSwipeSound = (kind: FeedbackKind) => {
   }
 };
 
+// --- Bubble sounds ("Unload your mind", Nov 2026: "звуки, когда лопаются пузыри") ---
+// Made here, no files: a short "bloop" (a sine that drops in pitch), lower for
+// bigger bubbles and a little different each time so many pops don't drone.
+// Ambient audio on iOS: the silent switch mutes it and music keeps playing.
+
+/** The app's sound setting (Settings → sounds), on unless she turned it off. */
+export const soundOn = (): boolean => {
+  try {
+    const raw = localStorage.getItem("memap_session_settings");
+    return raw ? JSON.parse(raw)?.soundEnabled !== false : true;
+  } catch {
+    return true;
+  }
+};
+
+const ready = (): AudioContext | null => {
+  const ctx = getCtx();
+  if (!ctx) return null;
+  try {
+    const nav = navigator as unknown as { audioSession?: { type: string } };
+    if (nav.audioSession && nav.audioSession.type !== "ambient") nav.audioSession.type = "ambient";
+  } catch { /* older WebViews */ }
+  if (ctx.state === "suspended") ctx.resume().catch(() => { /* ignore */ });
+  return ctx;
+};
+
+const bloop = (ctx: AudioContext, from: number, to: number, start: number, length: number, peak: number) => {
+  const t = ctx.currentTime + start;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + length);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + 0.006);
+  g.gain.linearRampToValueAtTime(0.0001, t + length);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + length + 0.03);
+};
+
+/** A bubble popping; size 0 (small) .. 1 (big). */
+export const playPop = (size = 0.3) => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try {
+    const z = Math.max(0, Math.min(1, size));
+    const f = (980 - 520 * z) * (0.92 + Math.random() * 0.16);
+    bloop(ctx, f, f * 0.5, 0, 0.07 + 0.05 * z, 0.09 + 0.05 * z);
+  } catch { /* audio never blocks the UI */ }
+};
+/** Two bubbles joining: a soft low blub. */
+export const playMerge = () => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try { bloop(ctx, 260, 340, 0, 0.09, 0.05); } catch { /* ignore */ }
+};
+/** A big bubble bursting: three quick bloops going up. */
+export const playBurst = () => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try {
+    [520, 700, 900].forEach((f, k) => bloop(ctx, f, f * 0.55, k * 0.045, 0.07, 0.08));
+  } catch { /* ignore */ }
+};
+/** A thought kept for later: a small rising chime. */
+export const playKeep = () => {
+  if (!soundOn()) return;
+  const ctx = ready();
+  if (!ctx) return;
+  try {
+    tone(ctx, [659.25], { start: 0, duration: 0.1, peak: 0.07 });
+    tone(ctx, [987.77], { start: 0.08, duration: 0.16, peak: 0.07 });
+  } catch { /* ignore */ }
+};
+
 export const triggerHaptic = async (kind: "light" | "medium" | "heavy") => {
   // Prefer the native Capacitor plugin on iOS/Android — especially on iOS
   // where `navigator.vibrate` is a no-op. We log every step so that if

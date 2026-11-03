@@ -40,6 +40,8 @@ export interface CoreHapticsPlugin {
    * UIFeedbackGenerator via @capacitor/haptics when this is false.
    */
   isAvailable(): Promise<{ available: boolean }>;
+  /** A short pattern: t = seconds from start, i = intensity, s = sharpness (0..1). */
+  play(o: { events: { t: number; i: number; s: number }[] }): Promise<void>;
 }
 
 const noop = async () => {};
@@ -56,6 +58,7 @@ const CoreHaptics = registerPlugin<CoreHapticsPlugin>("CoreHaptics", {
     warning: noop,
     error: noop,
     isAvailable: async () => ({ available: false }),
+    play: noop,
   }),
 });
 

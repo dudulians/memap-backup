@@ -9,8 +9,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Archive, ArrowUp, X } from "lucide-react";
+import { Archive, ArrowUp, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
+import { playBurst, playKeep, playMerge, playPop } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
 import { addNote } from "@/lib/notes";
 import { isoLocal } from "@/lib/doors";
@@ -42,6 +43,10 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   const [saved, setSaved] = useState(false);
   // The loop reads these through a ref (no re-render per frame).
   const api = useRef<{ add: (s: string) => void } | null>(null);
+  // Pop sounds (her ask), with their own mute here; Settings → sounds mutes them too.
+  const [muted, setMuted] = useState(() => { try { return localStorage.getItem("memap_unload_sound") === "off"; } catch { return false; } });
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
 
   useEffect(() => { markUnloadPlayed(); }, []);
 
@@ -49,7 +54,8 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
     const canvas = cv.current!, box = wrap.current!, ctx = canvas.getContext("2d")!;
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const speed = reduce ? 0.45 : 1;
-    let W = 0, H = 0, dpr = 1, raf = 0, alive = true, nextId = 1, lastSpawn = 0, lastTap = 0;
+    let W = 0, H = 0, dpr = 1, raf = 0, alive = true, nextId = 1, lastSpawn = 0, lastTap = 0, lastMerge = 0;
+    const sound = () => !mutedRef.current;
     let bubbles: Bubble[] = [];
     let bursts: Burst[] = [];
     const resize = () => {
@@ -97,7 +103,13 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
       bubbles = bubbles.filter((x) => x !== b);
       bursts.push({ x: b.x, y: b.y, r: b.r, c: b.c, t: 0 });
       const now = performance.now();
-      if (now - lastTap > 55) { haptics.tap(); lastTap = now; }
+      // Each pop sounds and feels its size; a big one bursts.
+      if (now - lastTap > 55) {
+        const z = b.text ? 0.65 : Math.min(1, b.r / MAX_R);
+        if (!b.text && b.r > 40) { haptics.burst(); if (sound()) playBurst(); }
+        else { haptics.pop(z); if (sound()) playPop(z); }
+        lastTap = now;
+      }
       if (b.text) setLetGo((n) => n + 1);
       else setPopped((n) => n + 1);
       // A big one bursts into small ones (there's always more to pop).
@@ -112,7 +124,8 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
     };
     const keep = (b: Bubble) => {
       bubbles = bubbles.filter((x) => x !== b);
-      haptics.medium();
+      haptics.rise();
+      if (sound()) playKeep();
       if (b.text) setKept((k) => [...k, b.text!]);
       bursts.push({ x: b.x, y: b.y, r: b.r, c: -1, t: 0 });
     };
@@ -168,6 +181,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
             big.x = (big.x * big.r ** 2 + small.x * small.r ** 2) / (big.r ** 2 + small.r ** 2);
             big.y = (big.y * big.r ** 2 + small.y * small.r ** 2) / (big.r ** 2 + small.r ** 2);
             big.r = Math.hypot(a.r, b.r); big.vy = Math.max(big.vy, small.vy) * 0.85; big.grow = 0.9;
+            if (now - lastMerge > 160) { haptics.merge(); if (sound()) playMerge(); lastMerge = now; }
             bubbles = bubbles.filter((x) => x !== small);
             j = bubbles.length; // restart the inner loop next frame
             continue;
@@ -266,6 +280,11 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
           <X className="h-6 w-6" />
         </button>
         <p className="min-w-0 flex-1 truncate text-[17px] font-bold">{t("unload.title")}</p>
+        <button type="button" onClick={() => { haptics.soft(); setMuted((m) => { try { localStorage.setItem("memap_unload_sound", m ? "on" : "off"); } catch { /* ignore */ } return !m; }); }}
+          aria-label={muted ? t("unload.soundOn") : t("unload.soundOff")} aria-pressed={!muted}
+          className="surface flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
+          {muted ? <VolumeX className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Volume2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}
+        </button>
         {kept.length > 0 && (
           <span className="surface inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-bold">
             <Archive className="h-4 w-4 text-[hsl(var(--coin-gold))]" strokeWidth={2.4} /> {kept.length}
