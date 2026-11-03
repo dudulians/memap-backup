@@ -9,9 +9,12 @@
 // dark rim); islands sink behind the horizon instead of standing in the sky;
 // fewer waves and filler islands, so hers lead; a found link is a line on
 // the ball (no flat bridge pictures); weather sits on its island's corner.
+// Later that night: it rolls with the finger (it was "слишком туго"), glides
+// on after a flick and slows down by itself; a tapped island presses in and a
+// ring spreads on the water; day/night redraws it in place, turned as it was.
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
+import { Island, IslandId, Route, islandName, isNightMap, mapPic, mapPicFor } from "@/lib/islands";
 import { growthLand, type GrowthKind } from "@/lib/growth";
 import { haptics } from "@/lib/haptics";
 import { playBloop } from "@/lib/feedback";
@@ -23,6 +26,15 @@ const axisRot = ([x, y, z]: V3, a: number): M3 => { const c = Math.cos(a), s = M
 const app = (A: M3, [x, y, z]: V3): V3 => [A[0] * x + A[1] * y + A[2] * z, A[3] * x + A[4] * y + A[5] * z, A[6] * x + A[7] * y + A[8] * z];
 const vec = (lon: number, lat: number): V3 => { const l = lon * Math.PI / 180, p = lat * Math.PI / 180; return [Math.cos(p) * Math.sin(l), Math.sin(p), Math.cos(p) * Math.cos(l)]; };
 const ease = (x: number) => (x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+
+// Pictures by address, kept across redraws (day/night, her avatar), so a
+// switch never shows the ball without its islands.
+const IMAGES = new Map<string, HTMLImageElement>();
+const image = (url: string) => {
+  let im = IMAGES.get(url);
+  if (!im) { im = new Image(); im.decoding = "async"; im.src = url; IMAGES.set(url, im); }
+  return im;
+};
 
 interface Thing { lon: number; lat: number; w: number; base?: string; land?: [string, number, number, number][]; cloud?: boolean; locked?: boolean; fx?: number; fy?: number; island?: Island }
 
@@ -52,6 +64,16 @@ const BOAT: Thing = { lon: 1, lat: 5, fx: 210, fy: 322, w: 46 };
 
 export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }: { islands: Island[]; routes: Route[]; growth?: Record<string, GrowthKind[]>; avatar?: string | null; onOpen: (id: IslandId) => void }) => {
   const { t } = useTranslation();
+  // Day or night: redrawn in place, the ball turned as it was (it used to
+  // start over, and the Map tab fell back to the flat map).
+  const [night, setNight] = useState(isNightMap);
+  useEffect(() => {
+    const sync = () => setNight(isNightMap());
+    window.addEventListener("memap-theme-changed", sync);
+    return () => window.removeEventListener("memap-theme-changed", sync);
+  }, []);
+  const camRef = useRef<M3 | null>(null);
+  const flatRef = useRef(false);
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
   const [flat, setFlat] = useState(false);
@@ -65,12 +87,18 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
   useEffect(() => {
     const canvas = cv.current!, box = wrap.current!, ctx = canvas.getContext("2d")!;
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const night = isNightMap();
     const FONT = `"DM Sans", "Onest", system-ui, -apple-system, sans-serif`;
-    const IMG = new Map<string, HTMLImageElement>();
     let raf = 0, alive = true;
     const kick = () => { if (!raf && alive) raf = requestAnimationFrame(frame); };
-    const pic = (n: string) => { let im = IMG.get(n); if (!im) { im = new Image(); im.onload = kick; im.src = mapPic(n); IMG.set(n, im); } return im; };
+    // every picture drawn, so the other theme's can load ahead
+    const used = new Set<string>(), waiting = new Set<HTMLImageElement>();
+    const pic = (n: string) => {
+      used.add(n);
+      const im = image(mapPic(n));
+      if (!im.complete && !waiting.has(im)) { waiting.add(im); im.addEventListener("load", () => { waiting.delete(im); kick(); }, { once: true }); }
+      return im;
+    };
+    const ahead = window.setTimeout(() => { if (alive) used.forEach((n) => image(mapPicFor(n, !night))); }, 1500);
     let av: HTMLImageElement | null = null;
     const avatarImg = () => { if (!avatar) return null; if (!av) { av = new Image(); av.onload = kick; av.src = avatar; } return av; };
 
@@ -92,6 +120,9 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
     const ro = new ResizeObserver(resize); ro.observe(box);
     { const f = focusDir(); roll(0, -(Math.asin(f[1]) + 2 * Math.PI / 180)); }
     const MHOME = M.slice();
+    // drawn again (day/night, her avatar): as it was
+    if (camRef.current) M = camRef.current.slice();
+    tv = tTarget = flatRef.current ? 1 : 0;
 
     const place = (o: Thing, morph: boolean) => {
       const g = geom(), [x, y, z] = app(M, vec(o.lon, o.lat)), gx = g.cx + g.R * x, gy = g.cy - g.R * y;
@@ -102,9 +133,21 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
       return { x: px, y: py, z, sc, fz, al, ang: Math.atan2(gy - g.cy, gx - g.cx) * (1 - e) };
     };
     type P = ReturnType<typeof place>;
-    const drawThing = (o: Thing, p: P) => {
+    // A tap: the island presses in and eases back up (no bounce), and a ring
+    // spreads on the water around it.
+    let press: { o: Thing; t0: number } | null = null;
+    const rings: { o: Thing; t0: number }[] = [];
+    const pressScale = (o: Thing, now: number) => {
+      if (!press || press.o !== o) return 1;
+      const u = now - press.t0;
+      if (u < 110) return 1 - .08 * (u / 110);
+      const v = Math.min(1, (u - 110) / 420);
+      if (v >= 1) press = null;
+      return .92 + .08 * (1 - Math.pow(1 - v, 3));
+    };
+    const drawThing = (o: Thing, p: P, k = 1) => {
       if (p.al <= .01) return;
-      ctx.save(); ctx.globalAlpha = p.al; ctx.translate(p.x, p.y); ctx.rotate(p.ang); ctx.scale(p.fz, 1); ctx.rotate(-p.ang);
+      ctx.save(); ctx.globalAlpha = p.al; ctx.translate(p.x, p.y); ctx.rotate(p.ang); ctx.scale(p.fz * k, k); ctx.rotate(-p.ang);
       const draw = (n: string, cx: number, cy: number, w: number) => { const im = pic(n); if (!im.complete || !im.naturalWidth) return; const h = w * im.naturalHeight / im.naturalWidth; ctx.drawImage(im, cx - w / 2, cy - h / 2, w, h); return h; };
       if (o.locked) draw("unexplored", 0, -o.w * p.sc * .28, o.w * p.sc);
       else if (o.cloud) { const w = o.w * p.sc; draw("cloud_large", 0, -w * .7, w); draw("cloud_large", w * .3, -w * 1.05, w * .75); }
@@ -122,12 +165,15 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
     const SKY: Record<string, [string, number]> = { storm: ["thunder_cloud", 52], clouds: ["partly_cloudy", 46], sun: ["sun", 42] };
     const WAVES: V3[] = []; { const N = 110; for (let i = 0; i < N; i++) { const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), th = i * 2.399963; WAVES.push([r * Math.sin(th), y, r * Math.cos(th)]); } }
 
-    let dragging = false, awayNow = false;
+    let dragging = false, awayNow = false, lastT = 0;
     function frame() {
       raf = 0;
       let moving = false;
+      // the glide counts time, not frames (60 or 120 a second)
+      const now = performance.now(), dt = lastT ? Math.min(3, (now - lastT) / 16.7) : 1;
+      lastT = now;
       if (spin) { spin.k = Math.min(1, spin.k + .06); M = mul(axisRot(spin.axis, spin.ang * ease(spin.k)), spin.M0); moving = true; if (spin.k >= 1) { const then = spin.then; spin = null; then?.(); } }
-      else if (!dragging && (vx || vy)) { roll(vx, vy); vx *= .88; vy *= .88; if (Math.abs(vx) + Math.abs(vy) < .0002) vx = vy = 0; moving = true; }
+      else if (!dragging && (vx || vy)) { roll(vx * dt, vy * dt); const f = Math.pow(.95, dt); vx *= f; vy *= f; if (Math.abs(vx) + Math.abs(vy) < .0003) vx = vy = 0; moving = true; }
       if (tv !== tTarget) { tv += (tTarget - tv) * (reduce ? 1 : .14); if (Math.abs(tTarget - tv) < .002) tv = tTarget; moving = true; }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
       const g = geom(), e = ease(tv), ga = 1 - e;
@@ -170,7 +216,18 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
         if (e > .01) { const fb = flatBox(), pa = P.get(a)!, pb = P.get(b)!, bend = (i % 2 ? -40 : 36) * fb.s, mx = (pa.x + pb.x) / 2 + bend, my = (pa.y + pb.y) / 2; ctx.save(); ctx.globalAlpha = e * .85; ctx.strokeStyle = "#2A8F80"; ctx.lineWidth = 3.5; ctx.setLineDash([1, 10]); ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.quadraticCurveTo(mx, my, pb.x, pb.y); ctx.stroke(); ctx.restore(); pill((pa.x + pb.x) / 2 + bend / 2, my, label, null, e, true); }
       });
       const items = [...SCENERY.map((o) => ({ o, p: place(o, false) })), ...UNEXPLORED.map((o) => ({ o, p: place(o, true) })), ...things.map((o) => ({ o, p: P.get(o.island!.id)! }))].sort((m, n) => m.p.z - n.p.z);
-      items.forEach(({ o, p }) => drawThing(o, p));
+      // rings on the water first, under the islands
+      for (let i = rings.length - 1; i >= 0; i--) {
+        const r = rings[i], u = (now - r.t0) / 760;
+        if (u >= 1) { rings.splice(i, 1); continue; }
+        const p = r.o.island ? P.get(r.o.island.id) : place(r.o, true);
+        if (!p || p.al < .05) continue;
+        const grow = 1 - Math.pow(1 - u, 2), rw = r.o.w * p.sc * (.32 + .5 * grow);
+        ctx.save(); ctx.globalAlpha = p.al * .9 * (1 - u); ctx.strokeStyle = night ? "rgba(190,215,255,.8)" : "#fff"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + r.o.w * p.sc * (r.o.locked ? -.1 : .16), rw, rw * .3 * Math.max(.4, p.fz), 0, 0, 7); ctx.stroke(); ctx.restore();
+      }
+      if (rings.length || press) moving = true;
+      items.forEach(({ o, p }) => drawThing(o, p, pressScale(o, now)));
       // the little boat: you, among your islands
       const bp = place(BOAT, true), boat = pic("sailboat");
       if (boat.complete && boat.naturalWidth && bp.al > .05) {
@@ -189,7 +246,9 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
       // names last, so no weather picture covers them
       things.forEach((o) => { const isl = o.island!, p = P.get(isl.id)!; pill(p.x, p.y + o.w * p.sc * .34, islandName(t, isl.id), "icon_" + isl.def.icon, Math.max(e, Math.min(1, (p.z - .3) * 3)) * p.al, false); });
       if (ga > .01) { ctx.save(); ctx.globalAlpha = ga; const rim = ctx.createRadialGradient(g.cx, g.cy, g.R * .9, g.cx, g.cy, g.R); rim.addColorStop(0, "rgba(255,255,255,0)"); rim.addColorStop(1, night ? "rgba(170,220,255,.22)" : "rgba(255,255,255,.42)"); ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(g.cx, g.cy, g.R, 0, 7); ctx.fill(); ctx.restore(); }
+      camRef.current = M;
       if (moving || dragging) kick();
+      else lastT = 0;
     }
 
     // turn the ball so `target` faces you, then run `then`
@@ -203,34 +262,52 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, onOpen }
       if (!best) return;
       haptics.pop(0.55);
       playBloop(x / W);
+      if (!reduce) { press = { o: best, t0: performance.now() }; rings.push({ o: best, t0: performance.now() }); kick(); }
       if (best.locked) { setNote(t("map.unexplored")); return; }
       const id = best.island!.id;
-      if (tTarget === 1) onOpenRef.current(id); else turnTo(best.lon, best.lat, () => onOpenRef.current(id));
+      // on the flat map: the press shows first, then the island opens
+      if (tTarget === 1) window.setTimeout(() => { if (alive) onOpenRef.current(id); }, reduce ? 0 : 160);
+      else turnTo(best.lon, best.lat, () => onOpenRef.current(id));
     };
 
-    // input: drag to roll (calm, short glide), tap an island, pinch for the flat map
+    // input: drag to roll (the ball under the finger follows it), a flick
+    // glides on and slows down by itself; tap an island; pinch for the flat map
     const pts = new Map<number, [number, number]>(); let down: { t: number; moved: number } | null = null, pinch0 = 0;
+    let trail: [number, number, number][] = [];
     const local = (ev: PointerEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
     const onDown = (ev: PointerEvent) => { canvas.setPointerCapture(ev.pointerId); pts.set(ev.pointerId, local(ev)); spin = null; setNote(null);
-      if (pts.size === 1) { dragging = true; down = { t: performance.now(), moved: 0 }; vx = vy = 0; }
+      if (pts.size === 1) { dragging = true; down = { t: performance.now(), moved: 0 }; vx = vy = 0; trail = []; }
       if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); } };
     const onMove = (ev: PointerEvent) => { if (!pts.has(ev.pointerId)) return; const prev = pts.get(ev.pointerId)!, cur = local(ev); pts.set(ev.pointerId, cur);
       if (pts.size === 2 && pinch0) { const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); return; }
-      if (!dragging || tTarget === 1 || !down) return; const dx = cur[0] - prev[0], dy = cur[1] - prev[1], k = .55 / geom().R; down.moved += Math.abs(dx) + Math.abs(dy);
-      roll(dx * k, dy * k); const cap = .012; vx = Math.max(-cap, Math.min(cap, dx * k * .6)); vy = Math.max(-cap, Math.min(cap, dy * k * .6)); if (down.moved > 12) setHint(false); kick(); };
+      if (!dragging || tTarget === 1 || !down) return; const dx = cur[0] - prev[0], dy = cur[1] - prev[1], k = 1 / geom().R; down.moved += Math.abs(dx) + Math.abs(dy);
+      roll(dx * k, dy * k); const now = performance.now(); trail.push([now, dx * k, dy * k]); trail = trail.filter(([t0]) => now - t0 < 90);
+      if (down.moved > 12) setHint(false); kick(); };
     const onUp = (ev: PointerEvent) => { if (!pts.has(ev.pointerId)) return; pts.delete(ev.pointerId); if (pts.size < 2) pinch0 = 0;
-      if (pts.size === 0) { dragging = false; if (reduce) vx = vy = 0; if (down && down.moved < 8 && performance.now() - down.t < 400) tap(...local(ev)); down = null; kick(); } };
+      if (pts.size === 0) {
+        dragging = false;
+        // the speed of the last moments of the drag, per 60th of a second
+        const now = performance.now(), recent = trail.filter(([t0]) => now - t0 < 90);
+        if (!reduce && recent.length > 1) {
+          const span = Math.max(16, now - recent[0][0]) / 16.7, cap = .06;
+          vx = Math.max(-cap, Math.min(cap, recent.reduce((a, r) => a + r[1], 0) / span));
+          vy = Math.max(-cap, Math.min(cap, recent.reduce((a, r) => a + r[2], 0) / span));
+        } else vx = vy = 0;
+        trail = [];
+        if (down && down.moved < 8 && now - down.t < 400) tap(...local(ev));
+        down = null; kick();
+      } };
     canvas.addEventListener("pointerdown", onDown); canvas.addEventListener("pointermove", onMove); canvas.addEventListener("pointerup", onUp); canvas.addEventListener("pointercancel", onUp);
 
     api.current = {
-      setFlat: (v) => { tTarget = v ? 1 : 0; vx = vy = 0; spin = null; setFlat(v); kick(); },
+      setFlat: (v) => { tTarget = v ? 1 : 0; flatRef.current = v; vx = vy = 0; spin = null; setFlat(v); kick(); },
       home: () => { vx = vy = 0; const T = [M[0], M[3], M[6], M[1], M[4], M[7], M[2], M[5], M[8]], R = mul(MHOME, T), ang = Math.acos(Math.max(-1, Math.min(1, (R[0] + R[4] + R[8] - 1) / 2)));
         if (ang < 1e-4) return; const s = 2 * Math.sin(ang); let ax: V3 = [(R[7] - R[5]) / s, (R[2] - R[6]) / s, (R[3] - R[1]) / s]; const n = Math.hypot(...ax);
         if (!isFinite(n) || n < 1e-6) { M = MHOME.slice(); kick(); return; } ax = ax.map((c) => c / n) as V3; spin = { k: reduce ? 1 : 0, M0: M, axis: ax, ang }; kick(); },
     };
     kick();
-    return () => { alive = false; cancelAnimationFrame(raf); ro.disconnect(); canvas.removeEventListener("pointerdown", onDown); canvas.removeEventListener("pointermove", onMove); canvas.removeEventListener("pointerup", onUp); canvas.removeEventListener("pointercancel", onUp); };
-  }, [islands, routes, growth, avatar, t]);
+    return () => { alive = false; cancelAnimationFrame(raf); window.clearTimeout(ahead); ro.disconnect(); canvas.removeEventListener("pointerdown", onDown); canvas.removeEventListener("pointermove", onMove); canvas.removeEventListener("pointerup", onUp); canvas.removeEventListener("pointercancel", onUp); };
+  }, [islands, routes, growth, avatar, t, night]);
 
   void setFlat;
   return (

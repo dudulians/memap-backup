@@ -45,8 +45,11 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen === "all" ? "all" : null);
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
-  // One switch: the flat map or the rolling globe (her note: one place to switch).
-  const [view, setView] = useState<"map" | "globe">("map");
+  // One switch: the flat map or the rolling globe (her note: one place to
+  // switch); remembered, so she comes back to the one she left.
+  const [view, setView] = useState<"map" | "globe">(() => {
+    try { return localStorage.getItem("memap_map_view") === "globe" ? "globe" : "map"; } catch { return "map"; }
+  });
   // Calendar / chart / lighthouses straight away, no tabs inside (her note).
   const [only, setOnly] = useState<Only | null>(initialOpen && initialOpen !== "all" ? initialOpen : null);
   // Which island the calendar / chart / action points show (null: all).
@@ -153,7 +156,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {loaded && islands.length > 0 && (
             <div className="inline-flex shrink-0 rounded-full bg-foreground/[0.06] p-0.5" role="tablist" aria-label={t("map.viewAria")}>
               {(["map", "globe"] as const).map((v) => (
-                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
+                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } }}
                   className={`h-8 rounded-full px-3.5 text-[14px] font-bold transition-colors ${view === v ? "surface text-foreground" : "text-muted-foreground"}`}>
                   {v === "map" ? t("map.flat") : t("map.globe")}
                 </button>

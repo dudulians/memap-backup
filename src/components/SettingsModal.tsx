@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { resetTourSeen } from "@/components/OnboardingTour";
 import { resetCoachmarkSeen, resetTourKey } from "@/components/CoachmarkTour";
-import { getTheme, setTheme, getLegacyTheme, AppTheme } from "@/lib/theme";
+import { getTheme, switchTheme, getLegacyTheme, AppTheme } from "@/lib/theme";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { Filesystem, Directory, Encoding } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
@@ -214,7 +214,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
   const handleThemeChange = (next: AppTheme) => {
     setThemeState(next);
-    setTheme(next);
+    switchTheme(next);
   };
 
   const handleToggleIdeas = (show: boolean) => {

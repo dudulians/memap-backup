@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 export type AppTheme = "classic" | "aurora" | "aurora-light" | "liquid" | "terra" | "pop" | "hush";
 
 const THEME_KEY = "memap_theme";
@@ -66,11 +67,21 @@ export const applyTheme = (theme: AppTheme): void => {
 
 /** Night or day on the new screens: dark Aurora with her night pack, or Aurora Light. */
 export const isNight = (): boolean => getTheme() === "aurora";
-export const toggleNight = (): void => setTheme(isNight() ? "aurora-light" : "aurora");
+export const toggleNight = (): void => switchTheme(isNight() ? "aurora-light" : "aurora");
 
 export const setTheme = (theme: AppTheme): void => {
   localStorage.setItem(THEME_KEY, theme);
   applyTheme(theme);
   window.dispatchEvent(new Event("memap-theme-changed"));
   trackThemeChange(theme);
+};
+
+/** A theme switch she makes: the screen stays where it is and cross-fades
+ *  (280 ms, index.css) where the system can (iOS 18+, Chrome); at once on
+ *  older systems and with Reduce Motion. */
+export const switchTheme = (theme: AppTheme): void => {
+  const doc = document as Document & { startViewTransition?: (update: () => void) => unknown };
+  if (typeof doc.startViewTransition === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    doc.startViewTransition(() => flushSync(() => setTheme(theme)));
+  } else setTheme(theme);
 };

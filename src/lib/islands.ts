@@ -25,7 +25,9 @@ export const isNightMap = (): boolean =>
   typeof document !== "undefined" &&
   document.documentElement.getAttribute("data-theme") === "aurora" &&
   document.documentElement.getAttribute("data-ui") === "new";
-export const mapPic = (name: string): string => (isNightMap() && NIGHT.get(name)) || PICS.get(name) || "";
+/** A map picture for day or night (the globe loads the other one ahead). */
+export const mapPicFor = (name: string, night: boolean): string => (night && NIGHT.get(name)) || PICS.get(name) || "";
+export const mapPic = (name: string): string => mapPicFor(name, isNightMap());
 
 export type BuiltinIsland = "me" | "love" | "kids" | "health" | "body" | "pet" | "parents" | "world" | "work" | "mine" | "other";
 /** A built-in island, or one she made ("own-…"). */
