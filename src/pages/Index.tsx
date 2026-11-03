@@ -4,9 +4,10 @@ import { TodayTab } from "@/components/TodayTab";
 import { MapTab } from "@/components/MapTab";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { NotesTab } from "@/components/NotesTab";
-import { CalendarDays, ListChecks, Map as MapIcon, Moon, NotebookPen, Settings, Sun, ArrowUp } from "lucide-react";
+import { CalendarDays, CircleUser, ListChecks, Map as MapIcon, Moon, NotebookPen, Sun, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
+import { YouSheet } from "@/components/YouSheet";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
 import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
@@ -45,6 +46,22 @@ const Index = () => {
   const [questionsFrom, setQuestionsFrom] = useState<Tab>("patterns");
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  // "You": her animal, her questions, Settings, her week and treasures. Opened
+  // from a side trip (the session's "See patterns", last week's report), its
+  // close takes her back.
+  const [youOpen, setYouOpen] = useState(false);
+  const youTrip = useRef(false);
+  useEffect(() => {
+    const open = (e: Event) => { youTrip.current = !!(e as CustomEvent).detail?.trip; setYouOpen(true); };
+    window.addEventListener("memap-open-you", open);
+    return () => window.removeEventListener("memap-open-you", open);
+  }, []);
+  const closeYou = (back: boolean) => {
+    setYouOpen(false);
+    const trip = youTrip.current;
+    youTrip.current = false;
+    if (trip && back) window.dispatchEvent(new Event("memap-trip-done"));
+  };
   const [refreshKey, setRefreshKey] = useState(0);
   const [tourOpen, setTourOpen] = useState(false);
   // Report buttons ask the Map to open a sheet straight away (Findings for
@@ -237,7 +254,7 @@ const Index = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  // Her avatar, if she chose one, stands in the gear's place.
+  // Her animal stands in the gear's place and opens You (Settings is inside).
   const [avatar, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
   useEffect(() => {
     const sync = () => setAvatarPic(avatarUrl(getAvatar()));
@@ -281,11 +298,11 @@ const Index = () => {
         </button>
         <button
           data-coachmark="settings-button"
-          onClick={() => setSettingsModalOpen(true)}
-          aria-label={t("common.settings")}
+          onClick={() => { haptics.tap(); setYouOpen(true); }}
+          aria-label={t("map.you")}
           className="absolute right-2 bottom-1.5 h-10 w-10 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
         >
-          {avatar ? <img src={avatar} alt="" className="h-8 w-8 rounded-full object-contain" /> : <Settings className="h-5 w-5" strokeWidth={1.75} />}
+          {avatar ? <img src={avatar} alt="" className="h-8 w-8 rounded-full object-contain" /> : <CircleUser className="h-6 w-6" strokeWidth={1.75} />}
         </button>
       </header>
 
@@ -394,6 +411,10 @@ const Index = () => {
         onClose={() => setAddModalOpen(false)}
         onTrackerAdded={handleTrackerAdded}
       />
+
+      <YouSheet open={youOpen} onClose={() => closeYou(true)}
+        onQuestions={() => { closeYou(false); window.dispatchEvent(new Event("memap-open-questions")); }}
+        onSettings={() => { closeYou(false); window.setTimeout(() => setSettingsModalOpen(true), 250); }} />
 
       {/* Settings Modal */}
       <SettingsModal

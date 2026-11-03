@@ -316,7 +316,8 @@ export const EveningPath = ({
 
   // Room above the first step, so it too can come to the band (a picker's
   // first row does); and where the band sits. After every render, set only
-  // when it changes.
+  // when it changes (so no loop).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const main = boxRef.current?.closest("main");
     const first = main?.querySelector(".path-snap");
@@ -453,7 +454,7 @@ export const EveningPath = ({
       cancelAnimationFrame(raf);
       frameRef.current = () => undefined;
     };
-  }, [hasPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasPath]);
 
   // Her step comes to the band when Today opens, before the first paint:
   // a microtask, because Index's own layout effect (which runs after this
@@ -764,12 +765,13 @@ export const EveningPath = ({
             const lockedGame = n.kind === "step" && n.step.kind === "game" && !canPlay && !n.step.done;
             return (
               <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
-                {/* her avatar (optional) stands beside her step and rolls with it */}
+                {/* her animal stands beside her step, rolls with it, and opens You */}
                 {i === focus && avatarPic && avatar && (
-                  <div aria-hidden="true" className="path-avatar pointer-events-none absolute z-[4]" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
-                    <span className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
+                  <button type="button" aria-label={t("map.you")} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-you")); }}
+                    className="path-avatar absolute z-[4] transition-transform duration-150 active:scale-95" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
+                    <span aria-hidden="true" className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
                     <img src={avatarPic} alt="" width={48} height={48} className="relative h-[48px] w-[48px] object-contain" />
-                  </div>
+                  </button>
                 )}
                 {!(i === currentNode && open === currentNode) && (
                   <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}

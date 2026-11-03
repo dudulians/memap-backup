@@ -1396,6 +1396,9 @@ const en = {
     backToToday: "Back to Today",
   },
 
+  you: {
+    change: "Change",
+  },
   coachmark: {
     next: "Next",
     done: "Done",

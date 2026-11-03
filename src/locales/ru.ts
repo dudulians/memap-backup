@@ -1568,6 +1568,9 @@ const ru: Translation = {
     backToToday: "Назад к сегодня",
   },
 
+  you: {
+    change: "Изменить",
+  },
   coachmark: {
     next: "Дальше",
     done: "Готово",

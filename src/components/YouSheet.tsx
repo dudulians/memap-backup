@@ -1,0 +1,91 @@
+// "You" (her notes, Nov 3 2026: "я бы дала аватара по дефолту"; "Week
+// summary ›" and "My questions ›" under the map's title looked like
+// sub-sections and belonged somewhere else; the camera and the bicycle
+// "куда идут?"). One sheet behind her animal: the animal with Change, her
+// questions, Settings, then her week, her treasures and her links. It opens
+// from the header, the boat on the map and the animal beside her step.
+import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useTranslation } from "react-i18next";
+import { ChevronRight, CircleUser, ListChecks, Settings, type LucideProps } from "lucide-react";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { AvatarPicker } from "@/components/AvatarPicker";
+import { WorldStats } from "@/components/IslandStats";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
+import { buildIslands, buildRoutes } from "@/lib/islands";
+import { worldFacts } from "@/lib/growth";
+import { getEntries, getTrackers } from "@/lib/storage";
+import { getNotes } from "@/lib/notes";
+import { haptics } from "@/lib/haptics";
+import type { Tracker, TrackerEntry } from "@/types/tracker";
+
+const Row = ({ icon: Icon, label, onClick }: { icon: ComponentType<LucideProps>; label: string; onClick: () => void }) => (
+  <button type="button" onClick={() => { haptics.tap(); onClick(); }}
+    className="flex h-[60px] w-full items-center gap-3.5 px-4 text-left active:bg-foreground/[0.04]">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]">
+      <Icon className="h-5 w-5" strokeWidth={2.2} />
+    </span>
+    <span className="min-w-0 flex-1 truncate text-[17px] font-semibold">{label}</span>
+    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />
+  </button>
+);
+
+export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
+  open: boolean;
+  onClose: () => void;
+  /** her questions list (the sheet closes first) */
+  onQuestions: () => void;
+  onSettings: () => void;
+}) => {
+  const { t } = useTranslation();
+  const [data, setData] = useState<{ trackers: Tracker[]; entries: TrackerEntry[]; notes: number } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    Promise.all([getTrackers(), getEntries(), getNotes().catch(() => [])])
+      .then(([trackers, entries, notes]) => { if (live) setData({ trackers, entries, notes: notes.length }); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [open]);
+  const islands = useMemo(() => (data ? buildIslands(data.trackers, data.entries) : []), [data]);
+  const routes = useMemo(() => (data ? buildRoutes(data.trackers, data.entries, islands) : []), [data, islands]);
+  const facts = useMemo(() => (data ? worldFacts(data.trackers, data.entries, islands, routes, data.notes) : undefined), [data, islands, routes]);
+  const questions = data ? data.trackers.filter((tr) => !tr.archived && tr.source !== "play").length : 0;
+
+  const [pic, setPic] = useState<string | null>(() => avatarUrl(getAvatar()));
+  useEffect(() => {
+    const sync = () => setPic(avatarUrl(getAvatar()));
+    window.addEventListener("memap-avatar-changed", sync);
+    return () => window.removeEventListener("memap-avatar-changed", sync);
+  }, []);
+  const [picking, setPicking] = useState(false);
+
+  return (
+    <>
+      <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(); }} className="h-[88vh]" ariaTitle={t("map.you")}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
+          <div className="flex shrink-0 flex-col items-center pb-5 pt-1">
+            <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-sky-50 ring-4 ring-[hsl(var(--coin-teal)/0.16)] dark:bg-[hsl(var(--surface))]">
+              {pic
+                ? <img src={pic} alt="" width={76} height={76} className="h-[76px] w-[76px] object-contain" />
+                : <CircleUser className="h-12 w-12 text-muted-foreground" strokeWidth={1.6} />}
+            </span>
+            <button type="button" onClick={() => { haptics.tap(); setPicking(true); }}
+              className="mt-3 h-11 rounded-full bg-foreground/[0.06] px-5 text-[16px] font-bold text-foreground">
+              {t("you.change")}
+            </button>
+          </div>
+          {/* shrink-0: in the scrolling column an overflow-hidden box would squash to nothing */}
+          <div className="surface shrink-0 overflow-hidden rounded-[20px]">
+            <Row icon={ListChecks} label={data ? `${t("today.myQuestions")} · ${questions}` : t("today.myQuestions")} onClick={onQuestions} />
+            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
+            <Row icon={Settings} label={t("common.settings")} onClick={onSettings} />
+          </div>
+          <div className="mt-5 shrink-0">
+            {data && <WorldStats islands={islands} routes={routes} trackers={data.trackers} entries={data.entries} facts={facts} />}
+          </div>
+        </div>
+      </BottomSheet>
+      <AvatarPicker open={picking} onClose={() => setPicking(false)} />
+    </>
+  );
+};

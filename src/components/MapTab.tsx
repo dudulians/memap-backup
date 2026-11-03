@@ -7,7 +7,7 @@
 // note, Nov 2: two ways into the map were confusing).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Pencil, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
@@ -17,13 +17,12 @@ import { litTrackers } from "@/lib/lighthouses";
 import { getNotes } from "@/lib/notes";
 import { ITEMS, growthOf, islandDays, itemEarned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
-import { AvatarPicker } from "./AvatarPicker";
 import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { IslandsMap } from "./IslandsMap";
 import { WorldMap } from "./WorldMap";
-import { AnswerNow, IslandMore, IslandWeek, WorldStats, type IslandView } from "./IslandStats";
+import { AnswerNow, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
@@ -42,7 +41,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [open, setOpen] = useState<IslandId | "all" | null>(initialOpen === "all" ? "all" : null);
+  const [open, setOpen] = useState<IslandId | null>(null);
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
   // One switch: the flat map or the rolling globe (her note: one place to
@@ -60,9 +59,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const fromOutside = useRef(false);
   useEffect(() => {
     if (!initialOpen) return;
-    fromOutside.current = true;
-    if (initialOpen === "all") setOpen("all");
-    else setOnly(initialOpen);
+    // her week and treasures live in You now; its close takes her back (Index)
+    if (initialOpen === "all") window.dispatchEvent(new CustomEvent("memap-open-you", { detail: { trip: true } }));
+    else { fromOutside.current = true; setOnly(initialOpen); }
     onOpened?.();
   }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -106,7 +105,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
 
   const islands = useMemo(() => buildIslands(trackers, entries), [trackers, entries]);
   const routes = useMemo(() => buildRoutes(trackers, entries, islands), [trackers, entries, islands]);
-  const island = open && open !== "all" ? islands.find((i) => i.id === open) : undefined;
+  const island = open ? islands.find((i) => i.id === open) : undefined;
   // How much of each island is answered today: a calm ring by its name.
   const fill = useMemo(() => {
     const today = isoLocal(new Date());
@@ -126,7 +125,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [testFor, setTestFor] = useState<IslandId | null>(null);
   // Her avatar sails by the island she answered last (her note: the avatar
   // was only an icon in the corner).
-  const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
   useEffect(() => {
     const sync = () => setAvatarPic(avatarUrl(getAvatar()));
@@ -164,19 +162,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
             </div>
           )}
         </div>
-        {loaded && islands.length > 0 && (
-          <div className="-ml-0.5 mt-0.5 flex flex-wrap items-center gap-x-5">
-            <button type="button" onClick={() => { haptics.tap(); setOpen("all"); }}
-              className="inline-flex h-8 items-center gap-0.5 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
-              {t("map.summary")} <ChevronRight className="h-4 w-4" strokeWidth={2.6} />
-            </button>
-            {/* All her questions in one list (edit, reorder, delete). */}
-            <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new Event("memap-open-questions")); }}
-              className="inline-flex h-8 items-center gap-0.5 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
-              {t("today.myQuestions")} <ChevronRight className="h-4 w-4" strokeWidth={2.6} />
-            </button>
-          </div>
-        )}
       </div>
 
       {view === "globe" ? (
@@ -196,7 +181,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} growth={growth} items={items} you={you} onYou={() => setAvatarOpen(true)} onOpen={setOpen} />
+              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} growth={growth} items={items} you={you} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} onOpen={setOpen} />
             </div>
           )}
           {loaded && (
@@ -241,8 +226,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
                   onView={(v: IslandView) => { const id = island.id; setOpen(null); window.setTimeout(() => { setOnlyIsland(id); setOnly(v); }, 250); }} />
               )}
             </>
-          ) : open === "all" ? (
-            <WorldStats islands={islands} routes={routes} trackers={trackers} entries={entries} facts={facts} />
           ) : null}
         </div>
       </BottomSheet>
@@ -273,7 +256,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
         </div>
       </BottomSheet>
-      <AvatarPicker open={avatarOpen} onClose={() => setAvatarOpen(false)} />
       {testFor && (
         <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
       )}

@@ -11,7 +11,7 @@
 // corner; her boat waits on the route by the island she answered last.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link2, Plus } from "lucide-react";
+import { Link2 } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { playBloop, preloadSounds } from "@/lib/feedback";
@@ -211,19 +211,15 @@ export const IslandsMap = ({
       ))}
 
       {you && boat && (
-        <button type="button" onClick={() => { haptics.soft(); onYou?.(); }} aria-label={t(you.pic ? "map.you" : "map.pickYou")}
+        <button type="button" onClick={() => { haptics.soft(); onYou?.(); }} aria-label={t("map.you")}
           className="absolute z-[2] flex flex-col items-center active:scale-95 transition-transform" style={{ left: boat.x - 50, top: boat.y - 52, width: 100 }}>
           <span className="relative block h-[54px] w-[54px]">
             <img src={mapPic("sailboat")} alt="" className="absolute bottom-0 left-1/2 w-[48px] -translate-x-1/2 object-contain drop-shadow-[0_4px_5px_rgba(16,42,56,0.2)]" draggable={false} />
-            {you.pic ? (
+            {you.pic && (
               <img src={you.pic} alt="" className="absolute left-[3px] top-[1px] h-[32px] w-[32px] object-contain drop-shadow-[0_3px_4px_rgba(16,42,56,0.25)]" draggable={false} />
-            ) : !you.declined ? (
-              <span className="absolute left-0 top-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[hsl(var(--surface))] bg-[hsl(var(--coin-teal))] text-white">
-                <Plus className="h-4 w-4" strokeWidth={3} />
-              </span>
-            ) : null}
+            )}
           </span>
-          <span className="surface -mt-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold">{you.pic || you.declined ? t("map.you") : t("map.pickYouShort")}</span>
+          <span className="surface -mt-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-bold">{t("map.you")}</span>
         </button>
       )}
 
