@@ -17,5 +17,7 @@ Trimmed, levelled and made mono for the app.
 - `swipe-yes.mp3`: "Playing Card Slide Right" by el_boss, https://freesound.org/people/el_boss/sounds/571581
 - `swipe-no.mp3`: "Playing Card Slide Left" by el_boss, https://freesound.org/people/el_boss/sounds/571574
 - `swipe-skip.mp3`: "Quiet Page Turn - 7" by SpaceJoe, https://freesound.org/people/SpaceJoe/sounds/484967
+- `wheel-tick.mp3`: "SFX Ambiance: Clock Tick" by trullilulli, https://freesound.org/people/trullilulli/sounds/422642
+  (one 70 ms tick, high-passed at 120 Hz and low-passed at 2.6 kHz so it stays soft)
 
-Used in src/lib/feedback.ts (the bubble game, Your hunch, the week chest, Test one change).
+Used in src/lib/feedback.ts (the bubble game, Your hunch, the week chest, Test one change, the path rolling on Today).

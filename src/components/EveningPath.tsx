@@ -26,7 +26,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, WEEK_TITLES, WeekBanner, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, SnapDot, type Stop, WEEK_TITLES, WeekBanner, WeekStrip, curveThrough, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -269,101 +269,230 @@ export const EveningPath = ({
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderSlot(document.getElementById("memap-header-start")), []);
 
-  // Her step sits in the middle of the scroller once laid out, after Index
-  // has reset the scroll for the tab (the same middle the wheel and the snap use).
+  // --- The drum ---------------------------------------------------------------
+  // Her notes, Nov 3 2026: the path should roll "как при выборе даты рождения
+  // или времени" and light up; the first try (steps tilting in place over a
+  // light) was "немного не то", its tick "очень резкий", and the big pinned
+  // week card hid it. So everything on Today lies on a drum now, the way the
+  // rows of an iOS date picker do: in the band in the middle a step is flat
+  // and full size; away from it, it turns away on the cylinder, the rows close
+  // up and fade, and the road bends with them. The scroll always comes to rest
+  // on a step (mandatory snap in Index; the middle is the snapport's, between
+  // the header and the tab bar), with a soft wooden tick and the lightest tap
+  // as each step passes the band. Once the week card has rolled away, "Week N
+  // · k/7" takes the header's title. Reduce Motion: a flat page, no band, no
+  // snap.
+  const BAND = 96;
   const focusRef = useRef<HTMLButtonElement>(null);
-  const middleOf = (main: Element) => { const mr = main.getBoundingClientRect(); return mr.top + mr.height / 2; };
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      const el = focusRef.current;
-      const main = el?.closest("main");
-      if (!el || !main) return;
-      const r = el.getBoundingClientRect();
-      const delta = r.top + r.height / 2 - middleOf(main);
-      if (delta > 0) main.scrollTop += delta;
-    }, 90);
-    return () => window.clearTimeout(id);
-  }, []);
-
-  // The path rolls like a picker wheel (her note, Nov 3 2026: "как при выборе
-  // даты рождения или времени — такой ролик"; "путь подсвечивался"): the step
-  // in the middle of the scroller is full size over a soft light (the sticky
-  // .path-lens), the others ease smaller and paler with distance, a light
-  // detent as each step passes the middle (her own scrolling only), and the
-  // scroll settles on a step (snap in Index, on the same middle). Reduce
-  // Motion: no tilt, no snap, no smooth scroll. Away from her step, a pill
-  // brings her back. An independent review the same night caught the light
-  // widening the page, two different middles and a 50 ms Android buzz per
-  // tick; fixed here.
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef<Open>(null);
+  openRef.current = open;
+  // who is turning it: her hand (ticks; an open bubble closes), a tap on a
+  // step that rolls it to the band (ticks), or the app (silent)
+  const modeRef = useRef<"hand" | "tap" | "auto">("auto");
+  // the band's middle (from the scroller's top) and the drum's radius
+  const geo = useRef({ off: 300, R: 300 });
+  const frameRef = useRef<() => void>(() => undefined);
+  const reduceQuery = () => matchMedia("(prefers-reduced-motion: reduce)");
+  const [drum, setDrum] = useState(() => !reduceQuery().matches);
+  const [bandTop, setBandTop] = useState(250);
+  const [spacer, setSpacer] = useState(0);
   const [away, setAway] = useState<"up" | "down" | null>(null);
   const awayRef = useRef<"up" | "down" | null>(null);
-  const byHandRef = useRef(false);
-  const [lensTop, setLensTop] = useState(260);
-  useEffect(() => {
-    preloadSounds("pop4", "pop1", "drop");
+  const [compact, setCompact] = useState(false);
+  const compactRef = useRef(false);
+  const hasPath = trackers.length > 0;
+  const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
+  useEffect(() => setHeaderTitle(document.getElementById("memap-header-center")), []);
+
+  /** Half the room between the header and the tab bar: the band's middle and
+   *  the drum's radius. Returns the scroller's top padding. */
+  const measure = (main: HTMLElement) => {
+    const cs = getComputedStyle(main);
+    const free = main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0);
+    geo.current = { off: free / 2, R: Math.max(200, free / 2) };
+    return parseFloat(cs.paddingTop) || 0;
+  };
+
+  // Room above the first step, so it too can come to the band (a picker's
+  // first row does); and where the band sits. After every render, set only
+  // when it changes.
+  useLayoutEffect(() => {
+    const main = boxRef.current?.closest("main");
+    const first = main?.querySelector(".path-snap");
+    if (!main || !first) return;
+    const pt = measure(main);
+    const mr = main.getBoundingClientRect();
+    const base = first.getBoundingClientRect().top + 1 - mr.top - pt + main.scrollTop - spacer;
+    const want = drum ? Math.max(0, Math.round(geo.current.off - pt - base)) : 0;
+    if (Math.abs(want - spacer) > 1) setSpacer(want);
+    const top = Math.round(geo.current.off - pt - BAND / 2);
+    if (top !== bandTop) setBandTop(top);
+  });
+
+  useLayoutEffect(() => {
+    preloadSounds("wheelTick", "pop1", "drop");
     const main = document.querySelector("main");
-    if (!main) return;
-    const mq = matchMedia("(prefers-reduced-motion: reduce)");
-    let raf = 0, last = -1, lastTick = 0;
+    if (!main || !hasPath) return;
+    const mq = reduceQuery();
+    const HALF = Math.PI / 2;
+    const seen = new WeakMap<Element, string>();
+    const parsed = new Map<string, Stop[]>();
+    let raf = 0, lastTick = 0;
+    let lastBest: Element | null = null;
     const frame = () => {
       raf = 0;
-      const H = window.innerHeight, mid = middleOf(main), reduce = mq.matches;
-      let best = -1, bestD = 1e9;
-      main.querySelectorAll<HTMLElement>("[data-wheel]").forEach((el, i) => {
-        const node = el.querySelector<HTMLElement>(".path-node");
-        if (!node) return;
-        const r = node.getBoundingClientRect();
-        const d = (r.top + r.height / 2 - mid) / (H * 0.55);
-        const a = Math.min(1, Math.abs(d));
-        if (reduce) { el.style.transform = ""; el.style.opacity = ""; }
-        else {
-          el.style.transform = `perspective(900px) rotateX(${(-Math.max(-1, Math.min(1, d)) * 12).toFixed(2)}deg) scale(${(1 - 0.14 * a * a).toFixed(3)})`;
-          el.style.opacity = (1 - 0.45 * a * a).toFixed(3);
+      const { off, R } = geo.current;
+      const on = !mq.matches;
+      const mr = main.getBoundingClientRect();
+      const mid = mr.top + off;
+      // every read first, then the writes (no layout in between)
+      const items = Array.from(main.querySelectorAll<HTMLElement>("[data-wheel]"));
+      const tops = new Map<Element, number>();
+      const topOf = (box: Element) => {
+        let t = tops.get(box);
+        if (t === undefined) { t = box.getBoundingClientRect().top; tops.set(box, t); }
+        return t;
+      };
+      // where each would be on a flat page: a step from its week's box, a
+      // card from the still wrapper around it
+      const ys = items.map((el) => {
+        if (el.dataset.cy !== undefined) {
+          const box = el.closest(".path-box");
+          return box ? topOf(box) + Number(el.dataset.cy) : NaN;
         }
-        if (Math.abs(d) < bestD) { bestD = Math.abs(d); best = i; }
+        const r = el.parentElement?.getBoundingClientRect();
+        return r ? r.top + r.height / 2 : NaN;
       });
-      if (best !== last) {
-        const now = performance.now();
-        if (last !== -1 && byHandRef.current && now - lastTick > 70) { haptics.tick(); playWheelTick(); lastTick = now; }
-        last = best;
+      const roads = Array.from(main.querySelectorAll<SVGSVGElement>(".path-box > svg.path-road"));
+      const roadTops = roads.map((svg) => topOf(svg.parentElement as Element));
+
+      let best: Element | null = null, bestD = Infinity;
+      for (let k = 0; k < items.length; k++) {
+        const el = items[k], d = ys[k] - mid;
+        if (Number.isNaN(d)) continue;
+        if (el.dataset.cy !== undefined && Math.abs(d) < bestD) { bestD = Math.abs(d); best = el; }
+        let tr = "", op = "", far = false;
+        if (on && Math.abs(d / R) >= HALF) {
+          // round the back of the drum: not drawn (and not rewritten every frame)
+          tr = "scale(0)"; op = "0"; far = true;
+        } else if (on) {
+          // on a cylinder of radius R: up the arc by the angle, closer to the
+          // middle (sin), further back (1 - cos), turned away, fainter
+          const th = d / R;
+          const c = Math.cos(th);
+          tr = `translate3d(0,${(R * Math.sin(th) - d).toFixed(1)}px,0) perspective(900px) translateZ(${(-R * (1 - c)).toFixed(1)}px) rotateX(${(-th).toFixed(3)}rad)`;
+          op = Math.pow(c, 1.3).toFixed(3);
+          far = c < 0.3;
+        }
+        if (seen.get(el) !== tr + op) { el.style.transform = tr; el.style.opacity = op; seen.set(el, tr + op); }
+        // nearly gone: not tappable
+        if (far !== el.hasAttribute("data-far")) el.toggleAttribute("data-far", far);
       }
-      // her step out of sight: the way back
-      const f = focusRef.current?.getBoundingClientRect();
-      const nowAway = !f ? null : f.bottom < 150 ? "up" : f.top > H - 170 ? "down" : null;
+      // the road bends the same way and fades toward the drum's edges
+      roads.forEach((svg, k) => {
+        const top = roadTops[k];
+        if (top > mr.bottom + R || top + (Number(svg.dataset.h) || 0) < mr.top - R) return;
+        const raw = svg.dataset.stops ?? "";
+        let st = parsed.get(raw);
+        if (!st) {
+          st = raw.split(" ").map((p) => { const [x, y] = p.split(",").map(Number); return { x, y, r: 0 }; });
+          parsed.set(raw, st);
+        }
+        const c = mid - top;
+        const wy = on ? (y: number) => c + R * Math.sin(Math.max(-HALF, Math.min(HALF, (y - c) / R))) : (y: number) => y;
+        svg.querySelectorAll<SVGPathElement>("path[data-from]").forEach((p) => {
+          const d = curveThrough(st as Stop[], Number(p.dataset.from), Number(p.dataset.to), wy);
+          if (p.getAttribute("d") !== d) p.setAttribute("d", d);
+        });
+        const mask = on
+          ? `linear-gradient(to bottom, transparent ${Math.round(c - 0.97 * R)}px, #000 ${Math.round(c - 0.4 * R)}px, #000 ${Math.round(c + 0.4 * R)}px, transparent ${Math.round(c + 0.97 * R)}px)`
+          : "";
+        if (seen.get(svg) !== mask) { svg.style.maskImage = mask; svg.style.setProperty("-webkit-mask-image", mask); seen.set(svg, mask); }
+      });
+
+      if (best !== lastBest) {
+        const now = performance.now();
+        if (lastBest && modeRef.current !== "auto" && now - lastTick > 70) { haptics.tick(); playWheelTick(); lastTick = now; }
+        if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") setOpen(null);
+        lastBest = best;
+      }
+      // her step far off: the way back
+      const fw = focusRef.current?.closest<HTMLElement>("[data-wheel]");
+      const fk = fw ? items.indexOf(fw) : -1;
+      const fd = fk >= 0 ? ys[fk] - mid : NaN;
+      const lim = on ? R : off - 120;
+      const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd > lim ? "down" : null;
       if (nowAway !== awayRef.current) { awayRef.current = nowAway; setAway(nowAway); }
+      // the week card rolled away: its line goes to the header
+      const bk = bannerRef.current ? items.indexOf(bannerRef.current) : -1;
+      const nowCompact = bk >= 0 && ys[bk] < mid - (on ? R : off - 20);
+      if (nowCompact !== compactRef.current) { compactRef.current = nowCompact; setCompact(nowCompact); }
     };
-    // the light's place: the middle of the scroller
-    // (sticky offsets start below the scroller's top padding)
-    const place = () => setLensTop(Math.round(main.clientHeight / 2 - 90 - (parseFloat(getComputedStyle(main).paddingTop) || 0)));
+    frameRef.current = frame;
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(frame); };
-    const onResize = () => { place(); onScroll(); };
-    const byHand = () => { byHandRef.current = true; };
+    const onResize = () => { measure(main); onScroll(); };
+    const byHand = () => { modeRef.current = "hand"; };
+    const byKey = (e: KeyboardEvent) => { if (/^(Arrow|Page|Home$|End$| $)/.test(e.key)) modeRef.current = "hand"; };
+    const onMotion = () => { setDrum(!mq.matches); onScroll(); };
     main.addEventListener("scroll", onScroll, { passive: true });
     main.addEventListener("touchstart", byHand, { passive: true });
     main.addEventListener("wheel", byHand, { passive: true });
+    main.addEventListener("keydown", byKey);
     window.addEventListener("resize", onResize);
-    mq.addEventListener?.("change", onScroll);
-    place();
-    const first = window.setTimeout(frame, 160);
+    mq.addEventListener?.("change", onMotion);
+    measure(main);
+    frame();
     return () => {
       main.removeEventListener("scroll", onScroll);
       main.removeEventListener("touchstart", byHand);
       main.removeEventListener("wheel", byHand);
+      main.removeEventListener("keydown", byKey);
       window.removeEventListener("resize", onResize);
-      mq.removeEventListener?.("change", onScroll);
-      window.clearTimeout(first);
+      mq.removeEventListener?.("change", onMotion);
       cancelAnimationFrame(raf);
+      frameRef.current = () => undefined;
     };
-  }, [nodes.length, width]);
+  }, [hasPath]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Her step comes to the band when Today opens, before the first paint:
+  // a microtask, because Index's own layout effect (which runs after this
+  // one) resets the scroll for the tab.
+  const placedRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!hasPath) return;
+    queueMicrotask(() => {
+      const box = boxRef.current, main = box?.closest("main");
+      if (placedRef.current || !box || !main) return;
+      placedRef.current = true;
+      measure(main);
+      main.scrollTop += box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + geo.current.off);
+      frameRef.current();
+    });
+  }, [hasPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  // after every render too: React may have put a node or the road back flat
+  useLayoutEffect(() => { frameRef.current(); });
+
+  /** How far a stop is from the band, on a flat page. */
+  const toBand = (i: number) => {
+    const box = boxRef.current, main = box?.closest("main");
+    if (!box || !main) return null;
+    return { main, d: box.getBoundingClientRect().top + stops[i].y - (main.getBoundingClientRect().top + geo.current.off) };
+  };
+  // A tapped step rolls to the band, the way a picker's row does.
+  const rollTo = (i: number) => {
+    const at = toBand(i);
+    if (!at || !drum || Math.abs(at.d) < 2) return;
+    modeRef.current = "tap";
+    at.main.scrollBy({ top: at.d, behavior: "smooth" });
+  };
   const backToStep = () => {
-    const el = focusRef.current, main = el?.closest("main");
-    if (!el || !main) return;
+    const el = focusRef.current, at = toBand(focus);
+    if (!el || !at) return;
     haptics.tap();
-    // a scroll she didn't drag: no ticks on the way
-    byHandRef.current = false;
-    const r = el.getBoundingClientRect();
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    main.scrollBy({ top: r.top + r.height / 2 - middleOf(main), behavior: reduce ? "auto" : "smooth" });
+    // a roll she didn't turn: no ticks on the way
+    modeRef.current = "auto";
+    at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
     // focus goes to her step instead of being lost with the pill
     el.focus({ preventScroll: true });
   };
@@ -405,6 +534,7 @@ export const EveningPath = ({
       setWiggle(i);
       window.setTimeout(() => setWiggle((w) => (w === i ? null : w)), 450);
     }
+    if (open !== i) rollTo(i);
     setOpen((o) => (o === i ? null : i));
   };
 
@@ -552,16 +682,28 @@ export const EveningPath = ({
   // A fragment, so the week card's sticky range is all of Today.
   return (
     <>
+      {/* The band in the middle, where a step lies flat: sticky, so it stays
+          while everything rolls under it. Then room for the first step. */}
+      {drum && <div aria-hidden="true" className="path-band pointer-events-none sticky animate-fade-in" style={{ top: bandTop, height: BAND, marginBottom: -BAND }} />}
+      <div aria-hidden="true" style={{ height: spacer }} />
       {/* An old user's days before the path began: one chip, no empty weeks. */}
       {m.prior > 0 && (
-        <p className="surface mx-auto -mt-1 mb-2 w-fit rounded-full px-3.5 py-1.5 text-[14px] font-semibold text-muted-foreground">
-          {t("path.priorDays", { count: m.prior })}
-        </p>
+        <div>
+          <div data-wheel>
+            <p className="surface mx-auto -mt-1 mb-2 w-fit rounded-full px-3.5 py-1.5 text-[14px] font-semibold text-muted-foreground">
+              {t("path.priorDays", { count: m.prior })}
+            </p>
+          </div>
+        </div>
       )}
       {pastFrom > 0 && (
-        <button type="button" onClick={() => setPastShown((n) => n + 4)} className="surface mx-auto block h-10 rounded-full px-4 text-[14px] font-semibold text-foreground">
-          {t("path.earlierWeeks", { count: pastFrom })}
-        </button>
+        <div>
+          <div data-wheel>
+            <button type="button" onClick={() => setPastShown((n) => n + 4)} className="surface mx-auto block h-10 rounded-full px-4 text-[14px] font-semibold text-foreground">
+              {t("path.earlierWeeks", { count: pastFrom })}
+            </button>
+          </div>
+        </div>
       )}
       {m.pastWeeks.slice(pastFrom).map((dates, j) => {
         const w = pastFrom + j;
@@ -578,40 +720,40 @@ export const EveningPath = ({
         </span>,
         headerSlot,
       )}
+      {headerTitle && compact && createPortal(
+        <span className="animate-fade-in whitespace-nowrap text-[16px] font-bold leading-[1.5] tracking-tight text-foreground">
+          {t("path.weekN", { n: m.week + 1 })}
+          <span className="font-semibold tabular-nums text-muted-foreground"> · {daysDone}/{DAYS_PER_WEEK}</span>
+        </span>,
+        headerTitle,
+      )}
 
-      {/* The week card. Tap: how far along, and last week's report. */}
-      <div className="sticky -top-4 z-[5] mt-2 animate-fade-in">
-        <WeekBanner week={m.week} done={daysDone} opened={!!thisChest} expanded={open === "banner"} data-path-stop="banner"
-          onClick={() => setOpen((o) => (o === "banner" ? null : "banner"))} />
-        {open === "banner" && (
-          <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute left-0 right-0 top-full z-20 mt-2 rounded-[20px] px-4 py-3.5" style={{ transformOrigin: "50% 0" }}>
-            {head(t("path.weekProgress", { k: daysDone }), m.weekComplete ? t("path.reportReady") : `${reportLabel} · ${t("path.toGo", { count: toGo })}`)}
-            {m.week > 0 && (
-              <button type="button" onClick={() => { setOpen(null); onOpenReport(); }} className="mt-2 inline-flex h-10 items-center gap-1 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
-                {t("path.lastReport")} <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
-              </button>
-            )}
-          </div>
-        )}
+      {/* The week card, on the drum like the rest (pinned, it hid the path
+          rolling). Tap: how far along, and last week's report. */}
+      <div className="relative mt-2 animate-fade-in" style={open === "banner" ? { zIndex: 6 } : undefined}>
+        <div ref={bannerRef} data-wheel className="relative">
+          <WeekBanner week={m.week} done={daysDone} opened={!!thisChest} expanded={open === "banner"} data-path-stop="banner"
+            onClick={() => setOpen((o) => (o === "banner" ? null : "banner"))} />
+          {open === "banner" && (
+            <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute left-0 right-0 top-full z-20 mt-2 rounded-[20px] px-4 py-3.5" style={{ transformOrigin: "50% 0" }}>
+              {head(t("path.weekProgress", { k: daysDone }), m.weekComplete ? t("path.reportReady") : `${reportLabel} · ${t("path.toGo", { count: toGo })}`)}
+              {m.week > 0 && (
+                <button type="button" onClick={() => { setOpen(null); onOpenReport(); }} className="mt-2 inline-flex h-10 items-center gap-1 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">
+                  {t("path.lastReport")} <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* The path. */}
       <section aria-label={title} className="animate-fade-in" style={{ marginTop: 14 }}>
         {/* overflow-x clip: the wheel's tilt must never widen the page (the
             review found a sideways pan); nothing visible is cut. */}
-        <div ref={boxRef} className="relative mx-auto [overflow-x:clip]" style={{ width, height }}>
-          {/* The light in the middle of the scroller: sticky, so it stays put
-              while the path rolls under it, and only over today's stretch;
-              as wide as the path, so the page never pans sideways. */}
-          <div aria-hidden="true" className="path-lens pointer-events-none sticky" style={{ top: lensTop, height: 180, marginBottom: -180 }} />
+        <div ref={boxRef} className="path-box relative mx-auto [overflow-x:clip]" style={{ width, height }}>
           <Road stops={stops} width={width} height={height} walked={focus} />
-
-          {avatarPic && avatar && (
-            <div aria-hidden="true" className="path-avatar pointer-events-none absolute z-[4]" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
-              <span className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
-              <img src={avatarPic} alt="" width={48} height={48} className="relative h-[48px] w-[48px] object-contain" />
-            </div>
-          )}
+          {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
 
           {nodes.map((n, i) => {
             const v = viewOf(n, i);
@@ -621,7 +763,14 @@ export const EveningPath = ({
               : undefined;
             const lockedGame = n.kind === "step" && n.step.kind === "game" && !canPlay && !n.step.done;
             return (
-              <div key={i} data-wheel style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+              <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
+                {/* her avatar (optional) stands beside her step and rolls with it */}
+                {i === focus && avatarPic && avatar && (
+                  <div aria-hidden="true" className="path-avatar pointer-events-none absolute z-[4]" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
+                    <span className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
+                    <img src={avatarPic} alt="" width={48} height={48} className="relative h-[48px] w-[48px] object-contain" />
+                  </div>
+                )}
                 {!(i === currentNode && open === currentNode) && (
                   <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}
                     maxRight={width} big={i === currentNode} muted={v.look === "done"}
@@ -634,10 +783,10 @@ export const EveningPath = ({
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
                 </PathNode>
+                {open === i && bubble(i)}
               </div>
             );
           })}
-          {typeof open === "number" && bubble(open)}
         </div>
       </section>
 

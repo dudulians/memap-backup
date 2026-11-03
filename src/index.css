@@ -2172,11 +2172,25 @@ html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { backgroun
 html[data-theme="aurora"] .island-ripple { border-color: rgba(190, 215, 255, .55); }
 @keyframes islandRipple { from { transform: scale(.35); opacity: .95; } to { transform: scale(1.5); opacity: 0; } }
 
-/* The light on the path where the middle of the screen is (her note: "путь
-   подсвечивался", like a picker wheel). */
-:root { --path-lens: rgba(255, 255, 255, .6); }
-html[data-theme="aurora"] { --path-lens: rgba(150, 190, 255, .18); }
-.path-lens { background: radial-gradient(closest-side, var(--path-lens), transparent); }
+/* Today's drum (EveningPath): the band in the middle, where a step lies flat
+   (her note: "путь подсвечивался", like a picker); steps nearly gone at the
+   drum's edge can't be tapped; the header's title gives way to the week. */
+:root {
+  --path-band: linear-gradient(180deg, rgba(255, 255, 255, .68), rgba(255, 255, 255, .5));
+  --path-band-edge: rgba(255, 255, 255, .92);
+  --path-band-shadow: 0 16px 34px -22px rgba(16, 42, 56, .5), inset 0 1px 0 rgba(255, 255, 255, .6);
+}
+html[data-theme="aurora"] {
+  --path-band: linear-gradient(180deg, rgba(170, 200, 255, .17), rgba(170, 200, 255, .09));
+  --path-band-edge: rgba(255, 255, 255, .16);
+  --path-band-shadow: 0 16px 34px -20px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+.path-band { border-radius: 30px; background: var(--path-band); border: 1px solid var(--path-band-edge); box-shadow: var(--path-band-shadow); }
+[data-far], [data-far] * { pointer-events: none !important; }
+header h1 { transition: opacity 200ms ease; }
+/* A day/night switch cross-fades (switchTheme in src/lib/theme.ts). */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 280ms; animation-timing-function: ease-out; }
+#memap-header-center:not(:empty) ~ h1 { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   main.snap-y { scroll-snap-type: none; }

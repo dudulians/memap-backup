@@ -47,30 +47,41 @@ export const WeekRing = ({ size, done, on, off, width = 4 }: { size: number; don
   );
 };
 
-/** One smooth curve through the stops, vertical at each stop. */
-export const curveThrough = (stops: Stop[], from: number, to: number) => {
-  let d = `M${stops[from].x},${stops[from].y}`;
+/** One smooth curve through the stops, vertical at each stop. `wy` moves
+ *  every height (Today's drum bends the road with its steps, EveningPath). */
+export const curveThrough = (stops: Stop[], from: number, to: number, wy: (y: number) => number = (y) => y) => {
+  const at = (y: number) => Math.round(wy(y) * 10) / 10;
+  let d = `M${stops[from].x},${at(stops[from].y)}`;
   for (let i = from + 1; i <= to; i++) {
     const a = stops[i - 1];
     const b = stops[i];
-    const my = (a.y + b.y) / 2;
-    d += ` C${a.x},${my} ${b.x},${my} ${b.x},${b.y}`;
+    const my = at((a.y + b.y) / 2);
+    d += ` C${a.x},${my} ${b.x},${my} ${b.x},${at(b.y)}`;
   }
   return d;
 };
 
-/** The road: a soft pale ribbon with dashes on top, teal where walked. */
+/** The road: a soft pale ribbon with dashes on top, teal where walked. The
+ *  stops and each line's span are kept on it, so the drum can bend it. */
 export const Road = ({ stops, width, height, walked }: { stops: Stop[]; width: number; height: number; walked: number }) => {
   const last = stops.length - 1;
-  const road = curveThrough(stops, 0, last);
+  const ahead = Math.max(walked, 0);
   return (
-    <svg width={width} height={height} className="path-road absolute inset-0 overflow-visible" aria-hidden="true">
-      <path d={road} fill="none" stroke="hsl(var(--path-ribbon))" strokeOpacity={0.85} strokeWidth={16} strokeLinecap="round" />
-      {walked < last && <path d={curveThrough(stops, Math.max(walked, 0), last)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3} strokeDasharray="7 8" strokeLinecap="round" />}
-      {walked > 0 && <path d={curveThrough(stops, 0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="7 8" strokeLinecap="round" />}
+    <svg width={width} height={height} className="path-road absolute inset-0 overflow-visible" aria-hidden="true"
+      data-stops={stops.map((p) => `${p.x},${p.y}`).join(" ")} data-h={height}>
+      <path data-from={0} data-to={last} d={curveThrough(stops, 0, last)} fill="none" stroke="hsl(var(--path-ribbon))" strokeOpacity={0.85} strokeWidth={16} strokeLinecap="round" />
+      {walked < last && <path data-from={ahead} data-to={last} d={curveThrough(stops, ahead, last)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3} strokeDasharray="7 8" strokeLinecap="round" />}
+      {walked > 0 && <path data-from={0} data-to={walked} d={curveThrough(stops, 0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="7 8" strokeLinecap="round" />}
     </svg>
   );
 };
+
+/** Where the scroll may come to rest: a still point at a stop's centre (the
+ *  node itself rolls on the drum, and a moving element would move its own
+ *  snap position). */
+export const SnapDot = ({ stop }: { stop: Stop }) => (
+  <span aria-hidden="true" className="path-snap pointer-events-none absolute snap-center" style={{ left: stop.x - 1, top: stop.y - 1, width: 2, height: 2 }} />
+);
 
 /** done: filled + check; current: the main step; todo: open now (white,
  *  full coloured rim and a soft glow); gold: a reward ready; locked: not yet
@@ -123,7 +134,7 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
     <button ref={refEl} type="button" data-path-stop={dataStop} data-shape={shape} aria-label={label} aria-expanded={expanded}
       onClick={() => { if (onClick) { haptics.tap(); playTick(true); onClick(); } }}
       className={cn(
-        "path-node absolute z-[3] flex snap-center items-center justify-center transition-transform duration-150 active:scale-[0.92]",
+        "path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.92]",
         filled ? "text-white" : locked ? !badge && "bg-[hsl(var(--path-locked))]" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
         wiggle && "path-wiggle-flat",
       )}
@@ -294,13 +305,19 @@ export const WeekStrip = ({
 
   return (
     <div className={cn("mt-4", kind === "coming" && "path-coming")} aria-hidden={kind === "coming" ? true : undefined}>
-      <WeekBanner week={week} done={kind === "past" ? DAYS_PER_WEEK : 0} opened={!!chest} onClick={kind === "past" ? onOpenChest : undefined} />
-      <div className="relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
+      {/* on Today's drum too: the card rolls with the week (EveningPath) */}
+      <div>
+        <div data-wheel>
+          <WeekBanner week={week} done={kind === "past" ? DAYS_PER_WEEK : 0} opened={!!chest} onClick={kind === "past" ? onOpenChest : undefined} />
+        </div>
+      </div>
+      <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
         <Road stops={stops} width={width} height={height} walked={kind === "past" ? DAYS_PER_WEEK : 0} />
+        {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
             return (
-              <div key={i} data-wheel style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+              <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                 <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"}
                   onTap={kind === "past" ? onOpenChest : undefined} />
                 <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
@@ -311,7 +328,7 @@ export const WeekStrip = ({
           }
           const d = day(i);
           return (
-            <div key={i} data-wheel style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+            <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
               <NodePill stop={p} title={dayName(d)} maxRight={width} muted={kind === "past"} dim={kind === "coming"}
                 onTap={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined} />
               <PathNode stop={p} look={kind === "past" ? "done" : "locked"} lock={false} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}

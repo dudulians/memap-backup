@@ -59,10 +59,19 @@ const Index = () => {
   const tripRef = useRef(trip);
   tripRef.current = trip;
   // Night or day (her night pack, Nov 2 2026): a moon/sun in the header.
-  // Pictures are picked per theme, so the tabs redraw on a switch.
+  // Pictures are picked per theme as the tabs draw, so this re-render is
+  // enough; the tabs are not rebuilt, so she stays where she was (her note,
+  // Nov 3 2026: the switch threw the globe back to the flat map).
   const [night, setNight] = useState(() => isNight());
+  // the other theme's backgrounds load ahead, so a switch has them at once
   useEffect(() => {
-    const sync = () => { setNight(isNight()); setRefreshKey((k) => k + 1); };
+    const id = window.setTimeout(() => {
+      (night ? [pathDay, pathDayTop, pathDayTile, seaDawn] : [pathNight, pathNightTop, pathNightTile, seaNight]).forEach((src) => { new Image().src = src; });
+    }, 2000);
+    return () => window.clearTimeout(id);
+  }, [night]);
+  useEffect(() => {
+    const sync = () => setNight(isNight());
     window.addEventListener("memap-theme-changed", sync);
     return () => window.removeEventListener("memap-theme-changed", sync);
   }, []);
@@ -198,8 +207,10 @@ const Index = () => {
     return () => el.removeEventListener("scroll", handler);
   }, []);
   // Reset scroll + hide the button whenever the active tab changes, so
-  // switching tabs always lands the user at the top of the new one.
-  useEffect(() => {
+  // switching tabs always lands the user at the top of the new one. A layout
+  // effect, before the first paint; Today then brings her step to the middle
+  // (EveningPath, right after this).
+  useLayoutEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
     setShowBackToTop(false);
     setScrolled(false);
@@ -256,6 +267,9 @@ const Index = () => {
       <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2 border-b transition-colors duration-300 ${activeTab === "patterns" || (activeTab === "cards" && scrolled) ? "backdrop-blur-lg bg-background/60 border-border/40" : "bg-transparent border-transparent"}`}>
         {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
         <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
+        {/* Today puts "Week N · k/7" here once its week card has rolled away;
+            the title gives way (index.css). */}
+        <div id="memap-header-center" className="pointer-events-none absolute inset-x-24 bottom-2.5 flex justify-center" />
         <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
         <button
           type="button"
@@ -284,8 +298,12 @@ const Index = () => {
           devices with a tall home indicator still clear the nav. */}
       <main
         ref={mainRef}
-        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : `flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4${activeTab === "cards" ? " snap-y snap-proximity overflow-x-hidden" : ""}`}
-        style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK }}
+        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : `flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4${activeTab === "cards" ? " snap-y snap-mandatory overflow-x-hidden" : ""}`}
+        style={activeTab === "patterns" ? undefined : {
+          paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK,
+          // Today's drum: its middle is between the header and the tab bar
+          scrollPaddingBottom: activeTab === "cards" ? "calc(5.25rem + env(safe-area-inset-bottom, 0px))" : undefined,
+        }}
       >
         {activeTab === "cards" && (
           <div className="relative">

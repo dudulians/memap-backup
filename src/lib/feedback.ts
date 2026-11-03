@@ -28,6 +28,7 @@ import sea from "@/assets/sounds/sea.mp3";
 import swipeYes from "@/assets/sounds/swipe-yes.mp3";
 import swipeNo from "@/assets/sounds/swipe-no.mp3";
 import swipeSkip from "@/assets/sounds/swipe-skip.mp3";
+import wheelTick from "@/assets/sounds/wheel-tick.mp3";
 
 type FeedbackKind = "yes" | "no" | "skip";
 
@@ -227,10 +228,10 @@ const plip = (ctx: AudioContext, size: number, pan: number, start = 0, peak = 1)
 };
 
 // The recordings (CC0, Freesound; src/assets/sounds/CREDITS.md).
-const FILES = { pop1, pop2, pop3, pop4, drop, sparkle, thump, sea, swipeYes, swipeNo, swipeSkip } as const;
+const FILES = { pop1, pop2, pop3, pop4, drop, sparkle, thump, sea, swipeYes, swipeNo, swipeSkip, wheelTick } as const;
 type Sound = keyof typeof FILES;
 /** How loud each file sits next to the others. */
-const LEVEL: Record<Sound, number> = { pop1: 1, pop2: 1, pop3: 0.7, pop4: 1.3, drop: 0.9, sparkle: 0.35, thump: 1, sea: 1, swipeYes: 0.35, swipeNo: 0.38, swipeSkip: 0.6 };
+const LEVEL: Record<Sound, number> = { pop1: 1, pop2: 1, pop3: 0.7, pop4: 1.3, drop: 0.9, sparkle: 0.35, thump: 1, sea: 1, swipeYes: 0.35, swipeNo: 0.38, swipeSkip: 0.6, wheelTick: 0.05 };
 const decoded = new Map<Sound, AudioBuffer | null>();
 const loading = new Map<Sound, Promise<AudioBuffer | null>>();
 
@@ -436,12 +437,29 @@ export const playThump = () => {
   if (!ctx) return;
   try { if (!sample(ctx, "thump", { gain: 0.45, rate: vary(0.05) })) tone(ctx, [196], { duration: 0.12, peak: 0.06 }); } catch { /* ignore */ }
 };
-/** The path rolling past a step: a tiny crisp tick, like a picker wheel. */
+/** A soft dull "tok": the wheel's sound until its recording has loaded. */
+const tok = (ctx: AudioContext) => {
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(820, t);
+  osc.frequency.exponentialRampToValueAtTime(420, t + 0.03);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.05, t + 0.003);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+  osc.connect(g).connect(outAt(ctx, 0));
+  osc.start(t);
+  osc.stop(t + 0.06);
+};
+/** The path rolling past a step, like a picker wheel: one soft wooden tick
+ *  of a clock (her note, Nov 3 2026: the pitched-up water drop before it was
+ *  "очень резкий"). */
 export const playWheelTick = () => {
   if (!soundOn()) return;
   const ctx = ready();
   if (!ctx) return;
-  try { if (!sample(ctx, "pop4", { gain: 0.07, rate: 2.1 * vary(0.03) })) plip(ctx, 0, 0, 0, 0.35); } catch { /* ignore */ }
+  try { if (!sample(ctx, "wheelTick", { rate: vary(0.04) })) tok(ctx); } catch { /* ignore */ }
 };
 /** An island pressed: a soft round "bloop" in the water, where it is. */
 export const playBloop = (x = 0.5) => {
