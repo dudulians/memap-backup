@@ -1977,7 +1977,6 @@ html[data-ui="new"][data-theme="aurora"] .memap-sea-bg::after { display: none; }
 .tone-lilac { --p3-face: var(--coin-lilac); --p3-face-hi: var(--coin-lilac-hi); --p3-lip: var(--lip-lilac); --p3-ink: #fff; }
 
 /* The road: an under-stroke for thickness, a pale ribbon, dashes on top. */
-/* .path-road: its shadow is a path of its own (PathParts Road), no filter */
 
 /* Tonight's halo: the one loop on Today, breathing once every 4s. */
 @keyframes pathHalo {

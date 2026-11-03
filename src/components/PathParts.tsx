@@ -15,11 +15,12 @@ import { DAYS_PER_WEEK, type ChestRecord } from "@/lib/pathSteps";
 // Nodes sit in the left half, a gentle zigzag, so every pill fits on the right.
 export const XS = [156, 95, 109, 156, 109, 85, 126, 150];
 export const DESIGN_W = 340;
-export const R_DAY = 24;
-export const R_STEP = 27;
-export const R_CURRENT = 36;
-export const R_CHEST = 30;
-export const GAP = 30;
+// About a quarter bigger since Nov 3 2026 (her note: "увеличим кружочки").
+export const R_DAY = 30;
+export const R_STEP = 34;
+export const R_CURRENT = 44;
+export const R_CHEST = 38;
+export const GAP = 28;
 export const WEEK_TITLES = 4;
 /** Kept for callers that still pass a week tone. */
 export type { PressTone } from "@/components/ui/pressable";
@@ -42,36 +43,6 @@ export const WeekRing = ({ size, done, on, off, width = 4 }: { size: number; don
         const p = (a: number) => `${c + r * Math.cos(a)},${c + r * Math.sin(a)}`;
         return <path key={i} d={`M${p(a0)} A${r},${r} 0 0 1 ${p(a1)}`} fill="none" stroke={i < done ? on : off} strokeWidth={width} strokeLinecap="round" />;
       })}
-    </svg>
-  );
-};
-
-/** One smooth curve through the stops, vertical at each stop. `wy` moves
- *  every height (Today's drum bends the road with its steps, EveningPath). */
-export const curveThrough = (stops: Stop[], from: number, to: number, wy: (y: number) => number = (y) => y) => {
-  const at = (y: number) => Math.round(wy(y) * 10) / 10;
-  let d = `M${stops[from].x},${at(stops[from].y)}`;
-  for (let i = from + 1; i <= to; i++) {
-    const a = stops[i - 1];
-    const b = stops[i];
-    const my = at((a.y + b.y) / 2);
-    d += ` C${a.x},${my} ${b.x},${my} ${b.x},${at(b.y)}`;
-  }
-  return d;
-};
-
-/** The road: a soft pale ribbon with dashes on top, teal where walked. The
- *  stops and each line's span are kept on it, so the drum can bend it. */
-export const Road = ({ stops, width, height, walked }: { stops: Stop[]; width: number; height: number; walked: number }) => {
-  const last = stops.length - 1;
-  const ahead = Math.max(walked, 0);
-  return (
-    <svg width={width} height={height} className="path-road absolute inset-0 overflow-visible" aria-hidden="true"
-      data-stops={stops.map((p) => `${p.x},${p.y}`).join(" ")} data-h={height}>
-      <path data-from={0} data-to={last} d={curveThrough(stops, 0, last)} fill="none" stroke="var(--path-shadow)" strokeWidth={22} strokeLinecap="round" transform="translate(0 4)" />
-      <path data-from={0} data-to={last} d={curveThrough(stops, 0, last)} fill="none" stroke="hsl(var(--path-ribbon))" strokeOpacity={0.85} strokeWidth={16} strokeLinecap="round" />
-      {walked < last && <path data-from={ahead} data-to={last} d={curveThrough(stops, ahead, last)} fill="none" stroke="hsl(var(--path-ahead))" strokeWidth={3} strokeDasharray="7 8" strokeLinecap="round" />}
-      {walked > 0 && <path data-from={0} data-to={walked} d={curveThrough(stops, 0, walked)} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={3.5} strokeDasharray="7 8" strokeLinecap="round" />}
     </svg>
   );
 };
@@ -169,8 +140,8 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
       )}
       <span className="relative flex items-center justify-center">{children}</span>
       {locked && lock && (
-        <span aria-hidden="true" className="absolute -bottom-1 -right-1 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_2px_6px_rgba(16,42,56,0.25)] dark:bg-[hsl(var(--surface))]">
-          <Lock className="h-3 w-3" strokeWidth={2.6} />
+        <span aria-hidden="true" className="absolute -bottom-1 -right-1 z-[1] flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_2px_6px_rgba(16,42,56,0.25)] dark:bg-[hsl(var(--surface))]">
+          <Lock className="h-3.5 w-3.5" strokeWidth={2.6} />
         </span>
       )}
     </button>
@@ -196,7 +167,7 @@ export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, 
   onTap?: () => void;
 }) => {
   const left = stop.x;
-  const h = big ? 70 : 42;
+  const h = big ? 78 : 48;
   return (
     <>
     {second && (
@@ -212,7 +183,7 @@ export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, 
         dim && "bg-white/60 shadow-none dark:bg-[hsl(var(--surface)/0.5)]")}
       style={{ left, top: stop.y - h / 2, height: h, maxWidth: maxRight - left, paddingLeft: stop.r + 12, paddingRight: action ? 8 : 14 }}>
       <span className="min-w-0 flex-1">
-        <span className={cn("block leading-tight", big ? "line-clamp-2 text-[18px] font-semibold" : "truncate text-[15px]", open ? "font-bold text-foreground" : "font-semibold", muted || dim ? "text-foreground/60" : "text-foreground")}>{title}</span>
+        <span className={cn("block leading-tight", big ? "line-clamp-2 text-[20px] font-semibold" : "truncate text-[16px]", open ? "font-bold text-foreground" : "font-semibold", muted || dim ? "text-foreground/60" : "text-foreground")}>{title}</span>
         {sub && <span className="mt-0.5 block truncate text-[14px] font-medium text-muted-foreground">{sub}</span>}
       </span>
       {open && !action && <ChevronRight aria-hidden="true" className="ml-1 h-5 w-5 shrink-0" strokeWidth={2.8} style={{ color: `hsl(${tone ?? "var(--coin-teal)"})` }} />}
@@ -285,7 +256,6 @@ export const WeekStrip = ({
         </div>
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
-        <Road stops={stops} width={width} height={height} walked={kind === "past" ? DAYS_PER_WEEK : 0} />
         {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
@@ -294,7 +264,7 @@ export const WeekStrip = ({
                 <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"}
                   onTap={kind === "past" ? onOpenChest : undefined} />
                 <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
-                  <Gift className="h-6 w-6" strokeWidth={2.2} />
+                  <Gift className="h-7 w-7" strokeWidth={2.2} />
                 </PathNode>
               </div>
             );
@@ -306,7 +276,7 @@ export const WeekStrip = ({
                 onTap={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined} />
               <PathNode stop={p} look={kind === "past" ? "done" : "locked"} lock={false} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
                 onClick={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined}>
-                {kind === "past" ? <Check className="h-5 w-5" strokeWidth={3} /> : <MoonStar className="h-5 w-5" strokeWidth={2} />}
+                {kind === "past" ? <Check className="h-6 w-6" strokeWidth={3} /> : <MoonStar className="h-6 w-6" strokeWidth={2} />}
               </PathNode>
             </div>
           );

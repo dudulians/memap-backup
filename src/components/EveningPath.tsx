@@ -26,7 +26,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, SnapDot, type Stop, WEEK_TITLES, WeekStrip, curveThrough, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, SnapDot, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -205,14 +205,14 @@ export const EveningPath = ({
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
     const current = i === currentNode;
-    if (n.kind === "past") return { look: "done", icon: <Check className="h-5 w-5" strokeWidth={3} />, title: cap(weekdayName(n.date)) };
+    if (n.kind === "past") return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: cap(weekdayName(n.date)) };
     if (n.kind === "future") {
-      return { look: "locked", hue: DAY_AHEAD, icon: <MoonStar className="h-5 w-5" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
+      return { look: "locked", hue: DAY_AHEAD, icon: <MoonStar className="h-6 w-6" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
     }
     if (n.kind === "chest") {
       return m.weekComplete
-        ? { look: "gold", icon: <Gift className="h-6 w-6" strokeWidth={2.2} />, title: t("path.chest.openReward"), action: currentNode < 0 ? t("path.openReport") : undefined }
-        : { look: "locked", hue: "var(--coin-gold)", icon: <Gift className="h-6 w-6" strokeWidth={2.2} />, title: reportLabel };
+        ? { look: "gold", icon: <Gift className="h-7 w-7" strokeWidth={2.2} />, title: t("path.chest.openReward"), action: currentNode < 0 ? t("path.openReport") : undefined }
+        : { look: "locked", hue: "var(--coin-gold)", icon: <Gift className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
     }
     const s = n.step;
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
@@ -220,7 +220,7 @@ export const EveningPath = ({
       : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
-    const icon = s.done && !s.skipped && !replay ? <Check className="h-5 w-5" strokeWidth={3} /> : <Icon className={current ? "h-8 w-8" : "h-5 w-5"} strokeWidth={2} />;
+    const icon = s.done && !s.skipped && !replay ? <Check className="h-6 w-6" strokeWidth={3} /> : <Icon className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
     if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.fresh && !s.done ? t("path.newIsland") : undefined };
@@ -342,7 +342,6 @@ export const EveningPath = ({
     const mq = reduceQuery();
     const HALF = Math.PI / 2;
     const seen = new WeakMap<Element, string>();
-    const parsed = new Map<string, Stop[]>();
     let raf = 0, lastTick = 0;
     let lastBest: Element | null = null;
     const frame = () => {
@@ -369,8 +368,6 @@ export const EveningPath = ({
         const r = el.parentElement?.getBoundingClientRect();
         return r ? r.top + r.height / 2 : NaN;
       });
-      const roads = Array.from(main.querySelectorAll<SVGSVGElement>(".path-box > svg.path-road"));
-      const roadTops = roads.map((svg) => topOf(svg.parentElement as Element));
 
       let best: Element | null = null, bestD = Infinity;
       for (let k = 0; k < items.length; k++) {
@@ -395,28 +392,6 @@ export const EveningPath = ({
         // nearly gone: not tappable
         if (far !== el.hasAttribute("data-far")) el.toggleAttribute("data-far", far);
       }
-      // the road bends the same way and fades toward the drum's edges
-      roads.forEach((svg, k) => {
-        const top = roadTops[k];
-        if (top > mr.bottom + R || top + (Number(svg.dataset.h) || 0) < mr.top - R) return;
-        const raw = svg.dataset.stops ?? "";
-        let st = parsed.get(raw);
-        if (!st) {
-          st = raw.split(" ").map((p) => { const [x, y] = p.split(",").map(Number); return { x, y, r: 0 }; });
-          parsed.set(raw, st);
-        }
-        const c = mid - top;
-        const wy = on ? (y: number) => c + R * Math.sin(Math.max(-HALF, Math.min(HALF, (y - c) / R))) : (y: number) => y;
-        svg.querySelectorAll<SVGPathElement>("path[data-from]").forEach((p) => {
-          const d = curveThrough(st as Stop[], Number(p.dataset.from), Number(p.dataset.to), wy);
-          if (p.getAttribute("d") !== d) p.setAttribute("d", d);
-        });
-        const mask = on
-          ? `linear-gradient(to bottom, transparent ${Math.round(c - 0.97 * R)}px, #000 ${Math.round(c - 0.4 * R)}px, #000 ${Math.round(c + 0.4 * R)}px, transparent ${Math.round(c + 0.97 * R)}px)`
-          : "";
-        if (seen.get(svg) !== mask) { svg.style.maskImage = mask; svg.style.setProperty("-webkit-mask-image", mask); seen.set(svg, mask); }
-      });
-
       if (best !== lastBest) {
         const now = performance.now();
         if (lastBest && modeRef.current !== "auto" && now - lastTick > 70) { haptics.tick(); playWheelTick(); lastTick = now; }
@@ -755,7 +730,6 @@ export const EveningPath = ({
         {/* overflow-x clip: the wheel's tilt must never widen the page (the
             review found a sideways pan); nothing visible is cut. */}
         <div ref={boxRef} className="path-box relative mx-auto [overflow-x:clip]" style={{ width, height }}>
-          <Road stops={stops} width={width} height={height} walked={focus} />
           {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
 
           {nodes.map((n, i) => {
