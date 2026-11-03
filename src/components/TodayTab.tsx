@@ -923,12 +923,15 @@ export const TodayTab = () => {
             setPlayMode(false);
             setStep(null);
             loadData();
+            // came here from an island on the Map: back there (Index)
+            window.dispatchEvent(new Event("memap-trip-done"));
           }}
           onComplete={() => {
             setDailySessionOpen(false);
             setPlayMode(false);
             setStep(null);
             loadData();
+            window.dispatchEvent(new Event("memap-trip-done"));
           }}
           onGoToPatterns={() => {
             setDailySessionOpen(false);
@@ -979,7 +982,7 @@ export const TodayTab = () => {
         }}
         onTask={(task: TaskId) => {
           const toMap = (section?: string) =>
-            window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: section ? { tab: "patterns", open: "all", section } : { tab: "patterns" } }));
+            window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: section ? { tab: "patterns", open: "all", section, back: true } : { tab: "patterns" } }));
           if (task === "note") window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} }));
           else if (task === "calendar") { markTaskDone("calendar"); toMap("overview"); }
           else if (task === "chart") { markTaskDone("chart"); toMap("trends"); }
@@ -988,7 +991,7 @@ export const TodayTab = () => {
         }}
         onOpenReport={() => {
           try { localStorage.setItem("memap_patterns_section", "findings"); } catch { /* ignore */ }
-          window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } }));
+          window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", back: true } }));
         }}
         onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
         onFillDay={(date, redo) => {

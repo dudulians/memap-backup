@@ -2149,3 +2149,14 @@ html[data-ui="new"][data-theme="aurora"] .bg-white { background-color: hsl(var(-
 .chest-card { animation: chestCard 320ms ease-out both; }
 @keyframes chestCard { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .chest-card { animation: none; } }
+
+/* Not-yet steps on the path (her note, Nov 3 2026: "визуально должно быть
+   понятно, какие уровни открыты, а какие ещё нет"): grey, with a lock. */
+:root { --path-locked: 216 24% 92%; }
+html[data-theme="aurora"] { --path-locked: 234 26% 28%; }
+
+/* Her own day and night pictures behind the path (Nov 3 2026): islands at
+   the edges, open sea in the middle, so nothing is scattered on the path. */
+.memap-sea-bg.memap-path-bg { background-size: cover !important; background-position: center top !important; }
+html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { background-color: #d2dde3; }
+html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #504a9b; }

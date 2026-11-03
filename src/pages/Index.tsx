@@ -12,6 +12,8 @@ import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 import seaDawn from "@/assets/bg/sea-dawn.webp";
 import seaNight from "@/assets/bg/sea-night.webp";
+import pathDay from "@/assets/bg/path-day.webp";
+import pathNight from "@/assets/bg/path-night.webp";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -32,6 +34,8 @@ const Index = () => {
     } catch { /* Today */ }
     return "cards";
   });
+  const tabRef = useRef(activeTab);
+  tabRef.current = activeTab;
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -39,6 +43,14 @@ const Index = () => {
   // Report buttons ask the Map to open a sheet straight away (Findings for
   // all questions) instead of landing on the bare globe.
   const [mapOpen, setMapOpen] = useState<"all" | "overview" | "trends" | "signals" | null>(null);
+  // A side trip (her note, Nov 3 2026: "приложение не всегда возвращает туда,
+  // откуда пришла"): a step on Today opens the calendar on the Map, or an
+  // island's "Answer now" opens its questions on Today. When that sheet or
+  // deck closes ("memap-trip-done"), she goes back, to the same island.
+  const [trip, setTrip] = useState<{ back: Tab; to: Tab; island?: string } | null>(null);
+  const [mapIsland, setMapIsland] = useState<string | null>(null);
+  const tripRef = useRef(trip);
+  tripRef.current = trip;
   // Night or day (her night pack, Nov 2 2026): a moon/sun in the header.
   // Pictures are picked per theme, so the tabs redraw on a switch.
   const [night, setNight] = useState(() => isNight());
@@ -68,6 +80,8 @@ const Index = () => {
           try { localStorage.setItem("memap_patterns_section", section); } catch { /* ignore */ }
           setMapOpen(section === "overview" || section === "trends" || section === "signals" ? section : "all");
         }
+        const from = tabRef.current;
+        setTrip((e as CustomEvent).detail?.back && from !== tab ? { back: from, to: tab } : null);
         setActiveTab(tab);
       }
     };
@@ -75,14 +89,30 @@ const Index = () => {
     // An island's "Answer now": Today opens its questions (TodayTab reads it on mount).
     const answer = (e: Event) => {
       try { sessionStorage.setItem("memap_answer_now", JSON.stringify((e as CustomEvent).detail ?? {})); } catch { /* Today just opens */ }
+      const from = tabRef.current;
+      setTrip(from !== "cards" ? { back: from, to: "cards", island: (e as CustomEvent).detail?.island } : null);
       setActiveTab("cards");
     };
     window.addEventListener("memap-answer-now", answer);
+    // The sheet or deck of a side trip closed: back to where she was.
+    const done = () => {
+      const tr = tripRef.current;
+      if (!tr) return;
+      setTrip(null);
+      if (tr.back === "patterns" && tr.island) setMapIsland(tr.island);
+      setActiveTab(tr.back);
+    };
+    window.addEventListener("memap-trip-done", done);
     return () => {
       window.removeEventListener("memap-switch-tab", handler);
       window.removeEventListener("memap-answer-now", answer);
+      window.removeEventListener("memap-trip-done", done);
     };
   }, []);
+  // Anywhere else she goes, the trip is over.
+  useEffect(() => {
+    if (trip && activeTab !== trip.to && activeTab !== trip.back) setTrip(null);
+  }, [activeTab, trip]);
 
   const [notesTargetDate, setNotesTargetDate] = useState<string | undefined>();
   const [notesSourceTab, setNotesSourceTab] = useState<Tab | null>(null);
@@ -186,8 +216,11 @@ const Index = () => {
       {/* Her sea at dawn behind Today and Notes (Nov 1 2026). Light Aurora
           only (index.css); the Map tab draws its own sea. Fixed: the tab
           content scrolls over it. */}
+      {/* Today: her own day/night picture with islands at the edges (Nov 3
+          2026), so nothing needs to be scattered on the path. */}
       {activeTab !== "patterns" && (
-        <div aria-hidden="true" className="memap-sea-bg pointer-events-none absolute inset-0 -z-10" style={{ backgroundImage: `url(${night ? seaNight : seaDawn})` }} />
+        <div aria-hidden="true" className={`memap-sea-bg pointer-events-none absolute inset-0 -z-10${activeTab === "cards" ? " memap-path-bg" : ""}`}
+          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? pathNight : pathDay) : night ? seaNight : seaDawn})` }} />
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
@@ -226,7 +259,7 @@ const Index = () => {
         style={activeTab === "patterns" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK }}
       >
         {activeTab === "cards" && <TodayTab key={`cards-${refreshKey}`} />}
-        {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} onOpened={() => setMapOpen(null)} />}
+        {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} initialIsland={mapIsland} onOpened={() => { setMapOpen(null); setMapIsland(null); }} />}
         {activeTab === "notes" && (
           <NotesTab
             key={`notes-${refreshKey}`}
@@ -274,6 +307,7 @@ const Index = () => {
                 data-coachmark={tab === "patterns" ? "patterns-tab" : undefined}
                 onClick={() => {
                   haptics.tap();
+                  setTrip(null);
                   setActiveTab(tab);
                   setNotesSourceTab(null);
                   setNotesTargetDate(undefined);

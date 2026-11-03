@@ -61,7 +61,7 @@ export const AnswerNow = ({ island, trackers, entries }: { island: Island; track
     <div className="surface rounded-[20px] px-4 py-3.5">
       <p className="text-[17px] font-bold leading-snug">{t("islands.answerTitle", { count: ids.length })}</p>
       <p className="mt-0.5 text-[14px] font-medium leading-snug text-muted-foreground">{t("islands.answerWhere", { name })}</p>
-      <button type="button" onClick={() => { haptics.medium(); window.dispatchEvent(new CustomEvent("memap-answer-now", { detail: { ids, title: name } })); }}
+      <button type="button" onClick={() => { haptics.medium(); window.dispatchEvent(new CustomEvent("memap-answer-now", { detail: { ids, title: name, island: island.id } })); }}
         className="mt-3 flex h-12 w-full items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-[16px] font-bold text-white active:scale-[0.98] transition-transform">
         {t("islands.answerNow")}
       </button>

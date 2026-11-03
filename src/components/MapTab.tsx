@@ -32,7 +32,12 @@ import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 
 type Only = "overview" | "trends" | "signals";
-export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" | Only | null; onOpened?: () => void } = {}) => {
+export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
+  initialOpen?: "all" | Only | null;
+  /** back from answering an island's questions on Today: its sheet again */
+  initialIsland?: string | null;
+  onOpened?: () => void;
+} = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
@@ -48,12 +53,25 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
   const [onlyIsland, setOnlyIsland] = useState<IslandId | null>(null);
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
+  // A sheet opened from elsewhere (a step on Today): closing it goes back there.
+  const fromOutside = useRef(false);
   useEffect(() => {
     if (!initialOpen) return;
+    fromOutside.current = true;
     if (initialOpen === "all") setOpen("all");
     else setOnly(initialOpen);
     onOpened?.();
   }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!initialIsland) return;
+    setOpen(initialIsland as IslandId);
+    onOpened?.();
+  }, [initialIsland]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tripDone = () => {
+    if (!fromOutside.current) return;
+    fromOutside.current = false;
+    window.dispatchEvent(new Event("memap-trip-done"));
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -186,7 +204,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
           <p className="mt-1.5 text-[15px] text-muted-foreground">{t("map.emptyBody")}</p>
         </div>
       )}
-      <BottomSheet open={!!open} onOpenChange={(o) => { if (!o) setOpen(null); }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
+      <BottomSheet open={!!open && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <div className="flex items-center gap-3 pb-3 pr-10 pt-1">
             <img src={mapPic(island ? "icon_" + island.def.icon : "icon_growth")} alt="" className="h-12 w-12" />
@@ -209,7 +227,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
               {island.trackerIds.length > 0 && (
                 <IslandMore island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []} islands={islands} entries={entries}
                   days={islandDays(trackers, entries).get(island.id) ?? 0}
-                  onTest={() => { const id = island.id; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }}
+                  onTest={() => { const id = island.id; fromOutside.current = false; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }}
                   onView={(v: IslandView) => { const id = island.id; setOpen(null); window.setTimeout(() => { setOnlyIsland(id); setOnly(v); }, 250); }} />
               )}
             </>
@@ -219,7 +237,7 @@ export const MapTab = ({ initialOpen = null, onOpened }: { initialOpen?: "all" |
         </div>
       </BottomSheet>
       {/* Calendar / chart / lighthouses for everything, straight away. */}
-      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) setOnly(null); }} className="h-[88vh]"
+      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { setOnly(null); tripDone(); } }} className="h-[88vh]"
         ariaTitle={only ? t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses") : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">

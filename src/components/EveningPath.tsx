@@ -2,7 +2,7 @@
 // reference picture ("вот так получше будет"): flat round nodes with a plain
 // line icon, a white pill label growing out of each to the right, the
 // current step's pill holding its "Start" button, a calm dashed road, a white
-// week card with a progress bar, and only a few quiet pieces of scenery.
+// week card with a progress bar; her day/night picture behind (Nov 3 2026).
 // Past days of the week come first, then today's steps (a missed day, one
 // per topic, a task, the "Guess" game), then the coming days and the reward.
 // Nov 2 2026 (her: "при нажатии шага сразу делать действие"): tapping a step
@@ -19,13 +19,12 @@ import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, 
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
-import { placeScenery, type Rect } from "@/lib/pathScenery";
 import { islandDef, islandName } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, Scenery, WEEK_TITLES, WeekBanner, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, Road, WEEK_TITLES, WeekBanner, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -33,6 +32,7 @@ import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 
 const PATH_MAX = 440;
+type Rect = { x: number; y: number; w: number; h: number };
 
 const TASK_ICON: Record<TaskId, LucideIcon> = {
   note: PenLine,
@@ -235,21 +235,9 @@ export const EveningPath = ({
     };
   };
 
-  // Pills reach to the right edge; scenery stays out of their way.
-  const pillRect = (i: number): Rect => {
-    const p = stops[i];
-    const h = i === currentNode ? 70 + 40 : 42;
-    return { x: p.x - p.r - 6, y: p.y - (i === currentNode ? 35 : 21) - 4, w: width - p.x + p.r + 6, h: h + 8 };
-  };
   const f = stops[focus];
   // Her avatar (optional) stands to the left of the step to do.
   const avatar: Rect | null = f.x - f.r - 50 >= 0 ? { x: f.x - f.r - 50, y: f.y - 22, w: 48, h: 48 } : null;
-
-  const scenery = useMemo(() => {
-    const blocked: Rect[] = stops.map((_, i) => pillRect(i));
-    if (avatar) blocked.push(avatar);
-    return placeScenery(m.week, stops, width, blocked, []);
-  }, [stops, m.week, width]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Bubbles ---------------------------------------------------------------
   const [open, setOpen] = useState<Open>(null);
@@ -303,7 +291,7 @@ export const EveningPath = ({
   const thisChest = chests[m.week];
 
   const openActionPoints = () =>
-    window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals" } }));
+    window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
   const startStep = (s: Step) => {
     setOpen(null);
     if (s.kind === "game") { if (canPlay) setGameOpen(true); }
@@ -525,7 +513,6 @@ export const EveningPath = ({
       <section aria-label={title} className="animate-fade-in" style={{ marginTop: 14 }}>
         <div ref={boxRef} className="relative mx-auto" style={{ width, height }}>
           <Road stops={stops} width={width} height={height} walked={focus} />
-          <Scenery pieces={scenery} />
 
           {avatarPic && avatar && (
             <div aria-hidden="true" className="path-avatar pointer-events-none absolute z-[4]" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
@@ -547,6 +534,7 @@ export const EveningPath = ({
                   <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}
                     maxRight={width} big={i === currentNode} muted={v.look === "done"}
                     open={v.look === "todo" && !lockedGame} dim={v.look === "locked" || lockedGame}
+                    locked={v.look === "locked" || lockedGame} tone={v.hue} onTap={() => tap(i)}
                     second={i === currentNode && n.kind === "step" && n.step.kind === "task" ? t("path.skip") : undefined}
                     onSecond={() => { if (n.kind === "step" && n.step.task) { skipTask(n.step.task); setTick((k) => k + 1); } }} />
                 )}

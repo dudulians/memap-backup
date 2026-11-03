@@ -2,14 +2,14 @@
 // reference picture, "вот так получше будет"): flat round nodes with a soft
 // shadow and a plain line icon (no 3D lip, no pasted tiles), a white pill
 // label growing out of each node to the right, a calm dashed road, a white
-// week card with a progress bar, and only a few quiet pieces of scenery.
+// week card with a progress bar. Since Nov 3 2026 her own day/night picture
+// is behind the path, and nothing is scattered on it (her note).
 import { useId, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
+import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, Lock, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { mapPic } from "@/lib/islands";
-import { placeScenery, type Piece, type Rect } from "@/lib/pathScenery";
 import { DAYS_PER_WEEK, type ChestRecord } from "@/lib/pathSteps";
 
 // Nodes sit in the left half, a gentle zigzag, so every pill fits on the right.
@@ -71,22 +71,10 @@ export const Road = ({ stops, width, height, walked }: { stops: Stop[]; width: n
   );
 };
 
-/** A few quiet pieces of her art beside the path, with a soft shadow. */
-export const Scenery = ({ pieces }: { pieces: Piece[] }) => (
-  <>
-    {pieces.map((p, k) => (
-      <div key={k} aria-hidden="true" className="pointer-events-none absolute" style={{ left: p.x, top: p.y, width: p.w, height: p.h }}>
-        {p.shadow && (
-          <span className="absolute rounded-[50%] blur-[2px]" style={{ left: p.w * 0.15, right: p.w * 0.15, bottom: -3, height: 7, background: "var(--scenery-shadow)" }} />
-        )}
-        <img src={mapPic(p.name)} alt="" width={p.w} height={p.h} decoding="async" loading="lazy" draggable={false} className="relative" />
-      </div>
-    ))}
-  </>
-);
-
 /** done: filled + check; current: the main step; todo: open now (white,
- *  coloured rim); gold: a reward ready; locked: not yet (pale, dashed). */
+ *  full coloured rim and a soft glow); gold: a reward ready; locked: not yet
+ *  (grey, with a lock; her note, Nov 3 2026: "визуально должно быть понятно,
+ *  какие уровни открыты, а какие ещё нет"). */
 export type NodeLook = "done" | "current" | "todo" | "gold" | "locked";
 /** circle: questions and days; badge (wavy edge): games; square: practices and tasks. */
 export type NodeShape = "circle" | "badge" | "square";
@@ -116,10 +104,12 @@ export const islandIcon = (name?: string): LucideIcon => (name && ICONS[name]) |
  *  from above; steps ahead are white with the coloured icon and a tinted
  *  rim; the reward is gold. `hue` is "h s% l%" or a var(). Pressing shrinks
  *  it a little, with a light tap. */
-export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle" }: {
+export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle", lock = true }: {
   stop: Stop; look: NodeLook; children: ReactNode; onClick?: () => void; label: string;
   refEl?: React.Ref<HTMLButtonElement>; pressedRing?: number; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
   shape?: NodeShape;
+  /** a locked node shows its lock (the quiet coming weeks don't) */
+  lock?: boolean;
 }) => {
   const size = stop.r * 2;
   const tone = look === "gold" ? "var(--coin-gold)" : hue;
@@ -133,17 +123,17 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
       onClick={() => { if (onClick) { haptics.tap(); onClick(); } }}
       className={cn(
         "path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.94]",
-        filled ? "text-white" : locked ? !badge && "bg-white/55 dark:bg-[hsl(var(--surface)/0.5)]" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
+        filled ? "text-white" : locked ? !badge && "bg-[hsl(var(--path-locked))]" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
         wiggle && "path-wiggle-flat",
       )}
       style={{
         left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: radius,
-        color: filled ? undefined : locked ? `hsl(${tone} / 0.55)` : `hsl(${tone})`,
+        color: filled ? undefined : locked ? "hsl(var(--muted-foreground) / 0.75)" : `hsl(${tone})`,
         background: badge ? undefined : filled ? `linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 58%), hsl(${tone})` : undefined,
-        border: badge ? undefined : filled ? "3px solid hsl(var(--surface))" : locked ? "2.5px dashed hsl(var(--muted-foreground) / 0.35)" : `3px solid hsl(${tone} / 0.55)`,
+        border: badge ? undefined : filled ? "3px solid hsl(var(--surface))" : locked ? "2px solid hsl(var(--muted-foreground) / 0.2)" : `3.5px solid hsl(${tone})`,
         boxShadow: badge || locked ? undefined : filled
           ? `0 9px 18px -9px hsl(${tone} / 0.75), inset 0 -3px 0 rgba(0,0,0,0.06)`
-          : `0 6px 16px -8px hsl(${tone} / 0.45)`,
+          : `0 0 0 4px hsl(${tone} / 0.14), 0 8px 18px -8px hsl(${tone} / 0.6)`,
       }}>
       {look === "current" && (
         <span aria-hidden="true" className="path-halo pointer-events-none absolute"
@@ -159,27 +149,39 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
               <stop offset="0.58" stopColor="#fff" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <path d={badgePath(size)} fill={filled ? `hsl(${tone})` : locked ? "hsl(var(--surface) / 0.5)" : "hsl(var(--surface))"}
-            stroke={filled ? "hsl(var(--surface))" : locked ? "hsl(var(--muted-foreground) / 0.35)" : `hsl(${tone} / 0.6)`} strokeWidth={locked ? 2.5 : 3}
-            strokeDasharray={locked ? "5 5" : undefined} strokeLinejoin="round" />
+          <path d={badgePath(size)} fill={filled ? `hsl(${tone})` : locked ? "hsl(var(--path-locked))" : "hsl(var(--surface))"}
+            stroke={filled ? "hsl(var(--surface))" : locked ? "hsl(var(--muted-foreground) / 0.2)" : `hsl(${tone})`} strokeWidth={locked ? 2 : 3.5}
+            strokeLinejoin="round" />
           {filled && <path d={badgePath(size)} fill={`url(#${gid})`} />}
         </svg>
       )}
       <span className="relative flex items-center justify-center">{children}</span>
+      {locked && lock && (
+        <span aria-hidden="true" className="absolute -bottom-1 -right-1 z-[1] flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_2px_6px_rgba(16,42,56,0.25)] dark:bg-[hsl(var(--surface))]">
+          <Lock className="h-3 w-3" strokeWidth={2.6} />
+        </span>
+      )}
     </button>
   );
 };
 
 /** The label: a white pill that grows out of the node to the right. The
  *  node covers its left end. The current step's pill is taller and holds a
- *  "Start" button. */
-export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, big, second, onSecond, open, dim }: {
+ *  "Start" button. Tapping the pill does what tapping its node does (her
+ *  note, Nov 3 2026: "чтобы нажать на шаг, можно нажать и на плашку"). */
+export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, big, second, onSecond, open, dim, locked, tone, onTap }: {
   stop: Stop; title: string; sub?: string; action?: string; onAction?: () => void; maxRight: number; muted?: boolean; big?: boolean;
   second?: string; onSecond?: () => void;
-  /** open now: bold, with an arrow */
+  /** open now: bold, with an arrow in its colour */
   open?: boolean;
   /** not yet: dim */
   dim?: boolean;
+  /** not yet: a lock at the end */
+  locked?: boolean;
+  /** the step's colour, "h s% l%" or a var() */
+  tone?: string;
+  /** the same as tapping the node */
+  onTap?: () => void;
 }) => {
   const left = stop.x;
   const h = big ? 70 : 42;
@@ -192,15 +194,19 @@ export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, 
         {second}
       </button>
     )}
-    <div className={cn("pointer-events-none absolute z-[2] flex items-center rounded-full bg-white/90 shadow-[0_6px_18px_-12px_rgba(16,42,56,0.45)] backdrop-blur-sm dark:bg-[hsl(var(--surface)/0.92)]", dim && "bg-white/45 opacity-70 shadow-none dark:bg-[hsl(var(--surface)/0.45)]")}
-      style={{ left, top: stop.y - h / 2, height: h, maxWidth: maxRight - left, paddingLeft: stop.r + 12, paddingRight: action ? 8 : 18 }}>
+    <div onClick={onTap ? () => { haptics.tap(); onTap(); } : undefined}
+      className={cn("absolute z-[2] flex items-center rounded-full bg-white/90 shadow-[0_6px_18px_-12px_rgba(16,42,56,0.45)] backdrop-blur-sm dark:bg-[hsl(var(--surface)/0.92)]",
+        onTap ? "cursor-pointer transition-transform duration-150 active:scale-[0.98]" : "pointer-events-none",
+        dim && "bg-white/60 shadow-none dark:bg-[hsl(var(--surface)/0.5)]")}
+      style={{ left, top: stop.y - h / 2, height: h, maxWidth: maxRight - left, paddingLeft: stop.r + 12, paddingRight: action ? 8 : 14 }}>
       <span className="min-w-0 flex-1">
-        <span className={cn("block leading-tight", big ? "line-clamp-2 text-[18px] font-semibold" : "truncate text-[15px]", open ? "font-bold text-foreground" : "font-semibold", muted || dim ? "text-foreground/65" : "text-foreground")}>{title}</span>
+        <span className={cn("block leading-tight", big ? "line-clamp-2 text-[18px] font-semibold" : "truncate text-[15px]", open ? "font-bold text-foreground" : "font-semibold", muted || dim ? "text-foreground/60" : "text-foreground")}>{title}</span>
         {sub && <span className="mt-0.5 block truncate text-[14px] font-medium text-muted-foreground">{sub}</span>}
       </span>
-      {open && !action && <ChevronRight aria-hidden="true" className="ml-1 h-5 w-5 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />}
+      {open && !action && <ChevronRight aria-hidden="true" className="ml-1 h-5 w-5 shrink-0" strokeWidth={2.8} style={{ color: `hsl(${tone ?? "var(--coin-teal)"})` }} />}
+      {locked && !action && <Lock aria-hidden="true" className="ml-1.5 h-4 w-4 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />}
       {action && (
-        <button type="button" onClick={() => { haptics.medium(); onAction?.(); }}
+        <button type="button" onClick={(e) => { e.stopPropagation(); haptics.medium(); onAction?.(); }}
           className="pointer-events-auto ml-2 inline-flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-[hsl(var(--coin-teal))] pl-3.5 pr-2.5 text-[15px] font-bold text-white shadow-[0_6px_14px_-8px_hsl(var(--coin-teal))] active:scale-[0.96] transition-transform">
           {action} <ChevronRight className="h-5 w-5" strokeWidth={2.6} />
         </button>
@@ -278,10 +284,6 @@ export const WeekStrip = ({
   };
   const stops = useMemo(() => weekStops(width, [...Array(DAYS_PER_WEEK).fill(R_DAY), R_CHEST]), [width]);
   const height = stops[DAYS_PER_WEEK].y + R_CHEST + 28;
-  const pieces = useMemo(() => {
-    const blocked: Rect[] = stops.map((p) => ({ x: p.x - p.r - 6, y: p.y - 26, w: width - p.x + p.r + 6, h: 52 }));
-    return placeScenery(week, stops, width, blocked, []);
-  }, [stops, width, week]);
   const day = (i: number) => {
     if (kind === "past" && dates?.[i]) return new Date(dates[i] + "T00:00:00");
     const d = new Date();
@@ -294,13 +296,13 @@ export const WeekStrip = ({
       <WeekBanner week={week} done={kind === "past" ? DAYS_PER_WEEK : 0} opened={!!chest} onClick={kind === "past" ? onOpenChest : undefined} />
       <div className="relative mx-auto mt-2" style={{ width, height }}>
         <Road stops={stops} width={width} height={height} walked={kind === "past" ? DAYS_PER_WEEK : 0} />
-        <Scenery pieces={pieces} />
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i}>
-                <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"} />
-                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
+                <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"}
+                  onTap={kind === "past" ? onOpenChest : undefined} />
+                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
                   <Gift className="h-6 w-6" strokeWidth={2.2} />
                 </PathNode>
               </div>
@@ -309,8 +311,9 @@ export const WeekStrip = ({
           const d = day(i);
           return (
             <div key={i}>
-              <NodePill stop={p} title={dayName(d)} maxRight={width} muted={kind === "past"} dim={kind === "coming"} />
-              <PathNode stop={p} look={kind === "past" ? "done" : "locked"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
+              <NodePill stop={p} title={dayName(d)} maxRight={width} muted={kind === "past"} dim={kind === "coming"}
+                onTap={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined} />
+              <PathNode stop={p} look={kind === "past" ? "done" : "locked"} lock={false} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
                 onClick={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined}>
                 {kind === "past" ? <Check className="h-5 w-5" strokeWidth={3} /> : <MoonStar className="h-5 w-5" strokeWidth={2} />}
               </PathNode>
