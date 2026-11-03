@@ -134,7 +134,14 @@ export const owned = (id: ItemId, f: WorldFacts): boolean => !!keptTreasures()[i
 export const unseenTreasures = (f: WorldFacts): ItemId[] => {
   const have = ITEMS.filter((it) => owned(it.id, f)).map((it) => it.id);
   const seen = readJson<ItemId[] | null>(SEEN, null);
-  if (!seen) { try { localStorage.setItem(SEEN, JSON.stringify(have)); } catch { /* ignore */ } return []; }
+  if (!seen) {
+    // the first look: everything she had before is seen, except what the
+    // last chest just announced
+    const last = Object.values(getChests()).sort((a, b) => (a.openedAt ?? "").localeCompare(b.openedAt ?? "")).pop();
+    const news = new Set(last?.fresh?.items ?? []);
+    try { localStorage.setItem(SEEN, JSON.stringify(have.filter((id) => !news.has(id)))); } catch { /* ignore */ }
+    return have.filter((id) => news.has(id));
+  }
   return have.filter((id) => !seen.includes(id));
 };
 export const markTreasuresSeen = (f: WorldFacts): void => {

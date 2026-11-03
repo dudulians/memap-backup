@@ -1,6 +1,6 @@
 // Pick an avatar (Aurora; drawn at marketing/aurora-light-ux/13-avatar-picker-30.png):
 // the chosen one on top, a grid under it, "No avatar" first in the grid.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,8 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 export const AvatarPicker = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const { t } = useTranslation();
   const [chosen, setChosen] = useState<string | null>(getAvatar());
+  // changed elsewhere (another picker, the default): show it as it is now
+  useEffect(() => { if (open) setChosen(getAvatar()); }, [open]);
   const pick = (id: string | null) => {
     haptics.tap();
     setChosen(id);

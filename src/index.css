@@ -2148,6 +2148,7 @@ html[data-ui="new"][data-theme="aurora"] .bg-white\/90,
 html[data-ui="new"][data-theme="aurora"] .bg-white\/60,
 html[data-ui="new"][data-theme="aurora"] .bg-white\/40,
 html[data-ui="new"][data-theme="aurora"] .bg-white { background-color: hsl(var(--surface) / 0.92); }
+html[data-ui="new"][data-theme="aurora"] .bg-sky-50 { background-color: hsl(var(--surface)); }
 
 /* The mic while it listens: one soft ring breathing out. */
 .dictate-pulse { animation: dictatePulse 1.6s ease-out infinite; box-shadow: 0 0 0 0 hsl(var(--coin-teal) / 0.45); }

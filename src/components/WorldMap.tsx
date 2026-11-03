@@ -328,17 +328,23 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
         const u = reduce ? 1 : Math.min(1, (now - anim.t0) / 350), e = easeOut(u);
         yaw = anim.y0 + (anim.y1 - anim.y0) * e; pitch = anim.p0 + (anim.p1 - anim.p0) * e; moving = true;
         if (u >= 1) { const then = anim.then; anim = null; then?.(); }
-      } else if (!dragging && (wYaw || wPitch)) {
-        yaw += wYaw * dt; pitch += wPitch * dt;
-        const f = Math.pow(.996, dt); wYaw *= f; wPitch *= f;
-        if (pitch < lo || pitch > hi) { pitch = clamp(pitch, lo, hi); wPitch = 0; }
-        if (Math.hypot(wYaw, wPitch) * g.R < .008) wYaw = wPitch = 0;
-        moving = true;
-      } else if (snapBack) {
-        const u = Math.min(1, (now - snapBack.t0) / 300);
-        pitch = snapBack.from + (snapBack.to - snapBack.from) * easeOut(u); moving = true;
-        if (u >= 1) snapBack = null;
+      } else {
+        if (!dragging && (wYaw || wPitch)) {
+          yaw += wYaw * dt;
+          if (!snapBack) pitch += wPitch * dt;
+          const f = Math.pow(.996, dt); wYaw *= f; wPitch *= f;
+          if (!snapBack && (pitch < lo || pitch > hi)) { pitch = clamp(pitch, lo, hi); wPitch = 0; }
+          if (Math.hypot(wYaw, wPitch) * g.R < .008) wYaw = wPitch = 0;
+          moving = true;
+        }
+        if (snapBack) {
+          const u = Math.min(1, (now - snapBack.t0) / 300);
+          pitch = snapBack.from + (snapBack.to - snapBack.from) * easeOut(u); moving = true;
+          if (u >= 1) snapBack = null;
+        }
       }
+      // a released press runs out by time, drawn or not (also with Reduce Motion)
+      if (press && press.up != null && (reduce || now - press.up >= 420)) press = null;
       yaw = wrapAngle(yaw);
       setM();
       VIEW = { yaw, pitch };
@@ -467,7 +473,14 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
       }
 
       if (moving || dragging) kick();
-      else { lastT = 0; if (life && !idle) idle = window.setTimeout(() => { idle = 0; kick(); }, 33); }
+      else {
+        lastT = 0;
+        if (life && !idle) idle = window.setTimeout(() => { idle = 0; kick(); }, 33);
+        else if (!life && !idle && !reduce && !pausedRef.current && !document.hidden) {
+          const check = () => { if (!alive) return; if (document.querySelector('[role="dialog"]')) idle = window.setTimeout(check, 1000); else { idle = 0; kick(); } };
+          idle = window.setTimeout(check, 1000);
+        }
+      }
     }
 
     // turn the ball so (lon, lat) is in the middle, then run `then`
@@ -512,9 +525,11 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
       const p = local(ev); start = p; last = p; downAt = performance.now(); moved = 0; samples = [{ t: ev.timeStamp, x: p[0], y: p[1] }];
       // a touch stops the ball; if it was moving fast, this touch is not a tap
       stopped = Math.hypot(wYaw, wPitch) * geom().R > .05 || !!anim;
+      // a turn to an island she tapped still opens it
+      if (anim?.then) { const then = anim.then; yaw = anim.y1; pitch = anim.p1; setM(); anim = null; then(); }
       wYaw = wPitch = 0; anim = null; snapBack = null; dragging = true;
       const o = hitTest(p[0], p[1]);
-      if (o && !stopped) press = { o, t0: performance.now() };
+      press = o && !stopped ? { o, t0: performance.now() } : null;
       kick();
     };
     const onMove = (ev: PointerEvent) => {
@@ -549,7 +564,7 @@ export const WorldMap = ({ islands, routes, growth = {}, avatar = null, near, pa
         wYaw = vx * gy; wPitch = pitch <= lo || pitch >= hi ? 0 : vy * gp;
       }
       if (pitch < lo || pitch > hi) { wPitch = 0; snapBack = { from: pitch, to: clamp(pitch, lo, hi), t0: now }; }
-      const o = press?.o ?? null;
+      const o = press && press.t0 >= downAt ? press.o : null;
       releasePress(now);
       if (!stopped && moved <= 10 && now - downAt <= 500) { const p = local(ev); tap(p[0], p[1], o ?? hitTest(p[0], p[1])); }
       samples = [];

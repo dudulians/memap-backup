@@ -313,7 +313,12 @@ export const EveningPath = ({
 
   // Room above the first step, so it too can come to the band (a picker's
   // first row does); and where the band sits. After every render, set only
-  // when it changes (so no loop).
+  // when it changes. The spacer is flow-root, so margins never collapse
+  // through it and its own measure can't jump (the review found phones where
+  // it flipped back and forth until React gave up and the app showed its
+  // error screen); a breaker stops any other back-and-forth.
+  const spacerMoves = useRef({ key: "", n: 0 });
+  const [resized, setResized] = useState(0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const main = boxRef.current?.closest("main");
@@ -323,7 +328,9 @@ export const EveningPath = ({
     const mr = main.getBoundingClientRect();
     const base = first.getBoundingClientRect().top + 1 - mr.top - pt + main.scrollTop - spacer;
     const want = drum ? Math.max(0, Math.round(geo.current.off - pt - base)) : 0;
-    if (Math.abs(want - spacer) > 1) setSpacer(want);
+    const key = `${width}|${drum}|${pastShown}|${m.prior}|${nodes.length}|${resized}`;
+    if (spacerMoves.current.key !== key) spacerMoves.current = { key, n: 0 };
+    if (Math.abs(want - spacer) > 1 && spacerMoves.current.n < 4) { spacerMoves.current.n++; setSpacer(want); }
     const top = Math.round(geo.current.off - pt - BAND / 2);
     if (top !== bandTop) setBandTop(top);
   });
@@ -426,7 +433,7 @@ export const EveningPath = ({
     };
     frameRef.current = frame;
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(frame); };
-    const onResize = () => { measure(main); onScroll(); };
+    const onResize = () => { measure(main); setResized((n) => n + 1); onScroll(); };
     const byHand = () => { modeRef.current = "hand"; };
     const byKey = (e: KeyboardEvent) => { if (/^(Arrow|Page|Home$|End$| $)/.test(e.key)) modeRef.current = "hand"; };
     const onMotion = () => { setDrum(!mq.matches); onScroll(); };
@@ -466,15 +473,18 @@ export const EveningPath = ({
   const placedRef = useRef(false);
   useLayoutEffect(() => {
     if (!hasPath) return;
+    const firstTime = !placedRef.current;
+    if (!firstTime && modeRef.current === "hand") return;
     queueMicrotask(() => {
       const box = boxRef.current, main = box?.closest("main");
-      if (placedRef.current || !box || !main) return;
+      if (!box || !main) return;
       placedRef.current = true;
       measure(main);
-      main.scrollTop += box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + geo.current.off);
-      frameRef.current();
+      const d = box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + geo.current.off);
+      if (firstTime) { main.scrollTop += d; frameRef.current(); }
+      else if (Math.abs(d) > 2) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
     });
-  }, [hasPath]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasPath, focus]); // eslint-disable-line react-hooks/exhaustive-deps
   // after every render too: React may have put a node or the road back flat
   useLayoutEffect(() => { frameRef.current(); });
 
@@ -689,7 +699,7 @@ export const EveningPath = ({
       {/* The band in the middle, where a step lies flat: sticky, so it stays
           while everything rolls under it. Then room for the first step. */}
       {drum && <div aria-hidden="true" className="path-band pointer-events-none sticky animate-fade-in" style={{ top: bandTop, height: BAND, marginBottom: -BAND }} />}
-      <div aria-hidden="true" style={{ height: spacer }} />
+      <div aria-hidden="true" style={{ height: spacer, display: "flow-root" }} />
       {/* An old user's days before the path began: one chip, no empty weeks. */}
       {m.prior > 0 && (
         <div>
