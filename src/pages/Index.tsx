@@ -19,6 +19,8 @@ import pathDayTop from "@/assets/bg/path-day-top.webp";
 import pathDayTile from "@/assets/bg/path-day-tile.webp";
 import pathNightTop from "@/assets/bg/path-night-top.webp";
 import pathNightTile from "@/assets/bg/path-night-tile.webp";
+import skyDay from "@/assets/globe/sky-day.webp";
+import skyNight from "@/assets/globe/sky-night.webp";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -80,6 +82,14 @@ const Index = () => {
   // enough; the tabs are not rebuilt, so she stays where she was (her note,
   // Nov 3 2026: the switch threw the globe back to the flat map).
   const [night, setNight] = useState(() => isNight());
+  // the Map tab's Map | Globe switch: on the globe her sky runs behind the header too
+  const [mapView, setMapView] = useState(() => { try { return localStorage.getItem("memap_map_view") === "globe" ? "globe" : "map"; } catch { return "map"; } });
+  useEffect(() => {
+    const sync = (e: Event) => setMapView((e as CustomEvent<string>).detail === "globe" ? "globe" : "map");
+    window.addEventListener("memap-map-view", sync);
+    return () => window.removeEventListener("memap-map-view", sync);
+  }, []);
+  const onGlobe = activeTab === "patterns" && mapView === "globe";
   // the other theme's backgrounds load ahead, so a switch has them at once
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -279,13 +289,14 @@ const Index = () => {
           content scrolls over it. */}
       {/* Today: her own day/night picture with islands at the edges (Nov 3
           2026), so nothing needs to be scattered on the path. */}
+      {onGlobe && <div aria-hidden="true" className={`planet-sky ${night ? "night" : "day"} -z-10`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
       {activeTab !== "patterns" && (
         <div aria-hidden="true" className={`memap-sea-bg pointer-events-none absolute inset-0 -z-10${activeTab === "cards" ? " memap-path-bg" : ""}`}
           style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? pathNight : pathDay) : night ? seaNight : seaDawn})` }} />
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2${activeTab === "patterns" ? " app-head-map" : ""}`}>
+      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2${activeTab === "patterns" ? " app-head-map" : ""}${onGlobe ? " app-head-clear" : ""}`}>
         {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
         <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
         {/* Today puts "Week N · k/7" here once its week card has rolled away;

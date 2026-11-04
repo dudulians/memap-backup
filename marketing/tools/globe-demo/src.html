@@ -1,0 +1,582 @@
+<title>MeMap Globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
+<style>
+/* One phone-sized scene: sky, a painted planet you spin, her islands on top, a sheet for the tapped island. */
+:root {
+  --page: #E7ECF4;
+  --sky-a: #C8D5F4; --sky-b: #DCDDF5; --sky-c: #F3E6EC; --sky-d: #FAEBE3;
+  --ink: #1E2A33; --ink-soft: #6F7D8A; --teal: #3D9A8B; --teal-ink: #FFFFFF;
+  --card: #FFFFFF; --pill: rgba(255,255,255,.95); --pill-ink: #1E2A33;
+  --seg: rgba(255,255,255,.72); --seg-on: #FFFFFF; --seg-ink: #5B6B78;
+  --tabbar: #FFFFFF; --tab-ink: #7D8A96; --tab-on: #3D9A8B;
+  --fog: rgba(244,248,252,.96); --fog-soft: rgba(244,248,252,0);
+  --wake-glow: rgba(255,255,255,.58); --wake-foam: rgba(255,255,255,.95);
+  --font: "DM Sans", -apple-system, "Segoe UI", sans-serif;
+}
+#app[data-mode="night"] {
+  --sky-a: #121A3A; --sky-b: #1A2450; --sky-c: #26336A; --sky-d: #2C3B70;
+  --ink: #F1F5FF; --ink-soft: #AEB9D6; --card: #1F2B52; --pill: rgba(0,0,0,0); --pill-ink: #F1F5FF;
+  --seg: rgba(255,255,255,.12); --seg-on: rgba(255,255,255,.92); --seg-ink: #B9C3E0;
+  --tabbar: #26365F; --tab-ink: #AEBADA; --tab-on: #7FE0CF;
+  --fog: rgba(26,38,80,.96); --fog-soft: rgba(26,38,80,0);
+  --wake-glow: rgba(140,235,220,.30); --wake-foam: rgba(205,255,245,.88);
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--page); font-family: var(--font); color: var(--ink); overflow: hidden; -webkit-font-smoothing: antialiased; }
+#app { position: relative; height: 100%; max-width: 480px; margin: 0 auto; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  background: linear-gradient(180deg, var(--sky-a) 0%, var(--sky-b) 16%, var(--sky-c) 27%, var(--sky-d) 32%); color: var(--ink); }
+.abs { position: absolute; }
+.sun { left: 50%; width: 240px; height: 180px; margin-left: -120px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,246,205,1), rgba(255,230,170,.55) 45%, rgba(255,226,180,0)); }
+.skycloud { pointer-events: none; opacity: .92; }
+/* her painted sky (Nov 4 2026): the sun glow sits just above the top of the ball */
+.sky { inset: 0; background: url(a/sky-day.webp) center top / cover no-repeat; pointer-events: none; }
+/* her night sky is shorter than the screen: it fills the width, and the ball covers everything below it */
+.sky-night { inset: 0; background: url(a/sky-night.webp) center top / 100% auto no-repeat; pointer-events: none; }
+.star { width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 2px rgba(255,255,255,.85); pointer-events: none; }
+.moon { color: #F6E3A1; pointer-events: none; }
+#app:not([data-mode="night"]) .night-only, #app[data-mode="night"] .day-only { display: none; }
+#globe { position: absolute; inset: 0; width: 100%; height: 100%; }
+#lanes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.shimmer { animation: shimmer 2.6s linear infinite; }
+@keyframes shimmer { to { stroke-dashoffset: -32; } }
+#isles { position: absolute; inset: 0; pointer-events: none; z-index: 2; } /* its own layer: islands and clouds stay under the header, tabs and sheet */
+.isle { position: absolute; left: 0; top: 0; transform-origin: 50% 72%; will-change: transform, opacity; }
+.isle img { display: block; width: 100%; filter: drop-shadow(0 6px 8px rgba(20,60,100,.25)); }
+.isle.sky-cloud img { filter: drop-shadow(0 14px 10px rgba(20,60,100,.18)); }
+.isle .deco { position: absolute; filter: none; }
+.isle .water { position: absolute; left: -8%; right: -8%; top: 52%; height: 44%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,255,255,.6), rgba(255,255,255,0)); }
+#app[data-mode="night"] .isle .water { background: radial-gradient(closest-side, rgba(150,230,215,.35), rgba(150,230,215,0)); }
+.isle .ring { position: absolute; left: -22%; right: -22%; top: 48%; height: 58%; border-radius: 50%; border: 3px solid rgba(255,255,255,.95);
+  box-shadow: 0 0 0 10px rgba(255,255,255,.28), 0 0 24px rgba(255,255,255,.7); opacity: 0; transform: scale(.7); transition: opacity .25s, transform .35s cubic-bezier(.34,1.56,.64,1); }
+.isle.on .ring { opacity: 1; transform: scale(1); }
+.boat .bob { animation: bob 3.2s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-3px) rotate(1.5deg); } }
+.boat .otter { position: absolute; left: 48%; top: 40%; width: 42%; }
+.label { position: absolute; left: 0; top: 0; display: flex; justify-content: center; width: 180px; margin-left: -90px; will-change: transform, opacity; }
+.label span { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px 0 9px; border-radius: 14px; background: var(--pill); color: var(--pill-ink);
+  font-size: 14px; font-weight: 600; white-space: nowrap; box-shadow: 0 6px 14px -8px rgba(20,50,90,.5); }
+#app[data-mode="night"] .label span { box-shadow: none; text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.label svg { flex: none; }
+.fog { left: 0; right: 0; bottom: 0; height: 30%; pointer-events: none;
+  background: linear-gradient(to bottom, var(--fog-soft), var(--fog) 62%); }
+.puff { border-radius: 50%; background: radial-gradient(circle at 50% 40%, var(--fog) 40%, var(--fog-soft) 70%); pointer-events: none; }
+header { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 10px); padding: 0 16px; display: flex; align-items: center; justify-content: space-between; z-index: 20; }
+.round { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer;
+  box-shadow: 0 6px 14px -8px rgba(30,60,90,.45); padding: 0; }
+.round img { width: 38px; }
+.seg { height: 40px; border-radius: 20px; background: var(--seg); display: flex; padding: 4px; gap: 2px; box-shadow: 0 6px 16px -10px rgba(30,60,90,.4); }
+.seg button { height: 32px; padding: 0 14px; border: 0; border-radius: 16px; background: transparent; display: flex; align-items: center; gap: 6px;
+  font: 600 14px var(--font); color: var(--seg-ink); cursor: pointer; }
+.seg button.on { background: var(--seg-on); color: #1E2A33; box-shadow: 0 2px 6px rgba(30,60,90,.12); }
+button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.planets { position: absolute; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 106px); z-index: 20; height: 34px; padding: 3px 3px 3px 12px; border-radius: 17px;
+  background: var(--seg); color: var(--seg-ink); display: flex; align-items: center; gap: 2px; font: 600 13px var(--font); }
+.planets span { margin-right: 6px; }
+.planets button { width: 28px; height: 28px; border: 0; border-radius: 14px; background: transparent; color: var(--seg-ink); font: 700 13px var(--font); cursor: pointer; }
+.planets button.on { background: var(--seg-on); color: #1E2A33; box-shadow: 0 2px 6px rgba(30,60,90,.12); }
+.texbtn { position: absolute; right: 16px; top: calc(env(safe-area-inset-top, 0px) + 64px); z-index: 20; height: 34px; padding: 0 12px; border-radius: 17px; border: 0;
+  background: var(--seg); color: var(--seg-ink); font: 600 13px var(--font); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.hint { left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 112px); display: flex; justify-content: center; z-index: 15; pointer-events: none; transition: opacity .5s; }
+.hint span { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--seg); color: var(--seg-ink); font-size: 13px; font-weight: 600; }
+.tabs { position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); height: 70px; border-radius: 30px; background: var(--tabbar);
+  display: flex; justify-content: space-around; align-items: center; z-index: 20; box-shadow: 0 16px 34px -16px rgba(20,50,90,.45); }
+.tabs button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font: 600 12px var(--font); color: var(--tab-ink); width: 80px; cursor: pointer; }
+.tabs button.on { color: var(--tab-on); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; background: var(--card); color: var(--ink); border-radius: 28px 28px 0 0;
+  padding: 10px 20px calc(env(safe-area-inset-bottom, 0px) + 22px); box-shadow: 0 -18px 40px -16px rgba(20,50,90,.4);
+  transform: translateY(105%); transition: transform .35s cubic-bezier(.2,.9,.25,1); }
+.sheet.open { transform: none; }
+.sheet .handle { width: 40px; height: 5px; border-radius: 3px; background: rgba(140,155,175,.35); margin: 0 auto 14px; }
+.sheet .row { display: flex; align-items: center; gap: 14px; }
+.sheet .thumb { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(160deg, #DDF0F7, #BFE0EE); display: grid; place-items: center; flex: none; }
+#app[data-mode="night"] .sheet .thumb { background: linear-gradient(160deg, #2C4A78, #22395F); }
+.sheet .thumb img { width: 54px; }
+.sheet h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.sheet p { margin: 2px 0 0; font-size: 15px; color: var(--ink-soft); }
+.sheet .go { margin-top: 16px; width: 100%; height: 52px; border: 0; border-radius: 26px; background: var(--teal); color: var(--teal-ink); font: 700 17px var(--font);
+  display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; }
+.toast { left: 50%; top: calc(env(safe-area-inset-top, 0px) + 110px); transform: translate(-50%, -8px); z-index: 40; background: rgba(30,42,51,.9); color: #fff;
+  font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 14px; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; max-width: 86%; text-align: center; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.nogl { inset: 0; display: grid; place-items: center; padding: 0 24px; text-align: center; font-size: 16px; color: var(--ink-soft); }
+@media (prefers-reduced-motion: reduce) { .shimmer { animation: none; } .boat .bob { animation: none; } .sheet, .toast, .isle .ring { transition: none; } }
+</style>
+
+<div id="app">
+  <div class="abs sky day-only"></div>
+  <div class="abs sky-night night-only"></div>
+  <div id="stars" hidden></div>
+
+  <canvas id="globe" aria-label="Globe with your life areas as islands. Drag to spin, tap an island to open it."></canvas>
+  <svg id="lanes"><g id="laneG"></g></svg>
+  <div id="isles"></div>
+  <div class="abs fog" id="fog"></div>
+
+  <header>
+    <button class="round" id="mode" aria-label="Switch day and night"><span class="day-only">{{i:moon:20}}</span><span class="night-only">{{i:sun:20}}</span></button>
+    <div class="seg" role="tablist">
+      <button id="segMap">{{i:map:16}}Map</button>
+      <button class="on" aria-selected="true">{{i:globe:16}}Globe</button>
+    </div>
+    <button class="round" id="you" aria-label="You"><img src="a/otter.webp" alt=""></button>
+  </header>
+  <button class="texbtn" id="texbtn">{{i:image-up:16}}Your planet picture</button>
+  <div class="planets" role="group" aria-label="Her planet pictures"><span>Planet</span><button data-planet="1">1</button><button data-planet="2">2</button><button data-planet="3" class="on">3</button></div>
+  <input type="file" id="texfile" accept="image/*" hidden>
+
+  <div class="abs hint" id="hint"><span>{{i:hand:16}}Drag to spin · tap an island</span></div>
+
+  <nav class="tabs">
+    <button data-toast="Today shows the voyage of the week">{{i:calendar-days:22}}<span>Today</span></button>
+    <button class="on">{{i:globe:22}}<span>Globe</span></button>
+    <button data-toast="Notes is the logbook">{{i:notebook-pen:22}}<span>Notes</span></button>
+  </nav>
+
+  <div class="sheet" id="sheet" aria-hidden="true">
+    <div class="handle"></div>
+    <div class="row"><div class="thumb"><img id="shImg" alt=""></div>
+      <div><h2 id="shName">Health</h2><p id="shSub">Stormy this week · 4 hard days</p></div></div>
+    <button class="go" id="shGo">Open the island {{i:chevron-right:18}}</button>
+  </div>
+  <div class="abs toast" id="toast"></div>
+</div>
+
+<script>
+(() => {
+const app = document.getElementById("app");
+const cv = document.getElementById("globe");
+const isles = document.getElementById("isles");
+const laneG = document.getElementById("laneG");
+const sheet = document.getElementById("sheet");
+const toastEl = document.getElementById("toast");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const D2R = Math.PI / 180;
+const ICON = {{ICONS}};
+
+// ---------- islands on the planet (lat, lon in degrees)
+const C0 = window.__c0 || [22, -10]; // open sea in her second planet, her west land at the left edge of the ball, her south land below the ring
+const dest = ([lat, lon], bearing, dist) => {
+  const p1 = lat * D2R, l1 = lon * D2R, t = bearing * D2R, d = dist * D2R;
+  const p2 = Math.asin(Math.sin(p1) * Math.cos(d) + Math.cos(p1) * Math.sin(d) * Math.cos(t));
+  const l2 = l1 + Math.atan2(Math.sin(t) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
+  return [p2 / D2R, l2 / D2R];
+};
+const AREAS = [
+  // her island pack v2 (Nov 4 2026): each area is one whole painted island
+  { id: "kids", name: "Kids", b: 38, pic: "isl_20_tropical_palms", ic: ["sprout", "#4BA27A"], sub: "Stormy this week · 3 hard days" },
+  { id: "love", name: "Love", b: 92, pic: "isl_11_sakura", ic: ["heart", "#E0707A"], sub: "Some clouds · 2 hard days" },
+  { id: "health", name: "Health", b: 146, pic: "isl_09_waterfall", deco: [["lighthouse", 68, -34, 20]], ic: ["heart-pulse", "#E0707A"], sub: "Stormy this week · 4 hard days" },
+  { id: "work", name: "Work", b: 214, pic: "isl_06_snow_peak", ic: ["cloud-sun", "#7D9CC8"], sub: "Some clouds · 2 hard days" },
+  { id: "me", name: "Me", b: 268, pic: "isl_17_lavender_garden", ic: ["sun", "#E8A93A"], sub: "Calm this week" },
+  { id: "pets", name: "Pets", b: 322, pic: "isl_24_oak_tree", ic: ["paw-print", "#C9962E"], sub: "Calm this week" },
+].map((a) => ({ ...a, ll: dest(C0, a.b, window.__ring || 28), size: 1 }));
+const FILLERS = window.__fillers ? [
+  { ll: [-4, 118], pic: "island_rocky", size: 0.62 }, { ll: [28, 158], pic: "island_plain", deco: [["palm_trees", 30, -66, 40]], size: 0.62 },
+  { ll: [-22, -122], pic: "island_lotus", size: 0.55 }, { ll: [40, -96], pic: "island_rocky", size: 0.55 },
+  { ll: [-34, 172], pic: "island_plain", deco: [["orange_tree", 28, -60, 44]], size: 0.6 }, { ll: [8, -160], pic: "island_mountain", size: 0.58 },
+] : []; // her planet has its own lands now
+const CLOUDS = [{ ll: [16, -88], size: 0.9, pic: "cloud_island_03" }, { ll: [-12, 96], size: 0.85, pic: "cloud_island_01" }, { ll: [30, 152], size: 0.8, pic: "cloud_island_05" }];
+// soft clouds that sit on the planet and turn with it, kept off the ring of islands
+const SKY = [[4, 48, "cloud_04_large"], [46, 40, "cloud_01_large"], [-20, -60, "cloud_06_large"], [56, -66, "cloud_02_large"], [-26, 118, "cloud_05_large"], [26, 168, "cloud_03_large"], [6, -150, "cloud_07_large"]]
+  .map(([lat, lon, pic]) => ({ ll: [lat, lon], pic, size: 1.05 }));
+const SIZES = {{SIZES}};
+const LINKS = [["me", "love"], ["kids", "work"]];
+const AR = { island_lotus: 0.78, island_mountain: 0.654, island_waterfall: 0.646, island_rocky: 0.5625, island_plain: 0.517, cloud: 0.62, sailboat: 1 };
+const ratio = (pic) => AR[pic] || (SIZES[pic] ? SIZES[pic][1] / SIZES[pic][0] : 0.6);
+// where the island meets the water, as a share of its height: the water halo is about 0.4 of the width tall
+const anchorOf = (it) => (it.kind === "sky" ? 0.5 : it.kind === "boat" ? 0.72 : Math.min(0.85, Math.max(0.5, 1 - 0.2 / it.ar)));
+
+const vec = ([lat, lon]) => { const p = lat * D2R, l = lon * D2R; return [Math.cos(p) * Math.sin(l), Math.sin(p), Math.cos(p) * Math.cos(l)]; };
+let night = false;
+const dir = () => (night ? "n" : "a");
+
+// ---------- DOM for every object on the planet
+const items = [];
+const icon = (name, color, size = 15) => (ICON[name] || "").replace('width="24" height="24"', `width="${size}" height="${size}"`).replace(/stroke="currentColor"/, `stroke="${color}"`)
+  .replace('fill="none"', name === "heart" ? `fill="${color}"` : 'fill="none"');
+const addItem = (o, kind) => {
+  const el = document.createElement("div");
+  el.className = "isle" + (kind === "boat" ? " boat" : kind === "sky" ? " sky-cloud" : "");
+  const pic = kind === "cloud" ? (o.pic || "cloud") : kind === "boat" ? "sailboat" : o.pic;
+  el.innerHTML = kind === "boat"
+    ? `<div class="bob"><img data-pic="sailboat" alt=""><img class="otter" src="a/otter.webp" alt=""></div>`
+    : kind === "sky" ? `<img data-pic="${pic}" alt="">`
+    : `${kind === "area" ? "" : '<div class="water"></div>'}<div class="ring"></div><img data-pic="${pic}" alt="">` +
+      (o.deco || []).map(([p, l, t, w]) => `<img class="deco" data-pic="${p}" alt="" style="left:${l}%;top:${t}%;width:${w}%">`).join("");
+  isles.appendChild(el);
+  let lab = null;
+  if (o.name) {
+    lab = document.createElement("div"); lab.className = "label";
+    lab.innerHTML = `<span>${icon(o.ic[0], o.ic[1])}${o.name}</span>`;
+    isles.appendChild(lab);
+  }
+  items.push({ ...o, kind, el, lab, v: vec(o.ll), ar: ratio(pic), s: 0, x: 0, y: 0, z: -1 });
+};
+AREAS.forEach((a) => addItem(a, "area"));
+FILLERS.forEach((f) => addItem(f, "filler"));
+CLOUDS.forEach((c) => addItem(c, "cloud"));
+SKY.forEach((c) => addItem(c, "sky"));
+addItem({ ll: [C0[0] - 1, C0[1]], size: 0.72 }, "boat");
+const setPics = () => {
+  for (const img of isles.querySelectorAll("img[data-pic]")) {
+    const p = img.dataset.pic;
+    img.src = p === "cloud" ? "a/cloud.webp" : `${dir()}/${p}.webp`;
+  }
+};
+setPics();
+
+// stars for the night sky
+(() => { const s = document.getElementById("stars"); let h = ""; let r = 3;
+  const rnd = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 22; i++) h += `<b class="abs star" style="left:${(rnd() * 96 + 2).toFixed(1)}%;top:${(rnd() * 30 + 6).toFixed(1)}%;opacity:${(0.45 + rnd() * 0.5).toFixed(2)}"></b>`;
+  s.innerHTML = h; })();
+
+// ---------- the painted planet (placeholder until her picture comes)
+const TW = 2048, TH = 1024;
+const makeTexture = (isNight) => {
+  const c = document.createElement("canvas"); c.width = TW; c.height = TH; const x = c.getContext("2d");
+  const P = isNight
+    ? { deep: "#14365A", mid: "#1F4C72", shallow: "rgba(64,128,150,.85)", sand: "#7E8A7C", g1: "#4E8C76", g2: "#2C5D55", hl: "rgba(170,225,210,.22)", sh: "rgba(5,20,35,.30)", wave: "rgba(170,210,255,.07)", forest: "rgba(20,55,50,.45)" }
+    : { deep: "#4C9FCC", mid: "#7FC8E3", shallow: "rgba(186,236,240,.95)", sand: "#F1E2BE", g1: "#BCE3A2", g2: "#7DBE84", hl: "rgba(255,255,235,.30)", sh: "rgba(40,90,60,.14)", wave: "rgba(255,255,255,.09)", forest: "rgba(60,130,80,.35)" };
+  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const g = x.createLinearGradient(0, 0, 0, TH);
+  g.addColorStop(0, P.deep); g.addColorStop(0.32, P.mid); g.addColorStop(0.68, P.mid); g.addColorStop(1, P.deep);
+  x.fillStyle = g; x.fillRect(0, 0, TW, TH);
+  const wrap = (cx, draw) => { for (const dx of [-TW, 0, TW]) { if (cx + dx < -400 || cx + dx > TW + 400) continue; x.save(); x.translate(dx, 0); draw(); x.restore(); } };
+  for (let i = 0; i < 140; i++) { // soft painted mottling
+    const cx = rnd() * TW, cy = TH * (0.08 + 0.84 * rnd()), r = 50 + rnd() * 150, light = rnd() > 0.5;
+    wrap(cx, () => { const rg = x.createRadialGradient(cx, cy, 0, cx, cy, r); rg.addColorStop(0, light ? (isNight ? "rgba(90,150,200,.10)" : "rgba(255,255,255,.10)") : "rgba(10,40,90,.08)"); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(cx - r, cy - r, r * 2, r * 2); });
+  }
+  x.lineCap = "round";
+  for (let i = 0; i < 700; i++) { // little painted waves
+    const cx = rnd() * TW, cy = TH * (0.1 + 0.8 * rnd()), w = 10 + rnd() * 26;
+    wrap(cx, () => { x.strokeStyle = P.wave; x.lineWidth = 2; x.beginPath(); x.moveTo(cx - w, cy); x.quadraticCurveTo(cx, cy - 5, cx + w, cy); x.stroke(); });
+  }
+  const LANDS = [[-66, 8, 80], [68, 2, 74], [76, -34, 52], [-40, 46, 50], [18, -46, 62], [138, 22, 104], [-136, -12, 92], [-172, 36, 56], [104, -46, 50], [-100, 30, 44], [170, -24, 46]];
+  for (const [lon, lat, r0] of LANDS) {
+    const cx = (lon / 360 + 0.5) * TW, cy = (0.5 - lat / 180) * TH, sx = 1 / Math.max(0.45, Math.cos(lat * D2R));
+    const n = 9, pts = [];
+    for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 2, rr = r0 * (0.68 + rnd() * 0.5); pts.push([cx + Math.cos(a) * rr * sx, cy + Math.sin(a) * rr * 0.82]); }
+    const path = (scale) => { x.beginPath(); const q = pts.map(([px, py]) => [cx + (px - cx) * scale, cy + (py - cy) * scale]); const m = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      let s = m(q[n - 1], q[0]); x.moveTo(s[0], s[1]); for (let k = 0; k < n; k++) { const e = m(q[k], q[(k + 1) % n]); x.quadraticCurveTo(q[k][0], q[k][1], e[0], e[1]); } x.closePath(); };
+    wrap(cx, () => {
+      x.save(); x.shadowColor = P.shallow; x.shadowBlur = 40; x.fillStyle = P.shallow; path(1.3); x.fill(); x.restore();
+      x.save(); x.shadowColor = P.sand; x.shadowBlur = 6; x.fillStyle = P.sand; path(1.07); x.fill(); x.restore();
+      const gg = x.createRadialGradient(cx - r0 * 0.35 * sx, cy - r0 * 0.35, r0 * 0.1, cx, cy, r0 * 1.2 * sx); gg.addColorStop(0, P.g1); gg.addColorStop(1, P.g2);
+      x.save(); path(1); x.fillStyle = gg; x.fill(); x.clip();
+      for (let h = 0; h < 3; h++) { // hills: light side up-left, shadow down-right
+        const hx = cx + (rnd() - 0.5) * r0 * sx, hy = cy + (rnd() - 0.5) * r0 * 0.8, hr = r0 * (0.25 + rnd() * 0.25);
+        let rg = x.createRadialGradient(hx + hr * 0.25, hy + hr * 0.3, 0, hx + hr * 0.25, hy + hr * 0.3, hr); rg.addColorStop(0, P.sh); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(hx - hr, hy - hr, hr * 2.6, hr * 2.6);
+        rg = x.createRadialGradient(hx - hr * 0.25, hy - hr * 0.3, 0, hx - hr * 0.25, hy - hr * 0.3, hr * 0.8); rg.addColorStop(0, P.hl); rg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = rg; x.fillRect(hx - hr * 1.2, hy - hr * 1.2, hr * 2.2, hr * 2.2);
+      }
+
+      x.restore();
+    });
+  }
+  return c;
+};
+// her picture: crop to 2:1, then blend the left and right edges so the seam disappears
+const fromPicture = (img) => {
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  let sw = iw, sh = iw / 2, sy = (ih - sh) / 2;
+  if (sh > ih) { sh = ih; sw = ih * 2; sy = 0; }
+  const sx0 = (iw - sw) / 2, b = Math.round(sw * 0.07);
+  const mid = document.createElement("canvas"); mid.width = Math.round(sw - b); mid.height = Math.round(sh);
+  const m = mid.getContext("2d");
+  m.drawImage(img, sx0, sy, sw - b, sh, 0, 0, sw - b, sh);
+  const strip = document.createElement("canvas"); strip.width = b; strip.height = Math.round(sh);
+  const st = strip.getContext("2d");
+  st.drawImage(img, sx0 + sw - b, sy, b, sh, 0, 0, b, sh);
+  st.globalCompositeOperation = "destination-in";
+  const fade = st.createLinearGradient(0, 0, b, 0); fade.addColorStop(0, "rgba(0,0,0,1)"); fade.addColorStop(1, "rgba(0,0,0,0)");
+  st.fillStyle = fade; st.fillRect(0, 0, b, sh);
+  m.drawImage(strip, 0, 0);
+  const out = document.createElement("canvas"); out.width = TW; out.height = TH;
+  out.getContext("2d").drawImage(mid, 0, 0, TW, TH);
+  return out;
+};
+
+// ---------- WebGL: one quad, the sphere is drawn per pixel
+const gl = cv.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false });
+if (!gl) { app.insertAdjacentHTML("beforeend", '<div class="abs nogl">This phone could not start the 3D view.</div>'); return; }
+const VS = "attribute vec2 p; varying vec2 v; void main(){ v = p; gl_Position = vec4(p, 0.0, 1.0); }";
+const FS = `precision highp float;
+varying vec2 v;
+uniform vec2 uRes; uniform vec3 uBall; uniform float uYaw; uniform float uPitch; uniform float uNight; uniform float uPx;
+uniform sampler2D uTex;
+const float PI = 3.14159265;
+void main(){
+  vec2 frag = vec2((v.x * 0.5 + 0.5) * uRes.x, (0.5 - v.y * 0.5) * uRes.y);
+  vec2 q = (frag - uBall.xy) / uBall.z; q.y = -q.y;
+  float d = length(q);
+  vec3 glow = mix(vec3(0.86, 0.93, 1.0), vec3(0.42, 0.58, 0.98), uNight);
+  float aa = 1.6 * uPx / uBall.z;
+  float outer = pow(clamp((1.14 - d) / 0.14, 0.0, 1.0), 1.7) * mix(0.8, 0.5, uNight);
+  if (d > 1.0) { gl_FragColor = vec4(glow * outer, outer); return; }
+  float z = sqrt(max(0.0, 1.0 - d * d));
+  vec3 n = vec3(q, z);
+  float cp = cos(uPitch), sp = sin(uPitch), cy = cos(uYaw), sy = sin(uYaw);
+  float y0 = n.y * cp + n.z * sp;
+  float z1 = -n.y * sp + n.z * cp;
+  float x0 = n.x * cy - z1 * sy;
+  float z0 = n.x * sy + z1 * cy;
+  vec2 uv = vec2(atan(x0, z0) / (2.0 * PI) + 0.5, 0.5 - asin(clamp(y0, -1.0, 1.0)) / PI);
+  vec3 col = texture2D(uTex, uv).rgb;
+  vec3 L = normalize(vec3(-0.35, 0.55, 0.78));
+  float diff = max(dot(n, L), 0.0);
+  col *= mix(0.72, 1.06, diff);
+  float fr = pow(1.0 - z, 2.4);
+  col = mix(col, mix(vec3(0.93, 0.97, 1.0), vec3(0.48, 0.66, 1.0), uNight), fr * mix(0.6, 0.5, uNight));
+  vec3 H = normalize(L + vec3(0.0, 0.0, 1.0));
+  col += pow(max(dot(n, H), 0.0), 42.0) * mix(0.16, 0.07, uNight);
+  float a = 1.0 - smoothstep(1.0 - aa, 1.0, d);
+  gl_FragColor = vec4(col * a + glow * outer * (1.0 - a), max(a, outer));
+}`;
+const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+const prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); gl.useProgram(prog);
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+const U = Object.fromEntries(["uRes", "uBall", "uYaw", "uPitch", "uNight", "uPx", "uTex"].map((k) => [k, gl.getUniformLocation(prog, k)]));
+const tex = gl.createTexture();
+const textures = { day: null, night: null };
+const useTexture = (canvas) => {
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  dirty = true; kick();
+};
+
+// ---------- view state
+let W = 0, H = 0, DPR = 1, R = 0, CX = 0, CY = 0;
+let yaw = -C0[1] * D2R, pitch = Math.max(0, C0[0] - 20) * D2R, vy = 0, vp = 0; // look from below the ring: it sits in the upper half, her land shows underneath
+// north stays up and the tilt stays low, so a sideways drag slides the islands sideways instead of swinging them round the pole
+const PITCH_MIN = -0.25, PITCH_MAX = window.__pmax || 0.62;
+let dirty = true, raf = 0, anim = null;
+const resize = () => {
+  const r = app.getBoundingClientRect(); W = r.width; H = r.height; DPR = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  R = Math.min(W * 0.74, H * 0.37); CX = W / 2; CY = H * 0.585;
+  document.getElementById("fog").style.height = Math.max(0, H - (CY + R * 0.62)) + "px";
+  gl.viewport(0, 0, cv.width, cv.height); dirty = true; kick();
+};
+
+const rot = ([x, y, z]) => {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const x1 = x * cy + z * sy, z1 = -x * sy + z * cy;
+  return [x1, y * cp - z1 * sp, y * sp + z1 * cp];
+};
+const slerp = (a, b, t) => { const d = Math.acos(Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])), s = Math.sin(d) || 1;
+  const k1 = Math.sin((1 - t) * d) / s, k2 = Math.sin(t * d) / s; return [a[0] * k1 + b[0] * k2, a[1] * k1 + b[1] * k2, a[2] * k1 + b[2] * k2]; };
+
+const draw = () => {
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform2f(U.uRes, cv.width, cv.height); gl.uniform3f(U.uBall, CX * DPR, CY * DPR, R * DPR);
+  gl.uniform1f(U.uYaw, yaw); gl.uniform1f(U.uPitch, pitch); gl.uniform1f(U.uNight, night ? 1 : 0); gl.uniform1f(U.uPx, DPR); gl.uniform1i(U.uTex, 0);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  const base = R * 0.35;
+  for (const it of items) {
+    const p = rot(it.v); it.z = p[2];
+    const vis = Math.max(0, Math.min(1, (p[2] - 0.04) / 0.24));
+    if (vis <= 0) { it.el.style.opacity = 0; if (it.lab) it.lab.style.opacity = 0; it.s = 0; continue; }
+    const s = (0.5 + 0.5 * p[2]) * it.size, w = base * s;
+    it.x = CX + R * p[0]; it.y = CY - R * p[1]; it.s = s; it.w = w;
+    // an island stands on the ball: it leans out toward the edge it is near, the same way every frame
+    it.lean = Math.atan2(p[0], p[1] + 1.6) * 0.35;
+    it.el.style.width = base * it.size + "px";
+    const an = anchorOf(it); it.el.style.transformOrigin = `50% ${(an * 100).toFixed(1)}%`;
+    it.el.style.transform = `translate(${it.x - (base * it.size) / 2}px, ${it.y - base * it.size * it.ar * an}px) rotate(${(it.lean * 57.3).toFixed(2)}deg) scale(${(s / it.size).toFixed(3)})`;
+    it.el.style.opacity = it.kind === "sky" ? vis * 0.92 : vis; it.el.style.zIndex = Math.round(100 + p[2] * 100 + (it.kind === "sky" ? 120 : 0));
+    if (it.lab) { const ls = Math.max(0.82, s); const off = w * it.ar * (1 - anchorOf(it)) + 8; it.lab.style.transform = `translate(${(it.x - Math.sin(it.lean) * off).toFixed(1)}px, ${(it.y + Math.cos(it.lean) * off).toFixed(1)}px) scale(${ls.toFixed(3)})`; it.lab.style.opacity = vis; it.lab.style.zIndex = Math.round(100 + p[2] * 100); }
+  }
+  // a link is the wake a boat left between two islands (from the first island to the second)
+  let h = "";
+  const f1 = (v) => v.toFixed(1), pt = (x, y) => `${f1(x)} ${f1(y)}`;
+  const delay = -Math.round(performance.now() % 2600);
+  for (const [a, b] of LINKS) {
+    const A = items.find((i) => i.id === a).v, B = items.find((i) => i.id === b).v;
+    const N = 90, runs = []; let run = [];
+    for (let k = 0; k <= N; k++) {
+      const t = k / N, p = rot(slerp(A, B, t));
+      if (p[2] > 0.06) run.push({ x: CX + R * p[0], y: CY - R * p[1], z: p[2], t }); else if (run.length) { runs.push(run); run = []; }
+    }
+    if (run.length) runs.push(run);
+    for (const P of runs) {
+      if (P.length < 3) continue;
+      const C = P.map((q, i) => {
+        const a0 = P[Math.max(0, i - 1)], a1 = P[Math.min(P.length - 1, i + 1)];
+        const dx = a1.x - a0.x, dy = a1.y - a0.y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+        const k = 0.5 + 0.5 * q.z;
+        const taper = Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, (q.t - 0.07) / 0.86))), 0.55);
+        const wave = 5.5 * k * Math.sin(q.t * Math.PI * 2 * 3.5) * taper; // a gentle meander, fixed to the water
+        return { x: q.x + nx * wave, y: q.y + ny * wave, ux, uy, nx, ny, w: (4.5 + 4.5 * k) * k * taper, cw: (0.9 + 1.2 * k) * taper };
+      });
+      const left = C.map((c) => pt(c.x + c.nx * c.w, c.y + c.ny * c.w)), right = C.map((c) => pt(c.x - c.nx * c.w, c.y - c.ny * c.w));
+      const mid = "M" + C.map((c) => pt(c.x, c.y)).join(" L");
+      h += `<path d="M${left.join(" L")} L${right.reverse().join(" L")}Z" fill="var(--wake-glow)" filter="url(#wb)"/>`;
+      // one smooth white stroke in the middle, tapering at both ends like a brush stroke
+      const coreL = C.map((c) => pt(c.x + c.nx * c.cw, c.y + c.ny * c.cw)), coreR = C.map((c) => pt(c.x - c.nx * c.cw, c.y - c.ny * c.cw));
+      h += `<path d="M${coreL.join(" L")} L${coreR.reverse().join(" L")}Z" fill="var(--wake-foam)" opacity=".85" filter="url(#ws)"/>`;
+      h += `<path class="shimmer" style="animation-delay:${delay}ms" d="${mid}" stroke="var(--wake-foam)" stroke-width="2.4" stroke-dasharray="0.1 22" fill="none" stroke-linecap="round" opacity=".6"/>`;
+    }
+  }
+  laneG.innerHTML = `<defs><filter id="wb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.2"/></filter><filter id="ws" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.5"/></filter></defs>` + h;
+};
+
+const FRICTION = 0.88; // per 16.7 ms, the glide stops in about 0.7 s
+let last = 0;
+const frame = (t) => {
+  raf = 0; const dt = last ? Math.min(48, t - last) : 16.7; last = t;
+  let moving = false;
+  if (anim) {
+    const k = Math.min(1, (t - anim.t0) / anim.dur), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+    yaw = anim.y0 + (anim.y1 - anim.y0) * e; pitch = anim.p0 + (anim.p1 - anim.p0) * e; moving = k < 1; if (!moving) { const f = anim.done; anim = null; f && f(); }
+    dirty = true;
+  } else if (!dragging && (Math.abs(vy) > 1e-5 || Math.abs(vp) > 1e-5)) {
+    yaw += vy * dt; pitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, pitch + vp * dt));
+    const f = Math.pow(FRICTION, dt / 16.7); vy *= f; vp *= f; if (Math.abs(vy) < 2e-5) vy = 0; if (Math.abs(vp) < 2e-5) vp = 0;
+    moving = true; dirty = true;
+  }
+  if (dirty) { draw(); dirty = false; }
+  if (moving) kick(); else last = 0;
+};
+const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+// ---------- touch: drag 1:1, glide, tap
+let dragging = false, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, moved = 0, pid = null;
+const onScene = (e) => !e.target.closest("header, .tabs, .sheet, .texbtn, .planets");
+app.addEventListener("pointerdown", (e) => {
+  if (!onScene(e)) return;
+  if (sheet.classList.contains("open")) { closeSheet(); return; }
+  pid = e.pointerId; app.setPointerCapture(pid); dragging = true; anim = null; vy = vp = 0;
+  sx = lx = e.clientX; sy = ly = e.clientY; lt = performance.now(); moved = 0;
+});
+app.addEventListener("pointermove", (e) => {
+  if (!dragging || e.pointerId !== pid) return;
+  const dx = e.clientX - lx, dy = e.clientY - ly, now = performance.now(), dt = Math.max(1, now - lt);
+  lx = e.clientX; ly = e.clientY; lt = now; moved = Math.max(moved, Math.hypot(e.clientX - sx, e.clientY - sy));
+  yaw += dx / R; pitch = Math.max(PITCH_MIN, Math.min(PITCH_MAX, pitch + dy / R));
+  const k = 0.35; vy = vy * (1 - k) + (dx / R / dt) * k; vp = vp * (1 - k) + (dy / R / dt) * k;
+  if (moved > 8) hideHint();
+  dirty = true; kick();
+});
+const end = (e) => {
+  if (!dragging || e.pointerId !== pid) return;
+  dragging = false; pid = null;
+  if (moved < 8) { vy = vp = 0; tap(e.clientX, e.clientY); return; }
+  if (performance.now() - lt > 80 || reduce) { vy = vp = 0; }
+  const cap = 0.004; vy = Math.max(-cap, Math.min(cap, vy)); vp = Math.max(-cap, Math.min(cap, vp));
+  kick();
+};
+app.addEventListener("pointerup", end); app.addEventListener("pointercancel", end);
+
+const turnTo = (it, done) => {
+  const [lat, lon] = it.ll;
+  let y1 = -lon * D2R; while (y1 - yaw > Math.PI) y1 -= 2 * Math.PI; while (yaw - y1 > Math.PI) y1 += 2 * Math.PI;
+  const p1 = Math.max(PITCH_MIN, Math.min(PITCH_MAX, (lat - 6) * D2R));
+  if (reduce) { yaw = y1; pitch = p1; dirty = true; kick(); done && done(); return; }
+  anim = { t0: performance.now(), dur: 620, y0: yaw, y1, p0: pitch, p1, done }; kick();
+};
+const tap = (x, y) => {
+  const r = app.getBoundingClientRect(); x -= r.left; y -= r.top;
+  let hit = null;
+  for (const it of items) {
+    if (it.z < 0.15 || !(it.kind === "area" || it.kind === "cloud")) continue;
+    const w = it.w, h = w * it.ar;
+    if (Math.abs(x - it.x) < w * 0.55 && y > it.y - h * 0.9 && y < it.y + h * 0.55 + (it.lab ? 30 : 0)) { if (!hit || it.z > hit.z) hit = it; }
+  }
+  if (!hit) return;
+  navigator.vibrate?.(8);
+  for (const it of items) it.el.classList.toggle("on", it === hit);
+  turnTo(hit, () => openSheet(hit));
+};
+const openSheet = (it) => {
+  const cloud = it.kind === "cloud";
+  document.getElementById("shName").textContent = cloud ? "Not explored yet" : it.name;
+  document.getElementById("shSub").textContent = cloud ? "Add a life area and a new island appears here" : it.sub;
+  document.getElementById("shImg").src = `${dir()}/${it.pic || "cloud_island_01"}.webp`;
+  document.getElementById("shGo").innerHTML = (cloud ? "Add an island" : "Open the island") + ICON["chevron-right"].replace('width="24" height="24"', 'width="18" height="18"');
+  sheet.classList.add("open"); sheet.setAttribute("aria-hidden", "false");
+};
+function closeSheet() { sheet.classList.remove("open"); sheet.setAttribute("aria-hidden", "true"); for (const it of items) it.el.classList.remove("on"); }
+document.getElementById("shGo").addEventListener("click", () => { closeSheet(); toast("In the app this opens the island page"); });
+
+let toastT = 0;
+function toast(msg) { toastEl.textContent = msg; toastEl.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("show"), 2200); }
+const hintEl = document.getElementById("hint");
+function hideHint() { hintEl.style.opacity = 0; }
+for (const b of document.querySelectorAll("[data-toast]")) b.addEventListener("click", () => toast(b.dataset.toast));
+document.getElementById("segMap").addEventListener("click", () => toast("This page shows only the globe"));
+document.getElementById("you").addEventListener("click", () => toast("Your animal opens the You page"));
+
+// ---------- day and night
+const setMode = (n) => {
+  night = n; app.dataset.mode = n ? "night" : "day"; setPics();
+  if (n && !textures.night) textures.night = textures.herDay ? nightFrom(textures.day) : makeTexture(true);
+  useTexture(n ? textures.night : textures.day);
+};
+// until her night picture comes: the day picture in moonlight
+const nightFrom = (day) => {
+  const c = document.createElement("canvas"); c.width = TW; c.height = TH; const x = c.getContext("2d");
+  x.drawImage(day, 0, 0);
+  x.globalCompositeOperation = "multiply"; x.fillStyle = "#6680C0"; x.fillRect(0, 0, TW, TH);
+  x.globalCompositeOperation = "source-over"; x.fillStyle = "rgba(16,30,70,.10)"; x.fillRect(0, 0, TW, TH);
+  return c;
+};
+document.getElementById("mode").addEventListener("click", () => setMode(!night));
+
+// ---------- her own planet picture
+const file = document.getElementById("texfile");
+document.getElementById("texbtn").addEventListener("click", () => file.click());
+file.addEventListener("change", () => {
+  const f = file.files && file.files[0]; if (!f) return;
+  const img = new Image(); const u = URL.createObjectURL(f);
+  img.onload = () => { const c = fromPicture(img); URL.revokeObjectURL(u);
+    if (night) textures.night = c; else { textures.day = c; textures.herDay = true; if (!textures.herNight) textures.night = null; }
+    if (night) textures.herNight = true; useTexture(c);
+    toast((night ? "Night" : "Day") + " planet: your picture, cropped to 2:1 with the edges joined"); };
+  img.onerror = () => toast("This file did not open as a picture. Try a PNG or JPG.");
+  img.src = u; file.value = "";
+});
+
+textures.day = makeTexture(false);
+addEventListener("resize", resize);
+resize(); useTexture(textures.day);
+// her planets (made in ChatGPT, Nov 4 2026); each keeps the ring of islands on its own open sea
+const PLANETS = {
+  1: { src: "a/planet-1.webp", c0: [27, -10], ring: 24 },
+  2: { src: "a/planet-2.webp", c0: [22, -10], ring: 28 },
+  3: { src: "a/planet-3.webp", night: "a/planet-3-night.webp", c0: [22, -10], ring: 28 },
+};
+const placeRing = (c0, ring) => {
+  for (const it of items) {
+    if (it.kind === "area") it.ll = dest(c0, it.b, ring);
+    else if (it.kind === "boat") it.ll = [c0[0] - 1, c0[1]];
+    else continue;
+    it.v = vec(it.ll);
+  }
+  yaw = -c0[1] * D2R; pitch = Math.max(0, c0[0] - 20) * D2R; vy = vp = 0; anim = null;
+};
+let planetLoad = 0;
+const setPlanet = (k) => {
+  const pl = PLANETS[k], ticket = ++planetLoad;
+  for (const b of document.querySelectorAll("[data-planet]")) b.classList.toggle("on", b.dataset.planet === String(k));
+  const load = (src) => new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = src; });
+  Promise.all([load(pl.src), pl.night ? load(pl.night) : null]).then(([day, dark]) => {
+    if (ticket !== planetLoad) return;
+    textures.day = fromPicture(day); textures.herDay = true;
+    textures.night = dark ? fromPicture(dark) : null; textures.herNight = !!dark; // without her night picture, night is the day one in moonlight
+    closeSheet(); placeRing(pl.c0, pl.ring);
+    if (night) setMode(true); else useTexture(textures.day);
+  }).catch(() => toast("This planet did not load. Check the connection and tap it again."));
+};
+for (const b of document.querySelectorAll("[data-planet]")) b.addEventListener("click", () => setPlanet(+b.dataset.planet));
+if (!window.__c0) setPlanet(3);
+})();
+</script>

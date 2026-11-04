@@ -21,7 +21,7 @@ import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { IslandsMap } from "./IslandsMap";
-import { WorldMap } from "./WorldMap";
+import { PlanetGlobe } from "./PlanetGlobe";
 import { AnswerNow, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
@@ -120,6 +120,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     const days = islandDays(trackers, entries);
     return Object.fromEntries(islands.map((i) => [i.id, growthOf(i.id, days.get(i.id) ?? 0)]));
   }, [islands, trackers, entries]);
+  // evenings answered on each island: her own islands grow on the globe
+  const dayCount = useMemo(() => Object.fromEntries(islandDays(trackers, entries)) as Record<string, number>, [trackers, entries]);
   const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount), [trackers, entries, islands, routes, notesCount]);
   useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
@@ -146,16 +148,16 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
 
   return (
     <div ref={boxRef} className={`map-sea relative h-full overscroll-contain ${view === "globe" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
-      style={view === "globe" ? undefined : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
+      style={view === "globe" ? { background: "transparent" } : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
       {/* The header stays at the top (her note): the name, this week's
           summary, and a small Map | Globe switch. */}
-      <div className="map-head sticky top-0 z-[6] px-4 pb-2.5 pt-3">
+      <div className="map-head sticky top-0 z-[6] px-4 pb-2.5 pt-3" style={view === "globe" ? { background: "transparent" } : undefined}>
         <div className="flex items-center justify-between gap-3">
           <h2 className="min-w-0 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
           {loaded && islands.length > 0 && (
             <div className="inline-flex shrink-0 rounded-full bg-foreground/[0.06] p-0.5" role="tablist" aria-label={t("map.viewAria")}>
               {(["map", "globe"] as const).map((v) => (
-                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } }}
+                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } window.dispatchEvent(new CustomEvent("memap-map-view", { detail: v })); }}
                   className={`h-8 rounded-full px-3.5 text-[14px] font-bold transition-colors ${view === v ? "surface text-foreground" : "text-muted-foreground"}`}>
                   {v === "map" ? t("map.flat") : t("map.globe")}
                 </button>
@@ -166,10 +168,11 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       </div>
 
       {view === "globe" ? (
-        // The globe runs to the bottom of the screen, under the tab bar.
+        // The globe (her painted planet, Nov 4 2026) fills the whole tab: her sky
+        // runs behind the header, the ball under the tab bar.
         loaded && (
-          <div className="relative min-h-0 flex-1">
-            <WorldMap islands={islands} routes={routes} growth={growth} avatar={avatarPic} near={near} onOpen={setOpen}
+          <div className="absolute inset-0">
+            <PlanetGlobe sky={false} islands={islands} routes={routes} avatar={avatarPic} lit={lit} days={dayCount} onOpen={setOpen}
               paused={!!open || !!only || newOpen || !!editor || !!testFor} onNewIsland={() => setNewOpen(true)} />
           </div>
         )
