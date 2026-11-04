@@ -8,7 +8,7 @@ import { useMemo, type ReactNode } from "react";
 import { art } from "@/lib/globeArt";
 import { mapPicFor } from "@/lib/islands";
 import { useTranslation } from "react-i18next";
-import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, Lock, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
+import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, FileBarChart2, Flower2, Heart, HeartPulse, Home, Layers, Lock, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playTick } from "@/lib/feedback";
@@ -65,74 +65,28 @@ const ICONS: Record<string, LucideIcon> = {
 };
 export const islandIcon = (name?: string): LucideIcon => (name && ICONS[name]) || Layers;
 
-/** A round node in its topic's calm colour (her: "кружки смотрятся скучно и
- *  грустно"): done and current are filled, with a white rim and soft light
- *  from above; steps ahead are white with the coloured icon and a tinted
- *  rim; the reward is gold. `hue` is "h s% l%" or a var(). Pressing shrinks
- *  it a little, with a light tap. */
-// Since Nov 4 2026 (the voyage on her sea): every node is a light on the water.
-// An evening done is a warm lit light, tonight a pale light waiting with a white
-// ring, a step open now a pearl ringed in its colour, what is not yet a dim
-// pearl, a week's reward her chest on a little island. Every one is round, with
-// no icon in it (her note, Nov 4 2026: "вместо иконок будут огоньки").
-export const PathNode = ({ stop, look, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", lock = false, chest = false }: {
-  stop: Stop; look: NodeLook; onClick?: () => void; label: string;
-  /** not drawn any more (the light is the whole node); kept so callers stay simple */
-  children?: ReactNode;
-  refEl?: React.Ref<HTMLButtonElement>; pressedRing?: number; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
-  /** a lock badge (off: not yet reads from the unlit light, as on Duolingo) */
-  lock?: boolean;
-  /** the week's reward: her chest on a little island instead of a light */
-  chest?: boolean;
+/** A step on the path: a round, slightly raised disc with its icon, as on
+ *  Duolingo (her note, Nov 4 2026: "кружочки … слегка объёмные … с нашими
+ *  иконками"). Done = gold with a check; her step = her topic's colour with a
+ *  ring round it; open today = white, the icon in its colour; not yet = grey.
+ *  `hue` is "h s% l%" or a var(). Pressing sinks it onto its lip. */
+export const PathNode = ({ stop, look, children, onClick, label, refEl, dataStop, expanded, wiggle, hue = "var(--coin-teal)" }: {
+  stop: Stop; look: NodeLook; children?: ReactNode; onClick?: () => void; label: string;
+  refEl?: React.Ref<HTMLButtonElement>; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
 }) => {
   const size = stop.r * 2;
-  const tone = look === "gold" ? "var(--coin-gold)" : hue;
-  const locked = look === "locked";
-  const color = look === "done" ? "#9A6A1C" : look === "gold" ? "#fff" : locked ? "hsl(var(--muted-foreground) / 0.7)" : `hsl(${tone})`;
   return (
     <>
-    {!chest && <span aria-hidden="true" className="path-ripple" style={{ left: stop.x - stop.r * 1.1, top: stop.y + stop.r * 0.25, width: stop.r * 2.2, height: stop.r * 0.7 }} />}
+    <span aria-hidden="true" className="path-ripple" style={{ left: stop.x - stop.r * 1.1, top: stop.y + stop.r * 0.5, width: stop.r * 2.2, height: stop.r * 0.7 }} />
     <button ref={refEl} type="button" data-path-stop={dataStop} aria-label={label} aria-expanded={expanded}
       onClick={() => { if (onClick) { haptics.tap(); playTick(true); onClick(); } }}
-      className={cn("path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.92]", wiggle && "path-wiggle-flat")}
-      style={{ left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: "9999px", color, ["--orb-ring" as string]: `hsl(${tone} / 0.45)` }}>
-      {look === "current" && !chest && (
-        <span aria-hidden="true" className="path-halo pointer-events-none absolute"
-          style={{ inset: -(pressedRing ?? 14), borderRadius: "9999px", background: "radial-gradient(closest-side, rgba(255,222,140,.5), rgba(255,222,140,0))" }} />
-      )}
-      {chest ? (
-        <span aria-hidden="true" className={cn("path-chest", locked && "is-locked")} style={{ width: size * 1.45, left: -size * 0.225, top: -size * 0.05 }}>
-          <img className="art-day isle" src={art("03_flower_hill", false)} alt="" />
-          <img className="art-night isle" src={art("03_flower_hill", true)} alt="" />
-          <img className="art-day box" src={mapPicFor("chest_closed", false)} alt="" />
-          <img className="art-night box" src={mapPicFor("chest_closed", true)} alt="" />
-        </span>
-      ) : (
-        <span aria-hidden="true" className={`path-orb orb-${look}`} style={{ borderRadius: "9999px" }} />
-      )}
-      {locked && lock && !chest && (
-        <span aria-hidden="true" className="absolute -bottom-1 -right-1 z-[1] flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_2px_6px_rgba(16,42,56,0.25)] dark:bg-[hsl(var(--surface))]">
-          <Lock className="h-3.5 w-3.5" strokeWidth={2.6} />
-        </span>
-      )}
+      className={cn("path-node absolute z-[3] rounded-full", `disc-${look}`, wiggle && "path-wiggle-flat")}
+      style={{ left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, ["--hue" as string]: look === "gold" ? "var(--coin-gold)" : hue }}>
+      {look === "current" && <span aria-hidden="true" className="path-cur-ring" />}
+      <span aria-hidden="true" className="path-disc" />
+      <span className="path-icon">{children}</span>
     </button>
     </>
-  );
-};
-
-/** Around tonight's light: one arc for each part of the evening, warm once
- *  done (as on Duolingo, where a ring shows the lessons done in a node). */
-export const PartsRing = ({ stop, total, done }: { stop: Stop; total: number; done: number }) => {
-  const size = stop.r * 2 + 28, sw = 5, r = size / 2 - sw / 2, c = size / 2;
-  const seg = (Math.PI * 2) / total, gap = 0.3;
-  const pt = (a: number) => `${(c + r * Math.cos(a)).toFixed(2)},${(c + r * Math.sin(a)).toFixed(2)}`;
-  return (
-    <svg aria-hidden="true" width={size} height={size} className="path-parts pointer-events-none absolute z-[2]" style={{ left: stop.x - size / 2, top: stop.y - size / 2 }}>
-      {Array.from({ length: total }, (_, i) => {
-        const a0 = -Math.PI / 2 + i * seg + gap / 2, a1 = a0 + seg - gap;
-        return <path key={i} d={`M${pt(a0)} A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${pt(a1)}`} fill="none" strokeWidth={sw} strokeLinecap="round" className={i < done ? "on" : "off"} />;
-      })}
-    </svg>
   );
 };
 
@@ -149,7 +103,7 @@ export const StartBubble = ({ stop, label, aria, onClick }: { stop: Stop; label:
 /** A light's name under it (her note, Nov 4 2026: "надо подписывать"), the same
  *  pill as an island's name on the Map; `below` is extra room (tonight's ring). */
 export const LightLabel = ({ stop, text, dim, below = 0 }: { stop: Stop; text: string; dim?: boolean; below?: number }) => (
-  <span aria-hidden="true" className={cn("planet-label path-label", dim && "is-dim")} style={{ left: stop.x, top: stop.y + stop.r + 8 + below }}>
+  <span aria-hidden="true" className={cn("planet-label path-label", dim && "is-dim")} style={{ left: stop.x, top: stop.y + stop.r + 14 + below }}>
     <span>{text}</span>
   </span>
 );
@@ -215,9 +169,9 @@ export const WeekStrip = ({
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
-                <LightLabel stop={p} text={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} dim={kind === "coming"} />
-                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} chest hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
-                  <Gift className="h-7 w-7" strokeWidth={2.2} />
+                <LightLabel stop={p} text={t("path.weekReport")} dim={kind === "coming"} />
+                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
+                  <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />
                 </PathNode>
               </div>
             );

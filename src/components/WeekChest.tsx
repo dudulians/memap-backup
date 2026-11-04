@@ -1,4 +1,6 @@
-// Opening a week's chest (Aurora step 6, plan §3.4; her ask: "сундук недели
+// A week's report (her note, Nov 4 2026: "уберём сундук, назовём это репортом
+// … это не подарок, не сундук"): no chest, no drum roll; the same cards.
+// Before: opening a week's chest (Aurora step 6, plan §3.4; her ask: "сундук недели
 // с картой внутри"). Ready → the lid opens on "A map of your week" with
 // counts from her own days → "You earned: a bridge" → "Put it on my map".
 // What it showed is saved when opened and reopens as is.
@@ -10,7 +12,7 @@
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Clock, Crown, FlaskConical, Lightbulb, Sparkles, Target, X } from "lucide-react";
+import { Clock, Crown, FileBarChart2, FlaskConical, Lightbulb, Sparkles, Target, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { playSparkle, playThump, preloadSounds } from "@/lib/feedback";
@@ -60,7 +62,7 @@ export const WeekChest = ({
   };
 
   const open = async () => {
-    haptics.drumroll();
+    haptics.soft();
     preloadSounds("sparkle", "thump");
     // Her world now, to say what grew since the last chest.
     const islands = buildIslands(trackers, entries);
@@ -285,7 +287,7 @@ export const WeekChest = ({
         {!rec ? (
           <>
             <div className="flex flex-1 flex-col items-center justify-center">
-              <img src={mapPic("chest_closed")} alt="" width={200} height={169} className="chest-drop" draggable={false} />
+              <span aria-hidden="true" className="report-badge"><FileBarChart2 className="h-14 w-14" strokeWidth={2} /></span>
               <p className="mt-6 text-[30px] font-bold tracking-tight">{t("path.chest.ready")}</p>
               <p className="mt-1 text-[17px] font-medium text-muted-foreground">{t("path.weekN", { n: week + 1 })}</p>
             </div>
@@ -295,7 +297,7 @@ export const WeekChest = ({
           </>
         ) : (
           <>
-            <img src={mapPic("chest_open_map")} alt="" width={140} height={145} className="mt-1" draggable={false} />
+            <span aria-hidden="true" className="report-badge is-small mt-1"><FileBarChart2 className="h-9 w-9" strokeWidth={2} /></span>
             <p className="mt-2 text-[28px] font-bold tracking-tight">{t("path.chest.mapOfWeek")}</p>
             {cards(rec).slice(0, shown).map((card, i) => (
               <div key={i} className="chest-card mt-4 w-full max-w-sm">{card}</div>

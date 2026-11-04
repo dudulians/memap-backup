@@ -2175,15 +2175,6 @@ html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { bac
 html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #1F3A9E; }
 
 /* Today's path as lights on her sea (PathParts, Nov 4 2026) */
-.path-orb { position: absolute; inset: 0; pointer-events: none; }
-.orb-done { background: radial-gradient(circle at 50% 46%, #FFFFFF 0%, #FFF3CC 40%, #F6D27E 100%); box-shadow: 0 0 0 4px rgba(255, 236, 180, .35), 0 0 26px 10px rgba(255, 214, 120, .45); }
-.orb-current { background: radial-gradient(circle at 40% 34%, #FFFFFF 0%, #F7F3E6 55%, #E7DEC2 100%); box-shadow: 0 0 0 4px #fff, 0 10px 18px -8px rgba(120, 100, 50, .45); }
-.orb-todo { background: radial-gradient(circle at 40% 34%, #FFFFFF 0%, #F1F4FA 55%, #DCE3F1 100%); box-shadow: 0 0 0 3px var(--orb-ring), 0 10px 18px -10px rgba(40, 60, 100, .4); }
-.orb-gold { background: radial-gradient(circle at 40% 30%, #FFF0B8 0%, #F6C45A 50%, #D9962A 100%); box-shadow: 0 0 22px 6px rgba(246, 196, 90, .45); }
-.orb-locked { background: radial-gradient(circle at 40% 34%, rgba(255, 255, 255, .85) 0%, rgba(238, 241, 248, .75) 55%, rgba(216, 223, 236, .7) 100%); box-shadow: 0 8px 14px -10px rgba(40, 60, 100, .35); }
-html[data-ui="new"][data-theme="aurora"] .orb-done { box-shadow: 0 0 0 4px rgba(255, 236, 180, .3), 0 0 30px 12px rgba(255, 214, 120, .55); }
-html[data-ui="new"][data-theme="aurora"] .orb-todo { background: radial-gradient(circle at 40% 34%, #F4F6FF 0%, #C9D2F0 55%, #9AA8DA 100%); }
-html[data-ui="new"][data-theme="aurora"] .orb-locked { background: radial-gradient(circle at 40% 34%, rgba(174, 185, 224, .8) 0%, rgba(127, 140, 194, .75) 55%, rgba(94, 106, 166, .7) 100%); }
 .path-ripple { position: absolute; z-index: 2; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); }
 html[data-ui="new"][data-theme="aurora"] .path-ripple { background: radial-gradient(closest-side, rgba(150, 200, 255, .35), rgba(150, 200, 255, 0)); }
 .path-chest { position: absolute; display: block; pointer-events: none; aspect-ratio: 1 / .8; }
@@ -2218,13 +2209,29 @@ html[data-theme="aurora"] { --path-band: rgba(170, 200, 255, .14); }
 .path-band { background: radial-gradient(closest-side, var(--path-band), transparent); }
 /* a week's name on the path, plain (no card) */
 /* tonight's parts around its light (PartsRing), and done ones in its card */
-.path-parts .on { stroke: #F2B544; }
-.path-parts .off { stroke: rgba(255, 255, 255, .9); }
-html[data-ui="new"][data-theme="aurora"] .path-parts .off { stroke: rgba(255, 255, 255, .3); }
 .path-part-done { background: radial-gradient(circle at 50% 46%, #FFFFFF 0%, #FFF3CC 40%, #F6D27E 100%); color: #8A5A12; }
 /* a light's name under it, the same as an island's on the Map (planet-label) */
 .path-label { z-index: 3; pointer-events: none; }
 .path-label.is-dim { opacity: .7; }
+/* the week's report: the same raised gold disc as on the path (WeekChest) */
+.report-badge { display: flex; width: 128px; height: 128px; align-items: center; justify-content: center; border-radius: 9999px; color: #fff;
+  background: linear-gradient(180deg, #FFD866 0%, #F6B92B 100%); box-shadow: 0 8px 0 #CF8E17, 0 18px 30px -12px rgba(160, 110, 20, .45); }
+.report-badge.is-small { width: 80px; height: 80px; box-shadow: 0 6px 0 #CF8E17; }
+/* the path's raised discs (PathNode, Nov 4 2026): a face and a lip under it */
+.path-node .path-disc { position: absolute; inset: 0; border-radius: 9999px; background: var(--face); box-shadow: 0 6px 0 var(--lip-shade, transparent), 0 6px 0 var(--lip); transition: transform .1s ease-out, box-shadow .1s ease-out; }
+.path-node .path-disc::after { content: ""; position: absolute; left: 20%; right: 20%; top: 9%; height: 34%; border-radius: 50%; background: linear-gradient(rgba(255, 255, 255, .5), rgba(255, 255, 255, 0)); }
+.path-node .path-icon { position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center; transition: transform .1s ease-out; }
+.path-node:active .path-disc { transform: translateY(4px); box-shadow: 0 2px 0 var(--lip-shade, transparent), 0 2px 0 var(--lip); }
+.path-node:active .path-icon { transform: translateY(4px); }
+.path-node.disc-done, .path-node.disc-gold { --face: linear-gradient(180deg, #FFD866 0%, #F6B92B 100%); --lip: #CF8E17; color: #fff; }
+.path-node.disc-current { --face: hsl(var(--hue)); --lip: hsl(var(--hue)); --lip-shade: rgba(0, 0, 0, .24); color: #fff; }
+.path-node.disc-todo { --face: #FFFFFF; --lip: #D3DAE8; color: hsl(var(--hue)); }
+.path-node.disc-locked { --face: #E4E8F1; --lip: #C6CEDD; color: #A3ACC0; }
+html[data-ui="new"][data-theme="aurora"] .path-node.disc-todo { --face: #EEF1FB; --lip: #9DA8D6; }
+html[data-ui="new"][data-theme="aurora"] .path-node.disc-locked { --face: #535E9C; --lip: #3B4581; color: #97A2D6; }
+.path-cur-ring { position: absolute; inset: -12px; border-radius: 9999px; border: 6px solid rgba(255, 255, 255, .75); }
+html[data-ui="new"][data-theme="aurora"] .path-cur-ring { border-color: rgba(255, 255, 255, .28); }
+@media (prefers-reduced-motion: reduce) { .path-node .path-disc, .path-node .path-icon { transition: none; } }
 /* the Start bubble over her step (StartBubble) */
 .path-start { transform: translate(-50%, -100%); transition: transform 120ms ease-out; }
 .path-start:active { transform: translate(-50%, -100%) scale(.95); }
