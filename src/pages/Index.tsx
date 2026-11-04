@@ -13,8 +13,8 @@ import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 import seaDawn from "@/assets/bg/sea-dawn.webp";
 import seaNight from "@/assets/bg/sea-night.webp";
-import todaySeaDay from "@/assets/bg/today-sea-day-tile.webp";
-import todaySeaNight from "@/assets/bg/today-sea-night-tile.webp";
+import planetDay from "@/assets/globe/planet-day.webp";
+import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 
@@ -89,7 +89,7 @@ const Index = () => {
   // the other theme's backgrounds load ahead, so a switch has them at once
   useEffect(() => {
     const id = window.setTimeout(() => {
-      (night ? [todaySeaDay, seaDawn] : [todaySeaNight, seaNight]).forEach((src) => { new Image().src = src; });
+      (night ? [planetDay, seaDawn] : [planetNight, seaNight]).forEach((src) => { new Image().src = src; });
     }, 2000);
     return () => window.clearTimeout(id);
   }, [night]);
@@ -288,9 +288,10 @@ const Index = () => {
       {onGlobe && <div aria-hidden="true" className={`planet-sky ${night ? "night" : "day"} -z-10`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
       {activeTab !== "patterns" && (
         <div aria-hidden="true" className={`memap-sea-bg pointer-events-none absolute inset-0 -z-10${activeTab === "cards" ? " memap-path-bg" : ""}`}
-          // Today: her sea stands still behind the path (her note, Nov 4 2026:
-          // "не надо, чтоб двигался фон"), one copy, behind the header too
-          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? todaySeaNight : todaySeaDay) : night ? seaNight : seaDawn})` }} />
+          // Today: the open sea of her planet, as on the Map (her note, Nov 4
+          // 2026: "сделай фон как на карте"); it stands still ("не надо, чтоб
+          // двигался фон"), behind the header too
+          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? planetNight : planetDay) : night ? seaNight : seaDawn})` }} />
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}

@@ -4,8 +4,8 @@
 // label growing out of each node to the right, a calm dashed road, a white
 // week card with a progress bar. Since Nov 3 2026 her own day/night picture
 // is behind the path, and nothing is scattered on it (her note).
-import { useId, useMemo, type ReactNode } from "react";
-import { alongCurve, art, wakeShape } from "@/lib/globeArt";
+import { useMemo, type ReactNode } from "react";
+import { art } from "@/lib/globeArt";
 import { mapPicFor } from "@/lib/islands";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, Lock, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
@@ -22,7 +22,8 @@ export const R_DAY = 30;
 export const R_STEP = 34;
 export const R_CURRENT = 44;
 export const R_CHEST = 38;
-export const GAP = 28;
+// room under each light for its name
+export const GAP = 56;
 export const WEEK_TITLES = 4;
 /** Kept for callers that still pass a week tone. */
 export type { PressTone } from "@/components/ui/pressable";
@@ -145,27 +146,13 @@ export const StartBubble = ({ stop, label, aria, onClick }: { stop: Stop; label:
   </button>
 );
 
-/** The wake her boat left through these stops (the same soft trail as the links on the
- *  map): from just above the first stop to the last, thin at both ends. */
-export const PathWake = ({ stops, width, height }: { stops: Stop[]; width: number; height: number }) => {
-  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const shape = useMemo(() => {
-    if (stops.length < 2) return null;
-    const pts: [number, number][] = [[stops[0].x - 8, stops[0].y - 56], ...stops.map((s) => [s.x, s.y] as [number, number])];
-    return wakeShape(alongCurve(pts, 90), { waves: Math.max(2, stops.length * 0.7), amp: 4, width: 4 });
-  }, [stops]);
-  if (!shape) return null;
-  return (
-    <svg aria-hidden="true" className="pointer-events-none absolute left-0 top-0 z-[1]" width={width} height={height}>
-      <defs>
-        <filter id={`wb${id}`} x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" /></filter>
-        <filter id={`ws${id}`}><feGaussianBlur stdDeviation="0.5" /></filter>
-      </defs>
-      <path d={shape.glow} className="planet-wake-glow" filter={`url(#wb${id})`} />
-      <path d={shape.core} className="planet-wake-core" filter={`url(#ws${id})`} />
-    </svg>
-  );
-};
+/** A light's name under it (her note, Nov 4 2026: "надо подписывать"), the same
+ *  pill as an island's name on the Map; `below` is extra room (tonight's ring). */
+export const LightLabel = ({ stop, text, dim, below = 0 }: { stop: Stop; text: string; dim?: boolean; below?: number }) => (
+  <span aria-hidden="true" className={cn("planet-label path-label", dim && "is-dim")} style={{ left: stop.x, top: stop.y + stop.r + 8 + below }}>
+    <span>{text}</span>
+  </span>
+);
 
 /** Stops winding down the middle (seven days and the reward, or today's week). */
 export const weekStops = (width: number, radii: number[], top = 24) => {
@@ -207,7 +194,7 @@ export const WeekStrip = ({
     return w.charAt(0).toUpperCase() + w.slice(1);
   };
   const stops = useMemo(() => weekStops(width, [...Array(DAYS_PER_WEEK).fill(R_DAY), R_CHEST]), [width]);
-  const height = stops[DAYS_PER_WEEK].y + R_CHEST + 28;
+  const height = stops[DAYS_PER_WEEK].y + R_CHEST + 52;
   const day = (i: number) => {
     if (kind === "past" && dates?.[i]) return new Date(dates[i] + "T00:00:00");
     const d = new Date();
@@ -224,11 +211,11 @@ export const WeekStrip = ({
         </div>
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
-        {kind === "past" && <PathWake stops={stops} width={width} height={height} />}
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+                <LightLabel stop={p} text={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} dim={kind === "coming"} />
                 <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} chest hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
                   <Gift className="h-7 w-7" strokeWidth={2.2} />
                 </PathNode>
@@ -238,6 +225,7 @@ export const WeekStrip = ({
           const d = day(i);
           return (
             <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+              <LightLabel stop={p} text={dayName(d)} dim={kind === "coming"} />
               <PathNode stop={p} look={kind === "past" ? "done" : "locked"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
                 onClick={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined}>
                 {kind === "past" ? <Check className="h-6 w-6" strokeWidth={3} /> : <MoonStar className="h-6 w-6" strokeWidth={2} />}

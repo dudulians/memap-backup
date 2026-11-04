@@ -33,7 +33,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, PartsRing, PathNode, PathWake, R_CHEST, R_CURRENT, R_DAY, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, LightLabel, PartsRing, PathNode, R_CHEST, R_CURRENT, R_DAY, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -165,10 +165,10 @@ export const EveningPath = ({
   const stops = useMemo(() => {
     // room above tonight's light for its Start bubble
     const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : i === currentNode ? R_CURRENT : R_DAY)), 74);
-    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 56 };
+    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
     return out;
   }, [nodes, width, currentNode]);
-  const height = stops[chestIndex].y + R_CHEST + 30;
+  const height = stops[chestIndex].y + R_CHEST + 52;
 
   // --- Words ---------------------------------------------------------------
   const reportLabel = m.week === 0 ? t("path.firstReport") : t("path.weekReport");
@@ -606,8 +606,6 @@ export const EveningPath = ({
         {/* overflow-x clip: the wheel's tilt must never widen the page (the
             review found a sideways pan); nothing visible is cut. */}
         <div ref={boxRef} className="path-box relative mx-auto [overflow-x:clip]" style={{ width, height }}>
-          {/* the wake her boat left through the evenings already lit */}
-          {focus > 0 && <PathWake stops={stops.slice(0, focus + 1)} width={width} height={height} />}
 
           {nodes.map((n, i) => {
             const v = viewOf(n);
@@ -632,6 +630,7 @@ export const EveningPath = ({
                   <StartBubble stop={p} label={partsDone > 0 ? t("path.continue") : t("path.start")}
                     aria={`${t("path.tonight")}: ${stepName(next)}`} onClick={() => startStep(next)} />
                 )}
+                <LightLabel stop={p} text={v.title} dim={v.look === "locked"} below={i === currentNode ? 10 : 0} />
                 <PathNode stop={p} look={v.look} hue={v.hue} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i} />
                 {open === i && bubble(i)}
