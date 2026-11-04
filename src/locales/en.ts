@@ -830,6 +830,7 @@ const en = {
     weekProgress: "{{k}} of 7 days",
     start: "Start",
     continue: "Continue",
+    partsDone: "{{done}} of {{count}} done",
     left_one: "{{count}} left",
     left_other: "{{count}} left",
     newQuestions_one: "{{count}} new question",

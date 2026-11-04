@@ -946,6 +946,7 @@ const ru: Translation = {
     weekProgress: "{{k}} из 7 дней",
     start: "Старт",
     continue: "Дальше",
+    partsDone: "Сделано {{done}} из {{count}}",
     left_one: "Остался {{count}}",
     left_few: "Осталось {{count}}",
     left_many: "Осталось {{count}}",

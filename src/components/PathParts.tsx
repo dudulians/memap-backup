@@ -119,12 +119,28 @@ export const PathNode = ({ stop, look, onClick, label, refEl, pressedRing, dataS
   );
 };
 
+/** Around tonight's light: one arc for each part of the evening, warm once
+ *  done (as on Duolingo, where a ring shows the lessons done in a node). */
+export const PartsRing = ({ stop, total, done }: { stop: Stop; total: number; done: number }) => {
+  const size = stop.r * 2 + 28, sw = 5, r = size / 2 - sw / 2, c = size / 2;
+  const seg = (Math.PI * 2) / total, gap = 0.3;
+  const pt = (a: number) => `${(c + r * Math.cos(a)).toFixed(2)},${(c + r * Math.sin(a)).toFixed(2)}`;
+  return (
+    <svg aria-hidden="true" width={size} height={size} className="path-parts pointer-events-none absolute z-[2]" style={{ left: stop.x - size / 2, top: stop.y - size / 2 }}>
+      {Array.from({ length: total }, (_, i) => {
+        const a0 = -Math.PI / 2 + i * seg + gap / 2, a1 = a0 + seg - gap;
+        return <path key={i} d={`M${pt(a0)} A${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${pt(a1)}`} fill="none" strokeWidth={sw} strokeLinecap="round" className={i < done ? "on" : "off"} />;
+      })}
+    </svg>
+  );
+};
+
 /** Over the step to do now (her note, Nov 4 2026: "как у дуолинго"): one big
  *  short word with a tail pointing down at its light, bobbing gently. It
  *  starts the step; the light itself opens its card. */
 export const StartBubble = ({ stop, label, aria, onClick }: { stop: Stop; label: string; aria: string; onClick: () => void }) => (
   <button type="button" aria-label={aria} onClick={() => { haptics.medium(); onClick(); }}
-    className="path-start absolute z-[5]" style={{ left: stop.x, top: stop.y - stop.r - 14 }}>
+    className="path-start absolute z-[5]" style={{ left: stop.x, top: stop.y - stop.r - 22 }}>
     <span className="path-start-body">{label}</span>
   </button>
 );

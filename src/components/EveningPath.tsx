@@ -1,4 +1,11 @@
-// Today's path (Aurora UX; steps not evenings, Nov 2 2026). Since her
+// Today's path. The rule since Nov 4 2026 (her note: "всё стало непонятно,
+// сделай по каким-то правилам"): one light is one evening, seven lights and a
+// chest make a week, the same in every week. Lit warm = an evening done;
+// tonight's light is pale, ringed with one arc per part of the evening (its
+// topics' questions, a task, the game), and a Start bubble over it starts the
+// next part; tapping it lists tonight's parts. Dim = not yet. Her sea stands
+// still behind. Before (Nov 2–4) today's parts were lights of their own.
+// Earlier notes: (Aurora UX; steps not evenings, Nov 2 2026). Since her
 // reference picture ("вот так получше будет"): flat round nodes with a plain
 // line icon, a white pill label growing out of each to the right, the
 // current step's pill holding its "Start" button, a calm dashed road, a white
@@ -12,7 +19,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronUp, Compass, FlaskConical, Flame, Gift, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FlaskConical, Flame, Layers, Lightbulb, Wind, Map as MapIcon, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
@@ -26,7 +33,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, PathNode, PathWake, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, PartsRing, PathNode, PathWake, R_CHEST, R_CURRENT, R_DAY, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -56,7 +63,7 @@ const addDays = (base: Date, n: number) => {
 
 type PNode =
   | { kind: "past"; date: string }
-  | { kind: "step"; step: Step }
+  | { kind: "tonight" }
   | { kind: "future"; offset: number }
   | { kind: "chest" };
 type Open = number | null;
@@ -135,27 +142,30 @@ export const EveningPath = ({
   const hunchReady = useMemo(() => !!readyHunch(trackers, entries), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
-    for (const step of m.steps) out.push({ kind: "step", step });
-    const coming = m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length;
-    for (let o = 1; o <= coming; o++) out.push({ kind: "future", offset: o });
+    out.push({ kind: "tonight" });
+    for (let o = 1; o <= DAYS_PER_WEEK - 1 - m.pastInWeek.length; o++) out.push({ kind: "future", offset: o });
     out.push({ kind: "chest" });
     return out;
   }, [m]);
-  const firstStep = m.pastInWeek.length;
-  const isOpenStep = (s: Step) => !s.done && (s.kind !== "game" || canPlay);
-  // The questions stay the main step; "Unload your mind" is there any time
-  // without taking the highlight (it is the main step only when nothing else is left).
-  const firstOpen = m.steps.findIndex((s) => isOpenStep(s) && s.kind !== "unload");
-  const cur = firstOpen >= 0 ? firstOpen : m.steps.findIndex(isOpenStep);
-  const currentNode = cur >= 0 ? firstStep + cur : -1;
+  const tonightAt = m.pastInWeek.length;
   const chestIndex = nodes.length - 1;
-  // The node to bring into view: the current step, else tomorrow, else the reward.
-  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + m.steps.length;
+  // Tonight's parts: what lights its light. The calm game (any time), a missed
+  // day to fill in and a game that can't be played yet are there as extras.
+  const counts = (s: Step) => s.kind !== "unload" && s.kind !== "fill" && (s.kind !== "game" || canPlay);
+  const parts = m.steps.filter(counts);
+  const partsDone = parts.filter((s) => s.done).length;
+  const tonightLit = parts.length > 0 ? partsDone === parts.length : m.todayCounted;
+  const isOpenStep = (s: Step) => !s.done && (s.kind !== "game" || canPlay);
+  /** the part the Start bubble starts: the first one still to do, else a missed day */
+  const next = m.steps.find((s) => isOpenStep(s) && counts(s)) ?? m.steps.find((s) => isOpenStep(s) && s.kind === "fill") ?? null;
+  const currentNode = tonightLit ? -1 : tonightAt;
+  // The light to bring into view: tonight's, else tomorrow's, else the reward.
+  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : Math.min(tonightAt + 1, chestIndex);
 
   const stops = useMemo(() => {
-    // room above her step for its Start bubble (the first light included)
-    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
-    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 50 };
+    // room above tonight's light for its Start bubble
+    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : i === currentNode ? R_CURRENT : R_DAY)), 74);
+    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 56 };
     return out;
   }, [nodes, width, currentNode]);
   const height = stops[chestIndex].y + R_CHEST + 30;
@@ -182,8 +192,7 @@ export const EveningPath = ({
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
   };
 
-  /** What a node looks like and says. */
-  /** A step's own calm colour: its island, else what kind of step it is. */
+  /** A part's calm colour (in tonight's list): its island, else what kind it is. */
   const hueOf = (s: Step): string => {
     if (s.kind === "questions" && s.island) return islandHsl(s.island);
     if (s.kind === "task") return "var(--coin-gold)";
@@ -194,47 +203,39 @@ export const EveningPath = ({
     if (s.kind === "fill") return "205 46% 58%";
     return "var(--coin-teal)";
   };
-  const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
-    const current = i === currentNode;
-    if (n.kind === "past") return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: cap(weekdayName(n.date)) };
-    if (n.kind === "future") {
-      return { look: "locked", hue: DAY_AHEAD, icon: <MoonStar className="h-6 w-6" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
-    }
-    if (n.kind === "chest") {
-      return m.weekComplete
-        ? { look: "gold", icon: <Gift className="h-7 w-7" strokeWidth={2.2} />, title: t("path.chest.openReward"), action: currentNode < 0 ? t("path.openReport") : undefined }
-        : { look: "locked", hue: "var(--coin-gold)", icon: <Gift className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
-    }
-    const s = n.step;
-    const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
+  const iconOf = (s: Step): LucideIcon =>
+    s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
       : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
-    // A skipped task can still be done today (her note), so it shows its icon, not a check.
-    const replay = s.kind === "unload";
-    const icon = s.done && !s.skipped && !replay ? <Check className="h-6 w-6" strokeWidth={3} /> : <Icon className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
-    const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
-    const hue = hueOf(s);
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.newQuestions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
+  /** One short line under a part's name. */
+  const partSub = (s: Step): string | undefined => {
     const left = s.trackerIds.length - s.answered;
-    if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
-    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("hunch.go") };
-    if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
-    if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
-    if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
-    return {
-      look, icon, hue, title: stepName(s),
-      sub: s.answered > 0 ? t("path.left", { count: left }) : s.added ? t("path.newQuestions", { count: left }) : t("path.questions", { count: left }),
-      action: s.answered > 0 ? t("path.continue") : t("path.start"),
-    };
+    if (s.kind === "questions" || s.kind === "fill") {
+      if (s.done) return t("path.answers", { count: s.answered });
+      return s.answered > 0 ? t("path.left", { count: left }) : s.added ? t("path.newQuestions", { count: left }) : t("path.questions", { count: left });
+    }
+    if (s.kind === "task") return s.done ? (s.skipped ? t("path.skipped") : t("path.done")) : t(`path.task.${s.task}.line`);
+    if (s.kind === "game") return !canPlay ? t("hunch.needTwo") : hunchReady ? t("hunch.checkedSub") : s.done ? t("hunch.doneToday") : t("hunch.sub");
+    if (s.kind === "act") return t("act.sub", { count: s.trackerIds.length });
+    if (s.kind === "test") return t("experiment.stepSub");
+    if (s.kind === "unload") return t("unload.sub");
+    return s.done ? t("path.done") : undefined;
+  };
+  /** What a light is and how it looks: lit, tonight, or not yet. */
+  const viewOf = (n: PNode): { look: NodeLook; title: string; hue?: string } => {
+    if (n.kind === "past") return { look: "done", title: cap(weekdayName(n.date)) };
+    if (n.kind === "future") return { look: "locked", hue: DAY_AHEAD, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
+    if (n.kind === "chest") return m.weekComplete ? { look: "gold", title: t("path.chest.openReward") } : { look: "locked", hue: "var(--coin-gold)", title: reportLabel };
+    return { look: tonightLit ? "done" : "current", title: t("path.tonight") };
   };
 
   const f = stops[focus];
   // Her avatar (optional) stands to the left of the step to do.
   // her boat (with her animal in it) waits beside the step to do
-  const toRight = f.x <= width / 2;
+  const toRight = f.x <= width / 2, gap = f.r + 16;
   const avatar: Rect | null = toRight
-    ? (f.x + f.r + 64 <= width ? { x: f.x + f.r + 6, y: f.y - 40, w: 58, h: 58 } : null)
-    : (f.x - f.r - 64 >= 0 ? { x: f.x - f.r - 64, y: f.y - 40, w: 58, h: 58 } : null);
+    ? (f.x + gap + 58 <= width ? { x: f.x + gap, y: f.y - 40, w: 58, h: 58 } : null)
+    : (f.x - gap - 58 >= 0 ? { x: f.x - gap - 58, y: f.y - 40, w: 58, h: 58 } : null);
 
   // --- Bubbles ---------------------------------------------------------------
   const [open, setOpen] = useState<Open>(null);
@@ -371,12 +372,15 @@ export const EveningPath = ({
     if (!box || !main) return null;
     return { main, d: box.getBoundingClientRect().top + stops[i].y - (main.getBoundingClientRect().top + mid.current) };
   };
-  // A light tapped low on the screen comes up, so its card isn't under the tabs.
-  const bringUp = (i: number) => {
+  // A light tapped low on the screen comes up, so its card isn't under the
+  // tabs; tonight's card is long, so its light goes near the top.
+  const bringUp = (i: number, high = false) => {
     const at = toMiddle(i);
-    if (!at || at.d < mid.current * 0.35) return;
+    if (!at) return;
+    const d = high ? at.d + mid.current - 150 : at.d;
+    if (high ? Math.abs(d) < 24 : d < mid.current * 0.35) return;
     modeRef.current = "auto";
-    at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
+    at.main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" });
   };
   const backToStep = () => {
     const el = focusRef.current, at = toMiddle(focus);
@@ -414,12 +418,12 @@ export const EveningPath = ({
   const tap = (i: number) => {
     const n = nodes[i];
     if (n.kind === "chest" && m.weekComplete) { setOpen(null); openThisChest(); return; }
-    const notYet = n.kind === "future" || (n.kind === "chest" && !m.weekComplete) || (n.kind === "step" && n.step.kind === "game" && !canPlay);
+    const notYet = n.kind === "future" || (n.kind === "chest" && !m.weekComplete);
     if (notYet && open !== i) {
       setWiggle(i);
       window.setTimeout(() => setWiggle((w) => (w === i ? null : w)), 450);
     }
-    if (open !== i) bringUp(i);
+    if (open !== i) bringUp(i, n.kind === "tonight");
     setOpen((o) => (o === i ? null : i));
   };
 
@@ -476,74 +480,54 @@ export const EveningPath = ({
         head(reportLabel, t("path.toGo", { count: toGo }))
       );
     }
-    const s = n.step;
-    if (s.kind === "auto") {
-      const door = getDoorState();
-      return head(s.auto === "topic" ? t("path.auto.topicBubble", { name: door ? t(`doors.${door.id}.name`) : "" }) : t("path.auto.firstBubble"));
-    }
-    if (s.kind === "act") {
-      return (
-        <>
-          {head(t("act.step"), t("act.sub", { count: s.trackerIds.length }))}
-          {button(t("act.open"), () => { setOpen(null); openActionPoints(); }, "plain")}
-        </>
-      );
-    }
-    if (s.kind === "game") {
-      if (!canPlay) return head(t("hunch.step"), t("hunch.needTwo"));
-      return (
-        <>
-          {head(t("hunch.step"), s.done ? t("hunch.doneToday") : t("hunch.sub"))}
-          {!s.done && button(t("game.play"), () => startStep(s))}
-        </>
-      );
-    }
-    if (s.kind === "task" && s.task === "note" && s.done && !s.skipped) {
-      return (
-        <>
-          {head(t("path.task.note.title"), t("path.done"))}
-          {button(t("path.noteAnother"), () => { setOpen(null); setNoteDraft(newDraft()); }, "plain")}
-          <button type="button" onClick={() => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} })); }}
-            className="mt-1 h-10 w-full text-[15px] font-semibold text-muted-foreground">{t("path.allNotes")}</button>
-        </>
-      );
-    }
-    if (s.kind === "task") {
-      return (
-        <>
-          {head(t(`path.task.${s.task}.title`), s.done ? (s.skipped ? t("path.skipped") : t("path.done")) : t(`path.task.${s.task}.line`))}
-          {!s.done && button(t("path.go"), () => startStep(s))}
-          {!s.done && (
-            <button type="button" onClick={() => { setOpen(null); skipTask(s.task!); setTick((k) => k + 1); }} className="mt-1 h-10 w-full text-[15px] font-semibold text-muted-foreground">
-              {t("path.skip")}
-            </button>
-          )}
-        </>
-      );
-    }
-    const left = s.trackerIds.length - s.answered;
+    // tonight: its parts, the next one ready to start
     return (
       <>
-        {head(
-          stepName(s),
-          s.done
-            ? t("path.answers", { count: s.answered })
-            : `${s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left })} · ${t("path.minutes", { count: minutesFor(left) })}`,
-        )}
-        {s.answered > 0 && dots(s.trackerIds, isoDay(new Date()))}
-        {/* Early in the day: answer what already happened, the rest tonight. */}
-        {!s.done && s.kind === "questions" && new Date().getHours() < 17 && (
-          <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("path.earlyHint")}</p>
-        )}
-        {!s.done && button(<>{s.answered > 0 ? t("path.continue") : t("path.start")} <ArrowRight className="h-4 w-4" /></>, () => startStep(s))}
-        {s.done && s.kind === "questions" && button(t("path.changeAnswers"), () => { setOpen(null); onStartStep(s, stepName(s), true); }, "plain")}
+        {head(t("path.tonight"), parts.length > 1 ? t("path.partsDone", { done: partsDone, count: parts.length }) : undefined)}
+        <div className="mt-2 -mx-1.5 flex flex-col">
+          {m.steps.map((s) => partRow(s))}
+        </div>
+        {next && button(<>{partsDone > 0 ? t("path.continue") : t("path.start")} <ArrowRight className="h-4 w-4" /></>, () => startStep(next))}
       </>
+    );
+  };
+
+  /** A row in tonight's card: its icon in its colour (a check once done), name, one line. */
+  const partRow = (s: Step) => {
+    const Icon = iconOf(s);
+    const done = s.done && !s.skipped && s.kind !== "unload";
+    const waits = s.kind === "game" && !canPlay;
+    const hue = hueOf(s);
+    // done questions: change the answers; a note written: write another; the rest: do it
+    const go = waits || s.kind === "auto" ? undefined
+      : done && s.kind === "questions" ? () => { setOpen(null); onStartStep(s, stepName(s), true); }
+      : done && s.kind === "task" && s.task === "note" ? () => { setOpen(null); setNoteDraft(newDraft()); }
+      : done ? undefined : () => startStep(s);
+    return (
+      <div key={s.id} className="flex items-center">
+        <button type="button" disabled={!go} onClick={() => { haptics.tap(); go?.(); }}
+          className="flex min-h-[54px] min-w-0 flex-1 items-center gap-3 rounded-2xl px-1.5 text-left transition-colors active:bg-foreground/[0.05] disabled:active:bg-transparent">
+          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", done && "path-part-done")}
+            style={done ? undefined : { background: `hsl(${hue} / .16)`, color: waits ? "hsl(var(--muted-foreground))" : `hsl(${hue})` }}>
+            {done ? <Check className="h-5 w-5" strokeWidth={3} /> : <Icon className="h-5 w-5" strokeWidth={2.2} />}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={cn("block truncate text-[16px] font-bold leading-tight", (done || waits) && "text-foreground/60")}>{stepName(s)}</span>
+            {partSub(s) && <span className="block truncate text-[14px] font-medium text-muted-foreground">{partSub(s)}</span>}
+          </span>
+          {go && !done && s.kind !== "task" && <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />}
+        </button>
+        {s.kind === "task" && !s.done && (
+          <button type="button" onClick={() => { haptics.tap(); skipTask(s.task!); setTick((k) => k + 1); }}
+            className="h-10 shrink-0 px-2 text-[14px] font-semibold text-muted-foreground">{t("path.skip")}</button>
+        )}
+      </div>
     );
   };
 
   const bubble = (i: number) => {
     const p = stops[i];
-    const w = Math.min(width - 16, 300);
+    const w = Math.min(width - 16, nodes[i].kind === "tonight" ? 330 : 300);
     const left = Math.max(8, Math.min(p.x - w / 2, width - w - 8));
     const above = p.y > height - 260;
     const caret = Math.max(18, Math.min(p.x - left, w - 18));
@@ -626,12 +610,8 @@ export const EveningPath = ({
           {focus > 0 && <PathWake stops={stops.slice(0, focus + 1)} width={width} height={height} />}
 
           {nodes.map((n, i) => {
-            const v = viewOf(n, i);
+            const v = viewOf(n);
             const p = stops[i];
-            const act = v.action
-              ? n.kind === "step" ? () => startStep(n.step) : n.kind === "chest" ? openThisChest : undefined
-              : undefined;
-            const lockedGame = n.kind === "step" && n.step.kind === "game" && !canPlay && !n.step.done;
             return (
               <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
                 {/* her animal stands beside her step, rolls with it, and opens You */}
@@ -645,15 +625,15 @@ export const EveningPath = ({
                     </span>
                   </button>
                 )}
-                {/* no names on the lights (her: "как у дуолинго и попроще"); over her
-                    step one short word that starts it, pointing at its light */}
-                {i === currentNode && open !== i && act && (
-                  <StartBubble stop={p} label={v.action ?? t("path.start")} aria={`${v.title}: ${v.action ?? t("path.start")}`} onClick={act} />
+                {/* tonight: an arc per part around its light, and one short word over it
+                    that starts the next part, pointing at its light */}
+                {i === currentNode && parts.length > 1 && <PartsRing stop={p} total={parts.length} done={partsDone} />}
+                {i === currentNode && open !== i && next && (
+                  <StartBubble stop={p} label={partsDone > 0 ? t("path.continue") : t("path.start")}
+                    aria={`${t("path.tonight")}: ${stepName(next)}`} onClick={() => startStep(next)} />
                 )}
-                <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
-                  refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
-                  {v.icon}
-                </PathNode>
+                <PathNode stop={p} look={v.look} hue={v.hue} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
+                  refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i} />
                 {open === i && bubble(i)}
               </div>
             );

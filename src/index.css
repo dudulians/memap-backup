@@ -2172,9 +2172,6 @@ html[data-theme="aurora"] { --path-locked: 234 26% 28%; }
 .memap-sea-bg.memap-path-bg { background-size: 100% auto !important; background-repeat: repeat-y !important; background-position: center top !important; }
 html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { background-color: #B9C5F2; }
 html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #2B3A9A; }
-.memap-sea-bg.memap-path-bg { overflow: hidden; }
-/* one tile taller than the screen (a tile is 163.4% of the width), moved up as the path scrolls */
-.memap-sea-roll { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% + 164vw); background-size: 100% auto; background-repeat: repeat-y; background-position: center top; will-change: transform; }
 
 /* Today's path as lights on her sea (PathParts, Nov 4 2026) */
 .path-orb { position: absolute; inset: 0; pointer-events: none; }
@@ -2219,6 +2216,11 @@ html[data-theme="aurora"] { --path-band: rgba(170, 200, 255, .14); }
 /* a soft light, no edges (her note: no see-through plates) */
 .path-band { background: radial-gradient(closest-side, var(--path-band), transparent); }
 /* a week's name on the path, plain (no card) */
+/* tonight's parts around its light (PartsRing), and done ones in its card */
+.path-parts .on { stroke: #F2B544; }
+.path-parts .off { stroke: rgba(255, 255, 255, .9); }
+html[data-ui="new"][data-theme="aurora"] .path-parts .off { stroke: rgba(255, 255, 255, .3); }
+.path-part-done { background: radial-gradient(circle at 50% 46%, #FFFFFF 0%, #FFF3CC 40%, #F6D27E 100%); color: #8A5A12; }
 /* the Start bubble over her step (StartBubble) */
 .path-start { transform: translate(-50%, -100%); transition: transform 120ms ease-out; }
 .path-start:active { transform: translate(-50%, -100%) scale(.95); }
