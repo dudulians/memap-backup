@@ -172,14 +172,38 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
   onOpenRef.current = onOpen;
   useEffect(() => { if (!paused) { setOn(null); kickRef.current(); } }, [paused]);
 
+  // The ball's WebGL lives as long as the globe is on screen and is freed the
+  // moment it leaves (her note, Nov 4 2026: "периодически вылетает глобус"):
+  // before, each visit left a context holding an 8 MB picture behind, and
+  // every redraw of the islands uploaded the picture again without freeing
+  // the old one, until the phone ran out of memory. If the phone drops the
+  // context itself, the ball comes back when it is restored.
+  const [gen, setGen] = useState(0);
+  const loseRef = useRef<WEBGL_lose_context | null>(null);
+  useEffect(() => {
+    const canvas = cv.current;
+    if (!canvas) return;
+    const lost = (e: Event) => e.preventDefault();
+    const back = () => setGen((g) => g + 1);
+    canvas.addEventListener("webglcontextlost", lost);
+    canvas.addEventListener("webglcontextrestored", back);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", lost);
+      canvas.removeEventListener("webglcontextrestored", back);
+      loseRef.current?.loseContext();
+    };
+  }, []);
+
   useEffect(() => {
     const canvas = cv.current!, box = wrap.current!;
     const gl = canvas.getContext("webgl", { alpha: true, premultipliedAlpha: true, antialias: false });
     if (!gl) return;
+    if (gl.isContextLost()) { loseRef.current?.restoreContext(); return; }
+    loseRef.current ??= gl.getExtension("WEBGL_lose_context");
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const sh = (type: number, src: string) => { const s = gl.createShader(type)!; gl.shaderSource(s, src); gl.compileShader(s); return s; };
-    const prog = gl.createProgram()!;
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog); gl.useProgram(prog);
+    const prog = gl.createProgram()!, vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+    gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog); gl.useProgram(prog);
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const U = Object.fromEntries(["uRes", "uBall", "uYaw", "uPitch", "uNight", "uPx", "uTex"].map((k) => [k, gl.getUniformLocation(prog, k)]));
@@ -195,13 +219,6 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       hasTex = true; dirty = true; kick();
     };
     let alive = true;
-    const src = night ? planetNight : planetDay;
-    const cached = TEXTURES.get(src);
-    if (cached) setTexture(cached);
-    else { const im = new Image(); im.onload = () => { if (!alive) return; const c = toTexture(im); TEXTURES.set(src, c); setTexture(c); }; im.src = src; }
-    // the other one loads ahead, so day/night switches at once
-    const other = night ? planetDay : planetNight;
-    const ahead = window.setTimeout(() => { if (!TEXTURES.has(other)) { const im = new Image(); im.onload = () => TEXTURES.set(other, toTexture(im)); im.src = other; } }, 1500);
 
     let W = 0, H = 0, DPR = 1, R = 0, CX = 0, CY = 0;
     let yaw = VIEW?.yaw ?? -C0[1] * D2R, pitch = VIEW?.pitch ?? Math.max(0, C0[0] - 20) * D2R, vy = 0, vp = 0;
@@ -402,6 +419,17 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
     box.addEventListener("pointerdown", onDown); box.addEventListener("pointermove", onMove);
     box.addEventListener("pointerup", onUp); box.addEventListener("pointercancel", onCancel);
     box.addEventListener("wheel", onWheel, { passive: false });
+    // Her planet, once everything it draws with exists. (It was set up top
+    // before: the second visit found the picture ready, drew at once and hit
+    // the frame state not made yet, and the whole app fell over: her note,
+    // Nov 4 2026, "периодически вылетает глобус"; day/night did the same.)
+    const src = night ? planetNight : planetDay;
+    const cached = TEXTURES.get(src);
+    if (cached) setTexture(cached);
+    else { const im = new Image(); im.onload = () => { if (!alive) return; const c = toTexture(im); TEXTURES.set(src, c); setTexture(c); }; im.src = src; }
+    // the other one loads ahead, so day/night switches at once
+    const other = night ? planetDay : planetNight;
+    const ahead = window.setTimeout(() => { if (!TEXTURES.has(other)) { const im = new Image(); im.onload = () => TEXTURES.set(other, toTexture(im)); im.src = other; } }, 1500);
     const ro = new ResizeObserver(resize); ro.observe(box);
     resize();
     // for the tests in development: where an island is drawn, how the ball is turned
@@ -415,8 +443,10 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       box.removeEventListener("pointerup", onUp); box.removeEventListener("pointercancel", onCancel);
       box.removeEventListener("wheel", onWheel);
       kickRef.current = () => undefined;
+      // what this run put on the GPU goes with it
+      gl.deleteTexture(tex); gl.deleteBuffer(buf); gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs);
     };
-  }, [things, wakes, night]);
+  }, [things, wakes, night, gen]);
 
   return (
     <div ref={wrap} className="planet-wrap" aria-label={t("map.aria")}>
