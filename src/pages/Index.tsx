@@ -13,12 +13,8 @@ import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 import seaDawn from "@/assets/bg/sea-dawn.webp";
 import seaNight from "@/assets/bg/sea-night.webp";
-import pathDay from "@/assets/bg/path-day.webp";
-import pathNight from "@/assets/bg/path-night.webp";
-import pathDayTop from "@/assets/bg/path-day-top.webp";
-import pathDayTile from "@/assets/bg/path-day-tile.webp";
-import pathNightTop from "@/assets/bg/path-night-top.webp";
-import pathNightTile from "@/assets/bg/path-night-tile.webp";
+import todaySeaDay from "@/assets/bg/today-sea-day-tile.webp";
+import todaySeaNight from "@/assets/bg/today-sea-night-tile.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 
@@ -93,7 +89,7 @@ const Index = () => {
   // the other theme's backgrounds load ahead, so a switch has them at once
   useEffect(() => {
     const id = window.setTimeout(() => {
-      (night ? [pathDay, pathDayTop, pathDayTile, seaDawn] : [pathNight, pathNightTop, pathNightTile, seaNight]).forEach((src) => { new Image().src = src; });
+      (night ? [todaySeaDay, seaDawn] : [todaySeaNight, seaNight]).forEach((src) => { new Image().src = src; });
     }, 2000);
     return () => window.clearTimeout(id);
   }, [night]);
@@ -292,7 +288,7 @@ const Index = () => {
       {onGlobe && <div aria-hidden="true" className={`planet-sky ${night ? "night" : "day"} -z-10`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
       {activeTab !== "patterns" && (
         <div aria-hidden="true" className={`memap-sea-bg pointer-events-none absolute inset-0 -z-10${activeTab === "cards" ? " memap-path-bg" : ""}`}
-          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? pathNight : pathDay) : night ? seaNight : seaDawn})` }} />
+          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? todaySeaNight : todaySeaDay) : night ? seaNight : seaDawn})` }} />
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
@@ -339,15 +335,16 @@ const Index = () => {
       >
         {activeTab === "cards" && (
           <div className="relative">
-            {/* Her picture moves with the path (her note, Nov 3 2026): the sky
-                once, then her sea with islands repeating (make-path-tiles.cjs). */}
+            {/* Her picture moves with the path (her note, Nov 3 2026). Since Nov 4
+                2026 her own Today sea, made to repeat downwards with no seam
+                (marketing/tools/make-today-sea.mjs). */}
             <div aria-hidden="true" className="pointer-events-none absolute -z-10"
               style={{
                 left: -16, right: -16, top: -16, bottom: "calc(-7rem - env(safe-area-inset-bottom, 0px))",
-                backgroundImage: `url(${night ? pathNightTop : pathDayTop}), url(${night ? pathNightTile : pathDayTile})`,
-                backgroundRepeat: "no-repeat, repeat-y",
-                backgroundSize: "100% auto, 100% auto",
-                backgroundPosition: `center ${-headerH}px, center ${-headerH}px`,
+                backgroundImage: `url(${night ? todaySeaNight : todaySeaDay})`,
+                backgroundRepeat: "repeat-y",
+                backgroundSize: "100% auto",
+                backgroundPosition: `center ${-headerH}px`,
               }} />
             <TodayTab key={`cards-${refreshKey}`} />
           </div>

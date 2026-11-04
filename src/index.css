@@ -2168,9 +2168,34 @@ html[data-theme="aurora"] { --path-locked: 234 26% 28%; }
 
 /* Her own day and night pictures behind the path (Nov 3 2026): islands at
    the edges, open sea in the middle, so nothing is scattered on the path. */
-.memap-sea-bg.memap-path-bg { background-size: cover !important; background-position: center top !important; }
-html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { background-color: #d2dde3; }
-html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #504a9b; }
+/* Today: her sea, repeating downwards (Nov 4 2026) */
+.memap-sea-bg.memap-path-bg { background-size: 100% auto !important; background-repeat: repeat-y !important; background-position: center top !important; }
+html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { background-color: #B9C5F2; }
+html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #2B3A9A; }
+
+/* Today's path as lights on her sea (PathParts, Nov 4 2026) */
+.path-orb { position: absolute; inset: 0; pointer-events: none; }
+.orb-done { background: radial-gradient(circle at 50% 46%, #FFFFFF 0%, #FFF3CC 40%, #F6D27E 100%); box-shadow: 0 0 0 4px rgba(255, 236, 180, .35), 0 0 26px 10px rgba(255, 214, 120, .45); }
+.orb-current { background: radial-gradient(circle at 40% 34%, #FFFFFF 0%, #F7F3E6 55%, #E7DEC2 100%); box-shadow: 0 0 0 4px #fff, 0 10px 18px -8px rgba(120, 100, 50, .45); }
+.orb-todo { background: radial-gradient(circle at 40% 34%, #FFFFFF 0%, #F1F4FA 55%, #DCE3F1 100%); box-shadow: 0 0 0 3px var(--orb-ring), 0 10px 18px -10px rgba(40, 60, 100, .4); }
+.orb-gold { background: radial-gradient(circle at 40% 30%, #FFF0B8 0%, #F6C45A 50%, #D9962A 100%); box-shadow: 0 0 22px 6px rgba(246, 196, 90, .45); }
+.orb-locked { background: radial-gradient(circle at 40% 34%, rgba(255, 255, 255, .85) 0%, rgba(238, 241, 248, .75) 55%, rgba(216, 223, 236, .7) 100%); box-shadow: 0 8px 14px -10px rgba(40, 60, 100, .35); }
+html[data-ui="new"][data-theme="aurora"] .orb-done { box-shadow: 0 0 0 4px rgba(255, 236, 180, .3), 0 0 30px 12px rgba(255, 214, 120, .55); }
+html[data-ui="new"][data-theme="aurora"] .orb-todo { background: radial-gradient(circle at 40% 34%, #F4F6FF 0%, #C9D2F0 55%, #9AA8DA 100%); }
+html[data-ui="new"][data-theme="aurora"] .orb-locked { background: radial-gradient(circle at 40% 34%, rgba(174, 185, 224, .8) 0%, rgba(127, 140, 194, .75) 55%, rgba(94, 106, 166, .7) 100%); }
+.path-ripple { position: absolute; z-index: 2; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); }
+html[data-ui="new"][data-theme="aurora"] .path-ripple { background: radial-gradient(closest-side, rgba(150, 200, 255, .35), rgba(150, 200, 255, 0)); }
+.path-chest { position: absolute; display: block; pointer-events: none; aspect-ratio: 1 / .8; }
+.path-chest .isle { position: absolute; left: 0; bottom: 0; width: 100%; filter: drop-shadow(0 6px 8px rgba(20, 60, 100, .25)); }
+.path-chest .box { position: absolute; left: 24%; bottom: 30%; width: 52%; filter: drop-shadow(0 6px 6px rgba(80, 60, 30, .3)); }
+.path-chest.is-locked { opacity: .78; filter: saturate(.75); }
+.path-boat .bob { position: absolute; inset: 0; display: block; animation: planetBob 3.2s ease-in-out infinite; }
+.path-boat img { position: absolute; left: 0; top: 0; width: 100%; }
+.path-boat img.who { left: 48%; top: 40%; width: 42%; }
+/* her day and night pictures side by side: the theme shows one */
+.art-night { display: none !important; }
+html[data-ui="new"][data-theme="aurora"] .art-night { display: block !important; }
+html[data-ui="new"][data-theme="aurora"] .art-day { display: none !important; }
 
 /* Tactile islands (her note, Nov 3 2026: "чтобы остров как кнопка отжимался,
    с ощущением"): pressed, it sinks and its shadow tightens; let go, it eases
@@ -2242,8 +2267,23 @@ html[data-ui="new"][data-theme="aurora"] .planet-label span { background: none; 
 
 @media (prefers-reduced-motion: reduce) {
   main.snap-y { scroll-snap-type: none; }
-  .globe-in, .treasure-new, .map-shore, .bridge-build, .planet-shimmer, .planet-boat .bob { animation: none; }
+  .globe-in, .treasure-new, .map-shore, .bridge-build, .planet-shimmer, .planet-boat .bob, .path-boat .bob { animation: none; }
   .planet-isle .ring { transition: none; }
   .island-press, .island-press:active { transition: none; transform: none; }
   .island-ripple { animation: none; opacity: 0; }
 }
+
+/* The flat map, new look (Nov 4 2026): her planet unrolled under a ring of her islands. */
+.planet-map { overflow: hidden; }
+/* around it, the page takes her planet colours (light: lavender sea; dark: her deep blue) */
+html[data-ui="new"][data-theme="aurora-light"] .map-sea { background: linear-gradient(180deg, #E6E9FC 0%, #D3DBFC 32%, #BCCFFB 100%); }
+html[data-ui="new"][data-theme="aurora-light"] .map-head { background: linear-gradient(180deg, #E6E9FC 0%, #E6E9FC 78%, rgba(230, 233, 252, 0) 100%); }
+html[data-ui="new"][data-theme="aurora-light"] .app-head-map { background: #E6E9FC; }
+html[data-ui="new"][data-theme="aurora"] .map-sea { background: linear-gradient(180deg, #141c39 0%, #182a72 40%, #1D3592 100%); }
+html[data-ui="new"] .map-sea { scrollbar-width: none; }
+html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
+.planet-map-sea { position: absolute; inset: 0; background-repeat: no-repeat; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 78%, transparent 97%); mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 78%, transparent 97%); }
+.planet-map-isle { will-change: auto; }
+.planet-map-isle .planet-label { z-index: 1; }
+.planet-label .is-new { color: hsl(var(--muted-foreground)); }

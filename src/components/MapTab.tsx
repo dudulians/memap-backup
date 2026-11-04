@@ -20,7 +20,7 @@ import { ExperimentSheet } from "./ExperimentSheet";
 import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
-import { IslandsMap } from "./IslandsMap";
+import { PlanetMap } from "./PlanetMap";
 import { PlanetGlobe } from "./PlanetGlobe";
 import { AnswerNow, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
@@ -186,10 +186,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <IslandsMap islands={islands} routes={routes} trackers={trackers} entries={entries} width={width} fill={fill} lit={lit} growth={growth} items={items} you={you} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} onOpen={setOpen} />
+              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} onOpen={setOpen}
+                onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>
           )}
-          {loaded && (
+          {/* the ring has its own place for a new island; this one is for an empty or full map */}
+          {loaded && (islands.length === 0 || islands.length >= 9) && (
             <button type="button" onClick={() => { haptics.tap(); setNewOpen(true); }}
               className="mx-auto mt-2 flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-foreground/20 bg-white/40 px-5 text-[16px] font-bold text-foreground/80">
               <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}

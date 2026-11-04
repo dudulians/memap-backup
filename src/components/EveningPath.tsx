@@ -21,12 +21,12 @@ import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, 
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
-import { islandDef, islandName } from "@/lib/islands";
+import { islandDef, islandName, mapPicFor } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, SnapDot, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, NodePill, PathNode, PathWake, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, SnapDot, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -156,7 +156,7 @@ export const EveningPath = ({
     const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 26);
     // The current step sits further left, so its pill has room for the name
     // and "Start"; with an avatar, a little right of it so she stands beside it.
-    if (currentNode >= 0) out[currentNode] = { ...out[currentNode], x: Math.round(Math.max(R_CURRENT + 14 + (avatarPic ? 48 : 0), width * 0.2)) };
+    if (currentNode >= 0) out[currentNode] = { ...out[currentNode], x: Math.round(Math.max(R_CURRENT + 14 + 40, width * 0.2)) };
     return out;
   }, [nodes, width, currentNode, avatarPic]);
   const height = stops[chestIndex].y + R_CHEST + 30;
@@ -239,7 +239,8 @@ export const EveningPath = ({
 
   const f = stops[focus];
   // Her avatar (optional) stands to the left of the step to do.
-  const avatar: Rect | null = f.x - f.r - 50 >= 0 ? { x: f.x - f.r - 50, y: f.y - 22, w: 48, h: 48 } : null;
+  // her boat (with her animal in it) waits beside the step to do
+  const avatar: Rect | null = f.x - f.r - 44 >= 0 ? { x: f.x - f.r - 46, y: f.y - 40, w: 58, h: 58 } : null;
 
   // --- Bubbles ---------------------------------------------------------------
   const [open, setOpen] = useState<Open>(null);
@@ -731,6 +732,8 @@ export const EveningPath = ({
             review found a sideways pan); nothing visible is cut. */}
         <div ref={boxRef} className="path-box relative mx-auto [overflow-x:clip]" style={{ width, height }}>
           {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
+          {/* the wake her boat left through the evenings already lit */}
+          {focus > 0 && <PathWake stops={stops.slice(0, focus + 1)} width={width} height={height} />}
 
           {nodes.map((n, i) => {
             const v = viewOf(n, i);
@@ -742,11 +745,14 @@ export const EveningPath = ({
             return (
               <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
                 {/* her animal stands beside her step, rolls with it, and opens You */}
-                {i === focus && avatarPic && avatar && (
+                {i === focus && avatar && (
                   <button type="button" aria-label={t("map.you")} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-you")); }}
-                    className="path-avatar absolute z-[4] transition-transform duration-150 active:scale-95" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
-                    <span aria-hidden="true" className="absolute bottom-0 left-2 right-2 h-2.5 rounded-[50%] blur-[2px]" style={{ background: "var(--scenery-shadow)" }} />
-                    <img src={avatarPic} alt="" width={48} height={48} className="relative h-[48px] w-[48px] object-contain" />
+                    className="path-boat absolute z-[4] transition-transform duration-150 active:scale-95" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
+                    <span className="bob">
+                      <img className="art-day" src={mapPicFor("sailboat", false)} alt="" />
+                      <img className="art-night" src={mapPicFor("sailboat", true)} alt="" />
+                      {avatarPic && <img className="who" src={avatarPic} alt="" />}
+                    </span>
                   </button>
                 )}
                 {!(i === currentNode && open === currentNode) && (
@@ -757,7 +763,7 @@ export const EveningPath = ({
                     second={i === currentNode && n.kind === "step" && n.step.kind === "task" ? t("path.skip") : undefined}
                     onSecond={() => { if (n.kind === "step" && n.step.task) { skipTask(n.step.task); setTick((k) => k + 1); } }} />
                 )}
-                <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} shape={shapeOf(n)} label={v.title} onClick={() => tap(i)} dataStop={i}
+                <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} shape={shapeOf(n)} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
                 </PathNode>

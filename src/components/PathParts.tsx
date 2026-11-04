@@ -5,6 +5,8 @@
 // week card with a progress bar. Since Nov 3 2026 her own day/night picture
 // is behind the path, and nothing is scattered on it (her note).
 import { useId, useMemo, type ReactNode } from "react";
+import { alongCurve, art, wakeShape } from "@/lib/globeArt";
+import { mapPicFor } from "@/lib/islands";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Briefcase, Check, ChevronRight, Coffee, Dumbbell, Flower2, Gift, Heart, HeartPulse, Home, Layers, Lock, MoonStar, Music, Palette, PawPrint, Plane, Sprout, Users, Utensils, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,64 +89,61 @@ export const islandIcon = (name?: string): LucideIcon => (name && ICONS[name]) |
  *  from above; steps ahead are white with the coloured icon and a tinted
  *  rim; the reward is gold. `hue` is "h s% l%" or a var(). Pressing shrinks
  *  it a little, with a light tap. */
-export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle", lock = true }: {
+// Since Nov 4 2026 (the voyage on her sea): every node is a light on the water.
+// An evening done is a warm lit light, tonight a pale light waiting with a white
+// ring, a step open now a pearl with its icon, what is not yet a dim pearl, a
+// week's reward her chest on a little island. Games keep a wavy edge, tasks a
+// rounded square, so they still read apart.
+export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle", lock = true, chest = false }: {
   stop: Stop; look: NodeLook; children: ReactNode; onClick?: () => void; label: string;
   refEl?: React.Ref<HTMLButtonElement>; pressedRing?: number; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
   shape?: NodeShape;
   /** a locked node shows its lock (the quiet coming weeks don't) */
   lock?: boolean;
+  /** the week's reward: her chest on a little island instead of a light */
+  chest?: boolean;
 }) => {
   const size = stop.r * 2;
   const tone = look === "gold" ? "var(--coin-gold)" : hue;
   const locked = look === "locked";
-  const filled = look !== "todo" && !locked;
-  const gid = `g${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const badge = shape === "badge";
   const radius = shape === "square" ? "32%" : "9999px";
+  const color = look === "done" ? "#9A6A1C" : look === "gold" ? "#fff" : locked ? "hsl(var(--muted-foreground) / 0.7)" : `hsl(${tone})`;
   return (
+    <>
+    {!chest && <span aria-hidden="true" className="path-ripple" style={{ left: stop.x - stop.r * 1.1, top: stop.y + stop.r * 0.25, width: stop.r * 2.2, height: stop.r * 0.7 }} />}
     <button ref={refEl} type="button" data-path-stop={dataStop} data-shape={shape} aria-label={label} aria-expanded={expanded}
       onClick={() => { if (onClick) { haptics.tap(); playTick(true); onClick(); } }}
-      className={cn(
-        "path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.92]",
-        filled ? "text-white" : locked ? !badge && "bg-[hsl(var(--path-locked))]" : !badge && "bg-white dark:bg-[hsl(var(--surface))]",
-        wiggle && "path-wiggle-flat",
-      )}
-      style={{
-        left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: radius,
-        color: filled ? undefined : locked ? "hsl(var(--muted-foreground) / 0.75)" : `hsl(${tone})`,
-        background: badge ? undefined : filled ? `linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 58%), hsl(${tone})` : undefined,
-        border: badge ? undefined : filled ? "3px solid hsl(var(--surface))" : locked ? "2px solid hsl(var(--muted-foreground) / 0.2)" : `3.5px solid hsl(${tone})`,
-        boxShadow: badge || locked ? undefined : filled
-          ? `0 9px 18px -9px hsl(${tone} / 0.75), inset 0 -3px 0 rgba(0,0,0,0.06)`
-          : `0 0 0 4px hsl(${tone} / 0.14), 0 8px 18px -8px hsl(${tone} / 0.6)`,
-      }}>
-      {look === "current" && (
+      className={cn("path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.92]", wiggle && "path-wiggle-flat")}
+      style={{ left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: radius, color, ["--orb-ring" as string]: `hsl(${tone} / 0.45)` }}>
+      {look === "current" && !chest && (
         <span aria-hidden="true" className="path-halo pointer-events-none absolute"
-          style={{ inset: -(pressedRing ?? 11), borderRadius: shape === "square" ? "36%" : "9999px", background: `hsl(${tone} / 0.16)`, boxShadow: `0 0 0 1px hsl(${tone} / 0.2)` }} />
+          style={{ inset: -(pressedRing ?? 14), borderRadius: shape === "square" ? "36%" : "9999px", background: "radial-gradient(closest-side, rgba(255,222,140,.5), rgba(255,222,140,0))" }} />
       )}
-      {/* A game: the same colours on a wavy badge edge. */}
-      {badge && (
-        <svg aria-hidden="true" width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute inset-0"
-          style={{ filter: filled ? `drop-shadow(0 7px 8px hsl(${tone} / 0.45))` : "drop-shadow(0 5px 7px rgba(16,42,56,0.22))" }}>
-          <defs>
-            <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#fff" stopOpacity={filled ? 0.26 : 0} />
-              <stop offset="0.58" stopColor="#fff" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <path d={badgePath(size)} fill={filled ? `hsl(${tone})` : locked ? "hsl(var(--path-locked))" : "hsl(var(--surface))"}
-            stroke={filled ? "hsl(var(--surface))" : locked ? "hsl(var(--muted-foreground) / 0.2)" : `hsl(${tone})`} strokeWidth={locked ? 2 : 3.5}
-            strokeLinejoin="round" />
-          {filled && <path d={badgePath(size)} fill={`url(#${gid})`} />}
+      {chest ? (
+        <span aria-hidden="true" className={cn("path-chest", locked && "is-locked")} style={{ width: size * 1.45, left: -size * 0.225, top: -size * 0.05 }}>
+          <img className="art-day isle" src={art("03_flower_hill", false)} alt="" />
+          <img className="art-night isle" src={art("03_flower_hill", true)} alt="" />
+          <img className="art-day box" src={mapPicFor("chest_closed", false)} alt="" />
+          <img className="art-night box" src={mapPicFor("chest_closed", true)} alt="" />
+        </span>
+      ) : (
+        <span aria-hidden="true" className={`path-orb orb-${look}`} style={{ borderRadius: radius }} />
+      )}
+      {/* A game: a wavy edge around its light. */}
+      {badge && !chest && (
+        <svg aria-hidden="true" width={size + 8} height={size + 8} viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute" style={{ left: -4, top: -4 }}>
+          <path d={badgePath(size)} fill="none" stroke={locked ? "hsl(var(--muted-foreground) / 0.3)" : `hsl(${tone} / 0.7)`} strokeWidth={2} strokeLinejoin="round" />
         </svg>
       )}
-      <span className="relative flex items-center justify-center">{children}</span>
-      {locked && lock && (
+      {!chest && <span className="relative flex items-center justify-center">{children}</span>}
+      {locked && lock && !chest && (
         <span aria-hidden="true" className="absolute -bottom-1 -right-1 z-[1] flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_2px_6px_rgba(16,42,56,0.25)] dark:bg-[hsl(var(--surface))]">
           <Lock className="h-3.5 w-3.5" strokeWidth={2.6} />
         </span>
       )}
     </button>
+    </>
   );
 };
 
@@ -196,6 +195,28 @@ export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, 
       )}
     </div>
     </>
+  );
+};
+
+/** The wake her boat left through these stops (the same soft trail as the links on the
+ *  map): from just above the first stop to the last, thin at both ends. */
+export const PathWake = ({ stops, width, height }: { stops: Stop[]; width: number; height: number }) => {
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const shape = useMemo(() => {
+    if (stops.length < 2) return null;
+    const pts: [number, number][] = [[stops[0].x - 8, stops[0].y - 56], ...stops.map((s) => [s.x, s.y] as [number, number])];
+    return wakeShape(alongCurve(pts, 90), { waves: Math.max(2, stops.length * 0.7), amp: 4, width: 4 });
+  }, [stops]);
+  if (!shape) return null;
+  return (
+    <svg aria-hidden="true" className="pointer-events-none absolute left-0 top-0 z-[1]" width={width} height={height}>
+      <defs>
+        <filter id={`wb${id}`} x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" /></filter>
+        <filter id={`ws${id}`}><feGaussianBlur stdDeviation="0.5" /></filter>
+      </defs>
+      <path d={shape.glow} className="planet-wake-glow" filter={`url(#wb${id})`} />
+      <path d={shape.core} className="planet-wake-core" filter={`url(#ws${id})`} />
+    </svg>
   );
 };
 
@@ -257,13 +278,14 @@ export const WeekStrip = ({
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
         {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
+        {kind === "past" && <PathWake stops={stops} width={width} height={height} />}
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                 <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"}
                   onTap={kind === "past" ? onOpenChest : undefined} />
-                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
+                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} chest hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
                   <Gift className="h-7 w-7" strokeWidth={2.2} />
                 </PathNode>
               </div>

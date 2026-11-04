@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CloudLightning, CloudSun, Plus, Sun } from "lucide-react";
-import { Island, IslandId, Route, bridgesOf, islandName, isNightMap, isOwnIsland, mapPic } from "@/lib/islands";
+import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -20,26 +20,7 @@ import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 
-const named = (files: Record<string, string>) => new Map(Object.entries(files).map(([p, url]) => [p.split("/").pop()!.replace(".webp", ""), url]));
-const DAY = named(import.meta.glob("@/assets/globe/day/*.webp", { eager: true, import: "default" }) as Record<string, string>);
-const NIGHT = named(import.meta.glob("@/assets/globe/night/*.webp", { eager: true, import: "default" }) as Record<string, string>);
-const art = (name: string, night: boolean) => (night && NIGHT.get(name)) || DAY.get(name) || "";
-/** height / width of each picture */
-const ASPECT: Record<string, number> = {
-  "03_flower_hill": 0.514, "04_twin_hills": 0.451, "05_wide_meadow": 0.379, "06_snow_peak": 0.508, "09_waterfall": 0.462,
-  "10_terraced_garden": 0.496, "11_sakura": 0.753, "14_stone_arch": 0.579, "16_cozy_cottage": 0.539, "17_lavender_garden": 0.519,
-  "19_grassy_terraces": 0.513, "20_tropical_palms": 0.747, "24_oak_tree": 0.704, "26_flowery_island": 0.441,
-  cloud_01_large: 0.607, cloud_02_large: 0.526, cloud_03_large: 0.384, cloud_04_large: 0.424, cloud_05_large: 0.447,
-  cloud_06_large: 0.406, cloud_07_large: 0.284, cloud_island_01: 0.461, cloud_island_03: 0.51, cloud_island_05: 0.415, sailboat: 1,
-};
-// Each life area is one whole island from her pack.
-const ART: Record<string, string> = {
-  me: "17_lavender_garden", love: "11_sakura", kids: "20_tropical_palms", health: "09_waterfall", body: "19_grassy_terraces",
-  pet: "24_oak_tree", parents: "16_cozy_cottage", world: "14_stone_arch", work: "06_snow_peak", mine: "26_flowery_island", other: "10_terraced_garden",
-};
-/** Her own islands grow with her evenings there; never a bare rock on day one (her rule). */
-const artOf = (id: IslandId, days: number) =>
-  isOwnIsland(id) ? (days >= 14 ? "05_wide_meadow" : days >= 7 ? "04_twin_hills" : "03_flower_hill") : ART[id] ?? ART.other;
+import { ASPECT, art, artOf, ringOrder, wakeShape } from "@/lib/globeArt";
 
 const D2R = Math.PI / 180;
 type V3 = [number, number, number];
@@ -161,10 +142,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
 
   // Her islands on a ring around the boat; linked pairs side by side, so their wake is short.
   const { things, wakes } = useMemo(() => {
-    const bridges = bridgesOf(routes, 3);
-    const ordered: Island[] = [];
-    for (const r of bridges) for (const id of [r.a, r.b]) { const isl = islands.find((i) => i.id === id); if (isl && !ordered.includes(isl)) ordered.push(isl); }
-    for (const isl of islands) if (!ordered.includes(isl)) ordered.push(isl);
+    const { ordered, links } = ringOrder(islands, routes);
     const n = ordered.length, ring = n <= 6 ? 28 : 31, size = n <= 6 ? 1 : 0.86;
     const list: Thing[] = ordered.map((isl, i) => {
       const ll = dest(C0, (360 / Math.max(n, 1)) * i + (n === 1 ? 0 : 38), n === 1 ? 14 : ring);
@@ -175,7 +153,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
     for (const s of SKY) list.push({ key: `sky-${s.ll.join()}`, kind: "sky", ll: s.ll, v: vec(s.ll), name: s.name, size: 1.05, ar: ASPECT[s.name] });
     const boatLL: [number, number] = [C0[0] - 1, C0[1]];
     list.push({ key: "boat", kind: "boat", ll: boatLL, v: vec(boatLL), name: "sailboat", size: 0.72, ar: 1 });
-    return { things: list, wakes: bridges.map((r) => [r.a, r.b] as const) };
+    return { things: list, wakes: links };
   }, [islands, routes, lit, days]);
 
   const wrap = useRef<HTMLDivElement>(null);
@@ -270,7 +248,6 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       }
       // links: the wake a boat left between two islands
       let h = "";
-      const f1 = (n: number) => n.toFixed(1), pt = (x: number, y: number) => `${f1(x)} ${f1(y)}`;
       const delay = -Math.round(performance.now() % 2600);
       for (const [a, b] of wakes) {
         const A = things.find((x) => x.key === a)?.v, B = things.find((x) => x.key === b)?.v; if (!A || !B) continue;
@@ -282,17 +259,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
         if (run.length) runs.push(run);
         for (const P of runs) {
           if (P.length < 3) continue;
-          const C = P.map((q, i) => {
-            const a0 = P[Math.max(0, i - 1)], a1 = P[Math.min(P.length - 1, i + 1)];
-            const dx = a1.x - a0.x, dy = a1.y - a0.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
-            const k = 0.5 + 0.5 * q.z;
-            const taper = Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, (q.t - 0.07) / 0.86))), 0.55);
-            const wave = 5.5 * k * Math.sin(q.t * Math.PI * 2 * 3.5) * taper; // a gentle meander, fixed to the water
-            return { x: q.x + nx * wave, y: q.y + ny * wave, nx, ny, w: (4.5 + 4.5 * k) * k * taper, cw: (0.9 + 1.2 * k) * taper };
-          });
-          const band = (k: "w" | "cw") => `M${C.map((c) => pt(c.x + c.nx * c[k], c.y + c.ny * c[k])).join(" L")} L${C.map((c) => pt(c.x - c.nx * c[k], c.y - c.ny * c[k])).reverse().join(" L")}Z`;
-          h += `<path d="${band("w")}" class="planet-wake-glow" filter="url(#planet-wb)"/><path d="${band("cw")}" class="planet-wake-core" filter="url(#planet-ws)"/>`;
-          h += `<path class="planet-shimmer" style="animation-delay:${delay}ms" d="M${C.map((c) => pt(c.x, c.y)).join(" L")}" stroke-width="2.4" stroke-dasharray="0.1 22" fill="none" stroke-linecap="round"/>`;
+          const w = wakeShape(P.map((q) => ({ x: q.x, y: q.y, t: q.t, k: 0.5 + 0.5 * q.z })));
+          h += `<path d="${w.glow}" class="planet-wake-glow" filter="url(#planet-wb)"/><path d="${w.core}" class="planet-wake-core" filter="url(#planet-ws)"/>`;
+          h += `<path class="planet-shimmer" style="animation-delay:${delay}ms" d="${w.mid}" stroke-width="2.4" stroke-dasharray="0.1 22" fill="none" stroke-linecap="round"/>`;
         }
       }
       if (wakeG.current) wakeG.current.innerHTML = h;
