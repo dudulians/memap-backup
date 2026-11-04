@@ -351,10 +351,10 @@ const Index = () => {
           devices with a tall home indicator still clear the nav. */}
       <main
         ref={mainRef}
-        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : `flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4${activeTab === "cards" ? " snap-y snap-mandatory overflow-x-hidden" : ""}`}
+        className={activeTab === "patterns" ? "flex-1 min-h-0 overflow-hidden max-w-2xl w-full mx-auto" : `flex-1 min-h-0 overflow-y-auto overscroll-contain max-w-2xl w-full mx-auto px-4 py-4${activeTab === "cards" ? " overflow-x-hidden" : ""}`}
         style={activeTab === "patterns" ? undefined : {
           paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))", maskImage: CONTENT_MASK, WebkitMaskImage: CONTENT_MASK,
-          // Today's drum: its middle is between the header and the tab bar
+          // Today: its middle is between the header and the tab bar
           scrollPaddingBottom: activeTab === "cards" ? "calc(5.25rem + env(safe-area-inset-bottom, 0px))" : undefined,
         }}
       >

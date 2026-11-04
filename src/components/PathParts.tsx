@@ -14,9 +14,9 @@ import { haptics } from "@/lib/haptics";
 import { playTick } from "@/lib/feedback";
 import { DAYS_PER_WEEK, type ChestRecord } from "@/lib/pathSteps";
 
-// Nodes sit in the left half, a gentle zigzag, so every pill fits on the right.
-export const XS = [156, 95, 109, 156, 109, 85, 126, 150];
-export const DESIGN_W = 340;
+// Lights wind down the middle, Duolingo-style (her note, Nov 4 2026): a share
+// of the width left (-) or right (+) of the centre, eight to a turn.
+export const ZIG = [0, 0.16, 0.24, 0.16, 0, -0.16, -0.24, -0.16];
 // About a quarter bigger since Nov 3 2026 (her note: "увеличим кружочки").
 export const R_DAY = 30;
 export const R_STEP = 34;
@@ -49,12 +49,6 @@ export const WeekRing = ({ size, done, on, off, width = 4 }: { size: number; don
   );
 };
 
-/** Where the scroll may come to rest: a still point at a stop's centre (the
- *  node itself rolls on the drum, and a moving element would move its own
- *  snap position). */
-export const SnapDot = ({ stop }: { stop: Stop }) => (
-  <span aria-hidden="true" className="path-snap pointer-events-none absolute snap-center" style={{ left: stop.x - 1, top: stop.y - 1, width: 2, height: 2 }} />
-);
 
 /** done: filled + check; current: the main step; todo: open now (white,
  *  full coloured rim and a soft glow); gold: a reward ready; locked: not yet
@@ -94,11 +88,11 @@ export const islandIcon = (name?: string): LucideIcon => (name && ICONS[name]) |
 // ring, a step open now a pearl with its icon, what is not yet a dim pearl, a
 // week's reward her chest on a little island. Games keep a wavy edge, tasks a
 // rounded square, so they still read apart.
-export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle", lock = true, chest = false }: {
+export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle", lock = false, chest = false }: {
   stop: Stop; look: NodeLook; children: ReactNode; onClick?: () => void; label: string;
   refEl?: React.Ref<HTMLButtonElement>; pressedRing?: number; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
   shape?: NodeShape;
-  /** a locked node shows its lock (the quiet coming weeks don't) */
+  /** a lock badge (off: not yet reads from the unlit light, as on Duolingo) */
   lock?: boolean;
   /** the week's reward: her chest on a little island instead of a light */
   chest?: boolean;
@@ -147,56 +141,15 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
   );
 };
 
-/** The label: a white pill that grows out of the node to the right. The
- *  node covers its left end. The current step's pill is taller and holds a
- *  "Start" button. Tapping the pill does what tapping its node does (her
- *  note, Nov 3 2026: "чтобы нажать на шаг, можно нажать и на плашку"). */
-export const NodePill = ({ stop, title, sub, action, onAction, maxRight, muted, big, second, onSecond, open, dim, locked, tone, onTap }: {
-  stop: Stop; title: string; sub?: string; action?: string; onAction?: () => void; maxRight: number; muted?: boolean; big?: boolean;
-  second?: string; onSecond?: () => void;
-  /** open now: bold, with an arrow in its colour */
-  open?: boolean;
-  /** not yet: dim */
-  dim?: boolean;
-  /** not yet: a lock at the end */
-  locked?: boolean;
-  /** the step's colour, "h s% l%" or a var() */
-  tone?: string;
-  /** the same as tapping the node */
-  onTap?: () => void;
-}) => {
-  const left = stop.x;
-  const h = big ? 78 : 48;
-  return (
-    <>
-    {second && (
-      <button type="button" onClick={() => { haptics.tap(); onSecond?.(); }}
-        className="absolute z-[2] h-8 rounded-full px-3 text-[14px] font-semibold text-muted-foreground active:opacity-60"
-        style={{ right: 4, top: stop.y + h / 2 + 2 }}>
-        {second}
-      </button>
-    )}
-    <div onClick={onTap ? () => { haptics.tap(); onTap(); } : undefined}
-      className={cn("absolute z-[2] flex items-center rounded-full bg-white/90 shadow-[0_6px_18px_-12px_rgba(16,42,56,0.45)] backdrop-blur-sm dark:bg-[hsl(var(--surface)/0.92)]",
-        onTap ? "cursor-pointer transition-transform duration-150 active:scale-[0.98]" : "pointer-events-none",
-        dim && "bg-white/60 shadow-none dark:bg-[hsl(var(--surface)/0.5)]")}
-      style={{ left, top: stop.y - h / 2, height: h, maxWidth: maxRight - left, paddingLeft: stop.r + 12, paddingRight: action ? 8 : 14 }}>
-      <span className="min-w-0 flex-1">
-        <span className={cn("block leading-tight", big ? "line-clamp-2 text-[20px] font-semibold" : "truncate text-[16px]", open ? "font-bold text-foreground" : "font-semibold", muted || dim ? "text-foreground/60" : "text-foreground")}>{title}</span>
-        {sub && <span className="mt-0.5 block truncate text-[14px] font-medium text-muted-foreground">{sub}</span>}
-      </span>
-      {open && !action && <ChevronRight aria-hidden="true" className="ml-1 h-5 w-5 shrink-0" strokeWidth={2.8} style={{ color: `hsl(${tone ?? "var(--coin-teal)"})` }} />}
-      {locked && !action && <Lock aria-hidden="true" className="ml-1.5 h-4 w-4 shrink-0 text-muted-foreground/70" strokeWidth={2.4} />}
-      {action && (
-        <button type="button" onClick={(e) => { e.stopPropagation(); haptics.medium(); onAction?.(); }}
-          className="pointer-events-auto ml-2 inline-flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-[hsl(var(--coin-teal))] pl-3.5 pr-2.5 text-[15px] font-bold text-white shadow-[0_6px_14px_-8px_hsl(var(--coin-teal))] active:scale-[0.96] transition-transform">
-          {action} <ChevronRight className="h-5 w-5" strokeWidth={2.6} />
-        </button>
-      )}
-    </div>
-    </>
-  );
-};
+/** Over the step to do now (her note, Nov 4 2026: "как у дуолинго"): one big
+ *  short word with a tail pointing down at its light, bobbing gently. It
+ *  starts the step; the light itself opens its card. */
+export const StartBubble = ({ stop, label, aria, onClick }: { stop: Stop; label: string; aria: string; onClick: () => void }) => (
+  <button type="button" aria-label={aria} onClick={() => { haptics.medium(); onClick(); }}
+    className="path-start absolute z-[5]" style={{ left: stop.x, top: stop.y - stop.r - 14 }}>
+    <span className="path-start-body">{label}</span>
+  </button>
+);
 
 /** The wake her boat left through these stops (the same soft trail as the links on the
  *  map): from just above the first stop to the last, thin at both ends. */
@@ -220,12 +173,12 @@ export const PathWake = ({ stops, width, height }: { stops: Stop[]; width: numbe
   );
 };
 
-/** Stops for a week of eight nodes (seven days and the reward). */
+/** Stops winding down the middle (seven days and the reward, or today's week). */
 export const weekStops = (width: number, radii: number[], top = 24) => {
   const out: Stop[] = [];
   radii.forEach((r, i) => {
     const y = i === 0 ? top + r : out[i - 1].y + out[i - 1].r + r + GAP;
-    out.push({ x: Math.round((XS[i % XS.length] / DESIGN_W) * width), y, r });
+    out.push({ x: Math.round(width / 2 + ZIG[i % ZIG.length] * width), y, r });
   });
   return out;
 };
@@ -277,15 +230,12 @@ export const WeekStrip = ({
         </div>
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
-        {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
         {kind === "past" && <PathWake stops={stops} width={width} height={height} />}
         {stops.map((p, i) => {
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
-                <NodePill stop={p} title={kind === "past" ? (chest ? t("path.chest.mapOfWeek") : t("path.chest.ready")) : t("path.weekReport")} maxRight={width} dim={kind === "coming"}
-                  onTap={kind === "past" ? onOpenChest : undefined} />
-                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} lock={false} chest hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
+                <PathNode stop={p} look={kind === "past" ? "gold" : "locked"} chest hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
                   <Gift className="h-7 w-7" strokeWidth={2.2} />
                 </PathNode>
               </div>
@@ -294,9 +244,7 @@ export const WeekStrip = ({
           const d = day(i);
           return (
             <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
-              <NodePill stop={p} title={dayName(d)} maxRight={width} muted={kind === "past"} dim={kind === "coming"}
-                onTap={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined} />
-              <PathNode stop={p} look={kind === "past" ? "done" : "locked"} lock={false} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
+              <PathNode stop={p} look={kind === "past" ? "done" : "locked"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
                 onClick={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined}>
                 {kind === "past" ? <Check className="h-6 w-6" strokeWidth={3} /> : <MoonStar className="h-6 w-6" strokeWidth={2} />}
               </PathNode>

@@ -2219,6 +2219,15 @@ html[data-theme="aurora"] { --path-band: rgba(170, 200, 255, .14); }
 /* a soft light, no edges (her note: no see-through plates) */
 .path-band { background: radial-gradient(closest-side, var(--path-band), transparent); }
 /* a week's name on the path, plain (no card) */
+/* the Start bubble over her step (StartBubble) */
+.path-start { transform: translate(-50%, -100%); transition: transform 120ms ease-out; }
+.path-start:active { transform: translate(-50%, -100%) scale(.95); }
+.path-start-body { position: relative; display: block; height: 46px; padding: 0 20px; border-radius: 16px; background: #fff; color: hsl(var(--coin-teal)); font-size: 18px; font-weight: 800; line-height: 46px; white-space: nowrap;
+  box-shadow: 0 10px 22px -12px rgba(16, 42, 56, .55); animation: pathStartBob 2.4s ease-in-out infinite; }
+.path-start-body::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 14px; height: 14px; margin-left: -7px; background: inherit; border-radius: 0 0 4px 0; transform: rotate(45deg); }
+html[data-ui="new"][data-theme="aurora"] .path-start-body { background: hsl(var(--surface)); color: #8FE3D2; box-shadow: 0 10px 22px -12px rgba(0, 0, 0, .7); }
+@keyframes pathStartBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .path-start-body { animation: none; } }
 .path-week-label { margin: 0 auto; width: fit-content; padding: 4px 0; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: hsl(var(--foreground) / .55); }
 [data-far], [data-far] * { pointer-events: none !important; }
 header h1 { transition: opacity 200ms ease; }

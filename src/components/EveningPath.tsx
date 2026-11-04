@@ -26,7 +26,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, NodePill, PathNode, PathWake, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, SnapDot, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, PathNode, PathWake, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -153,12 +153,11 @@ export const EveningPath = ({
   const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + m.steps.length;
 
   const stops = useMemo(() => {
-    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 26);
-    // The current step sits further left, so its pill has room for the name
-    // and "Start"; with an avatar, a little right of it so she stands beside it.
-    if (currentNode >= 0) out[currentNode] = { ...out[currentNode], x: Math.round(Math.max(R_CURRENT + 14 + 40, width * 0.2)) };
+    // room above her step for its Start bubble (the first light included)
+    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
+    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 50 };
     return out;
-  }, [nodes, width, currentNode, avatarPic]);
+  }, [nodes, width, currentNode]);
   const height = stops[chestIndex].y + R_CHEST + 30;
 
   // --- Words ---------------------------------------------------------------
@@ -240,7 +239,10 @@ export const EveningPath = ({
   const f = stops[focus];
   // Her avatar (optional) stands to the left of the step to do.
   // her boat (with her animal in it) waits beside the step to do
-  const avatar: Rect | null = f.x - f.r - 44 >= 0 ? { x: f.x - f.r - 46, y: f.y - 40, w: 58, h: 58 } : null;
+  const toRight = f.x <= width / 2;
+  const avatar: Rect | null = toRight
+    ? (f.x + f.r + 64 <= width ? { x: f.x + f.r + 6, y: f.y - 40, w: 58, h: 58 } : null)
+    : (f.x - f.r - 64 >= 0 ? { x: f.x - f.r - 64, y: f.y - 40, w: 58, h: 58 } : null);
 
   // --- Bubbles ---------------------------------------------------------------
   const [open, setOpen] = useState<Open>(null);
@@ -270,166 +272,75 @@ export const EveningPath = ({
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderSlot(document.getElementById("memap-header-start")), []);
 
-  // --- The drum ---------------------------------------------------------------
-  // Her notes, Nov 3 2026: the path should roll "как при выборе даты рождения
-  // или времени" and light up; the first try (steps tilting in place over a
-  // light) was "немного не то", its tick "очень резкий", and the big pinned
-  // week card hid it. So everything on Today lies on a drum now, the way the
-  // rows of an iOS date picker do: in the band in the middle a step is flat
-  // and full size; away from it, it turns away on the cylinder, the rows close
-  // up and fade, and the road bends with them. The scroll always comes to rest
-  // on a step (mandatory snap in Index; the middle is the snapport's, between
-  // the header and the tab bar), with a soft wooden tick and the lightest tap
-  // as each step passes the band. Once the week card has rolled away, "Week N
-  // · k/7" takes the header's title. Reduce Motion: a flat page, no band, no
-  // snap.
-  const BAND = 120;
+  // --- Scrolling --------------------------------------------------------------
+  // Her note, Nov 4 2026: "давай просто как у дуолинго и попроще". A plain page
+  // that scrolls freely under her finger: no drum, no snapping. A light passing
+  // the middle of the screen gives a light tap; her step far off shows the way
+  // back; Today opens with her step in the middle.
   const focusRef = useRef<HTMLButtonElement>(null);
   const openRef = useRef<Open>(null);
   openRef.current = open;
-  // who is turning it: her hand (ticks; an open bubble closes), a tap on a
-  // step that rolls it to the band (ticks), or the app (silent)
-  const modeRef = useRef<"hand" | "tap" | "auto">("auto");
-  // the band's middle (from the scroller's top) and the drum's radius
-  const geo = useRef({ off: 300, R: 300 });
+  // who is scrolling: her hand (taps; an open card closes) or the app (quiet)
+  const modeRef = useRef<"hand" | "auto">("auto");
+  /** the middle of the room between the header and the tab bar, from the scroller's top */
+  const mid = useRef(300);
   const frameRef = useRef<() => void>(() => undefined);
   const reduceQuery = () => matchMedia("(prefers-reduced-motion: reduce)");
-  const [drum, setDrum] = useState(() => !reduceQuery().matches);
-  const [bandTop, setBandTop] = useState(250);
-  const [spacer, setSpacer] = useState(0);
   const [away, setAway] = useState<"up" | "down" | null>(null);
   const awayRef = useRef<"up" | "down" | null>(null);
   const hasPath = trackers.length > 0;
   const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderTitle(document.getElementById("memap-header-center")), []);
 
-  /** Half the room between the header and the tab bar: the band's middle and
-   *  the drum's radius. Returns the scroller's top padding. */
   const measure = (main: HTMLElement) => {
     const cs = getComputedStyle(main);
-    const free = main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0);
-    geo.current = { off: free / 2, R: Math.max(200, free / 2) };
-    return parseFloat(cs.paddingTop) || 0;
+    mid.current = (main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0)) / 2;
   };
 
-  // Room above the first step, so it too can come to the band (a picker's
-  // first row does); and where the band sits. After every render, set only
-  // when it changes. The spacer is flow-root, so margins never collapse
-  // through it and its own measure can't jump (the review found phones where
-  // it flipped back and forth until React gave up and the app showed its
-  // error screen); a breaker stops any other back-and-forth.
-  const spacerMoves = useRef({ key: "", n: 0 });
-  const [resized, setResized] = useState(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
-    const main = boxRef.current?.closest("main");
-    const first = main?.querySelector(".path-snap");
-    if (!main || !first) return;
-    const pt = measure(main);
-    const mr = main.getBoundingClientRect();
-    const base = first.getBoundingClientRect().top + 1 - mr.top - pt + main.scrollTop - spacer;
-    const want = drum ? Math.max(0, Math.round(geo.current.off - pt - base)) : 0;
-    const key = `${width}|${drum}|${pastShown}|${m.prior}|${nodes.length}|${resized}`;
-    if (spacerMoves.current.key !== key) spacerMoves.current = { key, n: 0 };
-    if (Math.abs(want - spacer) > 1 && spacerMoves.current.n < 4) { spacerMoves.current.n++; setSpacer(want); }
-    const top = Math.round(geo.current.off - pt - BAND / 2);
-    if (top !== bandTop) setBandTop(top);
-  });
-
-  useLayoutEffect(() => {
-    preloadSounds("wheelTick", "pop1", "drop");
     const main = document.querySelector("main");
     if (!main || !hasPath) return;
-    const mq = reduceQuery();
-    const HALF = Math.PI / 2;
-    const seen = new WeakMap<Element, string>();
     let raf = 0, lastTick = 0;
     let lastBest: Element | null = null;
     const frame = () => {
       raf = 0;
-      const { off, R } = geo.current;
-      const on = !mq.matches;
-      const mr = main.getBoundingClientRect();
-      const mid = mr.top + off;
-      // every read first, then the writes (no layout in between)
-      const items = Array.from(main.querySelectorAll<HTMLElement>("[data-wheel]"));
+      const midY = main.getBoundingClientRect().top + mid.current;
       const tops = new Map<Element, number>();
-      const topOf = (box: Element) => {
+      // a light's centre on screen: its week's box and its place in it
+      const yOf = (el: HTMLElement) => {
+        const box = el.closest(".path-box");
+        if (!box) return NaN;
         let t = tops.get(box);
         if (t === undefined) { t = box.getBoundingClientRect().top; tops.set(box, t); }
-        return t;
+        return t + Number(el.dataset.cy);
       };
-      // where each would be on a flat page: a step from its week's box, a
-      // card from the still wrapper around it
-      const ys = items.map((el) => {
-        if (el.dataset.cy !== undefined) {
-          const box = el.closest(".path-box");
-          return box ? topOf(box) + Number(el.dataset.cy) : NaN;
-        }
-        const r = el.parentElement?.getBoundingClientRect();
-        return r ? r.top + r.height / 2 : NaN;
-      });
-
       let best: Element | null = null, bestD = Infinity;
-      for (let k = 0; k < items.length; k++) {
-        const el = items[k], d = ys[k] - mid;
-        if (Number.isNaN(d)) continue;
-        if (el.dataset.cy !== undefined && Math.abs(d) < bestD) { bestD = Math.abs(d); best = el; }
-        let tr = "", op = "", far = false;
-        if (on && Math.abs(d / R) >= HALF) {
-          // far past the screen's edge: invisible where it stands, so it is
-          // not rewritten every frame and VoiceOver still finds it in place
-          tr = ""; op = "0"; far = true;
-        } else if (on) {
-          // Her note, Nov 4 2026: the turning drum "всё ещё выглядит уродски,
-          // очень странно они двигаются": the steps slid toward the middle at
-          // their own speed, off the wake and over a sea that stood still. Now
-          // every step moves exactly with her finger and the sea; away from the
-          // band it only gets a little smaller and fainter, in place.
-          const c = Math.cos(d / R);
-          tr = `scale(${(1 - 0.14 * (1 - c)).toFixed(3)})`;
-          op = (0.25 + 0.75 * Math.pow(c, 1.5)).toFixed(3);
-          far = c < 0.3;
-        }
-        if (seen.get(el) !== tr + op) { el.style.transform = tr; el.style.opacity = op; seen.set(el, tr + op); }
-        // nearly gone: not tappable
-        if (far !== el.hasAttribute("data-far")) el.toggleAttribute("data-far", far);
+      for (const el of main.querySelectorAll<HTMLElement>("[data-cy]")) {
+        const d = Math.abs(yOf(el) - midY);
+        if (d < bestD) { bestD = d; best = el; }
       }
       if (best !== lastBest) {
         const now = performance.now();
-        if (lastBest && modeRef.current !== "auto" && now - lastTick > 70) { haptics.tick(); playWheelTick(); lastTick = now; }
+        if (lastBest && modeRef.current === "hand" && now - lastTick > 70) { haptics.tick(); lastTick = now; }
         if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") setOpen(null);
         lastBest = best;
       }
-      // her step far off: the way back
-      const fw = focusRef.current?.closest<HTMLElement>("[data-wheel]");
-      const fk = fw ? items.indexOf(fw) : -1;
-      const fd = fk >= 0 ? ys[fk] - mid : NaN;
-      const lim = on ? R : off - 120;
+      const fw = focusRef.current?.closest<HTMLElement>("[data-cy]");
+      const fd = fw ? yOf(fw) - midY : NaN;
+      const lim = mid.current - 120;
       const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd > lim ? "down" : null;
       if (nowAway !== awayRef.current) { awayRef.current = nowAway; setAway(nowAway); }
     };
     frameRef.current = frame;
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(frame); };
-    const onResize = () => { measure(main); setResized((n) => n + 1); onScroll(); };
+    const onResize = () => { measure(main); onScroll(); };
     const byHand = () => { modeRef.current = "hand"; };
     const byKey = (e: KeyboardEvent) => { if (/^(Arrow|Page|Home$|End$| $)/.test(e.key)) modeRef.current = "hand"; };
-    const onMotion = () => { setDrum(!mq.matches); onScroll(); };
-    // a step reached with the keyboard or VoiceOver rolls to the band
-    const onFocus = (e: FocusEvent) => {
-      const row = (e.target as Element | null)?.closest<HTMLElement>("[data-wheel][data-cy]");
-      const box = row?.closest(".path-box");
-      if (!row || !box || mq.matches) return;
-      const d = box.getBoundingClientRect().top + Number(row.dataset.cy) - (main.getBoundingClientRect().top + geo.current.off);
-      if (Math.abs(d) > 2) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: "smooth" }); }
-    };
     main.addEventListener("scroll", onScroll, { passive: true });
     main.addEventListener("touchstart", byHand, { passive: true });
     main.addEventListener("wheel", byHand, { passive: true });
     main.addEventListener("keydown", byKey);
-    main.addEventListener("focusin", onFocus);
     window.addEventListener("resize", onResize);
-    mq.addEventListener?.("change", onMotion);
     measure(main);
     frame();
     return () => {
@@ -437,15 +348,13 @@ export const EveningPath = ({
       main.removeEventListener("touchstart", byHand);
       main.removeEventListener("wheel", byHand);
       main.removeEventListener("keydown", byKey);
-      main.removeEventListener("focusin", onFocus);
       window.removeEventListener("resize", onResize);
-      mq.removeEventListener?.("change", onMotion);
       cancelAnimationFrame(raf);
       frameRef.current = () => undefined;
     };
   }, [hasPath]);
 
-  // Her step comes to the band when Today opens, before the first paint:
+  // Her step comes to the middle when Today opens, before the first paint:
   // a microtask, because Index's own layout effect (which runs after this
   // one) resets the scroll for the tab.
   const placedRef = useRef(false);
@@ -458,32 +367,29 @@ export const EveningPath = ({
       if (!box || !main) return;
       placedRef.current = true;
       measure(main);
-      const d = box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + geo.current.off);
+      const d = box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + mid.current);
       if (firstTime) { main.scrollTop += d; frameRef.current(); }
       else if (Math.abs(d) > 2) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
     });
   }, [hasPath, focus]); // eslint-disable-line react-hooks/exhaustive-deps
-  // after every render too: React may have put a node or the road back flat
-  useLayoutEffect(() => { frameRef.current(); });
 
-  /** How far a stop is from the band, on a flat page. */
-  const toBand = (i: number) => {
+  /** How far a stop is from the middle of the screen. */
+  const toMiddle = (i: number) => {
     const box = boxRef.current, main = box?.closest("main");
     if (!box || !main) return null;
-    return { main, d: box.getBoundingClientRect().top + stops[i].y - (main.getBoundingClientRect().top + geo.current.off) };
+    return { main, d: box.getBoundingClientRect().top + stops[i].y - (main.getBoundingClientRect().top + mid.current) };
   };
-  // A tapped step rolls to the band, the way a picker's row does.
-  const rollTo = (i: number) => {
-    const at = toBand(i);
-    if (!at || !drum || Math.abs(at.d) < 2) return;
-    modeRef.current = "tap";
-    at.main.scrollBy({ top: at.d, behavior: "smooth" });
+  // A light tapped low on the screen comes up, so its card isn't under the tabs.
+  const bringUp = (i: number) => {
+    const at = toMiddle(i);
+    if (!at || at.d < mid.current * 0.35) return;
+    modeRef.current = "auto";
+    at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
   };
   const backToStep = () => {
-    const el = focusRef.current, at = toBand(focus);
+    const el = focusRef.current, at = toMiddle(focus);
     if (!el || !at) return;
     haptics.tap();
-    // a roll she didn't turn: no ticks on the way
     modeRef.current = "auto";
     at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
     // focus goes to her step instead of being lost with the pill
@@ -511,22 +417,17 @@ export const EveningPath = ({
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
   };
-  /** A step with something to do right now (a skipped task still counts). */
-  const doable = (n: PNode) =>
-    n.kind === "step" && n.step.kind !== "auto" && (
-      n.step.kind === "game" ? canPlay && !n.step.done
-        : n.step.kind === "unload" ? true
-        : !n.step.done || !!n.step.skipped);
+  // A light tapped opens its card (name, what's there, Start), as on
+  // Duolingo; the Start bubble over her step starts it at once.
   const tap = (i: number) => {
     const n = nodes[i];
-    if (doable(n) && n.kind === "step") { startStep(n.step); return; }
     if (n.kind === "chest" && m.weekComplete) { setOpen(null); openThisChest(); return; }
     const notYet = n.kind === "future" || (n.kind === "chest" && !m.weekComplete) || (n.kind === "step" && n.step.kind === "game" && !canPlay);
     if (notYet && open !== i) {
       setWiggle(i);
       window.setTimeout(() => setWiggle((w) => (w === i ? null : w)), 450);
     }
-    if (open !== i) rollTo(i);
+    if (open !== i) bringUp(i);
     setOpen((o) => (o === i ? null : i));
   };
 
@@ -674,10 +575,6 @@ export const EveningPath = ({
   // A fragment, so the week card's sticky range is all of Today.
   return (
     <>
-      {/* The band in the middle, where a step lies flat: sticky, so it stays
-          while everything rolls under it. Then room for the first step. */}
-      {drum && <div aria-hidden="true" className="path-band pointer-events-none sticky animate-fade-in" style={{ top: bandTop, height: BAND, marginBottom: -BAND }} />}
-      <div aria-hidden="true" style={{ height: spacer, display: "flow-root" }} />
       {/* An old user's days before the path began: one chip, no empty weeks. */}
       {m.prior > 0 && (
         <div>
@@ -733,7 +630,6 @@ export const EveningPath = ({
         {/* overflow-x clip: the wheel's tilt must never widen the page (the
             review found a sideways pan); nothing visible is cut. */}
         <div ref={boxRef} className="path-box relative mx-auto [overflow-x:clip]" style={{ width, height }}>
-          {stops.map((p, i) => <SnapDot key={`s${i}`} stop={p} />)}
           {/* the wake her boat left through the evenings already lit */}
           {focus > 0 && <PathWake stops={stops.slice(0, focus + 1)} width={width} height={height} />}
 
@@ -757,13 +653,10 @@ export const EveningPath = ({
                     </span>
                   </button>
                 )}
-                {!(i === currentNode && open === currentNode) && (
-                  <NodePill stop={p} title={v.title} sub={lockedGame ? t("hunch.needTwo") : v.sub} action={v.action} onAction={act}
-                    maxRight={width} big={i === currentNode} muted={v.look === "done"}
-                    open={v.look === "todo" && !lockedGame} dim={v.look === "locked" || lockedGame}
-                    locked={v.look === "locked" || lockedGame} tone={v.hue} onTap={() => tap(i)}
-                    second={i === currentNode && n.kind === "step" && n.step.kind === "task" ? t("path.skip") : undefined}
-                    onSecond={() => { if (n.kind === "step" && n.step.task) { skipTask(n.step.task); setTick((k) => k + 1); } }} />
+                {/* no names on the lights (her: "как у дуолинго и попроще"); over her
+                    step one short word that starts it, pointing at its light */}
+                {i === currentNode && open !== i && act && (
+                  <StartBubble stop={p} label={v.action ?? t("path.start")} aria={`${v.title}: ${v.action ?? t("path.start")}`} onClick={act} />
                 )}
                 <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} shape={shapeOf(n)} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
