@@ -1,13 +1,13 @@
 // The flat map, new look (Nov 4 2026): the same planet as the globe, unrolled.
 // Her painted planet is the sea; her islands stand on a ring around the boat
 // in the middle (her pick, "карта 1"), each with its weather and name right
-// under it; a link is the same soft boat wake as on the globe; an empty place
+// under it; a link is the same dotted boat route as on the globe; an empty place
 // on the ring is her cloud island, where a new island can open.
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { CloudLightning, CloudSun, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, mapPicFor } from "@/lib/islands";
-import { ASPECT, alongCurve, art, artOf, ringOrder, wakeShape } from "@/lib/globeArt";
+import { ASPECT, alongCurve, art, artOf, ringOrder, routeDots } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -67,12 +67,12 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
       const hU = size * (ASPECT[U.name] ?? 0.55), hL = size * (ASPECT[L.name] ?? 0.55);
       if (L.y - U.y < size * 0.45) {
         const s = Math.sign(L.x - U.x) || 1, mx = (U.x + L.x) / 2, my = (U.y + L.y) / 2;
-        return wakeShape(alongCurve([[U.x + s * size * 0.4, U.y], [mx, my + (my > C.y ? -1 : 1) * size * 0.12], [L.x - s * size * 0.4, L.y]], 80));
+        return routeDots(alongCurve([[U.x + s * size * 0.4, U.y], [mx, my + (my > C.y ? -1 : 1) * size * 0.12], [L.x - s * size * 0.4, L.y]], 80));
       }
       const s = Math.sign(C.x - (U.x + L.x) / 2) || 1;
       const mid: [number, number] = [(U.x + L.x) / 2 + s * size * 0.4, (U.y + L.y) / 2];
-      return wakeShape(alongCurve([[U.x + s * size * 0.48, U.y - hU * 0.05], mid, [L.x + s * size * 0.12, L.y - hL * 0.25]], 80));
-    }).filter(Boolean) as ReturnType<typeof wakeShape>[];
+      return routeDots(alongCurve([[U.x + s * size * 0.48, U.y - hU * 0.05], mid, [L.x + s * size * 0.12, L.y - hL * 0.25]], 80));
+    }).filter(Boolean) as ReturnType<typeof routeDots>[];
     return { spots: { list, empty }, wakes: ws };
   }, [islands, routes, days, W, H, C.x, C.y, slots, big]);
 
@@ -87,16 +87,8 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
       <div aria-hidden="true" className="planet-map-sea art-day" style={bg(planetDay)} />
       <div aria-hidden="true" className="planet-map-sea art-night" style={bg(planetNight)} />
       <svg aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1]" width={W} height={H}>
-        <defs>
-          <filter id="pm-wb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.2" /></filter>
-          <filter id="pm-ws"><feGaussianBlur stdDeviation="0.5" /></filter>
-        </defs>
-        {wakes.map((w, i) => (
-          <g key={i}>
-            <path d={w.glow} className="planet-wake-glow" filter="url(#pm-wb)" />
-            <path d={w.core} className="planet-wake-core" filter="url(#pm-ws)" />
-            <path d={w.mid} className="planet-shimmer" strokeWidth={2.4} strokeDasharray="0.1 22" fill="none" strokeLinecap="round" />
-          </g>
+        {wakes.map((dots, i) => (
+          <g key={i}>{dots.map((d, j) => <circle key={j} className="planet-route" cx={d.x} cy={d.y} r={d.r * 1.1} opacity={d.o} />)}</g>
         ))}
       </svg>
 

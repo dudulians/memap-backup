@@ -5,6 +5,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { avatarUrl, getAvatar } from "@/lib/avatar";
+import { mapPicFor } from "@/lib/islands";
 import { cn } from "@/lib/utils";
 import { Plus, Settings as SettingsIcon, Play, X, Lightbulb, Flame, Shuffle, Bell, Trash2, Check, ListChecks, GripVertical, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { getDoorState } from "@/lib/doors";
@@ -891,24 +893,24 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   }
 
   if (trackers.length === 0) {
+    const emptyAvatar = avatarUrl(getAvatar());
     return (
-      <div className="flex flex-col items-center justify-center h-full px-6 text-center space-y-6 -mt-12">
-        <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-          <Play className="h-9 w-9 text-primary ml-1" strokeWidth={1.75} fill="currentColor" />
-        </div>
-        <div className="space-y-2">
-          <p className="text-2xl font-serif font-medium">{t("today.emptyTitle")}</p>
-          <p className="text-sm text-muted-foreground max-w-md">
-            {t("today.emptyHint")}
-          </p>
-        </div>
-        <Button
-          onClick={() => setAddTrackerModalOpen(true)}
-          className="rounded-full px-6"
-        >
-          <Plus className="mr-2 h-4 w-4" />
+      // Nothing to answer yet, in the new look (her note, Nov 4 2026: the first
+      // screens kept the old design): her boat waiting, one line, one button.
+      <div className="flex min-h-[calc(100dvh-15rem)] flex-col items-center justify-center px-6 pb-10 text-center">
+        <span aria-hidden="true" className="path-boat relative block h-[120px] w-[120px]">
+          <span className="bob">
+            <img className="art-day" src={mapPicFor("sailboat", false)} alt="" />
+            <img className="art-night" src={mapPicFor("sailboat", true)} alt="" />
+            {emptyAvatar && <img className="who" src={emptyAvatar} alt="" />}
+          </span>
+        </span>
+        <p className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{t("today.emptyTitle")}</p>
+        <p className="mt-2 max-w-xs text-[16px] font-medium leading-snug text-muted-foreground">{t("today.emptyHint")}</p>
+        <button type="button" onClick={() => { haptics.tap(); setAddTrackerModalOpen(true); }} className="raised-btn mt-7">
+          <Plus className="h-5 w-5" strokeWidth={2.6} />
           {t("today.addFirst")}
-        </Button>
+        </button>
         
         <AddTrackerModal
           open={addTrackerModalOpen}

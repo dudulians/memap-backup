@@ -8,6 +8,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus } from "lucide-react";
+import { art } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
@@ -190,8 +191,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
                 onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>
           )}
-          {/* the ring has its own place for a new island; this one is for an empty or full map */}
-          {loaded && (islands.length === 0 || islands.length >= 9) && (
+          {/* the ring has its own place for a new island; this one is for a full map */}
+          {loaded && islands.length >= 9 && (
             <button type="button" onClick={() => { haptics.tap(); setNewOpen(true); }}
               className="mx-auto mt-2 flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-foreground/20 bg-white/40 px-5 text-[16px] font-bold text-foreground/80">
               <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}
@@ -200,10 +201,17 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         </>
       )}
 
+      {/* No island yet, in the new look (her note, Nov 4 2026): her cloud island
+          waiting to be explored, one line, one button. */}
       {loaded && islands.length === 0 && (
-        <div className="absolute left-4 right-4 top-16 z-[2] rounded-[22px] bg-white/90 p-4 text-center shadow-lg">
-          <p className="text-[19px] font-bold leading-tight">{t("map.emptyTitle")}</p>
-          <p className="mt-1.5 text-[15px] text-muted-foreground">{t("map.emptyBody")}</p>
+        <div className="absolute inset-x-0 top-0 bottom-28 z-[2] flex flex-col items-center justify-center px-6 text-center">
+          <img aria-hidden="true" className="art-day w-[170px]" src={art("cloud_island_03", false)} alt="" />
+          <img aria-hidden="true" className="art-night w-[170px]" src={art("cloud_island_03", true)} alt="" />
+          <p className="mt-3 text-[26px] font-bold leading-tight tracking-tight">{t("map.emptyTitle")}</p>
+          <p className="mt-2 max-w-xs text-[16px] font-medium leading-snug text-muted-foreground">{t("map.emptyBody")}</p>
+          <button type="button" onClick={() => { haptics.tap(); setNewOpen(true); }} className="raised-btn mt-7">
+            <Plus className="h-5 w-5" strokeWidth={2.6} /> {t("islands.new")}
+          </button>
         </div>
       )}
       <BottomSheet open={!!open && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>

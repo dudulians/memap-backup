@@ -20,7 +20,7 @@ import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 
-import { ASPECT, art, artOf, ringOrder, wakeShape } from "@/lib/globeArt";
+import { ASPECT, art, artOf, ringOrder, routeDots } from "@/lib/globeArt";
 
 const D2R = Math.PI / 180;
 type V3 = [number, number, number];
@@ -284,9 +284,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
           e.lab.style.opacity = String(vis); e.lab.style.zIndex = e.el.style.zIndex;
         }
       }
-      // links: the wake a boat left between two islands
+      // links: a dotted boat route between two islands
       let h = "";
-      const delay = -Math.round(performance.now() % 2600);
       for (const [a, b] of wakes) {
         const A = things.find((x) => x.key === a)?.v, B = things.find((x) => x.key === b)?.v; if (!A || !B) continue;
         const N = 90, runs: { x: number; y: number; z: number; t: number }[][] = []; let run: { x: number; y: number; z: number; t: number }[] = [];
@@ -296,10 +295,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
         }
         if (run.length) runs.push(run);
         for (const P of runs) {
-          if (P.length < 3) continue;
-          const w = wakeShape(P.map((q) => ({ x: q.x, y: q.y, t: q.t, k: 0.5 + 0.5 * q.z })));
-          h += `<path d="${w.glow}" class="planet-wake-glow" filter="url(#planet-wb)"/><path d="${w.core}" class="planet-wake-core" filter="url(#planet-ws)"/>`;
-          h += `<path class="planet-shimmer" style="animation-delay:${delay}ms" d="${w.mid}" stroke-width="2.4" stroke-dasharray="0.1 22" fill="none" stroke-linecap="round"/>`;
+          for (const d of routeDots(P.map((q) => ({ x: q.x, y: q.y, t: q.t, k: 0.55 + 0.45 * q.z })), 12 * Math.sqrt(zoom))) {
+            h += `<circle class="planet-route" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${(d.r * Math.sqrt(zoom)).toFixed(2)}" opacity="${d.o.toFixed(2)}"/>`;
+          }
         }
       }
       if (wakeG.current) wakeG.current.innerHTML = h;

@@ -22,8 +22,9 @@ import { islandHsl } from "@/lib/islandColors";
 
 const WEEKS = 8;
 const LONG = 26;
-const PAIR_A = "var(--coin-teal)";
-const PAIR_B = "322 40% 60%";
+// a pair's two lines: the data colours (index.css --data-a/--data-b)
+const PAIR_A = "var(--data-a)";
+const PAIR_B = "var(--data-b)";
 
 /** The end of week w (0 = oldest of n), as a date. */
 const weekEnd = (w: number, n: number) => {

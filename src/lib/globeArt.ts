@@ -1,4 +1,4 @@
-// Her island pack v2 and the soft boat wake, shared by the globe, the flat
+// Her island pack v2 and the dotted route between islands, shared by the globe, the flat
 // map and Today (Nov 4 2026). Pictures: src/assets/globe/{day,night}, made
 // from marketing/brand/map-assets-v2 by marketing/tools/prep-map-assets-v2.mjs.
 import { Island, IslandId, Route, bridgesOf, isOwnIsland } from "@/lib/islands";
@@ -37,21 +37,25 @@ export const ringOrder = (islands: Island[], routes: Route[]) => {
 };
 
 export type WakePoint = { x: number; y: number; t: number; k?: number };
-/** A link drawn as the wake a boat left (her notes: one soft wavy trail, thin at both
- *  ends, never a straight line, never side ripples): a glow band and a white core,
- *  as SVG path data. `k` (0..1) shrinks it toward the back of the globe. */
-export const wakeShape = (P: WakePoint[], { waves = 3.5, amp = 5.5, width = 4.5 }: { waves?: number; amp?: number; width?: number } = {}) => {
-  const f1 = (n: number) => n.toFixed(1), pt = (x: number, y: number) => `${f1(x)} ${f1(y)}`;
-  const C = P.map((q, i) => {
-    const a0 = P[Math.max(0, i - 1)], a1 = P[Math.min(P.length - 1, i + 1)];
-    const dx = a1.x - a0.x, dy = a1.y - a0.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L;
-    const k = q.k ?? 1;
-    const taper = Math.pow(Math.sin(Math.PI * Math.min(1, Math.max(0, (q.t - 0.07) / 0.86))), 0.55);
-    const wave = amp * k * Math.sin(q.t * Math.PI * 2 * waves) * taper; // a gentle meander, fixed to the water
-    return { x: q.x + nx * wave, y: q.y + ny * wave, nx, ny, w: (width + width * k) * k * taper, cw: (0.9 + 1.2 * k) * taper };
-  });
-  const band = (key: "w" | "cw") => `M${C.map((c) => pt(c.x + c.nx * c[key], c.y + c.ny * c[key])).join(" L")} L${C.map((c) => pt(c.x - c.nx * c[key], c.y - c.ny * c[key])).reverse().join(" L")}Z`;
-  return { glow: band("w"), core: band("cw"), mid: `M${C.map((c) => pt(c.x, c.y)).join(" L")}` };
+/** A link drawn as a boat's route on a sea chart (her note, Nov 4 2026: the soft
+ *  wake before it "больше похожа на молнию"): round dots along a smooth curve,
+ *  every `gap` px, small and faint near both islands, full in the middle. `k`
+ *  (0..1) shrinks them toward the back of the globe. */
+export type RouteDot = { x: number; y: number; r: number; o: number };
+export const routeDots = (P: WakePoint[], gap = 12): RouteDot[] => {
+  const out: RouteDot[] = [];
+  let carry = gap * 0.5;
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i], L = Math.hypot(b.x - a.x, b.y - a.y);
+    let d = carry;
+    for (; d <= L; d += gap) {
+      const f = L ? d / L : 0, t = a.t + (b.t - a.t) * f, k = (a.k ?? 1) + ((b.k ?? 1) - (a.k ?? 1)) * f;
+      const end = Math.min(1, Math.min(t, 1 - t) / 0.14);
+      out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, r: (1.5 + 1.7 * end) * k, o: (0.3 + 0.7 * end) * (0.45 + 0.55 * k) });
+    }
+    carry = d - L;
+  }
+  return out;
 };
 
 /** Points along a smooth curve through `pts` (Catmull-Rom), t from 0 to 1 by length. */

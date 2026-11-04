@@ -106,8 +106,8 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
             const on = fill * 28 > i;
             const real = settle > 0 ? m : "calm";
             const bg = !on ? "hsl(var(--foreground) / 0.07)"
-              : real === "hard" ? "hsl(var(--coin-gold))"
-              : real === "calm" ? "hsl(var(--coin-teal))"
+              : real === "hard" ? "hsl(var(--strong))"
+              : real === "calm" ? "hsl(var(--balanced))"
               : "hsl(var(--foreground) / 0.07)";
             return <span key={i} className="h-[10px] w-[10px] rounded-[3px] transition-colors duration-300" style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
           })}
@@ -116,9 +116,9 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
       <button type="button" className={card} onClick={() => open("trends")}>
         <span className="text-[13px] font-bold leading-tight">{t("overviewCards.chart")}</span>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mt-1.5 overflow-visible" aria-hidden="true">
-          <path d={d} fill="none" stroke="hsl(var(--coin-teal))" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
+          <path d={d} fill="none" stroke="hsl(var(--data-a))" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
             strokeDasharray={len.current} strokeDashoffset={len.current * (1 - ease(wave))} />
-          {toReal >= 1 && pts.map(([x, y], i) => i === pts.length - 1 && <circle key={i} cx={x} cy={y} r={3.5} fill="hsl(var(--coin-teal))" />)}
+          {toReal >= 1 && pts.map(([x, y], i) => i === pts.length - 1 && <circle key={i} cx={x} cy={y} r={3.5} fill="hsl(var(--data-a))" />)}
         </svg>
         <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{t("overviewCards.hardPerWeek")}</span>
       </button>

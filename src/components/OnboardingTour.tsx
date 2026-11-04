@@ -93,7 +93,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden bg-background">
+    <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto">
         {step === "language" && (
           <div className="min-h-full flex items-center justify-center px-5 py-8">

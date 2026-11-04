@@ -2213,6 +2213,24 @@ html[data-theme="aurora"] { --path-band: rgba(170, 200, 255, .14); }
 /* a light's name under it, the same as an island's on the Map (planet-label) */
 .path-label { z-index: 3; pointer-events: none; }
 .path-label.is-dim { opacity: .7; }
+/* The first screens in the new look (her note, Nov 4 2026: "когда ещё ничего не
+   заполнено … остаются старые версии дизайна"): her sea behind them as on Today,
+   white cards instead of grey tints, raised main buttons like the path's discs. */
+html[data-ui="new"][data-theme="aurora-light"] .onb { background: #B4CDF8 url("./assets/globe/planet-day.webp") no-repeat; background-size: 709.6vw auto; background-position: -260vw -8vw; }
+html[data-ui="new"][data-theme="aurora"] .onb { background: #1F3A9E url("./assets/globe/planet-night.webp") no-repeat; background-size: 709.6vw auto; background-position: -260vw -8vw; }
+html[data-ui="new"] .onb :is([class~="bg-foreground/[0.07]"], [class~="bg-foreground/[0.06]"], [class~="bg-foreground/[0.05]"], [class~="bg-card"]) {
+  background-color: rgba(255, 255, 255, .94); border-color: transparent; box-shadow: 0 10px 24px -18px rgba(30, 50, 110, .55); }
+html[data-ui="new"][data-theme="aurora"] .onb :is([class~="bg-foreground/[0.07]"], [class~="bg-foreground/[0.06]"], [class~="bg-foreground/[0.05]"], [class~="bg-card"]) {
+  background-color: rgba(38, 50, 108, .9); }
+html[data-ui="new"] .onb [class~="bg-foreground/[0.08]"] { background-color: rgba(110, 126, 219, .14); }
+html[data-ui="new"] .onb [class~="bg-foreground/15"] { background-color: #FFFFFF; }
+html[data-ui="new"][data-theme="aurora"] .onb [class~="bg-foreground/15"] { background-color: rgba(70, 86, 160, .95); }
+html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"] { box-shadow: 0 5px 0 hsl(172 70% 30%); transition: transform .1s ease-out, box-shadow .1s ease-out; }
+html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"]:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 hsl(172 70% 30%); }
+/* a main button in the new look: teal, raised on its lip like the path's discs */
+.raised-btn { display: inline-flex; height: 56px; align-items: center; gap: 8px; border-radius: 9999px; padding: 0 28px; background: hsl(var(--coin-teal)); color: #fff;
+  font-size: 17px; font-weight: 800; box-shadow: 0 5px 0 hsl(172 70% 30%); transition: transform .1s ease-out, box-shadow .1s ease-out; }
+.raised-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 hsl(172 70% 30%); }
 /* the week's report: the same raised gold disc as on the path (WeekChest) */
 .report-badge { display: flex; width: 128px; height: 128px; align-items: center; justify-content: center; border-radius: 9999px; color: #fff;
   background: linear-gradient(180deg, #FFD866 0%, #F6B92B 100%); box-shadow: 0 8px 0 #CF8E17, 0 18px 30px -12px rgba(160, 110, 20, .45); }
@@ -2264,13 +2282,16 @@ header h1 { transition: opacity 200ms ease; }
 .planet-sky.night { background-size: 100% auto; background-color: #2C3B70; }
 .planet-canvas, .planet-wakes { position: absolute; inset: 0; width: 100%; height: 100%; }
 .planet-wakes { pointer-events: none; }
-.planet-wake-glow { fill: rgba(255, 255, 255, .58); }
-.planet-wake-core { fill: rgba(255, 255, 255, .95); }
-.planet-shimmer { stroke: rgba(255, 255, 255, .95); opacity: .6; animation: planetShimmer 2.6s linear infinite; }
-html[data-ui="new"][data-theme="aurora"] .planet-wake-glow { fill: rgba(140, 235, 220, .30); }
-html[data-ui="new"][data-theme="aurora"] .planet-wake-core, html[data-ui="new"][data-theme="aurora"] .planet-shimmer { fill: rgba(205, 255, 245, .88); stroke: rgba(205, 255, 245, .88); }
-html[data-ui="new"][data-theme="aurora"] .planet-shimmer { fill: none; }
-@keyframes planetShimmer { to { stroke-dashoffset: -32; } }
+/* Data colours in the new look (her note, Nov 4 2026: the calendar's and charts'
+   teal, yellow and pink "совсем не те"): indigo = a yes / a signal (the islands'
+   storm), soft lavender = a no / calm, warm amber = the second line of a pair.
+   The old screens keep theirs (:root). */
+:root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; }
+html[data-ui="new"][data-theme="aurora-light"] { --strong: 232 62% 64%; --strong-foreground: 0 0% 100%; --balanced: 228 75% 84%; --balanced-foreground: 232 45% 30%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
+html[data-ui="new"][data-theme="aurora"] { --strong: 232 80% 72%; --strong-foreground: 232 60% 12%; --balanced: 228 55% 68%; --balanced-foreground: 0 0% 100%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
+/* a link: a dotted boat route (globeArt routeDots, Nov 4 2026) */
+.planet-route { fill: #FFFFFF; stroke: rgba(70, 100, 170, .28); stroke-width: 1; }
+html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: rgba(10, 20, 60, .35); }
 /* its own layer: islands and clouds stay under the header, the tabs and the sheets */
 .planet-things { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .planet-isle { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
