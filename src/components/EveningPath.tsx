@@ -26,7 +26,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, PathNode, PathWake, type NodeShape, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, PathNode, PathWake, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -193,14 +193,6 @@ export const EveningPath = ({
     if (s.kind === "unload") return "198 55% 58%";
     if (s.kind === "fill") return "205 46% 58%";
     return "var(--coin-teal)";
-  };
-  /** Games wear a wavy badge, practices and tasks a rounded square, the rest is round. */
-  const shapeOf = (n: PNode): NodeShape => {
-    if (n.kind !== "step") return "circle";
-    const k = n.step.kind;
-    if (k === "game" || k === "unload") return "badge";
-    if (k === "task" || k === "test" || k === "act") return "square";
-    return "circle";
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
     const current = i === currentNode;
@@ -658,7 +650,7 @@ export const EveningPath = ({
                 {i === currentNode && open !== i && act && (
                   <StartBubble stop={p} label={v.action ?? t("path.start")} aria={`${v.title}: ${v.action ?? t("path.start")}`} onClick={act} />
                 )}
-                <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} shape={shapeOf(n)} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
+                <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} chest={n.kind === "chest"} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
                 </PathNode>

@@ -55,20 +55,6 @@ export const WeekRing = ({ size, done, on, off, width = 4 }: { size: number; don
  *  (grey, with a lock; her note, Nov 3 2026: "визуально должно быть понятно,
  *  какие уровни открыты, а какие ещё нет"). */
 export type NodeLook = "done" | "current" | "todo" | "gold" | "locked";
-/** circle: questions and days; badge (wavy edge): games; square: practices and tasks. */
-export type NodeShape = "circle" | "badge" | "square";
-
-/** A wavy "badge" outline (10 soft lobes) in a size×size box. */
-const badgePath = (size: number) => {
-  const c = size / 2, R = size / 2 - 1.5, pts: string[] = [];
-  for (let k = 0; k <= 120; k++) {
-    const a = (k / 120) * Math.PI * 2;
-    const r = R * (0.92 + 0.08 * Math.cos(10 * a));
-    pts.push(`${(c + r * Math.cos(a)).toFixed(2)},${(c + r * Math.sin(a)).toFixed(2)}`);
-  }
-  return `M${pts.join(" L")} Z`;
-};
-
 /** Line icons for the islands (one family with the rest of the path, her
  *  note: pasted 3D tiles looked "нелепо"). Keys are the island icon names. */
 const ICONS: Record<string, LucideIcon> = {
@@ -85,13 +71,14 @@ export const islandIcon = (name?: string): LucideIcon => (name && ICONS[name]) |
  *  it a little, with a light tap. */
 // Since Nov 4 2026 (the voyage on her sea): every node is a light on the water.
 // An evening done is a warm lit light, tonight a pale light waiting with a white
-// ring, a step open now a pearl with its icon, what is not yet a dim pearl, a
-// week's reward her chest on a little island. Games keep a wavy edge, tasks a
-// rounded square, so they still read apart.
-export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", shape = "circle", lock = false, chest = false }: {
-  stop: Stop; look: NodeLook; children: ReactNode; onClick?: () => void; label: string;
+// ring, a step open now a pearl ringed in its colour, what is not yet a dim
+// pearl, a week's reward her chest on a little island. Every one is round, with
+// no icon in it (her note, Nov 4 2026: "вместо иконок будут огоньки").
+export const PathNode = ({ stop, look, onClick, label, refEl, pressedRing, dataStop, expanded, wiggle, hue = "var(--coin-teal)", lock = false, chest = false }: {
+  stop: Stop; look: NodeLook; onClick?: () => void; label: string;
+  /** not drawn any more (the light is the whole node); kept so callers stay simple */
+  children?: ReactNode;
   refEl?: React.Ref<HTMLButtonElement>; pressedRing?: number; dataStop?: number; expanded?: boolean; wiggle?: boolean; hue?: string;
-  shape?: NodeShape;
   /** a lock badge (off: not yet reads from the unlit light, as on Duolingo) */
   lock?: boolean;
   /** the week's reward: her chest on a little island instead of a light */
@@ -100,19 +87,17 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
   const size = stop.r * 2;
   const tone = look === "gold" ? "var(--coin-gold)" : hue;
   const locked = look === "locked";
-  const badge = shape === "badge";
-  const radius = shape === "square" ? "32%" : "9999px";
   const color = look === "done" ? "#9A6A1C" : look === "gold" ? "#fff" : locked ? "hsl(var(--muted-foreground) / 0.7)" : `hsl(${tone})`;
   return (
     <>
     {!chest && <span aria-hidden="true" className="path-ripple" style={{ left: stop.x - stop.r * 1.1, top: stop.y + stop.r * 0.25, width: stop.r * 2.2, height: stop.r * 0.7 }} />}
-    <button ref={refEl} type="button" data-path-stop={dataStop} data-shape={shape} aria-label={label} aria-expanded={expanded}
+    <button ref={refEl} type="button" data-path-stop={dataStop} aria-label={label} aria-expanded={expanded}
       onClick={() => { if (onClick) { haptics.tap(); playTick(true); onClick(); } }}
       className={cn("path-node absolute z-[3] flex items-center justify-center transition-transform duration-150 active:scale-[0.92]", wiggle && "path-wiggle-flat")}
-      style={{ left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: radius, color, ["--orb-ring" as string]: `hsl(${tone} / 0.45)` }}>
+      style={{ left: stop.x - stop.r, top: stop.y - stop.r, width: size, height: size, borderRadius: "9999px", color, ["--orb-ring" as string]: `hsl(${tone} / 0.45)` }}>
       {look === "current" && !chest && (
         <span aria-hidden="true" className="path-halo pointer-events-none absolute"
-          style={{ inset: -(pressedRing ?? 14), borderRadius: shape === "square" ? "36%" : "9999px", background: "radial-gradient(closest-side, rgba(255,222,140,.5), rgba(255,222,140,0))" }} />
+          style={{ inset: -(pressedRing ?? 14), borderRadius: "9999px", background: "radial-gradient(closest-side, rgba(255,222,140,.5), rgba(255,222,140,0))" }} />
       )}
       {chest ? (
         <span aria-hidden="true" className={cn("path-chest", locked && "is-locked")} style={{ width: size * 1.45, left: -size * 0.225, top: -size * 0.05 }}>
@@ -122,15 +107,8 @@ export const PathNode = ({ stop, look, children, onClick, label, refEl, pressedR
           <img className="art-night box" src={mapPicFor("chest_closed", true)} alt="" />
         </span>
       ) : (
-        <span aria-hidden="true" className={`path-orb orb-${look}`} style={{ borderRadius: radius }} />
+        <span aria-hidden="true" className={`path-orb orb-${look}`} style={{ borderRadius: "9999px" }} />
       )}
-      {/* A game: a wavy edge around its light. */}
-      {badge && !chest && (
-        <svg aria-hidden="true" width={size + 8} height={size + 8} viewBox={`0 0 ${size} ${size}`} className="pointer-events-none absolute" style={{ left: -4, top: -4 }}>
-          <path d={badgePath(size)} fill="none" stroke={locked ? "hsl(var(--muted-foreground) / 0.3)" : `hsl(${tone} / 0.7)`} strokeWidth={2} strokeLinejoin="round" />
-        </svg>
-      )}
-      {!chest && <span className="relative flex items-center justify-center">{children}</span>}
       {locked && lock && !chest && (
         <span aria-hidden="true" className="absolute -bottom-1 -right-1 z-[1] flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white text-muted-foreground shadow-[0_2px_6px_rgba(16,42,56,0.25)] dark:bg-[hsl(var(--surface))]">
           <Lock className="h-3.5 w-3.5" strokeWidth={2.6} />
