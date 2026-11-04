@@ -42,6 +42,7 @@ import { track } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 import { getDoorState } from "@/lib/doors";
+import { SOUNDS_PAUSED } from "@/lib/feedback";
 
 // Shown under Data & privacy and in support emails. Bump with each release.
 const APP_VERSION = "1.8.0";
@@ -976,10 +977,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             {/* === SOUND & VIBRATION === */}
             {screen === "soundHaptics" && (
               <div className={card}>
-                <div className={row}>
-                  <span className="flex-1 text-[17px] font-medium">{t("settings.sound")}</span>
-                  <Switch id="sound-toggle" checked={sessionSettings.soundEnabled} onCheckedChange={(v) => handleSessionSettingsChange("soundEnabled", v)} />
-                </div>
+                {!SOUNDS_PAUSED && (
+                  <div className={row}>
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.sound")}</span>
+                    <Switch id="sound-toggle" checked={sessionSettings.soundEnabled} onCheckedChange={(v) => handleSessionSettingsChange("soundEnabled", v)} />
+                  </div>
+                )}
                 <div className={row}>
                   <span className="flex-1 text-[17px] font-medium">{t("settings.haptics")}</span>
                   <Switch id="haptics-toggle" checked={sessionSettings.hapticsEnabled} onCheckedChange={(v) => handleSessionSettingsChange("hapticsEnabled", v)} />

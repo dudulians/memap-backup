@@ -32,6 +32,11 @@ import wheelTick from "@/assets/sounds/wheel-tick.mp3";
 
 type FeedbackKind = "yes" | "no" | "skip";
 
+/** Every sound is off for now (her note, Nov 4 2026: "звуки пока везде
+ *  плохие", vibrations instead). Each place that played one also taps, so
+ *  nothing goes quiet; false brings them all back with the Settings switch. */
+export const SOUNDS_PAUSED = true;
+
 let audioCtx: AudioContext | null = null;
 let unlockAttached = false;
 
@@ -55,7 +60,7 @@ const getCtx = (): AudioContext | null => {
  * swipe after app launch plays audibly.
  */
 export const primeAudio = () => {
-  if (unlockAttached || typeof window === "undefined") return;
+  if (SOUNDS_PAUSED || unlockAttached || typeof window === "undefined") return;
   unlockAttached = true;
   const unlock = () => {
     const ctx = getCtx();
@@ -129,6 +134,7 @@ const playSkip = (ctx: AudioContext) => {
 };
 
 export const playSwipeSound = (kind: FeedbackKind) => {
+  if (!soundOn()) return;
   const ctx = getCtx();
   if (!ctx) return;
   // Try to resume on every call — the AudioContext may be in "suspended"
@@ -157,6 +163,7 @@ export const playSwipeSound = (kind: FeedbackKind) => {
 
 /** The app's sound setting (Settings → sounds), on unless she turned it off. */
 export const soundOn = (): boolean => {
+  if (SOUNDS_PAUSED) return false;
   try {
     const raw = localStorage.getItem("memap_session_settings");
     return raw ? JSON.parse(raw)?.soundEnabled !== false : true;
@@ -260,6 +267,7 @@ const load = (ctx: AudioContext, name: Sound): Promise<AudioBuffer | null> => {
 
 /** Start loading what a game will play, so its first sound is on time. */
 export const preloadSounds = (...names: Sound[]) => {
+  if (SOUNDS_PAUSED) return;
   const ctx = getCtx();
   if (ctx) names.forEach((n) => void load(ctx, n));
 };

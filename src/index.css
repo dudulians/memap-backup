@@ -2172,6 +2172,9 @@ html[data-theme="aurora"] { --path-locked: 234 26% 28%; }
 .memap-sea-bg.memap-path-bg { background-size: 100% auto !important; background-repeat: repeat-y !important; background-position: center top !important; }
 html[data-ui="new"][data-theme="aurora-light"] .memap-sea-bg.memap-path-bg { background-color: #B9C5F2; }
 html[data-ui="new"][data-theme="aurora"] .memap-sea-bg.memap-path-bg { background-color: #2B3A9A; }
+.memap-sea-bg.memap-path-bg { overflow: hidden; }
+/* one tile taller than the screen (a tile is 163.4% of the width), moved up as the path scrolls */
+.memap-sea-roll { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% + 164vw); background-size: 100% auto; background-repeat: repeat-y; background-position: center top; will-change: transform; }
 
 /* Today's path as lights on her sea (PathParts, Nov 4 2026) */
 .path-orb { position: absolute; inset: 0; pointer-events: none; }

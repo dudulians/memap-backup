@@ -130,7 +130,7 @@ const pattern = (beats: Beat[], android: ImpactStyle[], web: number[]) => {
   webVibrate(web.length === 1 ? web[0] : web);
 };
 
-// Last Android wheel detent (see haptics.tick).
+// Last wheel detent (see haptics.tick).
 let lastDetent = 0;
 
 export const haptics = {
@@ -149,7 +149,8 @@ export const haptics = {
     // Android: selectionChanged is silent without selectionStart, so a
     // light impact is the tap there (Aurora step 1 leftover).
     if (isAndroid) { safe(Haptics.impact({ style: ImpactStyle.Light })); return; }
-    webVibrate(5);
+    // under ~10 ms most phone motors never spin up: no tap is felt at all
+    webVibrate(10);
   },
 
   /** Medium thump — yes/no card swipe commit, long-press confirm. */
@@ -201,21 +202,20 @@ export const haptics = {
   /** A card landing: one solid, warm beat. */
   land: () => pattern([{ t: 0, i: 0.6, s: 0.35 }], [ImpactStyle.Medium], [14]),
   /** Barely there: theme switch, a quiet choice. */
-  soft: () => pattern([{ t: 0, i: 0.22, s: 0.2 }], [ImpactStyle.Light], [4]),
-  /** A picker-wheel detent (the path rolling past a step): the lightest
-   *  transient on iOS; on Android an 8 ms buzz at most every 120 ms (a Light
-   *  impact there is a 50 ms pulse, too much for a fling). */
+  soft: () => pattern([{ t: 0, i: 0.3, s: 0.3 }], [ImpactStyle.Light], [8]),
+  /** The path passing a step: a short crisp tap, like a picker wheel's detent.
+   *  Her note (Nov 4 2026): "на пути нет вибрации" — the old one (iOS 0.22,
+   *  Android 8 ms, web 4 ms) was too faint to feel. At most every 90 ms, so a
+   *  fling is a run of taps, not a buzz (a Light impact on Android is a 50 ms
+   *  pulse, too long for that). */
   tick: () => {
     if (!isHapticsEnabled()) return;
-    if (isIOS) { CoreHaptics.play({ events: [{ t: 0, i: 0.22, s: 0.2 }] }).catch(() => undefined); return; }
-    if (isAndroid) {
-      const now = performance.now();
-      if (now - lastDetent < 120) return;
-      lastDetent = now;
-      safe(Haptics.vibrate({ duration: 8 }));
-      return;
-    }
-    webVibrate(4);
+    const now = performance.now();
+    if (now - lastDetent < 90) return;
+    lastDetent = now;
+    if (isIOS) { CoreHaptics.play({ events: [{ t: 0, i: 0.5, s: 0.55 }] }).catch(() => safe(CoreHaptics.tap())); return; }
+    if (isAndroid) { safe(Haptics.vibrate({ duration: 14 })); return; }
+    webVibrate(12);
   },
 
   /** Error pattern — failed action that the user should notice. */

@@ -45,6 +45,8 @@ export interface Step {
   part?: [number, number];
   /** questions of a newly added island */
   fresh?: boolean;
+  /** questions added today to a topic already done today: their own step, ahead */
+  added?: boolean;
   trackerIds: string[];
   task?: TaskId;
   /** questions of this step answered today */
@@ -394,10 +396,23 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     break;
   }
 
+  // Questions added today to a topic she had already finished today (her
+  // note, Nov 4 2026: it wasn't clear she had to sail back and finish it): that
+  // step stays done, and they wait ahead of the boat as a step of their own.
+  const byId = new Map(trackers.map((t) => [t.id, t]));
+  const isLate = (id: string) => {
+    const at = byId.get(id)?.createdAt;
+    return !answeredToday.has(id) && !!at && isoLocal(new Date(at)) === today;
+  };
+  const late = new Map<IslandId, string[]>();
   let leftToday = 0;
   for (const g of questionGroups(trackers)) {
-    const answered = g.ids.filter((id) => answeredToday.has(id)).length;
-    leftToday += g.ids.length - answered;
+    leftToday += g.ids.filter((id) => !answeredToday.has(id)).length;
+    const older = g.ids.filter((id) => !isLate(id));
+    const moved = older.length > 0 && older.length < g.ids.length && older.every((id) => answeredToday.has(id));
+    const ids = moved ? older : g.ids;
+    if (moved) for (const id of g.ids) if (isLate(id)) { const k = islandOf(byId.get(id)!); late.set(k, [...(late.get(k) ?? []), id]); }
+    const answered = ids.filter((id) => answeredToday.has(id)).length;
     steps.push({
       id: `q:${g.island ?? g.mixed}:${g.part[0]}`,
       kind: "questions",
@@ -405,9 +420,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
       mixed: g.mixed,
       part: g.part[1] > 1 ? g.part : undefined,
       fresh: g.fresh,
-      trackerIds: g.ids,
+      trackerIds: ids,
       answered,
-      done: answered === g.ids.length,
+      done: answered === ids.length,
     });
   }
 
@@ -430,6 +445,13 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: hunchDoneToday() && !readyHunch(trackers, entries) });
     // Her "разгрузи свой мозг": a calm game any time, from day 1.
     steps.push({ id: "unload", kind: "unload", trackerIds: [], answered: 0, done: unloadPlayedToday() });
+  }
+  // the late questions go where the boat is: before the first step still to
+  // do (the calm game doesn't count), else at the end
+  if (late.size > 0) {
+    const at = steps.findIndex((s) => !s.done && s.kind !== "unload");
+    const added: Step[] = [...late].map(([island, ids]) => ({ id: `q:added:${island}`, kind: "questions", island, added: true, trackerIds: ids, answered: 0, done: false }));
+    steps.splice(at >= 0 ? at : steps.length, 0, ...added);
   }
 
   return {

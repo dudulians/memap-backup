@@ -48,8 +48,11 @@ const SKY: { ll: [number, number]; name: string }[] = [
   [-26, 118, "cloud_05_large"], [26, 168, "cloud_03_large"], [6, -150, "cloud_07_large"],
 ].map(([lat, lon, name]) => ({ ll: [lat as number, lon as number], name: name as string }));
 const PITCH_MIN = -0.25, PITCH_MAX = 0.62;
-/** How the ball is turned: kept for the whole visit (tabs, day/night). */
-let VIEW: { yaw: number; pitch: number } | null = null;
+// Pinch to zoom (her ask, Nov 4 2026: "зум ин зум аут"): from a little
+// smaller than usual to well over twice as big.
+const ZMIN = 0.75, ZMAX = 2.2;
+/** How the ball is turned and zoomed: kept for the whole visit (tabs, day/night). */
+let VIEW: { yaw: number; pitch: number; zoom: number; ox: number; oy: number } | null = null;
 
 type Kind = "area" | "cloud" | "sky" | "boat";
 interface Thing { key: string; kind: Kind; ll: [number, number]; v: V3; name: string; size: number; ar: number; island?: Island; lit?: boolean }
@@ -202,13 +205,31 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
 
     let W = 0, H = 0, DPR = 1, R = 0, CX = 0, CY = 0;
     let yaw = VIEW?.yaw ?? -C0[1] * D2R, pitch = VIEW?.pitch ?? Math.max(0, C0[0] - 20) * D2R, vy = 0, vp = 0;
+    // zoom, and how far the ball's middle has moved with it (to keep the
+    // spot under her fingers in place); at zoom 1 or less it sits in its place
+    let zoom = VIEW?.zoom ?? 1, ox = VIEW?.ox ?? 0, oy = VIEW?.oy ?? 0, R0 = 0, CX0 = 0, CY0 = 0;
     let dirty = true, raf = 0, last = 0;
-    let anim: { t0: number; dur: number; y0: number; y1: number; p0: number; p1: number; done?: () => void } | null = null;
+    let anim: { t0: number; dur: number; y0: number; y1: number; p0: number; p1: number; z0: number; z1: number; ox0: number; oy0: number; done?: () => void } | null = null;
+    const place = () => {
+      const m = Math.max(0, R0 * (zoom - 1));
+      ox = Math.max(-m, Math.min(m, ox)); oy = Math.max(-m, Math.min(m, oy));
+      R = R0 * zoom; CX = CX0 + ox; CY = CY0 + oy;
+    };
     const resize = () => {
       const r = box.getBoundingClientRect(); W = r.width; H = r.height; DPR = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-      R = Math.min(W * 0.74, H * 0.37); CX = W / 2; CY = H * 0.585;
+      R0 = Math.min(W * 0.74, H * 0.37); CX0 = W / 2; CY0 = H * 0.585; place();
       gl.viewport(0, 0, canvas.width, canvas.height); dirty = true; kick();
+    };
+    let atLimit = false;
+    /** Zoom to z with the point (fx, fy) staying where it is. */
+    const zoomAt = (z: number, fx: number, fy: number) => {
+      const nz = Math.max(ZMIN, Math.min(ZMAX, z)), k = nz / zoom;
+      ox = fx + (CX - fx) * k - CX0; oy = fy + (CY - fy) * k - CY0; zoom = nz; place();
+      // one soft tap where it stops growing or shrinking
+      const lim = nz === ZMIN || nz === ZMAX;
+      if (lim && !atLimit) haptics.soft();
+      atLimit = lim; dirty = true; kick();
     };
     const rot = ([x, y, z]: V3): V3 => {
       const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
@@ -265,8 +286,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
         }
       }
       if (wakeG.current) wakeG.current.innerHTML = h;
-      // far from home: offer the way back
-      const far = rot(vec(C0))[2] < 0.82;
+      // far from home, or zoomed: offer the way back
+      const far = rot(vec(C0))[2] < 0.82 || Math.abs(zoom - 1) > 0.15;
       if (far !== wasFar) { wasFar = far; setAway(far); }
     };
     let wasFar = false;
@@ -277,6 +298,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       if (anim) {
         const k = Math.min(1, (tm - anim.t0) / anim.dur), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
         yaw = anim.y0 + (anim.y1 - anim.y0) * e; pitch = anim.p0 + (anim.p1 - anim.p0) * e; moving = k < 1;
+        if (anim.z1 !== anim.z0) { zoom = anim.z0 + (anim.z1 - anim.z0) * e; ox = anim.ox0 * (1 - e); oy = anim.oy0 * (1 - e); place(); }
         if (!moving) { const done = anim.done; anim = null; done?.(); }
         dirty = true;
       } else if (!dragging && (Math.abs(vy) > 1e-5 || Math.abs(vp) > 1e-5)) {
@@ -284,30 +306,50 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
         const f = Math.pow(FRICTION, dt / 16.7); vy *= f; vp *= f; if (Math.abs(vy) < 2e-5) vy = 0; if (Math.abs(vp) < 2e-5) vp = 0;
         moving = true; dirty = true;
       }
-      if (dirty) { draw(); dirty = false; VIEW = { yaw, pitch }; }
+      if (dirty) { draw(); dirty = false; VIEW = { yaw, pitch, zoom, ox, oy }; }
       if (moving && !pausedRef.current) kick(); else last = 0;
     };
     const kick = () => { if (!raf && alive) raf = requestAnimationFrame(frame); };
     kickRef.current = () => { dirty = true; kick(); };
 
-    const turnTo = (ll: [number, number], done?: () => void) => {
+    /** Turns the ball to ll; with z1, zooms there too (z1 = 1: back in its place). */
+    const turnTo = (ll: [number, number], done?: () => void, z1 = zoom) => {
       let y1 = -ll[1] * D2R; while (y1 - yaw > Math.PI) y1 -= 2 * Math.PI; while (yaw - y1 > Math.PI) y1 += 2 * Math.PI;
       const p1 = Math.max(PITCH_MIN, Math.min(PITCH_MAX, (ll[0] - 6) * D2R));
-      if (reduce) { yaw = y1; pitch = p1; dirty = true; kick(); done?.(); return; }
-      anim = { t0: performance.now(), dur: 620, y0: yaw, y1, p0: pitch, p1, done }; kick();
+      if (reduce) { yaw = y1; pitch = p1; if (z1 !== zoom) { zoom = z1; ox = oy = 0; place(); } dirty = true; kick(); done?.(); return; }
+      anim = { t0: performance.now(), dur: 620, y0: yaw, y1, p0: pitch, p1, z0: zoom, z1, ox0: ox, oy0: oy, done }; kick();
     };
-    homeRef.current = () => { haptics.tap(); turnTo([C0[0] + 20, C0[1]]); };
+    homeRef.current = () => { haptics.tap(); turnTo([C0[0] + 20, C0[1]], undefined, 1); };
 
-    // touch: drag 1:1, a short glide, tap
+    // touch: drag 1:1, a short glide, tap; two fingers pinch to zoom
     let dragging = false, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, moved = 0, pid: number | null = null;
+    const fingers = new Map<number, { x: number; y: number }>();
+    // a pinch: the fingers' first distance and the zoom then; after one, the
+    // finger left on the glass does nothing until all are up
+    let pinch: { d0: number; z0: number } | null = null, pinched = false;
+    const spread = () => { const [a, b] = [...fingers.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
     const onDown = (ev: PointerEvent) => {
       // the buttons over the globe answer by themselves
-      if (pid !== null || pausedRef.current || (ev.target as HTMLElement).closest("button")) return;
-      pid = ev.pointerId; try { box.setPointerCapture(pid); } catch { /* synthetic events */ }
+      if (pausedRef.current || (ev.target as HTMLElement).closest("button")) return;
+      fingers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      try { box.setPointerCapture(ev.pointerId); } catch { /* synthetic events */ }
+      if (fingers.size === 2) {
+        dragging = false; pid = null; vy = vp = 0; anim = null; setHint(false);
+        pinch = { d0: Math.max(1, spread().d), z0: zoom }; pinched = true;
+        return;
+      }
+      if (fingers.size > 2 || pid !== null || pinched) return;
+      pid = ev.pointerId;
       dragging = true; anim = null; vy = vp = 0; setNote(false);
       sx = lx = ev.clientX; sy = ly = ev.clientY; lt = performance.now(); moved = 0;
     };
     const onMove = (ev: PointerEvent) => {
+      if (fingers.has(ev.pointerId)) fingers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (pinch && fingers.size >= 2) {
+        const s = spread(), r = box.getBoundingClientRect();
+        zoomAt(pinch.z0 * (s.d / pinch.d0), s.x - r.left, s.y - r.top);
+        return;
+      }
       if (!dragging || ev.pointerId !== pid) return;
       const dx = ev.clientX - lx, dy = ev.clientY - ly, now = performance.now(), dt = Math.max(1, now - lt);
       lx = ev.clientX; ly = ev.clientY; lt = now; moved = Math.max(moved, Math.hypot(ev.clientX - sx, ev.clientY - sy));
@@ -334,7 +376,13 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       setOn(id);
       turnTo(hit.ll, () => onOpenRef.current(id));
     };
+    const lift = (id: number) => {
+      fingers.delete(id);
+      if (fingers.size < 2) pinch = null;
+      if (fingers.size === 0) pinched = false;
+    };
     const onUp = (ev: PointerEvent) => {
+      lift(ev.pointerId);
       if (!dragging || ev.pointerId !== pid) return;
       dragging = false; pid = null;
       if (moved < 8) { vy = vp = 0; tap(ev.clientX, ev.clientY); return; }
@@ -342,20 +390,30 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       const cap = 0.004; vy = Math.max(-cap, Math.min(cap, vy)); vp = Math.max(-cap, Math.min(cap, vp));
       kick();
     };
-    const onCancel = (ev: PointerEvent) => { if (ev.pointerId !== pid) return; dragging = false; pid = null; vy = vp = 0; };
+    const onCancel = (ev: PointerEvent) => { lift(ev.pointerId); if (ev.pointerId !== pid) return; dragging = false; pid = null; vy = vp = 0; };
+    // a mouse wheel or a trackpad pinch (ctrlKey) zooms where the pointer is
+    const onWheel = (ev: WheelEvent) => {
+      if (pausedRef.current) return;
+      ev.preventDefault();
+      const r = box.getBoundingClientRect();
+      anim = null; setHint(false);
+      zoomAt(zoom * Math.exp(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.0015)), ev.clientX - r.left, ev.clientY - r.top);
+    };
     box.addEventListener("pointerdown", onDown); box.addEventListener("pointermove", onMove);
     box.addEventListener("pointerup", onUp); box.addEventListener("pointercancel", onCancel);
+    box.addEventListener("wheel", onWheel, { passive: false });
     const ro = new ResizeObserver(resize); ro.observe(box);
     resize();
     // for the tests in development: where an island is drawn, how the ball is turned
     if (import.meta.env.DEV) (window as unknown as { __planet?: unknown }).__planet = {
       at: (id: string) => pos.get(id) ?? null,
-      state: () => ({ yaw, pitch }),
+      state: () => ({ yaw, pitch, zoom }),
     };
     return () => {
       alive = false; cancelAnimationFrame(raf); window.clearTimeout(ahead); ro.disconnect();
       box.removeEventListener("pointerdown", onDown); box.removeEventListener("pointermove", onMove);
       box.removeEventListener("pointerup", onUp); box.removeEventListener("pointercancel", onCancel);
+      box.removeEventListener("wheel", onWheel);
       kickRef.current = () => undefined;
     };
   }, [things, wakes, night]);

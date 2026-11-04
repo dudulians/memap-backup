@@ -213,6 +213,7 @@ const Index = () => {
   // every tab (Today / Patterns / Notes) — each tab is a tall-scrolling
   // list and the user asked for a consistent return-to-top affordance.
   const mainRef = useRef<HTMLElement>(null);
+  const seaRollRef = useRef<HTMLDivElement>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   // Today's picture scrolls with the path and continues the one behind the
   // header; once she scrolls, the header turns frosted over it.
@@ -234,6 +235,25 @@ const Index = () => {
     el.addEventListener("scroll", handler, { passive: true });
     return () => el.removeEventListener("scroll", handler);
   }, []);
+  // Today's sea rolls with the path: a transform only (no repaint), within one
+  // repeat of the tile (both tiles are 941 × 1538, make-today-sea.mjs).
+  useLayoutEffect(() => {
+    const el = mainRef.current;
+    if (!el || activeTab !== "cards") return;
+    let raf = 0;
+    const roll = () => {
+      raf = 0;
+      const sea = seaRollRef.current;
+      if (!sea) return;
+      const tile = sea.clientWidth * (1538 / 941);
+      sea.style.transform = `translate3d(0,${(-(el.scrollTop % tile)).toFixed(1)}px,0)`;
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(roll); };
+    roll();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => { el.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); cancelAnimationFrame(raf); };
+  }, [activeTab, night]);
   // Reset scroll + hide the button whenever the active tab changes, so
   // switching tabs always lands the user at the top of the new one. A layout
   // effect, before the first paint; Today then brings her step to the middle
@@ -288,7 +308,12 @@ const Index = () => {
       {onGlobe && <div aria-hidden="true" className={`planet-sky ${night ? "night" : "day"} -z-10`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
       {activeTab !== "patterns" && (
         <div aria-hidden="true" className={`memap-sea-bg pointer-events-none absolute inset-0 -z-10${activeTab === "cards" ? " memap-path-bg" : ""}`}
-          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? todaySeaNight : todaySeaDay) : night ? seaNight : seaDawn})` }} />
+          style={activeTab === "cards" ? undefined : { backgroundImage: `url(${night ? seaNight : seaDawn})` }}>
+          {/* Today: one sea, behind the header too, rolling with the path at
+              exactly its speed (her note, Nov 4 2026: a second, still copy
+              showed through where the path fades, and the islands doubled). */}
+          {activeTab === "cards" && <div ref={seaRollRef} className="memap-sea-roll" style={{ backgroundImage: `url(${night ? todaySeaNight : todaySeaDay})` }} />}
+        </div>
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
@@ -335,17 +360,7 @@ const Index = () => {
       >
         {activeTab === "cards" && (
           <div className="relative">
-            {/* Her picture moves with the path (her note, Nov 3 2026). Since Nov 4
-                2026 her own Today sea, made to repeat downwards with no seam
-                (marketing/tools/make-today-sea.mjs). */}
-            <div aria-hidden="true" className="pointer-events-none absolute -z-10"
-              style={{
-                left: -16, right: -16, top: -16, bottom: "calc(-7rem - env(safe-area-inset-bottom, 0px))",
-                backgroundImage: `url(${night ? todaySeaNight : todaySeaDay})`,
-                backgroundRepeat: "repeat-y",
-                backgroundSize: "100% auto",
-                backgroundPosition: `center ${-headerH}px`,
-              }} />
+            {/* her sea is behind main now, rolled by Index (memap-sea-roll) */}
             <TodayTab key={`cards-${refreshKey}`} />
           </div>
         )}

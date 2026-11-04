@@ -223,7 +223,7 @@ export const EveningPath = ({
     const icon = s.done && !s.skipped && !replay ? <Check className="h-6 w-6" strokeWidth={3} /> : <Icon className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.fresh && !s.done ? t("path.newIsland") : undefined };
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.newQuestions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
     if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("hunch.go") };
@@ -232,7 +232,7 @@ export const EveningPath = ({
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
     return {
       look, icon, hue, title: stepName(s),
-      sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
+      sub: s.answered > 0 ? t("path.left", { count: left }) : s.added ? t("path.newQuestions", { count: left }) : t("path.questions", { count: left }),
       action: s.answered > 0 ? t("path.continue") : t("path.start"),
     };
   };
@@ -377,16 +377,18 @@ export const EveningPath = ({
         if (el.dataset.cy !== undefined && Math.abs(d) < bestD) { bestD = Math.abs(d); best = el; }
         let tr = "", op = "", far = false;
         if (on && Math.abs(d / R) >= HALF) {
-          // round the back of the drum: invisible where it stands, so it is
+          // far past the screen's edge: invisible where it stands, so it is
           // not rewritten every frame and VoiceOver still finds it in place
           tr = ""; op = "0"; far = true;
         } else if (on) {
-          // along a wheel of radius R: closer to the middle (sin), smaller and
-          // fainter, but never turned flat (her note: "дёшево плоские")
-          const th = d / R;
-          const c = Math.cos(th);
-          tr = `translate3d(0,${(R * Math.sin(th) - d).toFixed(1)}px,0) scale(${(1 - 0.42 * (1 - c)).toFixed(3)})`;
-          op = Math.pow(c, 1.3).toFixed(3);
+          // Her note, Nov 4 2026: the turning drum "всё ещё выглядит уродски,
+          // очень странно они двигаются": the steps slid toward the middle at
+          // their own speed, off the wake and over a sea that stood still. Now
+          // every step moves exactly with her finger and the sea; away from the
+          // band it only gets a little smaller and fainter, in place.
+          const c = Math.cos(d / R);
+          tr = `scale(${(1 - 0.14 * (1 - c)).toFixed(3)})`;
+          op = (0.25 + 0.75 * Math.pow(c, 1.5)).toFixed(3);
           far = c < 0.3;
         }
         if (seen.get(el) !== tr + op) { el.style.transform = tr; el.style.opacity = op; seen.set(el, tr + op); }
