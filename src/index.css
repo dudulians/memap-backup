@@ -2256,7 +2256,7 @@ html[data-ui="new"][data-theme="aurora"] .planet-shimmer { fill: none; }
 .planet-cloud img { filter: drop-shadow(0 14px 10px rgba(20, 60, 100, .18)); }
 .planet-isle .lighthouse { position: absolute; right: 6%; top: -26%; width: 22%; filter: none; }
 .planet-isle .ring { position: absolute; left: -22%; right: -22%; top: 48%; height: 58%; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .95);
-  box-shadow: 0 0 0 10px rgba(255, 255, 255, .28), 0 0 24px rgba(255, 255, 255, .7); opacity: 0; transform: scale(.7); transition: opacity .25s, transform .35s cubic-bezier(.34, 1.56, .64, 1); }
+  box-shadow: 0 0 0 10px rgba(255, 255, 255, .28), 0 0 24px rgba(255, 255, 255, .7); opacity: 0; transform: scale(.7); transition: opacity .25s, transform .35s cubic-bezier(.22, 1, .36, 1); }
 .planet-isle.on .ring { opacity: 1; transform: scale(1); }
 .planet-boat .bob { position: relative; animation: planetBob 3.2s ease-in-out infinite; }
 .planet-boat .otter { position: absolute; left: 48%; top: 40%; width: 42%; filter: none; }
