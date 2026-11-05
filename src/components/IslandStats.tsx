@@ -11,7 +11,8 @@
 // sheets filtered to it; growth is one line.
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { islandName, mapPic, type Island, type Route } from "@/lib/islands";
+import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
+import { STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
@@ -67,6 +68,33 @@ export const AnswerNow = ({ island, trackers, entries }: { island: Island; track
         className="mt-3 flex h-12 w-full items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-[16px] font-bold text-white active:scale-[0.98] transition-transform">
         {t("islands.answerNow")}
       </button>
+    </div>
+  );
+};
+
+/** All four stages of an island in a row, so she sees what it grows into
+ *  (her note, Nov 5 2026: "надо обязательно показать, как будет выглядеть,
+ *  когда его разовьют полностью"). Passed and now in full colour, the one now
+ *  ringed, the ones ahead pale, each with the evening it opens at. */
+export const GrowthLadder = ({ island, days }: { island: IslandId; days: number }) => {
+  const { t } = useTranslation();
+  const now = stageOf(days);
+  return (
+    <div className="surface mb-3 grid grid-cols-4 gap-1.5 rounded-[20px] px-2 pb-2.5 pt-2.5" aria-label={t(`path.stage${now}`)}>
+      {([1, 2, 3, 4] as const).map((s) => {
+        const name = artOf(island, STAGE_AT[s - 1]), ahead = s > now;
+        return (
+          <div key={s} className="flex flex-col items-center text-center">
+            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", s === now && "bg-[hsl(var(--coin-teal)/0.12)] ring-2 ring-[hsl(var(--coin-teal))]", ahead && "opacity-50 saturate-50")}>
+              <img aria-hidden="true" className="art-day block h-[50px] w-full object-contain" src={art(name, false)} alt="" />
+              <img aria-hidden="true" className="art-night block h-[50px] w-full object-contain" src={art(name, true)} alt="" />
+              {s === 4 && <img aria-hidden="true" className="absolute left-[22%] top-[4%] w-[15%]" src={mapPicFor("marker_flag", false)} alt="" />}
+            </span>
+            <span className={cn("mt-1 text-[12px] font-bold leading-tight", ahead && "text-muted-foreground")}>{t(`path.stage${s}`)}</span>
+            <span className="text-[11px] font-semibold leading-tight text-muted-foreground">{s === 1 ? t("path.ladderStart") : t("path.ladderAt", { count: STAGE_AT[s - 1] })}</span>
+          </div>
+        );
+      })}
     </div>
   );
 };

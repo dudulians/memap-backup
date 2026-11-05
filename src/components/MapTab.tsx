@@ -24,7 +24,7 @@ import { haptics } from "@/lib/haptics";
 import { PlanetMap } from "./PlanetMap";
 import { LinkSheet } from "./LinkSheet";
 import { PlanetGlobe } from "./PlanetGlobe";
-import { AnswerNow, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
+import { AnswerNow, GrowthLadder, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
@@ -247,6 +247,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               {/* In order (her note: "куча всего, дублируется"): this week in
                   words, what to answer today, the questions, then this
                   island's calendar / chart / action points, links, test, growth. */}
+              <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0} />
               {island.trackerIds.length > 0 && <IslandWeek island={island} trackers={trackers} />}
               <div className="mb-1 mt-2"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
               <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />
