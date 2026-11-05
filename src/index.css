@@ -2387,5 +2387,18 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .planet-map-sea { position: absolute; inset: 0; background-repeat: no-repeat; pointer-events: none;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 78%, transparent 97%); mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 78%, transparent 97%); }
 .planet-map-isle { will-change: auto; }
+/* Treasures on the islands (Nov 5 2026, growth.ts placeTreasures): over the
+   island, or on its left or right shore; the next one to come is pale. */
+.planet-isle .treasure { position: absolute; display: block; pointer-events: none; }
+.planet-isle .treasure img { width: 100%; filter: drop-shadow(0 3px 4px rgba(20, 60, 100, .22)); }
+.planet-isle .treasure.t-sky { left: 38%; top: -58%; width: 24%; }
+.planet-isle .treasure.t-sky.it-rainbow { left: 24%; top: -46%; width: 52%; }
+.planet-isle .treasure.t-sky.it-airplane { left: 34%; top: -54%; width: 30%; }
+.planet-isle .treasure.t-left { left: -13%; top: 26%; width: 23%; }
+.planet-isle .treasure.t-right { right: -13%; top: 26%; width: 23%; }
+.planet-isle .treasure.is-ghost { opacity: .5; filter: grayscale(1); }
+.planet-isle .treasure.t-sky:not(.is-ghost) { animation: treasureFloat 3.6s ease-in-out infinite; }
+@keyframes treasureFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5%); } }
+@media (prefers-reduced-motion: reduce) { .planet-isle .treasure.t-sky:not(.is-ghost) { animation: none; } }
 .planet-map-isle .planet-label { z-index: 1; }
 .planet-label .is-new { color: hsl(var(--muted-foreground)); }

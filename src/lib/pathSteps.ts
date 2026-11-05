@@ -320,12 +320,12 @@ export interface ChestRecord {
   guesses?: { hit: number; n: number };
   /** a new title for her (CHEST_TITLES) */
   title?: string;
-  /** her world when opened (growth "island:kind", items, bridges "a|b"), to tell what's new next time */
+  /** her world when opened (growth "island:stageN" since Nov 5 2026, before "island:kind"; items; links "a|b"), to tell what's new next time */
   world?: { growth: string[]; items: string[]; bridges: string[] };
   /** next week's mission (src/lib/growth.ts) */
   mission?: { id: string; n?: number };
   /** what grew since the last chest, and the items she's closest to ("id:k/n") */
-  fresh?: { growth: string[]; items: string[]; bridges: string[] };
+  fresh?: { growth: string[]; items: string[]; bridges: string[]; itemIslands?: Record<string, string> };
   nextUp?: string[];
 }
 

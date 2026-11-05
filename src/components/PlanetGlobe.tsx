@@ -21,6 +21,7 @@ import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 
 import { ASPECT, STAGE_SCALE, art, artOf, ringOrder, routeDots, stageOf } from "@/lib/globeArt";
+import type { PlacedTreasure } from "@/lib/growth";
 
 const D2R = Math.PI / 180;
 type V3 = [number, number, number];
@@ -118,12 +119,14 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, paused = false, sky = true, onOpen, onNewIsland, onLink }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, paused = false, sky = true, onOpen, onNewIsland, onLink }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** draw her sky here (false: the screen draws it behind its header) */
   sky?: boolean;
   /** islands whose rule (lighthouse) is lit */
   lit?: Set<IslandId>;
+  /** her treasures, each on its island (growth.ts placeTreasures) */
+  treasures?: Map<IslandId, PlacedTreasure[]>;
   /** evenings answered on each island: her own islands grow with them */
   days?: Record<string, number>;
   /** a sheet is open over the globe: nothing moves */
@@ -501,6 +504,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
                 )}
                 {th.lit && <img className="lighthouse" src={mapPic("lighthouse")} alt="" />}
                 {th.flag && <img className="flag" src={mapPic("marker_flag")} alt="" />}
+                {th.island && treasures?.get(th.island.id)?.map((tr) => (
+                  <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}`}><img src={mapPic(tr.pic)} alt="" /></span>
+                ))}
               </div>
               {th.island && (
                 <div ref={(el) => { elOf(th.key).lab = el; }} className="planet-label" style={{ opacity: 0 }}>

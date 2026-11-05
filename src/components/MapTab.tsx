@@ -16,7 +16,7 @@ import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
 import { getNotes } from "@/lib/notes";
-import { ITEMS, growthOf, islandDays, owned, syncTreasures, worldFacts, type ItemId } from "@/lib/growth";
+import { ITEMS, growthOf, islandDays, owned, placeTreasures, syncTreasures, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
 import type { TryAction } from "./ActionPoints";
 import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
@@ -25,7 +25,7 @@ import { haptics } from "@/lib/haptics";
 import { PlanetMap } from "./PlanetMap";
 import { LinkSheet } from "./LinkSheet";
 import { PlanetGlobe } from "./PlanetGlobe";
-import { AnswerNow, GrowthLadder, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
+import { AnswerNow, GrowthLadder, IslandMore, IslandTreasures, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
@@ -129,6 +129,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // evenings answered on each island: her own islands grow on the globe
   const dayCount = useMemo(() => Object.fromEntries(islandDays(trackers, entries)) as Record<string, number>, [trackers, entries]);
   const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount), [trackers, entries, islands, routes, notesCount]);
+  // her treasures, each on its island, on the Map and the Globe alike (Nov 5 2026)
+  const treasures = useMemo(() => (loaded ? placeTreasures({ islands: islands.map((i) => i.id), days: dayCount, facts, routes, trackers }) : new Map()),
+    [loaded, islands, dayCount, facts, routes, trackers]);
   useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
@@ -181,7 +184,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         // runs behind the header, the ball under the tab bar.
         loaded && (
           <div className="absolute inset-0">
-            <PlanetGlobe sky={false} islands={islands} routes={routes} avatar={avatarPic} lit={lit} days={dayCount} onOpen={setOpen}
+            <PlanetGlobe sky={false} islands={islands} routes={routes} avatar={avatarPic} lit={lit} days={dayCount} treasures={treasures} onOpen={setOpen}
               onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
               paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={() => setNewOpen(true)} />
           </div>
@@ -196,7 +199,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} onOpen={setOpen} onLink={setLink}
+              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} treasures={treasures} onOpen={setOpen} onLink={setLink}
                 onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>
           )}
@@ -252,6 +255,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
                   words, what to answer today, the questions, then this
                   island's calendar / chart / action points, links, test, growth. */}
               <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0} />
+              <IslandTreasures placed={treasures.get(island.id)} facts={facts}
+                onAll={() => { setOpen(null); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 260); }} />
               {island.trackerIds.length > 0 && <IslandWeek island={island} trackers={trackers} />}
               <div className="mb-1 mt-2"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
               <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />

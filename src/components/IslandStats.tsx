@@ -18,7 +18,7 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
 import { BarChart3, CalendarDays, FlaskConical } from "lucide-react";
-import { GROWTH_AT, ITEMS, growthLand, homeWord, itemProgress, markTreasuresSeen, owned, unseenTreasures, type GrowthKind, type ItemId, type WorldFacts } from "@/lib/growth";
+import { GROWTH_AT, ITEMS, growthLand, homeWord, itemProgress, keptTreasures, markTreasuresSeen, owned, unseenTreasures, type GrowthKind, type ItemId, type PlacedTreasure, type WorldFacts } from "@/lib/growth";
 import { playSparkle } from "@/lib/feedback";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -208,6 +208,38 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
           </span>
         </button>
       ) : null}
+    </div>
+  );
+};
+
+/** The treasures on this island (Nov 5 2026): the ones she has, since when
+ *  and for what; the next one to come, pale, with how far along it is. */
+export const IslandTreasures = ({ placed, facts, onAll }: { placed?: PlacedTreasure[]; facts: WorldFacts; onAll: () => void }) => {
+  const { t, i18n } = useTranslation();
+  if (!placed?.length) return null;
+  const kept = keptTreasures();
+  const when = (iso?: string) => (iso ? new Date(iso + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" }) : "");
+  return (
+    <div className="surface rounded-[20px] px-4 py-3.5">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("items.here")}</p>
+      {placed.map((p) => {
+        const [k, n] = itemProgress(p.id, facts);
+        return (
+          <div key={p.id} className="mt-2.5 flex items-center gap-3">
+            <img src={mapPic(p.pic)} alt="" width={48} height={48} className={cn("h-12 w-12 shrink-0 object-contain", p.ghost && "opacity-40 grayscale")} />
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 text-[17px] font-bold leading-snug">
+                {t(`items.${p.id}.name`)}
+                {p.ghost && <span className="rounded-full bg-foreground/[0.07] px-2 py-0.5 text-[12px] font-bold text-muted-foreground">{t("items.next")}</span>}
+              </span>
+              <span className="block text-[14px] font-medium leading-snug text-muted-foreground">
+                {p.ghost ? t("items.toGet", { how: t(`items.${p.id}.how`), k, count: n }) : t("items.got", { how: t(`items.${p.id}.how`), date: when(kept[p.id]) })}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+      <button type="button" onClick={() => { haptics.tap(); onAll(); }} className="quiet-btn mt-3 h-11 w-full">{t("items.all")}</button>
     </div>
   );
 };

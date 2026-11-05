@@ -179,6 +179,81 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
   };
 };
 
+// --- Treasures on the map ----------------------------------------------------
+// WORLD-BIBLE "Решения 5 ноября" #8 (Nov 5 2026): a treasure stands on an
+// island, in one of three places — over it (balloon, plane, rainbow, stars) or
+// on its left or right shore (camera, signpost, books, easel, bicycle). The
+// island is the one it belongs to when there is one (the rainbow over the
+// island that turned calm, the easel where her test was, the signpost on her
+// own island, the camera where her first link starts, the stars where her
+// hunch was); otherwise the island she answers most. Once chosen it is kept,
+// so a treasure never moves. The next one to come stands there pale, with how
+// to get it in the island's card.
+
+export type TreasureSlot = "sky" | "left" | "right";
+export interface PlacedTreasure { id: ItemId; pic: string; slot: TreasureSlot; ghost: boolean }
+const SKY_ITEMS: ItemId[] = ["balloon", "airplane", "rainbow", "sparkles"];
+const HOSTS = "memap_treasure_islands";
+
+export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
+  /** the islands on the map */
+  islands: IslandId[];
+  /** evenings answered on each island */
+  days: Record<string, number>;
+  facts: WorldFacts;
+  routes: Route[];
+  trackers: Tracker[];
+}): Map<IslandId, PlacedTreasure[]> => {
+  const out = new Map<IslandId, PlacedTreasure[]>();
+  if (islands.length === 0) return out;
+  const busiest = [...islands].sort((a, b) => (days[b] ?? 0) - (days[a] ?? 0));
+  const hosts = readJson<Partial<Record<ItemId, IslandId>>>(HOSTS, {});
+  const own = (id: ItemId): IslandId | undefined => {
+    switch (id) {
+      case "rainbow": return facts.cleared ?? undefined;
+      case "easel": return finishedExperiments()[0]?.island as IslandId | undefined;
+      case "signpost": return getOwnIslands()[0]?.id;
+      case "camera": return routes[0]?.a;
+      case "sparkles": {
+        const h = getHunches().find((x) => x.seen);
+        const tr = h && trackers.find((x) => x.id === h.suspect);
+        return tr ? islandOf(tr) : undefined;
+      }
+      default: return undefined;
+    }
+  };
+  const free = (isl: IslandId, id: ItemId): TreasureSlot | null => {
+    const taken = new Set((out.get(isl) ?? []).map((x) => x.slot));
+    if (SKY_ITEMS.includes(id)) return taken.has("sky") ? null : "sky";
+    return !taken.has("left") ? "left" : !taken.has("right") ? "right" : null;
+  };
+  const put = (id: ItemId, ghost: boolean): IslandId | null => {
+    const want = [hosts[id], own(id), ...busiest].filter((x): x is IslandId => !!x && islands.includes(x));
+    for (const isl of want) {
+      const slot = free(isl, id);
+      if (!slot) continue;
+      out.set(isl, [...(out.get(isl) ?? []), { id, pic: ITEMS.find((it) => it.id === id)!.pic, slot, ghost }]);
+      return isl;
+    }
+    return null;
+  };
+  let changed = false;
+  // the ones that belong to an island take their places first
+  const order = [...ITEMS].sort((x, y) => Number(!own(x.id)) - Number(!own(y.id)));
+  for (const it of order) {
+    if (!owned(it.id, facts)) continue;
+    const isl = put(it.id, false);
+    if (isl && hosts[it.id] !== isl) { hosts[it.id] = isl; changed = true; }
+  }
+  if (changed) { try { localStorage.setItem(HOSTS, JSON.stringify(hosts)); } catch { /* placed, not kept */ } }
+  // the next one to come, pale
+  const next = ITEMS.filter((it) => !owned(it.id, facts))
+    .map((it) => ({ id: it.id, p: itemProgress(it.id, facts) }))
+    .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1])[0];
+  if (next) put(next.id, true);
+  return out;
+};
+
 // --- Mission ------------------------------------------------------------------
 
 export type Mission =

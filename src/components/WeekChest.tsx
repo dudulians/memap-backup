@@ -12,13 +12,14 @@
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Clock, Crown, FileBarChart2, FlaskConical, Lightbulb, Sparkles, Target, X } from "lucide-react";
+import { Clock, Crown, FileBarChart2, FlaskConical, Lightbulb, Link2, Sparkles, Target, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { playSparkle, playThump, preloadSounds } from "@/lib/feedback";
-import { buildIslands, buildRoutes, islandDef, islandName, mapPic, type IslandId } from "@/lib/islands";
+import { buildIslands, buildRoutes, isNightMap, islandName, mapPic, type IslandId } from "@/lib/islands";
+import { art, artOf, islandEvenings, stageOf } from "@/lib/globeArt";
 import { getNotes } from "@/lib/notes";
-import { ITEMS, growthLand, growthOf, homeWord, islandDays, itemProgress, lastWorld, nextMission, owned, syncTreasures, worldFacts, type GrowthKind, type ItemId } from "@/lib/growth";
+import { ITEMS, islandDays, itemProgress, lastWorld, nextMission, owned, placeTreasures, syncTreasures, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { getDoor, getDoorState } from "@/lib/doors";
@@ -71,14 +72,21 @@ export const WeekChest = ({
     const notes = await getNotes().then((n) => n.length).catch(() => 0);
     const facts = worldFacts(trackers, entries, islands, routes, notes);
     syncTreasures(facts);
+    // where each treasure stands (so the report can say which island)
+    const hosts = placeTreasures({ islands: islands.map((i) => i.id), days: Object.fromEntries(days), facts, routes, trackers });
+    const hostOf = (id: string) => [...hosts.entries()].find(([, list]) => list.some((x) => x.id === id && !x.ghost))?.[0];
+    // islands that reached a new stage this week (their pictures on the map)
+    const was = islandEvenings(trackers, entries.filter((e) => e.date < dates[0]));
+    const now = islandEvenings(trackers, entries);
     const world = {
-      growth: islands.flatMap((i) => growthOf(i.id, days.get(i.id) ?? 0).map((k) => `${i.id}:${k}`)),
+      growth: islands.map((i) => `${i.id}:stage${stageOf(now.get(i.id) ?? 0)}`),
       items: ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id as string),
       bridges: routes.slice(0, 3).map((r) => `${r.a}|${r.b}`),
     };
     const before = lastWorld();
     const fresh = {
-      growth: world.growth.filter((g) => !before.growth.includes(g)),
+      growth: islands.filter((i) => stageOf(now.get(i.id) ?? 0) > stageOf(was.get(i.id) ?? 0)).map((i) => `${i.id}:stage${stageOf(now.get(i.id) ?? 0)}`),
+      itemIslands: Object.fromEntries(ITEMS.map((it) => [it.id, hostOf(it.id)]).filter(([, h]) => !!h)),
       items: world.items.filter((g) => !before.items.includes(g)),
       bridges: world.bridges.filter((g) => !before.bridges.includes(g)),
     };
@@ -148,10 +156,12 @@ export const WeekChest = ({
   );
 
   /** One line of "what grew": its picture, what it is, where or why. */
-  const row = (pic: string, what: string, sub: string, special = false, muted = false) => (
+  const row = (pic: string, what: string, sub: string, special = false, muted = false, src?: string) => (
     <div key={`${pic}${what}${sub}`} className="mt-3 flex items-center gap-3">
       <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${special ? "bg-[hsl(var(--coin-gold)/0.16)]" : "bg-foreground/[0.04]"}`}>
-        <img src={mapPic(pic)} alt="" className={`max-h-11 max-w-11 object-contain ${muted ? "opacity-40 grayscale" : ""}`} draggable={false} />
+        {pic === "link"
+          ? <Link2 className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
+          : <img src={src ?? mapPic(pic)} alt="" className={`max-h-11 max-w-11 object-contain ${muted ? "opacity-40 grayscale" : ""}`} draggable={false} />}
       </span>
       <span className="min-w-0">
         <span className="block text-[17px] font-bold leading-snug">{what}</span>
@@ -197,23 +207,24 @@ export const WeekChest = ({
     if (fresh) {
       const rows: ReactNode[] = [];
       // Special items first (the rarest), then each island's new pieces, then bridges.
+      // treasures first (the rarest), with the island they stand on
       fresh.items.forEach((id) => {
         const it = ITEMS.find((x) => x.id === id);
-        if (it) rows.push(row(it.pic, t(`items.${id}.name`), t(`items.${id}.how`), true));
+        const host = fresh.itemIslands?.[id] as IslandId | undefined;
+        if (it) rows.push(row(it.pic, t(`items.${id}.name`), host ? t("items.onIsland", { how: t(`items.${id}.how`), island: islandName(t, host) }) : t(`items.${id}.how`), true));
       });
-      const byIsland = new Map<IslandId, GrowthKind[]>();
+      // islands that grew a stage (an older report kept other growth words: skip those)
       fresh.growth.forEach((g) => {
-        const [id, kind] = g.split(":") as [IslandId, GrowthKind];
-        byIsland.set(id, [...(byIsland.get(id) ?? []), kind]);
+        const [id, st] = g.split(":") as [IslandId, string];
+        const n = Number(st.replace("stage", ""));
+        if (!n) return;
+        const evenings = islandEvenings(trackers, entries).get(id) ?? 0;
+        rows.push(row(id, islandName(t, id), t(`path.stage${n}`), false, false, art(artOf(id, evenings), isNightMap())));
       });
-      byIsland.forEach((kinds, id) => {
-        const pic = growthLand([kinds[0]]).front[0]?.[0] ?? growthLand([kinds[0]]).back[0]?.[0] ?? "";
-        const home = homeWord(islandDef(id).land);
-        rows.push(row(kinds[0] === "house" && home === "tent" ? "camping_tent" : pic, islandName(t, id), kinds.map((k) => t(`growth.short.${k === "house" ? home : k}`)).join(" · ")));
-      });
+      // a link is the dotted route on the map (no bridge)
       if (fresh.bridges.length > 0) {
         const names = fresh.bridges.map((b) => b.split("|").map((x) => islandName(t, x as IslandId)).join(" ↔ "));
-        rows.push(row("wooden_bridge", t("path.chest.bridges", { count: fresh.bridges.length }), names.join(", ")));
+        rows.push(row("link", t("path.chest.links", { count: fresh.bridges.length }), names.join(", ")));
       }
       if (rows.length > 5) {
         const more = rows.length - 4;
