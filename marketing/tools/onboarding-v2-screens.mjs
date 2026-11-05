@@ -60,7 +60,9 @@ export const screens = ({ page, isle, boat, disc, cur, lab, tile, icon, tabbar, 
     <div class="grow"></div>
     <div class="btn">Continue</div></div>`);
 
-  // 4. the promise in her words; her first island rises from a cloud
+  // 4. the promise in her words, said as a promise, not a question (her note, Nov 5 2026:
+  //    a big question with nothing to tap read as "answer me" in the middle of the questions);
+  //    her first island rises from a cloud
   const promise = (line, island, label, k) => page(`<div class="screen">
     ${dots(2)}</div>
     ${isle(195, 360, 230, "cloud_island_03")}
@@ -70,31 +72,39 @@ export const screens = ({ page, isle, boat, disc, cur, lab, tile, icon, tabbar, 
       <h1 class="c" style="font-size:32px">${line}</h1>
       <p class="sub c">Your first island. It grows as you answer.</p>
       <div style="height:28px"></div>
-      <div class="btn">Let's look ${icon("arrow-right", { size: 20, sw: 2.6 })}</div>
+      <div class="btn">Let's start ${icon("arrow-right", { size: 20, sw: 2.6 })}</div>
       <div style="height:${k ? 0 : 0}px"></div>
     </div>`);
-  S["v4-promise"] = promise("What comes before<br>your migraines?", "03_flower_hill", `${icon("heart-pulse", { size: 16, color: `hsl(${HUE.health})` })}Health`, 0);
-  S["v4b-promise-good"] = promise("What comes before<br>your best days?", "03_flower_hill", `${icon("flower-2", { size: 16, color: `hsl(${HUE.me})` })}Me`, 1);
+  S["v4-promise"] = promise("Let's see what comes<br>before your migraines", "03_flower_hill", `${icon("heart-pulse", { size: 16, color: `hsl(${HUE.health})` })}Health`, 0);
+  S["v4b-promise-good"] = promise("Let's see what comes<br>before your best days", "03_flower_hill", `${icon("flower-2", { size: 16, color: `hsl(${HUE.me})` })}Me`, 1);
 
-  // 5. the first answer: one tap, a fact. (Her note, Nov 5 2026: we promise to find out
-  // "what comes before", so we don't ask her for it here. The facts of that day come next,
-  // as swipes; her own guess waits for "Your hunch" on the path, where the app checks it.)
-  const when = (q, on) => page(`<div class="screen">
+  // 5. the first answer: two taps
+  const chips = (all, on) => `<div class="chips" style="margin-top:12px">${all.map((c) => `<span class="chip${on.includes(c) ? " on" : ""}">${c}</span>`).join("")}</div>`;
+  S["v5-first"] = page(`<div class="screen">
     ${dots(3)}
-    <h1 style="margin-top:10px">${q}</h1>
-    <div class="grid2" style="margin-top:22px">
-      ${["Today", "Yesterday", "This week", "A while ago"].map((t) => `<div class="card big${t === on ? " on" : ""}">${t}</div>`).join("")}
+    <h1 style="margin-top:10px">When was the<br>last migraine?</h1>
+    <div class="grid2" style="margin-top:18px">
+      <div class="card big">Today</div><div class="card big on">Yesterday</div><div class="card big">This week</div><div class="card big">A while ago</div>
     </div>
-    <p class="sub" style="margin-top:22px">Then 3 quick questions about that day</p>
+    <p style="margin-top:28px;font-size:22px;font-weight:800">What came before?</p>
+    ${chips(["Little sleep", "Stress", "Screens", "Skipped a meal", "Alcohol", "Weather", "Period", "Don't know"], ["Little sleep", "Stress"])}
     <div class="grow"></div>
     <div class="btn">Next</div></div>`);
-  S["v5-first"] = when("When was the<br>last migraine?", "Yesterday");
-  S["v5b-first-good"] = when("When did you last<br>have a lot of energy?", "Today");
+  S["v5b-first-good"] = page(`<div class="screen">
+    ${dots(3)}
+    <h1 style="margin-top:10px">When did you last<br>have a lot of energy?</h1>
+    <div class="grid2" style="margin-top:18px">
+      <div class="card big on">Today</div><div class="card big">Yesterday</div><div class="card big">This week</div><div class="card big">A while ago</div>
+    </div>
+    <p style="margin-top:28px;font-size:22px;font-weight:800">What helped?</p>
+    ${chips(["Slept well", "Moved", "Outside", "Ate well", "Good people", "Rest", "Sun", "Don't know"], ["Slept well", "Outside"])}
+    <div class="grow"></div>
+    <div class="btn">Next</div></div>`);
 
   // 6. the first swipe = the first lesson (as before)
   S["v6-swipe"] = page(`<div class="screen">
     ${dots(4)}
-    <h1 style="margin-top:10px">What was that<br>day like?</h1></div>
+    <h1 style="margin-top:10px">What else was<br>that day?</h1></div>
     <div class="swipe" style="top:262px;height:380px;transform:scale(.9) translateY(30px);opacity:.6"></div>
     <div class="swipe" style="top:262px;height:380px;transform:scale(.95) translateY(15px);opacity:.85"></div>
     <div class="swipe" style="top:262px;height:380px;transform:rotate(-3deg)">

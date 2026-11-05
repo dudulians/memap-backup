@@ -25,7 +25,7 @@
 | Fights with my partner | argued-with-partner | ✅ готова (дверь, 3 соседних вопроса, «что было перед») |
 | Migraines | migraine | ✅ готова |
 | Drinking | drank-alcohol | ✅ готова |
-| **Bad nights** | — | ⚠️ **двери нет.** Вопросы есть: «Slept enough (7+ hours)», «Recovered after sleep», «In bed before midnight», «Coffee after 2pm», «Stuck to a screen 4h+». Нужна дверь |
+| **Bad nights** | — | ⚠️ **двери нет.** Вопросы есть: «Slept enough (7+ hours)», «Recovered after sleep», «In bed before midnight», «Coffee after 2pm», «Stuck to a screen 4h+». Нужны дверь и «What kept you up?» |
 | Snapping at my kid | yelled-at-kid | ✅ готова |
 | Low mood | felt-depressed | ✅ готова |
 | Something else | свой остров | ✅ есть |
@@ -56,10 +56,6 @@
 | Ate late in the evening | Поздно ела вечером | Body & habits | трудный | сосед для Bad nights и Energy |
 
 И сделать в коде:
-1. Дверь **Bad nights** (главный — «Slept enough», «нет» = плохая ночь; соседи — кофе после 14:00, экраны, просыпалась ночью).
-2. Семь дверей **хороших дней** (главный хороший вопрос + 3 соседа).
+1. Дверь **Bad nights** (главный — «Slept enough», «нет» = плохая ночь) с «What kept you up?»: кофе, экраны, мысли, поздняя еда, шум, ребёнок, боль, не знаю.
+2. Семь дверей **хороших дней** (главный хороший вопрос + 3 соседа) и «What helped?»: Slept well, Moved, Outside, Ate well, Good people, Rest, Sun, Don't know.
 3. Развилку и обещание её словами (доски 49 и 50).
-
-## Первый ответ — один факт (её замечание, 5 нояб.)
-
-Обещаем «узнаем, что бывает перед», поэтому на первом ответе не спрашиваем «что было перед?» / «что помогло?». Первый ответ — одно касание: когда это было. Потом 3 карточки-свайпа про тот день (сон, стресс, еда…) — это и есть данные. Её собственная догадка — позже, в шаге «Your hunch» на пути, где приложение проверяет её на ответах. Подсказки-чипы «what came before» из онбординга убраны.

@@ -157,10 +157,10 @@ const board = async (keys, caps, title, file) => {
   await p.screenshot({ path: path.join(OUT, file), fullPage: true });
 };
 await board(["v1-welcome", "v2-fork", "v3-pain", "v4-promise", "v5-first", "v6-swipe", "v7-firstlight", "v8-companion", "v9-today"],
-  ["One line for both sides", "The fork: two big cards", "What keeps happening", "Her words · her first island from the cloud", "First answer: one tap, a fact", "That day, as swipes = the first lesson", "First light · day 10 · reminder", "Who sails with you", "Today: one hint, on Start"],
+  ["One line for both sides", "The fork: two big cards", "What keeps happening", "Her words · her first island from the cloud", "First answer: two taps", "First swipe = the first lesson", "First light · day 10 · reminder", "Who sails with you", "Today: one hint, on Start"],
   "New user · something keeps happening", "49-onboarding-v2-pain.png");
 await board(["v2b-fork-good", "v3b-good", "v4b-promise-good", "v5b-first-good"],
-  ["The other card", "What do you want more of", "Best days · her first island", "First answer: one tap, a fact"],
+  ["The other card", "What do you want more of", "Best days · her first island", "First answer: what helped"],
   "New user · more good days (then the same 6–9)", "50-onboarding-v2-good.png");
 console.log("ok", Object.keys(S).length);
 await b.close();
