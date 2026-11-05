@@ -1,15 +1,12 @@
-// Tonight is done (her idea, Nov 5 2026): when every step is done, a card says
-// "Great work today!" and offers bubbles or new questions. EN/RU, day/night,
-// and before/after Unload was played; both buttons open what they say.
+// Tonight is done (her idea, Nov 5 2026; then "не нравится эта табличка на постоянке"):
+// no card stays on the path; tapping tonight's last light opens "Great work today!" with
+// bubbles or new questions. EN/RU, day/night; both buttons open what they say.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
 const D = `./aurora-tests/work/r30`; mkdirSync(D, { recursive: true });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const errs = [], out = {};
-for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "aurora-light", true], ["ru", "aurora", true]]) {
-  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
-  const p = await ctx.newPage();
-  p.on("pageerror", (e) => errs.push(e.message));
+const setup = async (p, lang, theme, played) => {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   await p.evaluate(async ({ lang, theme, played }) => {
     const iso = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
@@ -29,19 +26,29 @@ for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "auro
     for (const s of ps.pathModel(T, E).steps) if (s.kind === "task") ps.markTaskDone(s.task);
   }, { lang, theme, played });
   await p.reload(); await p.waitForTimeout(2500);
+};
+const tapLast = async (p, lang) => {
+  const name = lang === "ru" ? "Разгрузи голову" : "Unload your mind";
+  await p.locator(`.path-node[aria-label*="${name}"]`).first().click(); await p.waitForTimeout(900);
+};
+for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "aurora-light", true], ["ru", "aurora", true]]) {
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
+  const p = await ctx.newPage();
+  p.on("pageerror", (e) => errs.push(e.message));
+  await setup(p, lang, theme, played);
   const tag = `${lang}-${theme === "aurora" ? "night" : "day"}-${played ? "played" : "new"}`;
   await p.screenshot({ path: `${D}/${tag}.png` });
-  out[tag] = await p.evaluate(() => document.querySelector(".path-done")?.innerText.replace(/\s+/g, " ") ?? "NO CARD");
+  out[`${tag} card on the path`] = await p.locator(".path-done").count();
+  out[`${tag} start bubble`] = await p.locator(".path-start").count();
+  await tapLast(p, lang);
+  await p.screenshot({ path: `${D}/${tag}-tap.png` });
+  out[tag] = await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD");
   if (tag === "en-day-new") {
-    // the card is on screen, not under the tab bar
-    out.cardBox = await p.evaluate(() => { const r = document.querySelector(".path-done")?.getBoundingClientRect(); return r ? [Math.round(r.top), Math.round(r.bottom)] : null; });
     await p.getByRole("button", { name: "Pop bubbles" }).click(); await p.waitForTimeout(1200);
-    await p.screenshot({ path: `${D}/${tag}-bubbles.png` });
-    out.bubblesOpen = await p.evaluate(() => document.body.innerText.includes("How it works"));
-    await p.keyboard.press("Escape"); await p.waitForTimeout(600);
+    out.bubblesOpen = await p.evaluate(() => document.body.innerText.includes("How it works") || document.body.innerText.includes("popped"));
     await p.reload(); await p.waitForTimeout(2200);
+    await tapLast(p, lang);
     await p.getByRole("button", { name: "Explore new questions" }).click(); await p.waitForTimeout(1400);
-    await p.screenshot({ path: `${D}/${tag}-questions.png` });
     out.questionsOpen = await p.evaluate(() => document.body.innerText.includes("Add a question"));
   }
   await ctx.close();

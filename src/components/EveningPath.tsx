@@ -66,8 +66,6 @@ type PNode =
   | { kind: "future"; offset: number }
   | { kind: "chest" };
 type Open = number | null;
-/** Space under tonight's last step for the "done" card. */
-const DONE_ROOM = 320;
 
 export const EveningPath = ({
   trackers,
@@ -162,25 +160,24 @@ export const EveningPath = ({
   const firstOpen = steps.findIndex((s) => isOpenStep(s) && s.kind !== "unload");
   // Tonight is done (her note, Nov 5 2026: "ты сделал большую работу сегодня, можешь
   // ещё поизучать вопросы или поиграть в пузырики"): when every step but "Unload your
-  // mind" is done, no step is highlighted; a card under today's steps says so and
-  // offers the two things left, both optional.
+  // mind" is done, no step is highlighted. Tapping tonight's last light says so and
+  // offers the two things left, both optional — a card on tap, never one that stays
+  // on the path (her note the same day: "не нравится эта табличка на постоянке").
   const eveningDone = steps.length > 0 && firstOpen < 0;
   const cur = firstOpen;
   const currentNode = cur >= 0 ? firstStep + cur : -1;
   const chestIndex = nodes.length - 1;
   const lastStepNode = firstStep + steps.length - 1;
   // The node to bring into view: the current step, else the reward, else tonight's
-  // last step (its "done" card is right under it), else tomorrow.
+  // last step, else tomorrow.
   const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : eveningDone ? lastStepNode : firstStep + steps.length;
 
   const stops = useMemo(() => {
     // room above her step for its Start bubble (the first light included)
     const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
     if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
-    // room for tonight's "done" card under the last step
-    if (eveningDone) for (let k = lastStepNode + 1; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + DONE_ROOM };
     return out;
-  }, [nodes, width, currentNode, eveningDone, lastStepNode]);
+  }, [nodes, width, currentNode]);
   const height = stops[chestIndex].y + R_CHEST + 56;
 
   // --- Words ---------------------------------------------------------------
@@ -407,9 +404,7 @@ export const EveningPath = ({
       if (!box || !main) return;
       placedRef.current = true;
       measure(main);
-      // when tonight is done, its card (under the last step) comes into view too
-      const extra = eveningDone && focus === lastStepNode ? 180 : 0;
-      const d = box.getBoundingClientRect().top + stops[focus].y + extra - (main.getBoundingClientRect().top + mid.current);
+      const d = box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + mid.current);
       if (firstTime) { main.scrollTop += d; frameRef.current(); }
       else if (Math.abs(d) > 2) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
     });
@@ -555,6 +550,16 @@ export const EveningPath = ({
       );
     }
     const s = n.step;
+    // tonight is done: tapping its last light says so, and offers two optional things
+    if (eveningDone && i === lastStepNode) {
+      return (
+        <>
+          {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
+          {button(<><Wind className="h-5 w-5" strokeWidth={2.4} /> {t("path.popBubbles")}</>, () => { setOpen(null); setUnloadOpen(true); })}
+          {button(<><Plus className="h-5 w-5" strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, () => { setOpen(null); onTask("ownQuestion"); }, "plain")}
+        </>
+      );
+    }
     if (s.kind === "grew") return grewBody(s.island!);
     if (s.kind === "auto") {
       const door = getDoorState();
@@ -728,21 +733,6 @@ export const EveningPath = ({
         {/* overflow-x clip: the wheel's tilt must never widen the page (the
             review found a sideways pan); nothing visible is cut. */}
         <div ref={boxRef} className="path-box relative mx-auto [overflow-x:clip]" style={{ width, height }}>
-
-          {/* tonight is done: well done, and two optional things */}
-          {eveningDone && (
-            <div className="path-done surface absolute z-[3] rounded-[24px] px-5 pb-5 pt-5 text-center" style={{ left: 8, right: 8, top: stops[lastStepNode].y + R_STEP + 58 }}>
-              <span className="report-badge is-tiny mx-auto"><Check className="h-7 w-7" strokeWidth={3} /></span>
-              <p className="mt-4 text-[22px] font-bold leading-tight">{t("path.eveningDone")}</p>
-              <p className="mt-1 text-[15px] font-medium text-muted-foreground">{t("path.eveningDoneSub")}</p>
-              <button type="button" onClick={() => { haptics.tap(); setUnloadOpen(true); }} className="raised-btn is-small mt-4 w-full justify-center">
-                <Wind className="h-5 w-5" strokeWidth={2.4} /> {t("path.popBubbles")}
-              </button>
-              <button type="button" onClick={() => { haptics.tap(); onTask("ownQuestion"); }} className="quiet-btn mt-2.5 h-12 w-full text-[16px]">
-                <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("path.exploreQuestions")}
-              </button>
-            </div>
-          )}
 
           {nodes.map((n, i) => {
             const v = viewOf(n, i);
