@@ -29,7 +29,7 @@ const ISL = (n) => url(`src/assets/globe/day/${n}.webp`);
 const ANI = (n) => url(`src/assets/avatars/${n}.webp`);
 const BOAT = url("src/assets/map/sailboat.webp");
 const PLANET = url("src/assets/globe/planet-day.webp");
-const FONT = url("marketing/tools/aurora-tests/work/phone-preview-map/assets/dm-sans-latin-wght-normal-Xz1IZZA0.woff2");
+const FONT = url("src/assets/fonts/manrope-latin-wght-normal.woff2");
 const TEAL = "174 44% 42%";
 
 const CSS = `

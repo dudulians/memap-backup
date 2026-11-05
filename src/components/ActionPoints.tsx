@@ -178,7 +178,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               const mine = test?.from === tr.id;
               return (
                 <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="block w-full px-4 py-3 text-left">
-                  <span className="block truncate text-[16px] font-semibold">{planOf(tr) || name(tr)}</span>
+                  <span className="line-clamp-2 block text-[16px] font-semibold leading-snug">{planOf(tr) || name(tr)}</span>
                   <span className={cn("mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
                     {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
                     {mine ? testLine : planOf(tr) ? label(tr) : ""}

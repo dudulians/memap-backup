@@ -124,7 +124,7 @@ export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tra
             const tr = trackers.find((x) => x.id === h.trackerId);
             return (
               <p key={h.trackerId} className="mt-1.5 flex items-center gap-2 text-[15px] font-medium leading-snug">
-                <span className="min-w-0 flex-1 truncate">{title(h.trackerId)}</span>
+                <span className="min-w-0 flex-1 leading-snug">{title(h.trackerId)}</span>
                 <span className="shrink-0 rounded-full bg-[hsl(var(--strong)/0.14)] px-2 py-0.5 text-[13px] font-bold text-[hsl(var(--strong))]">
                   {tr?.problemWhen === "yes" ? t("common.yes") : t("common.no")} · {t("isle.days", { count: h.days })}
                 </span>
