@@ -202,6 +202,13 @@ const ru: Translation = {
     bicycle: { name: "Велосипед", how: "14 дней подряд" },
     rainbow: { name: "Радуга", how: "Шторм стих" },
     airplane: { name: "Самолёт", how: "60 дней" },
+    moon: { name: "Луна", how: "7 вечеров подряд" },
+    chest: { name: "Сундук", how: "Первый отчёт недели" },
+    zen: { name: "Дзен-камни", how: "Спокойная неделя" },
+    lavender: { name: "Лаванда", how: "Пузыри 7 дней" },
+    house: { name: "Домик", how: "Остров вырос полностью" },
+    tent: { name: "Палатка", how: "30 дней" },
+    suitcase: { name: "Чемодан", how: "100 дней" },
   },
   experiment: {
     title: "Проверь одно изменение",

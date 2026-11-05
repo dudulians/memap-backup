@@ -120,7 +120,7 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, paused = false, sky = true, onOpen, onNewIsland, onLink }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, onOpen, onNewIsland, onLink }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** draw her sky here (false: the screen draws it behind its header) */
   sky?: boolean;
@@ -128,6 +128,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   lit?: Set<IslandId>;
   /** her treasures, each on its island (growth.ts placeTreasures) */
   treasures?: Map<IslandId, PlacedTreasure[]>;
+  /** her garden: a tree for each finished test (growth.ts gardenTrees) */
+  garden?: Map<IslandId, string[]>;
   /** evenings answered on each island: her own islands grow with them */
   days?: Record<string, number>;
   /** a sheet is open over the globe: nothing moves */
@@ -503,6 +505,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
                 ) : (
                   <img src={art(th.name, night)} alt="" />
                 )}
+                {th.island && garden?.get(th.island.id)?.map((pic, gi) => (
+                  <span key={`g${gi}`} className="stand tree" style={standAt(th.name, gi === 0 ? "g1" : "g2")}><img src={mapPic(pic)} alt="" /></span>
+                ))}
                 {th.lit && <span className="stand lighthouse" style={standAt(th.name, "light")}><img src={mapPic("lighthouse")} alt="" /></span>}
                 {th.flag && <span className="stand flag" style={standAt(th.name, "flag")}><img src={mapPic("marker_flag")} alt="" /></span>}
                 {th.island && treasures?.get(th.island.id)?.map((tr) => (

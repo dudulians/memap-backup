@@ -2439,6 +2439,15 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .planet-isle .treasure.stand.it-bicycle { width: 18%; }
 .planet-isle .treasure.stand.it-balloon { width: 11%; }
 .planet-isle .treasure.stand.it-books { width: 12%; }
+.planet-isle .treasure.stand.it-house { width: 24%; }
+.planet-isle .treasure.stand.it-tent { width: 21%; }
+.planet-isle .treasure.stand.it-suitcase { width: 12%; }
+.planet-isle .treasure.stand.it-chest { width: 13%; }
+.planet-isle .treasure.stand.it-zen { width: 11%; }
+.planet-isle .treasure.stand.it-lavender { width: 13%; }
+/* her garden: a tree for each finished test, behind the rest */
+.planet-isle .stand.tree { width: 17%; }
+.planet-isle .treasure.t-sky.it-moon { left: 70%; top: -28%; width: 20%; }
 .planet-isle .treasure.t-sky { left: 40%; top: -40%; width: 18%; }
 .planet-isle .treasure.t-sky.it-rainbow { left: 4%; top: -30%; width: 92%; z-index: -1; }
 .planet-isle .treasure.t-sky.it-airplane { left: 58%; top: -52%; width: 22%; }

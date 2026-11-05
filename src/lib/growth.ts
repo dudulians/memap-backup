@@ -12,7 +12,7 @@
 //   mission       — what to go for next week, said in the chest.
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandOf, type Island, type IslandId, type Route } from "@/lib/islands";
-import { countedDays, getChests } from "@/lib/pathSteps";
+import { countedDays, getChests, unloadDays } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
 import { finishedExperiments, currentExperiment, experimentDay } from "@/lib/experiments";
 import { getOwnIslands } from "@/lib/ownIslands";
@@ -72,7 +72,9 @@ export const growthLand = (kinds: GrowthKind[], land: [string, number, number, n
 
 // --- Special items ---------------------------------------------------------
 
-export type ItemId = "balloon" | "camera" | "signpost" | "books" | "sparkles" | "bicycle" | "easel" | "rainbow" | "airplane";
+export type ItemId = "balloon" | "camera" | "signpost" | "books" | "sparkles" | "bicycle" | "easel" | "rainbow" | "airplane"
+  // from her pack, Nov 5 2026 ("возьми все возможные трежерс")
+  | "moon" | "chest" | "zen" | "lavender" | "house" | "tent" | "suitcase";
 export const ITEMS: { id: ItemId; pic: string }[] = [
   { id: "balloon", pic: "hot_air_balloon" }, // a first full week
   { id: "camera", pic: "camera" }, // a first link found
@@ -83,6 +85,13 @@ export const ITEMS: { id: ItemId; pic: string }[] = [
   { id: "bicycle", pic: "bicycle" }, // 14 days in a row
   { id: "rainbow", pic: "rainbow" }, // a stormy island turned calm
   { id: "airplane", pic: "airplane" }, // 60 days
+  { id: "moon", pic: "moon_and_stars" }, // 7 evenings in a row
+  { id: "chest", pic: "chest_open_map" }, // a first week's report opened
+  { id: "zen", pic: "zen_stones" }, // a calm week on an island
+  { id: "lavender", pic: "lavender" }, // bubbles popped on 7 days
+  { id: "house", pic: "house" }, // an island fully grown (21 evenings)
+  { id: "tent", pic: "camping_tent" }, // 30 days
+  { id: "suitcase", pic: "travel_suitcase" }, // 100 days
 ];
 
 export interface WorldFacts {
@@ -96,6 +105,15 @@ export interface WorldFacts {
   tests: number;
   /** an island that was stormy in an earlier week and is calm now */
   cleared: IslandId | null;
+  /** week reports opened */
+  reports: number;
+  /** an island with a calm week now */
+  calm: IslandId | null;
+  /** the island with the most evenings, and how many */
+  top: IslandId | null;
+  topDays: number;
+  /** days she popped bubbles */
+  unloads: number;
 }
 
 export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
@@ -109,6 +127,13 @@ export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
     case "bicycle": return f.streak >= 14;
     case "rainbow": return f.cleared !== null;
     case "airplane": return f.days >= 60;
+    case "moon": return f.streak >= 7;
+    case "chest": return f.reports >= 1;
+    case "zen": return f.calm !== null;
+    case "lavender": return f.unloads >= 7;
+    case "house": return f.topDays >= 21;
+    case "tent": return f.days >= 30;
+    case "suitcase": return f.days >= 100;
   }
 };
 
@@ -160,6 +185,13 @@ export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
     case "bicycle": return [Math.min(f.streak, 14), 14];
     case "rainbow": return [f.cleared ? 1 : 0, 1];
     case "airplane": return [Math.min(f.days, 60), 60];
+    case "moon": return [Math.min(f.streak, 7), 7];
+    case "chest": return [Math.min(f.reports, 1), 1];
+    case "zen": return [f.calm ? 1 : 0, 1];
+    case "lavender": return [Math.min(f.unloads, 7), 7];
+    case "house": return [Math.min(f.topDays, 21), 21];
+    case "tent": return [Math.min(f.days, 30), 30];
+    case "suitcase": return [Math.min(f.days, 100), 100];
   }
 };
 
@@ -167,6 +199,7 @@ export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
 export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands: Island[], routes: Route[], notes: number): WorldFacts => {
   const days = countedDays(trackers, entries);
   const cleared = islands.find((i) => i.weather === "sun" && i.wasStormy)?.id ?? null;
+  const byIsland = [...islandDays(trackers, entries).entries()].sort((a, b) => b[1] - a[1]);
   return {
     days: days.length,
     streak: eveningStreak(days),
@@ -176,6 +209,11 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
     hunches: getHunches().filter((h) => h.seen).length,
     tests: finishedExperiments().length,
     cleared,
+    reports: Object.keys(getChests()).length,
+    calm: islands.find((i) => i.weather === "sun")?.id ?? null,
+    top: byIsland[0]?.[0] ?? null,
+    topDays: byIsland[0]?.[1] ?? 0,
+    unloads: unloadDays(),
   };
 };
 
@@ -190,10 +228,17 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
 // so a treasure never moves. The next one to come stands there pale, with how
 // to get it in the island's card.
 
-export type TreasureSlot = "sky" | "left" | "right";
+// Nov 5 2026 (her pack, all of it): every treasure stands on a ground spot of its
+// island picture (src/lib/islandSpots.ts) — left, right, front, or back for the
+// big ones (house, tent) — or in its sky (plane, rainbow, stars, moon). At most
+// three on one island, so it never turns into a shop window; the rest wait on
+// her shelf in You, and the next free island takes the next one.
+export type TreasureSlot = "sky" | "left" | "right" | "front" | "back";
 export interface PlacedTreasure { id: ItemId; pic: string; slot: TreasureSlot; ghost: boolean }
 // the balloon stands on the island, landed (her note, Nov 5 2026: things "левитируют")
-const SKY_ITEMS: ItemId[] = ["airplane", "rainbow", "sparkles"];
+const SKY_ITEMS: ItemId[] = ["airplane", "rainbow", "sparkles", "moon"];
+const BIG_ITEMS: ItemId[] = ["house", "tent"];
+const MAX_ON_ISLAND = 3;
 const HOSTS = "memap_treasure_islands";
 
 export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
@@ -215,6 +260,8 @@ export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
       case "easel": return finishedExperiments()[0]?.island as IslandId | undefined;
       case "signpost": return getOwnIslands()[0]?.id;
       case "camera": return routes[0]?.a;
+      case "house": return facts.topDays >= 21 ? facts.top ?? undefined : undefined;
+      case "zen": return facts.calm ?? undefined;
       case "sparkles": {
         const h = getHunches().find((x) => x.seen);
         const tr = h && trackers.find((x) => x.id === h.suspect);
@@ -224,9 +271,12 @@ export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
     }
   };
   const free = (isl: IslandId, id: ItemId): TreasureSlot | null => {
-    const taken = new Set((out.get(isl) ?? []).map((x) => x.slot));
+    const here = out.get(isl) ?? [];
+    if (here.length >= MAX_ON_ISLAND) return null;
+    const taken = new Set(here.map((x) => x.slot));
     if (SKY_ITEMS.includes(id)) return taken.has("sky") ? null : "sky";
-    return !taken.has("left") ? "left" : !taken.has("right") ? "right" : null;
+    const order: TreasureSlot[] = BIG_ITEMS.includes(id) ? ["back", "front"] : ["left", "right", "front"];
+    return order.find((s) => !taken.has(s)) ?? null;
   };
   const put = (id: ItemId, ghost: boolean): IslandId | null => {
     const want = [hosts[id], own(id), ...busiest].filter((x): x is IslandId => !!x && islands.includes(x));
@@ -252,6 +302,20 @@ export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
     .map((it) => ({ id: it.id, p: itemProgress(it.id, facts) }))
     .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1])[0];
   if (next) put(next.id, true);
+  return out;
+};
+
+/** Her garden: a tree for each test she finished, on the island it was about
+ *  ("провёл эксперимент — сад", her note, Nov 2 2026). Two at most on one island. */
+const TREES = ["green_tree", "orange_tree", "pine_tree", "cherry_blossom_tree"];
+export const gardenTrees = (islands: IslandId[]): Map<IslandId, string[]> => {
+  const out = new Map<IslandId, string[]>();
+  finishedExperiments().forEach((x, i) => {
+    const isl = x.island as IslandId;
+    if (!islands.includes(isl)) return;
+    const list = out.get(isl) ?? [];
+    if (list.length < 2) out.set(isl, [...list, TREES[i % TREES.length]]);
+  });
   return out;
 };
 

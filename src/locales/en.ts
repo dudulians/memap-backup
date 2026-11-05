@@ -174,6 +174,13 @@ const en = {
     bicycle: { name: "Bicycle", how: "14 days in a row" },
     rainbow: { name: "Rainbow", how: "Storm turned calm" },
     airplane: { name: "Plane", how: "60 days" },
+    moon: { name: "Moon", how: "7 evenings in a row" },
+    chest: { name: "Chest", how: "First week's report" },
+    zen: { name: "Zen stones", how: "A calm week" },
+    lavender: { name: "Lavender", how: "Bubbles on 7 days" },
+    house: { name: "House", how: "An island fully grown" },
+    tent: { name: "Tent", how: "30 days" },
+    suitcase: { name: "Suitcase", how: "100 days" },
   },
   experiment: {
     title: "Test one change",

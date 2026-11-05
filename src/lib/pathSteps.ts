@@ -257,7 +257,18 @@ export const unloadPlayedToday = () => {
   try { return localStorage.getItem(UNLOAD_KEY) === isoLocal(new Date()); } catch { return false; }
 };
 export const markUnloadPlayed = () => {
-  try { localStorage.setItem(UNLOAD_KEY, isoLocal(new Date())); } catch { /* plays again, harmless */ }
+  const today = isoLocal(new Date());
+  try {
+    localStorage.setItem(UNLOAD_KEY, today);
+    // the days she played, for the lavender treasure (7 days)
+    const days = JSON.parse(localStorage.getItem(UNLOAD_DAYS) || "[]") as string[];
+    if (!days.includes(today)) localStorage.setItem(UNLOAD_DAYS, JSON.stringify([...days, today].slice(-60)));
+  } catch { /* plays again, harmless */ }
+};
+const UNLOAD_DAYS = "memap_unload_days";
+/** Days she popped bubbles ("Unload your mind"). */
+export const unloadDays = (): number => {
+  try { return (JSON.parse(localStorage.getItem(UNLOAD_DAYS) || "[]") as string[]).length; } catch { return 0; }
 };
 
 

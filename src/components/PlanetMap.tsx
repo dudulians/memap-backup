@@ -21,7 +21,7 @@ const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as
 // picture pixels 28 degrees are: the crop puts the ring on her open sea.
 const PIC_W = 1774, MID_X = 779, MID_Y = 335, RING_PX = 128;
 
-export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = null, treasures, onOpen, onNewIsland, onYou, onLink }: {
+export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = null, treasures, garden, onOpen, onNewIsland, onYou, onLink }: {
   islands: Island[]; routes: Route[];
   /** the column's width; the map adds 16 px on both sides (its parent has no padding) */
   width: number;
@@ -30,6 +30,8 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
   avatar?: string | null;
   /** her treasures, each on its island (growth.ts placeTreasures) */
   treasures?: Map<IslandId, PlacedTreasure[]>;
+  /** her garden: a tree for each finished test (growth.ts gardenTrees) */
+  garden?: Map<IslandId, string[]>;
   onOpen: (id: IslandId) => void;
   onNewIsland?: () => void;
   onYou?: () => void;
@@ -135,7 +137,10 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
             <span className="ring" />
             <img className="art-day island-art" src={art(name, false)} alt="" />
             <img className="art-night island-art" src={art(name, true)} alt="" />
-            {/* things stand on the island's ground (src/lib/islandSpots.ts) */}
+            {/* things stand on the island's ground (src/lib/islandSpots.ts); her garden first, behind */}
+            {garden?.get(isl.id)?.map((pic, gi) => (
+              <span key={`g${gi}`} className="stand tree" style={standAt(name, gi === 0 ? "g1" : "g2")}><img className="art-day" src={mapPicFor(pic, false)} alt="" /><img className="art-night" src={mapPicFor(pic, true)} alt="" /></span>
+            ))}
             {lit?.has(isl.id) && <span className="stand lighthouse" style={standAt(name, "light")}><img className="art-day" src={mapPicFor("lighthouse", false)} alt="" /><img className="art-night" src={mapPicFor("lighthouse", true)} alt="" /></span>}
             {stage === 4 && <span className="stand flag" style={standAt(name, "flag")}><img className="art-day" src={mapPicFor("marker_flag", false)} alt="" /><img className="art-night" src={mapPicFor("marker_flag", true)} alt="" /></span>}
             {treasures?.get(isl.id)?.map((tr) => (

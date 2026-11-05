@@ -8,7 +8,7 @@ const names = ["03_flower_hill", "04_twin_hills", "05_wide_meadow", "06_snow_pea
 const spots = process.argv[2] ? JSON.parse(process.argv[2]) : {};
 const cell = (n) => {
   const s = spots[n] ?? {};
-  const dots = Object.entries(s).map(([k, [x, y]]) => `<span style="position:absolute;left:${x}%;top:${y}%;width:12px;height:12px;margin:-6px;border-radius:50%;background:${k === "flag" ? "#e33" : k === "light" ? "#f90" : k === "left" ? "#09f" : "#0b6"};border:2px solid #fff"></span><span style="position:absolute;left:${x}%;top:${y}%;font:700 11px sans-serif;color:#000;transform:translate(8px,-4px)">${k}</span>`).join("");
+  const dots = Object.entries(s).map(([k, [x, y]]) => `<span style="position:absolute;left:${x}%;top:${y}%;width:12px;height:12px;margin:-6px;border-radius:50%;background:${({ flag: "#e33", light: "#f90", left: "#09f", right: "#0b6", front: "#a3f", back: "#850", g1: "#063", g2: "#063" })[k] ?? "#000"};border:2px solid #fff"></span><span style="position:absolute;left:${x}%;top:${y}%;font:700 11px sans-serif;color:#000;transform:translate(8px,-4px)">${k}</span>`).join("");
   return `<div style="display:inline-block;margin:10px;text-align:center;font:600 14px sans-serif">
   <div style="position:relative;width:420px;background:#bcd6f6">
     <img src="file:///${A}/globe/day/${n}.webp" style="display:block;width:100%">
