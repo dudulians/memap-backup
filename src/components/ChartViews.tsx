@@ -235,10 +235,10 @@ export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[
         <div className="surface rounded-[24px] px-4 pb-4 pt-4">
           <p className="text-[19px] font-bold leading-snug">{detail.title}</p>
           {detail.sub && <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{detail.sub}</p>}
-          <div className="mt-3 inline-flex rounded-full bg-foreground/[0.06] p-0.5" role="tablist">
+          <div className="seg mt-3" role="tablist">
             {[false, true].map((v) => (
               <button key={String(v)} type="button" role="tab" aria-selected={long === v} onClick={() => { haptics.tap(); setLong(v); }}
-                className={cn("h-9 rounded-full px-4 text-[14px] font-bold", long === v ? "surface text-foreground" : "text-muted-foreground")}>
+                className={cn("chip", long === v && "is-on")}>
                 {t(v ? "charts.months6" : "charts.weeks8")}
               </button>
             ))}
@@ -254,10 +254,10 @@ export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[
   const card = "surface block w-full rounded-[22px] px-4 py-3.5 text-left active:scale-[0.99] transition-transform";
   return (
     <div className="animate-fade-in">
-      <div className="inline-flex rounded-full bg-foreground/[0.06] p-0.5" role="tablist">
+      <div className="seg" role="tablist">
         {(["links", "each"] as const).map((v) => (
           <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
-            className={cn("h-9 rounded-full px-4 text-[15px] font-bold transition-colors", view === v ? "surface text-foreground" : "text-muted-foreground")}>
+            className={cn("chip", view === v && "is-on")}>
             {t(`charts.${v}`)}
           </button>
         ))}

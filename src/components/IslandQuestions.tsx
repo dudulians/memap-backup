@@ -117,7 +117,7 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
 
       {!adding ? (
         <button type="button" onClick={() => { haptics.tap(); setAdding(true); setSaved(false); }}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-[20px] border-2 border-dashed border-foreground/15 text-[16px] font-semibold text-foreground/80">
+          className="quiet-btn h-12 w-full text-[16px]">
           <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.addHere")}
         </button>
       ) : (
@@ -139,7 +139,7 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
             {[false, true].map((h) => (
               <button key={String(h)} type="button" onClick={() => { haptics.tap(); setHard(h); setAsk(false); }} aria-pressed={hard === h}
                 className={cn("flex h-14 items-center justify-center gap-2 rounded-2xl text-[16px] font-semibold",
-                  hard === h ? "bg-[hsl(var(--coin-teal)/0.14)] ring-2 ring-[hsl(var(--coin-teal))]" : "bg-foreground/[0.05]",
+                  hard === h ? "surface pick-on font-bold" : "bg-foreground/[0.05]",
                   ask && hard === null && "ring-2 ring-[hsl(var(--coin-teal)/0.5)]")}>
                 <img src={mapPic(h ? "thunder_cloud" : "sun")} alt="" width={28} height={28} className="object-contain" />
                 {t(h ? "islands.hard" : "islands.good")}
@@ -169,7 +169,7 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
               onClick={async () => { haptics.pop(0.35); await ensureTemplates([tpl.id]); window.dispatchEvent(new Event("memap-settings-changed")); }}
               className="surface flex w-full items-center gap-3 rounded-[18px] px-4 py-3 text-left animate-fade-in">
               <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{templateQuestion(tpl)}</span>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
+              <span className="icon-dot h-8 w-8"><Plus className="h-4 w-4" strokeWidth={2.6} /></span>
             </button>
           ))}
         </>

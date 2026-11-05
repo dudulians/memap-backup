@@ -9,7 +9,6 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes } from "@/lib/notes";
 import { Check, ChevronLeft, ChevronRight, FileText, ListChecks } from "lucide-react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
@@ -327,10 +326,7 @@ export const OverviewCard = ({
               type="button"
               onClick={() => { haptics.tap(); setActiveTrackerIndex(i); }}
               aria-pressed={on}
-              className={cn(
-                "shrink-0 max-w-[230px] truncate h-[42px] px-[18px] rounded-full border text-base transition-colors",
-                on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-              )}
+              className={cn("chip block max-w-[230px] truncate leading-[38px]", on && "is-on")}
             >
               {doorOf.has(tr.id) ? t(`doors.${doorOf.get(tr.id)}.name`) : localizeTrackerTitle(tr.title)}
             </button>
@@ -340,17 +336,14 @@ export const OverviewCard = ({
 
       {/* Month or year. */}
       <div className="mt-4 flex justify-center">
-        <div className="inline-grid grid-cols-2 gap-1 rounded-full bg-foreground/[0.06] p-1">
+        <div className="seg">
           {(["month", "year"] as const).map((v) => (
             <button
               key={v}
               type="button"
               aria-pressed={view === v}
               onClick={() => { haptics.tap(); setView(v); setMulti(false); setPicked(new Set()); }}
-              className={cn(
-                "h-11 min-w-[104px] rounded-full px-5 text-[15px] font-semibold transition-colors",
-                view === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground",
-              )}
+              className={cn("chip min-w-[96px]", view === v && "is-on")}
             >
               {t(`overview.${v}`)}
             </button>
@@ -480,14 +473,10 @@ export const OverviewCard = ({
         {/* Select several days: one answer for many days at once. */}
         {onBulkAnswer && !multi && (
           <div className="mt-4 flex justify-center">
-            <Button
-              variant="outline"
-              onClick={toggleMulti}
-              className="h-11 rounded-full px-5 text-[15px] font-semibold bg-transparent border-foreground/20"
-            >
-              <ListChecks className="h-[18px] w-[18px] mr-2" strokeWidth={2.2} />
+            <button type="button" onClick={toggleMulti} className="quiet-btn">
+              <ListChecks className="h-[18px] w-[18px]" strokeWidth={2.2} />
               {t("overview.pickSeveral")}
-            </Button>
+            </button>
           </div>
         )}
         {multi && (
@@ -504,16 +493,12 @@ export const OverviewCard = ({
             </p>
             {picked.size > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-2.5">
-                <Button
-                  variant="outline"
-                  onClick={() => answerPicked(false)}
-                  className="h-[52px] rounded-full text-[17px] font-semibold bg-transparent border-foreground/20"
-                >
+                <button type="button" onClick={() => answerPicked(false)} className="quiet-btn h-[50px] text-[17px]">
                   {t("common.no")}
-                </Button>
-                <Button onClick={() => answerPicked(true)} className="h-[52px] rounded-full text-[17px] font-semibold">
+                </button>
+                <button type="button" onClick={() => answerPicked(true)} className="raised-btn is-small justify-center">
                   {t("common.yes")}
-                </Button>
+                </button>
               </div>
             )}
             <div className="mt-2 flex justify-center gap-2">
@@ -522,7 +507,7 @@ export const OverviewCard = ({
                   {t("common.clear")}
                 </button>
               )}
-              <button type="button" onClick={toggleMulti} className="h-11 px-4 text-[15px] font-semibold text-primary">
+              <button type="button" onClick={toggleMulti} className="h-11 px-4 text-[15px] font-bold text-[hsl(var(--coin-teal))]">
                 {t("common.done")}
               </button>
             </div>

@@ -21,7 +21,7 @@ import type { Tracker, TrackerEntry } from "@/types/tracker";
 const Row = ({ icon: Icon, label, onClick }: { icon: ComponentType<LucideProps>; label: string; onClick: () => void }) => (
   <button type="button" onClick={() => { haptics.tap(); onClick(); }}
     className="flex h-[60px] w-full items-center gap-3.5 px-4 text-left active:bg-foreground/[0.04]">
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]">
+    <span className="icon-dot h-9 w-9">
       <Icon className="h-5 w-5" strokeWidth={2.2} />
     </span>
     <span className="min-w-0 flex-1 truncate text-[17px] font-semibold">{label}</span>

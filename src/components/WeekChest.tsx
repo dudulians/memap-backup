@@ -240,7 +240,7 @@ export const WeekChest = ({
           <p className="mt-1 text-[15px] font-medium text-muted-foreground">{t(`mission.${id}Line`, { day: r.mission.n })}</p>
           {id === "test" && (
             <button type="button" onClick={() => { haptics.tap(); setTestOpen(true); }}
-              className="mt-3 inline-flex h-11 items-center gap-2 rounded-full bg-[hsl(152_36%_44%)] px-4 text-[15px] font-bold text-white">
+              className="raised-btn is-small mt-3 px-5">
               <FlaskConical className="h-4 w-4" strokeWidth={2.4} /> {t("mission.choose")}
             </button>
           )}

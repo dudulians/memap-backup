@@ -11,7 +11,7 @@ import { OverviewCard } from "./OverviewCard";
 import { FindingsView } from "./FindingsView";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
 import { ChartViews } from "./ChartViews";
-import { ActionPoints } from "./ActionPoints";
+import { ActionPoints, type TryAction } from "./ActionPoints";
 import { ReflectionSheet } from "./ReflectionSheet";
 import { uuid } from "@/lib/uuid";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -22,7 +22,7 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 // go through the full lists, so nothing outside the island is touched.
 // only (Map cards, Nov 2 2026, her note: "при нажатии на календарь хочу чтоб
 // сразу был виден календарь"): show one section, with no tabs to wander off.
-export const PatternsTab = ({ focusIds, only }: { focusIds?: string[]; only?: "findings" | "overview" | "trends" | "signals" } = {}) => {
+export const PatternsTab = ({ focusIds, only, onTry }: { focusIds?: string[]; only?: "findings" | "overview" | "trends" | "signals"; onTry?: (x: TryAction) => void } = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
@@ -378,7 +378,7 @@ export const PatternsTab = ({ focusIds, only }: { focusIds?: string[]; only?: "f
             gone; a crossed row turns rose and offers "What now?", which
             opens the same reflection sheet (advice + new cycle). */}
         {/* Action points: the action first, why under it (her note, Nov 3 2026). */}
-        {section === "signals" && <ActionPoints trackers={visible} entries={entries} />}
+        {section === "signals" && <ActionPoints trackers={visible} entries={entries} onTry={onTry} />}
       </div>
 
       {/* Disclaimer removed from Patterns in 1.7.2 — was shown on

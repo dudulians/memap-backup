@@ -7,7 +7,7 @@
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { isoLocal } from "@/lib/doors";
-import { islandOf } from "@/lib/islands";
+import { isHardAnswer, isTestQuestion, islandOf } from "@/lib/islands";
 
 export const EXPERIMENT_DAYS = 7;
 const KEY = "memap_experiments";
@@ -26,6 +26,8 @@ export interface Experiment {
   reviewed?: string;
   /** keep asking the question after the week */
   kept?: boolean;
+  /** the action point it came from ("I'll try", Nov 5 2026): that question's id */
+  from?: string;
 }
 
 /** Ready ideas per island (keys into experiment.idea.*): everyday changes,
@@ -73,7 +75,7 @@ export const experimentOver = (x: Experiment, today = isoLocal(new Date())) => e
 export const finishedExperiments = () => getExperiments().filter((x) => !!x.reviewed);
 
 /** Start a test: adds "Did you…?" to the island, from today. */
-export const startExperiment = async (island: string, change: string, question: string): Promise<Experiment> => {
+export const startExperiment = async (island: string, change: string, question: string, from?: string): Promise<Experiment> => {
   const existing = await getTrackers();
   const tracker: Tracker = {
     id: `${Date.now()}-test`,
@@ -91,7 +93,7 @@ export const startExperiment = async (island: string, change: string, question: 
     island,
   };
   await saveTrackers([...existing, tracker]);
-  const x: Experiment = { id: tracker.id, island, trackerId: tracker.id, change, start: isoLocal(new Date()) };
+  const x: Experiment = { id: tracker.id, island, trackerId: tracker.id, change, start: isoLocal(new Date()), ...(from ? { from } : {}) };
   save([...getExperiments().filter((e) => e.reviewed), x]);
   window.dispatchEvent(new Event("memap-settings-changed"));
   return x;
@@ -114,12 +116,13 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
     d.setDate(d.getDate() + i);
     return isoLocal(d);
   }));
-  // The island's "hard" questions (not the test question itself).
-  const hardIds = new Set(trackers.filter((t) => !t.archived && t.id !== x.trackerId && t.problemWhen === "yes" && islandOf(t) === x.island).map((t) => t.id));
+  // The island's questions (not test questions), hard days by the one rule
+  // (isHardAnswer: YES to a hard question, NO to a good one).
+  const own = new Map(trackers.filter((t) => !t.archived && !isTestQuestion(t) && islandOf(t) === x.island).map((t) => [t.id, t]));
   const did = new Map<string, boolean>();
   for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date)) did.set(e.date, e.value === true);
-  const hard = new Set(entries.filter((e) => days.has(e.date) && hardIds.has(e.trackerId) && e.value === true).map((e) => e.date));
-  const answeredHard = new Set(entries.filter((e) => days.has(e.date) && hardIds.has(e.trackerId)).map((e) => e.date));
+  const hard = new Set(entries.filter((e) => days.has(e.date) && own.has(e.trackerId) && isHardAnswer(own.get(e.trackerId)!, e.value)).map((e) => e.date));
+  const answeredHard = new Set(entries.filter((e) => days.has(e.date) && own.has(e.trackerId)).map((e) => e.date));
   const withDays = [...did.entries()].filter(([d, v]) => v && answeredHard.has(d)).map(([d]) => d);
   const withoutDays = [...did.entries()].filter(([d, v]) => !v && answeredHard.has(d)).map(([d]) => d);
   return {

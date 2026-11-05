@@ -56,11 +56,10 @@ export const DaySheet = ({ date, ids, trackers, entries, onSet, onClose }: {
             return (
               <div key={tr.id} className="surface rounded-[20px] px-4 py-3">
                 <p className="text-[16px] font-semibold leading-snug">{cardQuestion(tr)}</p>
-                <div className="mt-2.5 grid grid-cols-2 gap-2" role="group" aria-label={cardQuestion(tr)}>
+                <div className="seg mt-2.5 grid w-full grid-cols-2" role="group" aria-label={cardQuestion(tr)}>
                   {[true, false].map((val) => (
                     <button key={String(val)} type="button" aria-pressed={v === val} onClick={() => set(tr.id, val)}
-                      className={cn("h-11 rounded-full border-2 text-[15px] font-bold transition-colors duration-150 active:scale-[0.98]",
-                        v === val ? "border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal))] text-white" : "border-foreground/[0.12] text-foreground/75")}>
+                      className={cn("chip w-full", v === val && "is-on")}>
                       {val ? t("common.yes") : t("common.no")}
                     </button>
                   ))}

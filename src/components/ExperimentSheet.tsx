@@ -1,7 +1,9 @@
 // "Test one change" (src/lib/experiments.ts): pick an island and one small
 // change, try it for 7 days; then see how that island's hard days went on
 // days with the change and without. Counts only, never a verdict. Same
-// full-screen frame as the games.
+// full-screen frame as the games. From an action point ("I'll try", Nov 5
+// 2026) her plan is the first choice, the island is the question's own, and
+// starting the test counts that action point again from today.
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -11,23 +13,29 @@ import { haptics } from "@/lib/haptics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
-import { islandHsl } from "@/lib/islandColors";
 import { EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, startExperiment, type Experiment } from "@/lib/experiments";
-import { IslandPicture } from "@/components/IslandPicture";
+import { countFromToday } from "@/lib/actionPoints";
+import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { Pressable } from "@/components/ui/pressable";
 
-const GREEN = "hsl(152 36% 44%)";
-/** Chosen: a green rim, a light tint and a tick (her note, Nov 3 2026: the
- *  choice "didn't press"; the old ring didn't show at all). */
-const chosenLook = { boxShadow: `0 0 0 2.5px ${GREEN}`, background: "hsl(152 36% 44% / 0.1)" };
+/* Chosen: a teal ring and a teal tick (the Aurora kit, Nov 5 2026: no
+   tinted backgrounds, one accent colour). */
 
-export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, onClose }: {
+const PLAN = "__plan";
+/** "Did you…?" from her own words: "Walk 20 minutes" → "Walk 20 minutes?" */
+const asQuestion = (s: string) => `${s.trim().replace(/[.?？!]+$/, "")}?`;
+
+export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, onClose }: {
   mode: "pick" | "result";
   experiment?: Experiment | null;
   trackers: Tracker[];
   entries: TrackerEntry[];
   /** island to suggest first (from an island's sheet) */
   island?: IslandId;
+  /** her plan from an action point: the first choice, on that island only */
+  plan?: string;
+  /** the action point it came from: its count starts again when the test starts */
+  from?: { trackerId: string; k: number };
   onClose: () => void;
 }) => {
   const { t } = useTranslation();
@@ -35,17 +43,21 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   // The stormiest island first: that's where a change can show.
   const first = startIsland ?? [...islands].sort((a, b) => b.hardDays - a.hardDays)[0]?.id;
   const [island, setIsland] = useState<IslandId | undefined>(first);
-  const [idea, setIdea] = useState<string | null>(null);
+  const [idea, setIdea] = useState<string | null>(plan ? PLAN : null);
   const [own, setOwn] = useState("");
   const [started, setStarted] = useState<Experiment | null>(null);
 
-  const change = idea ? t(`experiment.idea.${idea}.change`) : own.trim();
-  const question = idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? `${own.trim().replace(/[?？]+$/, "")}?` : "";
+  const change = idea === PLAN ? plan!.trim() : idea ? t(`experiment.idea.${idea}.change`) : own.trim();
+  const question = idea === PLAN ? asQuestion(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? asQuestion(own) : "";
   const start = async () => {
     if (!island || !change) return;
     haptics.rise();
-    setStarted(await startExperiment(island, change, question));
+    const x = await startExperiment(island, change, question, from?.trackerId);
+    if (from) await countFromToday(from.trackerId, from.k);
+    setStarted(x);
   };
+  const choices = [...(plan ? [PLAN] : []), ...(island ? ideasFor(island) : [])];
+  const label = (k: string) => (k === PLAN ? plan! : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
   // The result screen: a garden grew.
@@ -66,19 +78,17 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto px-6 pb-10">
         <p className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
-          <FlaskConical className="h-4 w-4 text-[hsl(152_36%_44%)]" strokeWidth={2.4} />{t("experiment.title")}
+          <FlaskConical className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{t("experiment.title")}
         </p>
 
         {mode === "pick" && !started && (
           <>
             <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">{t("experiment.ask", { count: EXPERIMENT_DAYS })}</p>
-            {/* Which island */}
+            {/* Which island (from an action point: that question's island only) */}
             <div className="-mx-6 mt-5 flex gap-2 overflow-x-auto px-6 scrollbar-hide">
-              {islands.map((isl) => (
-                <button key={isl.id} type="button" onClick={() => { haptics.tap(); setIsland(isl.id); setIdea(null); }} aria-pressed={island === isl.id}
-                  className={cn("inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] pl-1.5 pr-4 text-[15px] font-semibold",
-                    island === isl.id ? "font-bold" : "border-foreground/[0.14] bg-foreground/[0.04]")}
-                  style={island === isl.id ? { borderColor: `hsl(${islandHsl(isl.id)})`, background: `hsl(${islandHsl(isl.id)} / 0.14)` } : undefined}>
+              {islands.filter((isl) => !plan || isl.id === island).map((isl) => (
+                <button key={isl.id} type="button" disabled={!!plan} onClick={() => { haptics.tap(); setIsland(isl.id); setIdea(null); }} aria-pressed={island === isl.id}
+                  className={cn("chip has-icon", island === isl.id && "is-on")}>
                   <img src={mapPic("icon_" + isl.def.icon)} alt="" width={28} height={28} />
                   {islandName(t, isl.id)}
                 </button>
@@ -87,23 +97,20 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
             {/* Which change */}
             {island && (
               <div className="mt-4 space-y-2.5">
-                {ideasFor(island).map((k) => {
+                {choices.map((k) => {
                   const on = idea === k;
                   return (
                     <button key={k} type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={on}
-                      className={cn("surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3 text-left text-[17px] outline-none transition-[box-shadow,background-color] duration-150 active:scale-[0.99]", on ? "font-bold" : "font-semibold")}
-                      style={on ? chosenLook : undefined}>
-                      <span className="min-w-0 flex-1">{t(`experiment.idea.${k}.change`)}</span>
-                      <span aria-hidden="true" className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2", on ? "text-white" : "border-foreground/20")}
-                        style={on ? { background: GREEN, borderColor: GREEN } : undefined}>
+                      className={cn("surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3 text-left text-[17px] outline-none transition-shadow duration-150 active:scale-[0.99]", on ? "pick-on font-bold" : "font-semibold")}>
+                      <span className="min-w-0 flex-1">{label(k)}</span>
+                      <span aria-hidden="true" className={cn("tick", on && "is-on")}>
                         {on && <Check className="h-4 w-4" strokeWidth={3} />}
                       </span>
                     </button>
                   );
                 })}
                 <input value={own} onChange={(e) => { setOwn(e.target.value); setIdea(null); }} placeholder={t("experiment.own")} maxLength={60}
-                  className="h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none"
-                  style={own.trim() ? chosenLook : undefined} />
+                  className={cn("h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none", own.trim() && "pick-on")} />
               </div>
             )}
             <div className="mt-auto pt-8">
@@ -117,7 +124,11 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
 
         {mode === "pick" && started && (
           <div className="flex flex-1 flex-col items-center justify-center text-center animate-fade-in">
-            <IslandPicture id={started.island as IslandId} width={170} />
+            {/* the island as it looks on her Map now (not the old flat picture) */}
+            <span aria-hidden="true" className="block w-[180px]">
+              <img className="art-day block w-full" src={art(artOf(started.island as IslandId, islandEvenings(trackers, entries).get(started.island as IslandId) ?? 0), false)} alt="" />
+              <img className="art-night block w-full" src={art(artOf(started.island as IslandId, islandEvenings(trackers, entries).get(started.island as IslandId) ?? 0), true)} alt="" />
+            </span>
             <p className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{t("experiment.started")}</p>
             <p className="mt-2 text-[17px] font-medium text-muted-foreground">{t("experiment.startedLine", { island: islandName(t, started.island as IslandId), count: EXPERIMENT_DAYS })}</p>
             <Pressable tone="teal" haptic="none" onClick={onClose} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">

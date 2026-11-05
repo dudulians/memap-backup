@@ -444,7 +444,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
             {offer.saved ? (
               <span className="shrink-0 px-2 text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("unload.savedOne")}</span>
             ) : (
-              <button type="button" onClick={saveOffer} className="h-9 shrink-0 rounded-full bg-[hsl(var(--coin-teal))] px-3.5 text-[14px] font-bold text-white">
+              <button type="button" onClick={saveOffer} className="quiet-btn h-9 shrink-0 px-3.5 text-[14px] text-[hsl(var(--coin-teal))]">
                 {t("unload.toNotes")}
               </button>
             )}
@@ -476,7 +476,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
             <div className="mt-4 space-y-3.5">
               {([[PenLine, "how1"], [Circle, "how2"], [Pointer, "how3"], [NotebookPen, "how4"]] as const).map(([Icon, k]) => (
                 <div key={k} className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]">
+                  <span className="icon-dot h-10 w-10">
                     <Icon className="h-5 w-5" strokeWidth={2.2} />
                   </span>
                   <p className="text-[17px] font-semibold leading-snug">{t(`unload.${k}`)}</p>

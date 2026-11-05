@@ -65,7 +65,7 @@ export const AnswerNow = ({ island, trackers, entries }: { island: Island; track
       <p className="text-[17px] font-bold leading-snug">{t("islands.answerTitle", { count: ids.length })}</p>
       <p className="mt-0.5 text-[14px] font-medium leading-snug text-muted-foreground">{t("islands.answerWhere", { name })}</p>
       <button type="button" onClick={() => { haptics.medium(); window.dispatchEvent(new CustomEvent("memap-answer-now", { detail: { ids, title: name, island: island.id } })); }}
-        className="mt-3 flex h-12 w-full items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-[16px] font-bold text-white active:scale-[0.98] transition-transform">
+        className="raised-btn is-small mt-3 w-full justify-center">
         {t("islands.answerNow")}
       </button>
     </div>
@@ -85,7 +85,7 @@ export const GrowthLadder = ({ island, days }: { island: IslandId; days: number 
         const name = artOf(island, STAGE_AT[s - 1]), ahead = s > now;
         return (
           <div key={s} className="flex flex-col items-center text-center">
-            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", s === now && "bg-[hsl(var(--coin-teal)/0.12)] ring-2 ring-[hsl(var(--coin-teal))]", ahead && "opacity-50 saturate-50")}>
+            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", s === now && "surface pick-on", ahead && "opacity-50 saturate-50")}>
               <img aria-hidden="true" className="art-day block h-[50px] w-full object-contain" src={art(name, false)} alt="" />
               <img aria-hidden="true" className="art-night block h-[50px] w-full object-contain" src={art(name, true)} alt="" />
               {s === 4 && <img aria-hidden="true" className="absolute left-[22%] top-[4%] w-[15%]" src={mapPicFor("marker_flag", false)} alt="" />}
@@ -192,7 +192,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
       )}
       {test && test.island === island.id ? (
         <div className="surface flex items-center gap-3 rounded-[20px] px-4 py-3">
-          <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(152_36%_44%)]" strokeWidth={2.2} />
+          <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
           <div className="min-w-0">
             <p className="text-[16px] font-bold leading-snug">{test.change}</p>
             <p className="text-[14px] font-medium text-muted-foreground">{t("experiment.dayOf", { k: Math.min(experimentDay(test), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</p>
@@ -201,7 +201,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
       ) : !test && onTest ? (
         <button type="button" onClick={() => { haptics.tap(); onTest(); }}
           className="surface flex w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left active:scale-[0.99] transition-transform">
-          <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(152_36%_44%)]" strokeWidth={2.2} />
+          <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
           <span className="min-w-0">
             <span className="block text-[16px] font-bold leading-snug">{t("experiment.here")}</span>
             <span className="block text-[14px] font-medium text-muted-foreground">{t("experiment.hereLine")}</span>

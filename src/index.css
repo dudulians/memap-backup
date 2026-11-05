@@ -2232,9 +2232,48 @@ html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"]:acti
 @keyframes grewIn { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .grew-toast { animation: none; } }
 /* a main button in the new look: teal, raised on its lip like the path's discs */
+/* ---- Aurora kit (her note, Nov 5 2026: "формат кнопок и переключателей
+   должен быть везде одинаковый", no green backgrounds, check the fonts).
+   - Main button: .raised-btn — teal face, darker lip, words as written.
+     The Pressable buttons look the same in the new screens (below).
+   - Second button: .quiet-btn — grey.
+   - Switches and filters: .chip on a grey ground; the chosen one is white
+     and lifted, like Map | Globe (and a two-way switch: .seg around chips).
+   - A picked row: .pick-on (a teal ring) and .tick (a teal tick), never a
+     tinted background.
+   - Icon circles: .icon-dot, grey with a teal icon.
+   Teal is the one accent colour for controls; gold is for lit lighthouses
+   and the report, not for borders. One font: MeMap Sans. */
 .raised-btn { display: inline-flex; height: 56px; align-items: center; gap: 8px; border-radius: 9999px; padding: 0 28px; background: hsl(var(--coin-teal)); color: #fff;
-  font-size: 17px; font-weight: 800; box-shadow: 0 5px 0 hsl(172 70% 30%); transition: transform .1s ease-out, box-shadow .1s ease-out; }
-.raised-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 hsl(172 70% 30%); }
+  font-size: 17px; font-weight: 800; box-shadow: 0 5px 0 hsl(var(--lip-teal)); transition: transform .1s ease-out, box-shadow .1s ease-out; }
+.raised-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 hsl(var(--lip-teal)); }
+.raised-btn.is-small { height: 50px; font-size: 16px; box-shadow: 0 4px 0 hsl(var(--lip-teal)); }
+.raised-btn.is-small:active { box-shadow: 0 1px 0 hsl(var(--lip-teal)); }
+.raised-btn.is-gold { background: hsl(var(--coin-gold)); color: hsl(28 70% 16%); box-shadow: 0 4px 0 hsl(var(--lip-gold)); }
+.raised-btn.is-gold:active { box-shadow: 0 1px 0 hsl(var(--lip-gold)); }
+.raised-btn:disabled { transform: none; opacity: .4; }
+.quiet-btn { display: inline-flex; height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; padding: 0 20px;
+  background: hsl(var(--foreground) / 0.06); color: hsl(var(--foreground)); font-size: 15px; font-weight: 700; transition: transform .1s ease-out; }
+.quiet-btn:active { transform: scale(0.98); }
+.seg { display: inline-flex; border-radius: 9999px; background: hsl(var(--foreground) / 0.06); padding: 2px; }
+.chip { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; height: 40px; border-radius: 9999px; padding: 0 16px;
+  border: 1px solid transparent; background: hsl(var(--foreground) / 0.06); color: hsl(var(--muted-foreground)); font-size: 15px; font-weight: 600;
+  transition: background-color .15s, color .15s, box-shadow .15s; }
+.seg .chip { background: transparent; height: 32px; padding: 0 14px; font-size: 14px; font-weight: 700; }
+.chip.has-icon { padding: 0 14px 0 5px; }
+.chip.is-on, .seg .chip.is-on { background: hsl(var(--surface) / var(--surface-alpha, 1)); border-color: var(--surface-border, transparent); box-shadow: var(--surface-shadow);
+  color: hsl(var(--foreground)); font-weight: 700; }
+/* at night the white "lifted" chip is the lighter surface: lift it a little more */
+html[data-theme="aurora"] .chip.is-on, html[data-theme="aurora"] .seg .chip.is-on { background: hsl(var(--foreground) / 0.16); border-color: transparent; }
+.pick-on { box-shadow: 0 0 0 2px hsl(var(--coin-teal)), var(--surface-shadow) !important; }
+.tick { display: flex; width: 28px; height: 28px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; border: 2px solid hsl(var(--foreground) / 0.2); }
+.tick.is-on { border-color: hsl(var(--coin-teal)); background: hsl(var(--coin-teal)); color: #fff; }
+.icon-dot { display: flex; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; background: hsl(var(--foreground) / 0.06); color: hsl(var(--coin-teal)); }
+/* The Pressable buttons (src/components/ui/pressable.tsx) in the new screens:
+   the same flat teal face and lip as .raised-btn, round, no capitals. */
+html[data-ui="new"] .press3d-face { background: hsl(var(--p3-face)); box-shadow: none; text-transform: none !important; letter-spacing: 0 !important; }
+html[data-ui="new"] .press3d-ground { display: none; }
+html[data-ui="new"] .press3d.rounded-2xl { border-radius: 9999px; }
 /* the week's report: the same raised gold disc as on the path (WeekChest) */
 .report-badge { display: flex; width: 128px; height: 128px; align-items: center; justify-content: center; border-radius: 9999px; color: #fff;
   background: linear-gradient(180deg, #FFD866 0%, #F6B92B 100%); box-shadow: 0 8px 0 #CF8E17, 0 18px 30px -12px rgba(160, 110, 20, .45); }

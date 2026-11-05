@@ -149,7 +149,10 @@ export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: 
 
 /** A hard day's answer, the same rule as the lighthouses (WORLD-BIBLE, Nov 5
  *  2026): YES to a hard question, NO to a good one ("Slept 7+ hours?" — no). */
-export const isHardAnswer = (t: Tracker, value: unknown): boolean => typeof value === "boolean" && value === (t.problemWhen === "yes");
+export const isHardAnswer = (t: Tracker, value: unknown): boolean => !isTestQuestion(t) && typeof value === "boolean" && value === (t.problemWhen === "yes");
+/** A week's test asks "Did you…?" (src/lib/experiments.ts): a "no" there means
+ *  she didn't try it that day, not that the day was hard. */
+export const isTestQuestion = (t: Tracker) => t.id.endsWith("-test");
 
 /** The islands that have questions, busiest first, with this week's
  *  weather. Honest weather (plan §3.5, Nov 2 2026): a hard day is a day with

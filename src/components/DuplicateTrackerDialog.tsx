@@ -108,7 +108,7 @@ export const DuplicateTrackerDialog = ({
                 <p className="text-xs uppercase tracking-wider mt-1" style={{ color: `hsl(var(--${categoryColor}))` }}>
                   {localizeTrackerTheme(existingTracker)}
                 </p>
-                <p className="text-sm text-muted-foreground mt-2 font-playful break-words">
+                <p className="text-sm text-muted-foreground mt-2 break-words">
                   {localizeTrackerQuestion(existingTracker.questionText, existingTracker.title)}
                 </p>
               </div>

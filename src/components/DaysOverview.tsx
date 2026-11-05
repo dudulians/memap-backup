@@ -12,6 +12,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { isoLocal } from "@/lib/doors";
 import { isHardAnswer, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
+import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
 import { smooth } from "./ChartViews";
 
@@ -72,6 +73,8 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
 
   const lit = useMemo(() => litTrackers(trackers, entries).size, [trackers, entries]);
   const rules = live.filter((tr) => tr.threshold > 0).length;
+  // No "all calm" before a week of evenings (Nov 5 2026): it's still taking shape.
+  const shaping = useMemo(() => answeredEvenings(trackers, entries) < SHAPING_EVENINGS, [trackers, entries]);
 
   // Calendar: cells fill one by one (as if every day were answered), then
   // turn into her real days.
@@ -128,7 +131,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
           <img src={mapPic("lighthouse")} alt="" width={28} height={36} className={lit > 0 ? "drop-shadow-[0_0_8px_hsl(44_96%_60%/0.8)]" : "opacity-60 grayscale"} />
           <span className="text-[20px] font-bold tabular-nums">{lit}</span>
         </span>
-        <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{lit > 0 ? t("overviewCards.litOf", { count: rules }) : t("overviewCards.noneLit", { count: rules })}</span>
+        <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{lit === 0 && shaping ? t("overviewCards.shaping") : t("overviewCards.litOf", { count: rules })}</span>
       </button>
     </div>
   );

@@ -530,7 +530,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
             <p className="text-[15px] font-semibold leading-snug text-muted-foreground">{t("map.unexplored")}</p>
             {onNewIsland && (
               <button type="button" onClick={() => { haptics.tap(); setNote(false); onNewIsland(); }}
-                className="mt-2 inline-flex h-10 items-center gap-1.5 rounded-full bg-[hsl(var(--coin-teal))] px-4 text-[15px] font-bold text-white">
+                className="raised-btn is-small mt-2 px-5">
                 <Plus className="h-4 w-4" strokeWidth={2.6} /> {t("islands.new")}
               </button>
             )}

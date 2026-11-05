@@ -25,13 +25,12 @@ export const RuleChips = ({ hard, value, onChange, plan, onPlan, customLabel, sh
         {RULE_KEYS.map((k) => (
           <button key={k} type="button" aria-pressed={value === k}
             onClick={() => { haptics.tap(); onChange(k, RULES[k]); }}
-            className={cn("h-11 rounded-full border-[1.5px] px-4 text-[15px] font-semibold transition-colors",
-              value === k ? "border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal)/0.14)] font-bold" : "border-foreground/[0.16] bg-foreground/[0.04]")}>
+            className={cn("chip", value === k && "is-on")}>
             {t(`rules.${k}`)}
           </button>
         ))}
         {value === null && customLabel && (
-          <span className="inline-flex h-11 items-center rounded-full border-[1.5px] border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal)/0.14)] px-4 text-[15px] font-bold">{customLabel}</span>
+          <span className="chip is-on">{customLabel}</span>
         )}
       </div>
       {showPlan && value !== "off" && (

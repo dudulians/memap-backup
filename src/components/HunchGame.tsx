@@ -116,7 +116,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
       {on && <Check className="h-4 w-4" strokeWidth={3} />}
     </span>
   );
-  const picked = "ring-2 ring-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal)/0.08)]";
+  const picked = "pick-on";
 
   return createPortal(
     <div role="dialog" aria-modal="true" className="fixed inset-0 z-[70] flex flex-col bg-background/95 backdrop-blur-sm animate-fade-in">
@@ -143,7 +143,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                       {name(hunch.suspect)}{result.nextDay ? ` ${t("map.nextDay")}` : ""}
                     </p>
                     <span className={cn("shrink-0 rounded-full px-3 py-1 text-[13px] font-bold",
-                      result.onto ? "bg-[hsl(var(--coin-teal)/0.15)] text-[hsl(var(--coin-teal))]" : "bg-foreground/[0.06] text-muted-foreground")}>
+                      result.onto ? "bg-foreground/[0.06] text-[hsl(var(--coin-teal))]" : "bg-foreground/[0.06] text-muted-foreground")}>
                       {t(result.onto ? "hunch.ontoShort" : "hunch.notShort")}
                     </span>
                   </div>
@@ -187,14 +187,14 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                 );
               })}
               {ownOpen ? (
-                <label className={cn("flex min-h-14 w-full items-center gap-3 rounded-2xl px-5", ownText ? cn("surface", picked) : "border-2 border-dashed border-foreground/15")}>
+                <label className={cn("flex min-h-14 w-full items-center gap-3 rounded-2xl px-5", ownText ? cn("surface", picked) : "border border-foreground/[0.14] bg-foreground/[0.04]")}>
                   <input value={own} onChange={(e) => setOwn(e.target.value)} placeholder={t("hunch.ownPlaceholder")} maxLength={70} autoFocus
                     aria-label={t("hunch.ownIdea")} className="h-12 min-w-0 flex-1 bg-transparent text-[17px] font-semibold outline-none placeholder:font-medium" />
                   {tick(!!ownText)}
                 </label>
               ) : (
                 <button type="button" onClick={() => { haptics.tap(); setOwnOpen(true); }}
-                  className="flex min-h-14 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-foreground/15 px-5 text-left text-[17px] font-semibold text-muted-foreground">
+                  className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-left text-[17px] font-semibold text-muted-foreground">
                   <Pencil className="h-5 w-5 shrink-0" strokeWidth={2.2} />
                   {t("hunch.ownIdea")}
                 </button>
@@ -214,7 +214,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
             <p className="text-[26px] font-bold leading-tight tracking-tight">{t("hunch.noted")}</p>
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               {noted.names.map((n) => (
-                <span key={n} className="rounded-full bg-[hsl(var(--coin-teal)/0.12)] px-3.5 py-1.5 text-[15px] font-bold">{n}</span>
+                <span key={n} className="rounded-full bg-foreground/[0.06] px-3.5 py-1.5 text-[15px] font-bold">{n}</span>
               ))}
             </div>
             <p className="mt-2 text-[17px] font-semibold text-muted-foreground">→ {x}</p>

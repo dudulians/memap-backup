@@ -18,6 +18,7 @@ import { litTrackers } from "@/lib/lighthouses";
 import { getNotes } from "@/lib/notes";
 import { ITEMS, growthOf, islandDays, owned, syncTreasures, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
+import type { TryAction } from "./ActionPoints";
 import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
@@ -131,6 +132,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
+  // "I'll try" on an action point: the Action points sheet steps aside for the
+  // week's test, and comes back after it (Nov 5 2026).
+  const [trying, setTrying] = useState<TryAction | null>(null);
   // Her avatar sails by the island she answered last (her note: the avatar
   // was only an icon in the corner).
   const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
@@ -160,10 +164,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="flex items-center justify-between gap-3">
           <h2 className="min-w-0 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
           {loaded && islands.length > 0 && (
-            <div className="inline-flex shrink-0 rounded-full bg-foreground/[0.06] p-0.5" role="tablist" aria-label={t("map.viewAria")}>
+            <div className="seg shrink-0" role="tablist" aria-label={t("map.viewAria")}>
               {(["map", "globe"] as const).map((v) => (
                 <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } window.dispatchEvent(new CustomEvent("memap-map-view", { detail: v })); }}
-                  className={`h-8 rounded-full px-3.5 text-[14px] font-bold transition-colors ${view === v ? "surface text-foreground" : "text-muted-foreground"}`}>
+                  className={`chip ${view === v ? "is-on" : ""}`}>
                   {v === "map" ? t("map.flat") : t("map.globe")}
                 </button>
               ))}
@@ -179,7 +183,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           <div className="absolute inset-0">
             <PlanetGlobe sky={false} islands={islands} routes={routes} avatar={avatarPic} lit={lit} days={dayCount} onOpen={setOpen}
               onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-              paused={!!open || !!only || newOpen || !!editor || !!testFor || !!link} onNewIsland={() => setNewOpen(true)} />
+              paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={() => setNewOpen(true)} />
           </div>
         )
       ) : (
@@ -199,7 +203,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {/* the ring has its own place for a new island; this one is for a full map */}
           {loaded && islands.length >= 9 && (
             <button type="button" onClick={() => { haptics.tap(); setNewOpen(true); }}
-              className="mx-auto mt-2 flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-foreground/20 bg-white/40 px-5 text-[16px] font-bold text-foreground/80">
+              className="surface mx-auto mt-2 flex h-12 items-center gap-2 rounded-full px-5 text-[16px] font-bold">
               <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}
             </button>
           )}
@@ -275,7 +279,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               const isl = id ? islands.find((i) => i.id === id) : undefined;
               return (
                 <button key={id ?? "all"} type="button" role="tab" aria-selected={on} onClick={() => { haptics.tap(); setOnlyIsland(id); }}
-                  className={`inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border-[1.5px] text-[15px] font-semibold ${isl ? "pl-1 pr-3.5" : "px-4"} ${on ? "border-[hsl(var(--coin-teal))] bg-[hsl(var(--coin-teal)/0.12)] font-bold" : "border-foreground/[0.12] bg-foreground/[0.03]"}`}>
+                  className={`chip ${isl ? "has-icon" : ""} ${on ? "is-on" : ""}`}>
                   {isl && <img src={mapPic("icon_" + isl.def.icon)} alt="" width={28} height={28} />}
                   {isl ? islandName(t, isl.id) : t("map.allIslands")}
                 </button>
@@ -284,7 +288,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           </div>
           {only && (
             <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only}
-              focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)} />
+              focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)}
+              onTry={(x) => { setOnly(null); window.setTimeout(() => setTrying(x), 250); }} />
           )}
         </div>
       </BottomSheet>
@@ -292,6 +297,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         onChart={(ids) => { setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
       {testFor && (
         <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
+      )}
+      {trying && (
+        <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
+          trackers={trackers} entries={entries} onClose={() => { setTrying(null); window.setTimeout(() => setOnly("signals"), 150); }} />
       )}
       {newOpen && (
         <NewIslandSheet islands={islands} trackers={trackers} canOwn={canMake} onClose={() => setNewOpen(false)}

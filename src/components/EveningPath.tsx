@@ -464,10 +464,10 @@ export const EveningPath = ({
   // an open bubble and replay its entrance.
   const button = (children: ReactNode, onClick: () => void, look: "teal" | "plain" | "gold" = "teal") => (
     <button type="button" onClick={onClick}
-      className={cn("mt-3 flex h-12 w-full items-center justify-center gap-1 rounded-full text-[16px] font-bold active:scale-[0.98] transition-transform",
-        look === "teal" && "bg-[hsl(var(--coin-teal))] text-white",
-        look === "gold" && "bg-[hsl(var(--coin-gold))] text-white",
-        look === "plain" && "bg-foreground/[0.06] text-foreground")}>
+      className={cn("mt-3 w-full justify-center gap-1",
+        look === "teal" && "raised-btn is-small",
+        look === "gold" && "raised-btn is-small is-gold",
+        look === "plain" && "quiet-btn h-12 text-[16px]")}>
       {children}
     </button>
   );
@@ -756,7 +756,7 @@ export const EveningPath = ({
           style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
           {avatarPic
             ? <img src={avatarPic} alt="" className="h-9 w-9 rounded-full bg-sky-50 object-contain p-0.5 ring-2 ring-[hsl(var(--coin-teal))] dark:bg-[hsl(var(--surface))]" />
-            : <span className="h-9 w-9 rounded-full bg-[hsl(var(--coin-teal)/0.12)]" />}
+            : <span className="h-9 w-9 rounded-full bg-foreground/[0.06]" />}
           {t("path.backToStep")}
           {away === "up" ? <ChevronUp className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} /> : <ChevronDown className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />}
         </button>,

@@ -49,7 +49,7 @@ export const DictateButton = ({ text, onText }: { text: string; onText: (next: s
       <button type="button" onClick={on ? stop : start} aria-pressed={on}
         aria-label={on ? t("notesTab.dictateStop") : t("notesTab.dictate")}
         className={cn("relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-transform active:scale-95",
-          on ? "bg-[hsl(var(--coin-teal))] text-white" : "bg-[hsl(var(--coin-teal)/0.12)] text-[hsl(var(--coin-teal))]")}>
+          on ? "bg-[hsl(var(--coin-teal))] text-white" : "bg-foreground/[0.06] text-[hsl(var(--coin-teal))]")}>
         {on && <span aria-hidden="true" className="dictate-pulse absolute inset-0 rounded-full" />}
         <Mic className="relative h-6 w-6" strokeWidth={2.2} />
       </button>
