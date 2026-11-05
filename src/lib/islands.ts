@@ -89,6 +89,7 @@ const CATEGORY: Record<Tracker["category"], BuiltinIsland> = {
 export const WORK_TEMPLATES = new Set([
   "burned-out-after-work", "didnt-want-to-work", "worked-overtime", "felt-fulfilled-at-work", "boss-was-difficult",
   "conflict-with-colleague", "wanted-leave-job", "thought-career-change", "long-commute", "dealt-with-paperwork",
+  "main-thing-done", "focus-hour",
 ]);
 const STREAM_OF = new Map(LIFE_STREAMS.flatMap((st) => st.templates.map((tpl) => [tpl.id, st.id] as const)));
 const islandCache = new Map<string, IslandId>();

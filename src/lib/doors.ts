@@ -8,7 +8,7 @@
 // `TrackerEntry.tags` (reason chips) and the door state below, which
 // the Today hero and the echo lines read.
 import type { LucideIcon } from "lucide-react";
-import { Heart, Activity, Wine, Smile, CloudRain } from "lucide-react";
+import { Heart, Activity, Wine, Smile, CloudRain, Moon, Zap, Leaf, BedDouble, HeartHandshake, Target, Footprints, Sparkles } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, saveTrackers, getEntries, saveEntries } from "./storage";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
@@ -19,7 +19,9 @@ import {
 } from "./trackerLocalize";
 import { uuid } from "./uuid";
 
-export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid";
+export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid" | "sleep"
+  // onboarding v2 (Nov 5 2026): "I want more good days"
+  | "energy" | "calm" | "goodSleep" | "closeness" | "focus" | "movement" | "joy";
 
 export interface Door {
   id: DoorId;
@@ -37,11 +39,17 @@ export interface Door {
   icon: LucideIcon;
   /** Tailwind text colour class for the door icon. */
   iconClass: string;
+  /** Onboarding v2 (Nov 5 2026): "Something keeps happening" or "I want more good days". */
+  branch: "pain" | "good";
+  /** The answer that means "it happened" (default yes). A bad night is a "no"
+   *  to "Slept enough", so the Bad nights door logs no. */
+  mainValue?: boolean;
 }
 
 export const DOORS: Door[] = [
   {
     id: "fights",
+    branch: "pain",
     kind: "event",
     mainTemplateId: "argued-with-partner",
     contextTemplateIds: ["slept-enough", "drank-alcohol", "felt-fatigued"],
@@ -51,6 +59,7 @@ export const DOORS: Door[] = [
   },
   {
     id: "mood",
+    branch: "pain",
     kind: "state",
     // Main = a low day. Anxiety is the first context question and is
     // answered by the same "how did today feel?" tap (see FEELINGS).
@@ -62,6 +71,7 @@ export const DOORS: Door[] = [
   },
   {
     id: "migraine",
+    branch: "pain",
     kind: "event",
     mainTemplateId: "migraine",
     contextTemplateIds: ["slept-enough", "felt-anxious", "ate-by-2pm"],
@@ -71,6 +81,7 @@ export const DOORS: Door[] = [
   },
   {
     id: "drinking",
+    branch: "pain",
     kind: "event",
     mainTemplateId: "drank-alcohol",
     contextTemplateIds: ["slept-enough", "felt-anxious", "felt-lonely"],
@@ -80,6 +91,7 @@ export const DOORS: Door[] = [
   },
   {
     id: "kid",
+    branch: "pain",
     kind: "event",
     mainTemplateId: "yelled-at-kid",
     contextTemplateIds: ["slept-enough", "felt-fatigued", "felt-anxious"],
@@ -87,6 +99,30 @@ export const DOORS: Door[] = [
     icon: Smile,
     iconClass: "text-note",
   },
+  {
+    id: "sleep",
+    branch: "pain",
+    kind: "event",
+    mainTemplateId: "slept-enough",
+    mainValue: false,
+    contextTemplateIds: ["coffee-late", "screen-time-long", "ate-late"],
+    reasons: ["caffeine", "screens", "thoughts", "lateFood", "noise", "kids", "pain", "dontKnow"],
+    icon: Moon,
+    iconClass: "text-[hsl(232_62%_62%)]",
+  },
+  // "I want more good days" (onboarding v2): the good question is the main one
+  ...([
+    ["energy", "had-energy", ["slept-enough", "outside-30min", "exercised"], Zap, "text-[hsl(36_86%_52%)]"],
+    ["calm", "felt-calm", ["slept-enough", "phone-free-morning", "time-for-myself"], Leaf, "text-[hsl(152_36%_44%)]"],
+    ["goodSleep", "slept-enough", ["coffee-late", "screen-time-long", "felt-anxious"], BedDouble, "text-[hsl(232_62%_62%)]"],
+    ["closeness", "felt-close-to-partner", ["slept-enough", "felt-fatigued", "saw-friends"], HeartHandshake, "text-[hsl(340_62%_60%)]"],
+    ["focus", "main-thing-done", ["slept-enough", "focus-hour", "phone-free-morning"], Target, "text-[hsl(212_60%_56%)]"],
+    ["movement", "exercised", ["slept-enough", "outside-30min", "had-energy"], Footprints, "text-[hsl(16_72%_58%)]"],
+    ["joy", "felt-happy", ["saw-friends", "outside-30min", "did-creative-work"], Sparkles, "text-[hsl(290_40%_60%)]"],
+  ] as const).map(([id, main, ctx, icon, iconClass]): Door => ({
+    id, branch: "good", kind: "event", mainTemplateId: main, contextTemplateIds: [...ctx] as [string, string, string],
+    reasons: ["sleptWell", "moved", "outside", "ateWell", "goodPeople", "rest", "sun", "dontKnow"], icon, iconClass,
+  })),
 ];
 
 export const getDoor = (id: DoorId): Door | undefined => DOORS.find((d) => d.id === id);

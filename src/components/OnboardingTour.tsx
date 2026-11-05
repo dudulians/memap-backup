@@ -20,6 +20,7 @@ import {
 import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door } from "@/lib/doors";
 import { DoorPickerScreen, DoorFlow, OwnFlow, CuriousFlow, PickResult, Finish } from "./DoorOnboarding";
+import { CompanionScreen, ForkScreen, PromiseScreen, WelcomeScreen } from "./OnboardingV2";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -29,19 +30,24 @@ interface OnboardingTourProps {
   onClose: () => void;
 }
 
-// 1.8.0: language (first install only) → doors, then one of three short
-// paths (DoorOnboarding.tsx). The five-screen interview (gender, focus,
-// context, goal, starter pack) and the coach tour after it are gone.
-type Step = "language" | "doors" | "door" | "own" | "curious";
+// Onboarding v2 (Nov 5 2026, boards 49/50): one line with the language in a corner →
+// "something keeps happening" or "I want more good days" (or just looking) → the list →
+// the promise in her words, her first island from a cloud → the first answer and that
+// day's questions (DoorOnboarding) → the first light → who sails with her → Today.
+type Step = "welcome" | "fork" | "pain" | "good" | "promise" | "door" | "own" | "curious" | "companion";
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
-  const [step, setStep] = useState<Step>(() => (hasExplicitLanguage() ? "doors" : "language"));
+  const [step, setStep] = useState<Step>("welcome");
+  const [branch, setBranch] = useState<"pain" | "good">("pain");
   const [doors, setDoors] = useState<Door[]>([]);
+  // the path's end waits for "who sails with you"
+  const [ending, setEnding] = useState<Parameters<Finish>[0] | null>(null);
 
   useEffect(() => {
     if (open) {
-      setStep(hasExplicitLanguage() ? "doors" : "language");
+      setStep("welcome");
       setDoors([]);
+      setEnding(null);
       document.body.style.overflow = "hidden";
     }
     return () => {
@@ -87,25 +93,31 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
     if (r.kind === "own") return setStep("own");
     if (r.kind === "curious") return setStep("curious");
     setDoors(r.ids.map((id) => getDoor(id)).filter((d): d is Door => !!d));
-    setStep("door");
+    setStep("promise");
   };
+  // every path ends with "who sails with you", then Today
+  const toCompanion: Finish = (opts) => { setEnding(opts); setStep("companion"); };
 
   if (!open) return null;
 
   return (
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto">
-        {step === "language" && (
-          <div className="min-h-full flex items-center justify-center px-5 py-8">
-            <LanguagePickerScreen onNext={() => setStep("doors")} />
-          </div>
+        {step === "welcome" && <WelcomeScreen onStart={() => setStep("fork")} />}
+        {step === "fork" && (
+          <ForkScreen onBack={() => setStep("welcome")}
+            onPick={(b) => { if (b === "look") { setStep("curious"); return; } setBranch(b); setStep(b); }} />
         )}
-        {step === "doors" && <DoorPickerScreen onPick={onPick} />}
+        {(step === "pain" || step === "good") && <DoorPickerScreen key={step} branch={step} onBack={() => setStep("fork")} onPick={onPick} />}
+        {step === "promise" && doors.length > 0 && (
+          <PromiseScreen door={doors[0]} onBack={() => setStep(branch)} onNext={() => setStep("door")} />
+        )}
         {step === "door" && doors.length > 0 && (
-          <DoorFlow doors={doors} onBack={() => setStep("doors")} onFinish={finish} />
+          <DoorFlow doors={doors} onBack={() => setStep("promise")} onFinish={toCompanion} />
         )}
-        {step === "own" && <OwnFlow onBack={() => setStep("doors")} onFinish={finish} />}
-        {step === "curious" && <CuriousFlow onBack={() => setStep("doors")} onFinish={finish} />}
+        {step === "own" && <OwnFlow onBack={() => setStep("pain")} onFinish={toCompanion} />}
+        {step === "curious" && <CuriousFlow onBack={() => setStep("fork")} onFinish={toCompanion} />}
+        {step === "companion" && <CompanionScreen onDone={() => finish(ending ?? { path: "curious", reminders: false })} />}
       </div>
     </div>
   );

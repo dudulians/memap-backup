@@ -2287,6 +2287,18 @@ html[data-ui="new"] .settings-seg { background: hsl(var(--foreground) / 0.06); p
 html[data-ui="new"] .settings-seg button { height: 32px; font-weight: 700; color: hsl(var(--muted-foreground)); background: transparent; }
 html[data-ui="new"] .settings-seg button[aria-pressed="true"] { background: hsl(var(--surface)); color: hsl(var(--foreground)); box-shadow: var(--surface-shadow); }
 html[data-ui="new"][data-theme="aurora"] .settings-seg button[aria-pressed="true"] { background: hsl(var(--foreground) / 0.16); }
+/* Onboarding v2 (Nov 5 2026) */
+.onb-float { animation: onbFloat 6s ease-in-out infinite; }
+.onb-bob { animation: onbFloat 3.4s ease-in-out infinite; }
+@keyframes onbFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.onb-rise { animation: onbRise 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) .35s both; }
+@keyframes onbRise { from { opacity: 0; transform: translateY(26px) scale(.92); } to { opacity: 1; transform: none; } }
+.onb-cloud-out { animation: onbCloudOut 1.2s ease-out .2s both; }
+@keyframes onbCloudOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(18px) scale(1.08); } }
+.onb-disc { display: flex; width: 56px; height: 56px; align-items: center; justify-content: center; border-radius: 9999px; background: #E4E8F1; color: #A3ACC0; box-shadow: 0 5px 0 #C6CEDD; }
+.onb-disc.is-link { background: #fff; color: hsl(232 62% 62%); box-shadow: 0 5px 0 #D3DAE8; }
+html[data-ui="new"][data-theme="aurora"] .onb-disc { background: rgba(70, 86, 160, .9); color: #c7cff5; box-shadow: 0 5px 0 rgba(40, 52, 110, .9); }
+@media (prefers-reduced-motion: reduce) { .onb-float, .onb-bob, .onb-rise, .onb-cloud-out { animation: none; } .onb-cloud-out { opacity: 0; } }
 .pick-on { box-shadow: 0 0 0 2px hsl(var(--coin-teal)), var(--surface-shadow) !important; }
 .tick { display: flex; width: 28px; height: 28px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; border: 2px solid hsl(var(--foreground) / 0.2); }
 .tick.is-on { border-color: hsl(var(--coin-teal)); background: hsl(var(--coin-teal)); color: #fff; }
@@ -2423,4 +2435,5 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 @keyframes treasureFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5%); } }
 @media (prefers-reduced-motion: reduce) { .planet-isle .treasure.t-sky:not(.is-ghost) { animation: none; } }
 .planet-map-isle .planet-label { z-index: 1; }
+.planet-label.is-static { position: static; width: auto; margin-left: 0; }
 .planet-label .is-new { color: hsl(var(--muted-foreground)); }

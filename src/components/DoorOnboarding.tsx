@@ -20,6 +20,7 @@ import { localizeTrackerQuestionRaw } from "@/lib/trackerLocalize";
 import maluWave from "@/assets/malu/malu-wave.webp";
 import maluHappy from "@/assets/malu/malu-happy.webp";
 import { SHOW_MASCOT } from "@/lib/mascot";
+import { FirstLightPath } from "./OnboardingV2";
 import {
   DOORS,
   Door,
@@ -121,7 +122,7 @@ const Chip = ({
     className={cn(
       "inline-flex items-center h-11 px-[18px] rounded-full border text-[17px] transition-colors",
       selected
-        ? "border-primary bg-primary/15 text-primary font-semibold"
+        ? "border-transparent bg-foreground/[0.07] pick-on text-foreground font-bold"
         : "border-foreground/[0.18] bg-foreground/[0.05] text-foreground font-medium",
     )}
   >
@@ -151,7 +152,7 @@ const BigChoice = ({
       "rounded-[18px] border text-lg transition-colors flex flex-col items-center justify-center gap-1.5",
       tall ? "h-[88px]" : "h-[58px]",
       selected
-        ? "border-primary bg-primary/15 text-primary font-semibold"
+        ? "border-transparent bg-foreground/[0.07] pick-on font-bold"
         : "border-foreground/[0.14] bg-foreground/[0.06] font-medium",
     )}
   >
@@ -243,10 +244,13 @@ const DoneScreen = ({
   title,
   rows,
   onDone,
+  light,
 }: {
   title: string;
   rows?: { label: string }[];
   onDone: (reminders: boolean) => void;
+  /** onboarding v2: the first light is lit, and what comes next */
+  light?: boolean;
 }) => {
   const { t } = useTranslation();
   const [reminders, setReminders] = useState(true);
@@ -254,8 +258,12 @@ const DoneScreen = ({
   return (
     <Screen className="items-center text-center">
       <div className="flex-1 min-h-6" />
-      {SHOW_MASCOT && <img src={maluHappy} alt="" aria-hidden="true" className="h-[200px] w-[200px] -mt-5 -mb-7" />}
-      <h1 className="text-[40px] leading-[1.1] font-bold tracking-tight">{title}</h1>
+      {SHOW_MASCOT && !light && <img src={maluHappy} alt="" aria-hidden="true" className="h-[200px] w-[200px] -mt-5 -mb-7" />}
+      <h1 className={light ? "text-[32px] leading-[1.12] font-bold tracking-tight" : "text-[40px] leading-[1.1] font-bold tracking-tight"}>{light ? t("doors.v2.firstLight") : title}</h1>
+      {light && <div className="mt-6"><FirstLightPath /></div>}
+      {light && (
+        <p className="mt-4 text-[18px] font-bold leading-snug">{t("doors.v2.tenDays")}<span className="mt-1 block text-[16px] font-semibold text-muted-foreground">{t("doors.v2.steer")}</span></p>
+      )}
       {rows && rows.length > 0 && (
         <div className="mt-6 w-full rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] divide-y divide-foreground/[0.08] text-left">
           {rows.map((r) => (
@@ -272,7 +280,8 @@ const DoneScreen = ({
       <AddressPolRow className="mb-3" />
       <ReminderRow on={reminders} setOn={setReminders} label={t("doors.remindShort", { time })} />
       <div className="h-3.5" />
-      <PrimaryButton onClick={() => onDone(reminders)}>{t("doors.goToday")}</PrimaryButton>
+      {/* every path now goes on to "who sails with you" */}
+      <PrimaryButton onClick={() => onDone(reminders)}>{t("doors.next")}</PrimaryButton>
     </Screen>
   );
 };
@@ -281,7 +290,7 @@ const DoneScreen = ({
 
 export type PickResult = { kind: "doors"; ids: DoorId[] } | { kind: "own" } | { kind: "curious" };
 
-export const DoorPickerScreen = ({ onPick }: { onPick: (r: PickResult) => void }) => {
+export const DoorPickerScreen = ({ onPick, branch = "pain", onBack }: { onPick: (r: PickResult) => void; branch?: "pain" | "good"; onBack?: () => void }) => {
   const { t } = useTranslation();
   const [picked, setPicked] = useState<DoorId[]>([]);
   const [alt, setAlt] = useState<"own" | "curious" | null>(null);
@@ -315,15 +324,15 @@ export const DoorPickerScreen = ({ onPick }: { onPick: (r: PickResult) => void }
 
   return (
     <Screen>
-      {SHOW_MASCOT && (
+      {onBack ? <TopBar onBack={onBack} /> : SHOW_MASCOT && (
         <div className="pt-1 flex justify-center">
           <img src={maluWave} alt="" aria-hidden="true" className="h-[112px] w-[112px] -mb-4" />
         </div>
       )}
-      <Title className="mt-1">{t("doors.pickTitle")}</Title>
+      <Title className="mt-4">{t(branch === "good" ? "doors.goodTitle" : "doors.pickTitle")}</Title>
       <p className="mt-2 text-[17px] text-muted-foreground">{t("doors.pickSubtitle")}</p>
       <div className="mt-5 flex flex-col gap-2.5">
-        {DOORS.map((door) => {
+        {DOORS.filter((d) => d.branch === branch).map((door) => {
           const Icon = door.icon;
           const on = picked.includes(door.id);
           return (
@@ -336,7 +345,7 @@ export const DoorPickerScreen = ({ onPick }: { onPick: (r: PickResult) => void }
               style={{ touchAction: "manipulation" }}
               className={cn(
                 "w-full flex items-center gap-3.5 px-4 py-4 rounded-[20px] border text-left transition-colors",
-                on ? "border-primary bg-primary/10" : "border-foreground/[0.12] bg-foreground/[0.07]",
+                on ? "border-transparent bg-foreground/[0.07] pick-on" : "border-foreground/[0.12] bg-foreground/[0.07]",
               )}
             >
               <span className="h-10 w-10 shrink-0 rounded-full bg-foreground/[0.08] flex items-center justify-center">
@@ -348,7 +357,7 @@ export const DoorPickerScreen = ({ onPick }: { onPick: (r: PickResult) => void }
           );
         })}
         <div className="flex gap-2.5">
-          {(["own", "curious"] as const).map((a) => (
+          {(branch === "good" ? [] : (["own"] as const)).map((a) => (
             <button
               key={a}
               type="button"
@@ -357,7 +366,7 @@ export const DoorPickerScreen = ({ onPick }: { onPick: (r: PickResult) => void }
               data-onb-interactive
               className={cn(
                 "flex-1 py-4 rounded-[20px] text-[17px] font-semibold transition-colors",
-                alt === a ? "border-[1.5px] border-primary bg-primary/10" : "border border-dashed border-foreground/30",
+                alt === a ? "bg-foreground/[0.07] pick-on" : "bg-foreground/[0.05]",
               )}
             >
               {t(a === "own" ? "doors.own.name" : "doors.curious.name")}
@@ -475,7 +484,7 @@ export const DoorFlow = ({
           const id = byTemplate.get(tpl);
           if (id) ctx[id] = context[tpl];
         }
-        let value = true;
+        let value = main.mainValue ?? true;
         if (isMood && feeling) {
           const a = feelingAnswers(feeling);
           value = a.low;
@@ -603,7 +612,7 @@ export const DoorFlow = ({
                         // Neutral: the chosen answer is just white. Rose/mint read
                         // as wrong/right answers (same rule as the evening card).
                         "flex-1 h-[52px] rounded-2xl border-[1.5px] text-[17px] transition-colors",
-                        value === v ? "border-foreground bg-foreground/15 font-bold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
+                        value === v ? "border-transparent bg-foreground/[0.07] pick-on font-bold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
                       )}
                     >
                       {v ? t("common.yes") : t("common.no")}
@@ -632,6 +641,7 @@ export const DoorFlow = ({
     <DoneScreen
       title={entryOffset === null ? t("doors.loggedTitleFresh") : t("doors.loggedTitle")}
       rows={rows}
+      light={entryOffset !== null}
       onDone={(reminders) => onFinish({ path: "door", reminders })}
     />
   );

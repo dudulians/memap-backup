@@ -36,6 +36,13 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "screen-time-long": { en: "4+ hours on screens?", ru: "Было больше 4 часов в экране?" },
   "felt-happy": { en: "A happy day?", ru: "Был счастливый день?" },
   "had-energy": { en: "Enough energy?", ru: "Хватило энергии?" },
+  // onboarding v2 (Nov 5 2026)
+  "felt-calm": { en: "A calm day?", ru: "Был спокойный день?" },
+  "time-for-myself": { en: "Time for yourself?", ru: "Было время для себя?" },
+  "main-thing-done": { en: "Got the main thing done?", ru: "Удалось сделать главное?" },
+  "focus-hour": { en: "An hour without the phone?", ru: "Был час без телефона?" },
+  "woke-at-night": { en: "Woke up at night?", ru: "Просыпался(ась) ночью?" },
+  "ate-late": { en: "Ate late?", ru: "Поздно ел(а)?" },
   "wanted-child": { en: "Wished for a child?", ru: "Хотелось ребёнка?" },
   "thought-about-emigrating": { en: "Thought about moving abroad?", ru: "Была мысль уехать?" },
   "read-book": { en: "Read 10+ pages of a book?", ru: "Удалось прочитать 10+ страниц?" },
