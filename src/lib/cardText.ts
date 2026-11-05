@@ -1,11 +1,12 @@
-// Short card wording for the most-seen questions (Aurora step 4, plan §5).
-// Rules: one fact per card, at most 7 words in EN and 6 in RU, no "today"
-// (the header names the day), "you", RU gender-free with the verb first and
-// no «ли». YES means it happened. Counted Nov 2 2026 with the plan's script:
-// 173 templates; 78 RU questions with "(а)" forms, 68 EN with and/or/slash,
-// 146 with today/«сегодня». These 30 are the 11 door questions and the 19
-// featured ones. Her own typed questions are never rewritten: the short text
-// is used only while a tracker still has the library's own wording.
+// Card wording for the most-seen questions (Aurora step 4, plan §5; rewritten
+// Nov 5 2026, her note: "A warm moment with your partner?" and "Time with
+// friends?" read like the app offering something, not asking about her day,
+// even under "About today"). Rules: a whole question with "you" and a verb
+// ("Did you…?", "Were you…?"), about 8 words; no "today" (the card's header
+// names the day, and past days use the same card); RU gender-free with the
+// verb or «было» first and no «ли». YES means it happened. Her own typed
+// questions are never rewritten: the short text is used only while a tracker
+// still has the library's own wording.
 import { Tracker } from "@/types/tracker";
 import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
@@ -14,44 +15,44 @@ import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   // door questions
-  "argued-with-partner": { en: "A fight with your partner?", ru: "Была ссора с партнёром?" },
-  "yelled-at-kid": { en: "Snapped at your child?", ru: "Был срыв на ребёнка?" },
-  migraine: { en: "A real migraine?", ru: "Была мигрень?" },
-  "slept-enough": { en: "Slept 7+ hours?", ru: "Удалось поспать 7+ часов?" },
-  "felt-fatigued": { en: "Exhausted most of the day?", ru: "Весь день без сил?" },
-  "outside-30min": { en: "30 minutes outside?", ru: "Полчаса на улице?" },
-  "ate-by-2pm": { en: "A real meal before 2 pm?", ru: "Была нормальная еда до 14:00?" },
-  "drank-alcohol": { en: "Any alcohol?", ru: "Был алкоголь?" },
-  "felt-anxious": { en: "Felt anxious?", ru: "Было тревожно?" },
-  "felt-depressed": { en: "Felt low most of the day?", ru: "Было подавленное настроение?" },
-  "felt-lonely": { en: "Felt lonely?", ru: "Было одиноко?" },
+  "argued-with-partner": { en: "Did you fight with your partner?", ru: "Была ссора с партнёром?" },
+  "yelled-at-kid": { en: "Did you snap at your child?", ru: "Был срыв на ребёнка?" },
+  migraine: { en: "Did you have a migraine?", ru: "Была мигрень?" },
+  "slept-enough": { en: "Did you sleep 7+ hours?", ru: "Удалось поспать 7+ часов?" },
+  "felt-fatigued": { en: "Were you exhausted most of the day?", ru: "Весь день не было сил?" },
+  "outside-30min": { en: "Were you outside for 30 minutes?", ru: "Удалось побыть на улице полчаса?" },
+  "ate-by-2pm": { en: "Did you eat a real meal before 2 pm?", ru: "Была нормальная еда до 14:00?" },
+  "drank-alcohol": { en: "Did you drink any alcohol?", ru: "Был алкоголь?" },
+  "felt-anxious": { en: "Did you feel anxious?", ru: "Было тревожно?" },
+  "felt-depressed": { en: "Did you feel low most of the day?", ru: "Было подавленное настроение?" },
+  "felt-lonely": { en: "Did you feel lonely?", ru: "Было одиноко?" },
   // featured
-  "felt-close-to-partner": { en: "A warm moment with your partner?", ru: "Был тёплый момент вдвоём?" },
-  "saw-friends": { en: "Time with friends?", ru: "Было общение с друзьями?" },
-  "quality-time-kid": { en: "A real moment with your child?", ru: "Был настоящий момент с ребёнком?" },
-  "felt-overwhelmed-parenting": { en: "Parenting felt like too much?", ru: "Было тяжело с детьми?" },
-  headache: { en: "Had a headache?", ru: "Болела голова?" },
-  exercised: { en: "A real workout?", ru: "Была тренировка?" },
-  "ate-sweets": { en: "Had sweets?", ru: "Было сладкое?" },
-  "screen-time-long": { en: "4+ hours on screens?", ru: "Было больше 4 часов в экране?" },
-  "felt-happy": { en: "A happy day?", ru: "Был счастливый день?" },
-  "had-energy": { en: "Enough energy?", ru: "Хватило энергии?" },
+  "felt-close-to-partner": { en: "Did you have a warm moment with your partner?", ru: "Был тёплый момент вдвоём?" },
+  "saw-friends": { en: "Did you spend time with friends?", ru: "Было общение с друзьями?" },
+  "quality-time-kid": { en: "Did you have a real moment with your child?", ru: "Был настоящий момент с ребёнком?" },
+  "felt-overwhelmed-parenting": { en: "Did parenting feel like too much?", ru: "Было тяжело с детьми?" },
+  headache: { en: "Did you have a headache?", ru: "Болела голова?" },
+  exercised: { en: "Did you do a real workout?", ru: "Была тренировка?" },
+  "ate-sweets": { en: "Did you eat sweets?", ru: "Было сладкое?" },
+  "screen-time-long": { en: "Did you spend 4+ hours on screens?", ru: "Было больше 4 часов в экране?" },
+  "felt-happy": { en: "Was it a happy day?", ru: "Был счастливый день?" },
+  "had-energy": { en: "Did you have enough energy?", ru: "Хватило энергии?" },
   // onboarding v2 (Nov 5 2026)
-  "felt-calm": { en: "A calm day?", ru: "Был спокойный день?" },
-  "time-for-myself": { en: "Time for yourself?", ru: "Было время для себя?" },
-  "main-thing-done": { en: "Got the main thing done?", ru: "Удалось сделать главное?" },
-  "focus-hour": { en: "An hour without the phone?", ru: "Был час без телефона?" },
-  "woke-at-night": { en: "Woke up at night?", ru: "Просыпался(ась) ночью?" },
-  "ate-late": { en: "Ate late?", ru: "Поздно ел(а)?" },
-  "wanted-child": { en: "Wished for a child?", ru: "Хотелось ребёнка?" },
-  "thought-about-emigrating": { en: "Thought about moving abroad?", ru: "Была мысль уехать?" },
-  "read-book": { en: "Read 10+ pages of a book?", ru: "Удалось прочитать 10+ страниц?" },
-  "noisy-neighbors": { en: "Noisy neighbors?", ru: "Шумели соседи?" },
-  "internet-down": { en: "Internet problems?", ru: "Были проблемы с интернетом?" },
-  "criticized-by-close": { en: "Someone close hurt you?", ru: "Кто-то близкий задел?" },
-  "spoke-local-language": { en: "Spoke the local language?", ru: "Был разговор на местном языке?" },
-  "missed-home-country": { en: "Missed home?", ru: "Была тоска по дому?" },
-  "felt-foreigner": { en: "Felt like you don't belong?", ru: "Было чувство отчуждения?" },
+  "felt-calm": { en: "Did you feel calm?", ru: "Был спокойный день?" },
+  "time-for-myself": { en: "Did you have time for yourself?", ru: "Было время для себя?" },
+  "main-thing-done": { en: "Did you get the main thing done?", ru: "Удалось сделать главное?" },
+  "focus-hour": { en: "Did you work an hour without your phone?", ru: "Был час без телефона?" },
+  "woke-at-night": { en: "Did you wake up at night?", ru: "Просыпался(ась) ночью?" },
+  "ate-late": { en: "Did you eat late in the evening?", ru: "Был поздний плотный ужин?" },
+  "wanted-child": { en: "Did you wish for a child?", ru: "Хотелось ребёнка?" },
+  "thought-about-emigrating": { en: "Did you think about moving abroad?", ru: "Была мысль уехать?" },
+  "read-book": { en: "Did you read 10+ pages of a book?", ru: "Удалось прочитать 10+ страниц?" },
+  "noisy-neighbors": { en: "Were the neighbors noisy?", ru: "Шумели соседи?" },
+  "internet-down": { en: "Did you have internet problems?", ru: "Были проблемы с интернетом?" },
+  "criticized-by-close": { en: "Did someone close hurt you?", ru: "Кто-то близкий задел?" },
+  "spoke-local-language": { en: "Did you speak the local language?", ru: "Был разговор на местном языке?" },
+  "missed-home-country": { en: "Did you miss home?", ru: "Была тоска по дому?" },
+  "felt-foreigner": { en: "Did you feel like you don't belong?", ru: "Было чувство отчуждения?" },
 };
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
