@@ -2282,6 +2282,7 @@ html[data-ui="new"] .press3d.rounded-2xl { border-radius: 9999px; }
 .report-badge { display: flex; width: 128px; height: 128px; align-items: center; justify-content: center; border-radius: 9999px; color: #fff;
   background: linear-gradient(180deg, #FFD866 0%, #F6B92B 100%); box-shadow: 0 8px 0 #CF8E17, 0 18px 30px -12px rgba(160, 110, 20, .45); }
 .report-badge.is-small { width: 80px; height: 80px; box-shadow: 0 6px 0 #CF8E17; }
+.report-badge.is-tiny { width: 56px; height: 56px; box-shadow: 0 4px 0 #CF8E17; }
 /* the path's raised discs (PathNode, Nov 4 2026): a face and a lip under it */
 .path-node .path-disc { position: absolute; inset: 0; border-radius: 9999px; background: var(--face); box-shadow: 0 6px 0 var(--lip-shade, transparent), 0 6px 0 var(--lip); transition: transform .1s ease-out, box-shadow .1s ease-out; }
 .path-node .path-disc::after { content: ""; position: absolute; left: 20%; right: 20%; top: 9%; height: 34%; border-radius: 50%; background: linear-gradient(rgba(255, 255, 255, .5), rgba(255, 255, 255, 0)); }
