@@ -7,6 +7,7 @@
 // week. Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top note).
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandOf, type IslandId } from "@/lib/islands";
+import { grewToday } from "@/lib/globeArt";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { litTrackers } from "@/lib/lighthouses";
@@ -31,7 +32,9 @@ export interface Step {
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
   /** "test": her week of trying one change is over: see how it went */
   /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload";
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew";
+  /** grew: the stage the island reached today */
+  stage?: number;
   /** fill: the day */
   date?: string;
   /** task: skipped for today */
@@ -452,6 +455,16 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     const at = steps.findIndex((s) => !s.done && s.kind !== "unload");
     const added: Step[] = [...late].map(([island, ids]) => ({ id: `q:added:${island}`, kind: "questions", island, added: true, trackerIds: ids, answered: 0, done: false }));
     steps.splice(at >= 0 ? at : steps.length, 0, ...added);
+  }
+  // An island that reached a new stage with today's answers: a step already
+  // done, right after the questions that grew it (her note, Nov 5 2026: one
+  // evening of answers should show progress by itself, no extra taps).
+  for (const g of grewToday(trackers, entries, today)) {
+    let at = -1;
+    steps.forEach((s, i) => {
+      if (s.kind === "questions" && s.trackerIds.some((id) => { const t = byId.get(id); return !!t && islandOf(t) === g.island; })) at = i;
+    });
+    steps.splice(at >= 0 ? at + 1 : steps.length, 0, { id: `grew:${g.island}`, kind: "grew", island: g.island, stage: g.stage, trackerIds: [], answered: 0, done: true });
   }
 
   return {

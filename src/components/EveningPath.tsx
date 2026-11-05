@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronUp, Compass, FileBarChart2, FlaskConical, Flame, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronUp, Compass, FileBarChart2, FlaskConical, Flame, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
@@ -26,7 +26,8 @@ import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, 
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
-import { islandDef, islandName, mapPicFor } from "@/lib/islands";
+import { islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
+import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState } from "@/lib/doors";
@@ -111,6 +112,8 @@ export const EveningPath = ({
   }, [trackers, entries, noteDays, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
+  // evenings answered on each island: how far each has grown
+  const evenings = useMemo(() => islandEvenings(trackers, entries), [trackers, entries]);
 
   const [avatarPic, setAvatarPic] = useState<string | null>(() => avatarUrl(getAvatar()));
   useEffect(() => {
@@ -177,6 +180,7 @@ export const EveningPath = ({
   };
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
+    if (s.kind === "grew") return t("path.grew", { name: islandName(t, s.island!) });
     if (s.kind === "fill") return t("path.fillTitle", { day: weekdayName(s.date!) });
     if (s.kind === "game") return t("hunch.step");
     if (s.kind === "act") return t("act.step");
@@ -190,7 +194,7 @@ export const EveningPath = ({
   /** What a node looks like and says. */
   /** A step's own calm colour: its island, else what kind of step it is. */
   const hueOf = (s: Step): string => {
-    if (s.kind === "questions" && s.island) return islandHsl(s.island);
+    if ((s.kind === "questions" || s.kind === "grew") && s.island) return islandHsl(s.island);
     // a task: rose (gold is for what's done)
     if (s.kind === "task") return "350 60% 66%";
     if (s.kind === "game") return "262 40% 64%";
@@ -212,6 +216,8 @@ export const EveningPath = ({
         : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
     }
     const s = n.step;
+    // an island grew today: done already, with a sprout
+    if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
       : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
@@ -256,6 +262,27 @@ export const EveningPath = ({
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [open]);
+
+  // An island grew with today's answers: show it once, for a few seconds
+  // (her note, Nov 5 2026: short, no taps needed).
+  const [grewNow, setGrewNow] = useState<IslandId | null>(null);
+  useEffect(() => {
+    const today = isoDay(new Date());
+    const grew = m.steps.filter((s) => s.kind === "grew");
+    let seen: string[] = [];
+    try { seen = JSON.parse(localStorage.getItem("memap_grew_seen") || "[]"); } catch { /* shows again, harmless */ }
+    const fresh = grew.find((s) => !seen.includes(`${today}:${s.island}:${s.stage}`));
+    if (!fresh) return;
+    try { localStorage.setItem("memap_grew_seen", JSON.stringify([...seen.slice(-40), `${today}:${fresh.island}:${fresh.stage}`])); } catch { /* ignore */ }
+    haptics.sparkle();
+    setGrewNow(fresh.island!);
+  }, [m]);
+  // it goes away by itself (a re-render of the path must not keep it up)
+  useEffect(() => {
+    if (!grewNow) return;
+    const id = window.setTimeout(() => setGrewNow(null), 3600);
+    return () => window.clearTimeout(id);
+  }, [grewNow]);
 
   // A week's chest, open in its own sheet; and how many finished weeks show.
   const [chestOpen, setChestOpen] = useState<{ week: number; dates: string[] } | null>(null);
@@ -459,6 +486,30 @@ export const EveningPath = ({
     </>
   );
 
+  /** An island's picture at its stage now, and how far the next one is. */
+  const stageLine = (island: IslandId) => {
+    const n = evenings.get(island) ?? 0, left = toNextStage(n);
+    return `${t(`path.stage${stageOf(n)}`)} · ${left === null ? t("path.fullyGrown") : t("path.toNext", { count: left })}`;
+  };
+  const islandPic = (island: IslandId, w: number) => {
+    const name = artOf(island, evenings.get(island) ?? 0);
+    return (
+      <span aria-hidden="true" className="block" style={{ width: w }}>
+        <img className="art-day block w-full" src={art(name, false)} alt="" />
+        <img className="art-night block w-full" src={art(name, true)} alt="" />
+      </span>
+    );
+  };
+  const grewBody = (island: IslandId) => (
+    <>
+      <div className="flex items-center gap-3">
+        {islandPic(island, 92)}
+        <div className="min-w-0">{head(t("path.grew", { name: islandName(t, island) }), stageLine(island))}</div>
+      </div>
+      {button(t("path.seeWorld"), () => { setOpen(null); onOpenMap(); }, "plain")}
+    </>
+  );
+
   const bubbleBody = (i: number): ReactNode => {
     const n = nodes[i];
     if (n.kind === "past") {
@@ -483,6 +534,7 @@ export const EveningPath = ({
       );
     }
     const s = n.step;
+    if (s.kind === "grew") return grewBody(s.island!);
     if (s.kind === "auto") {
       const door = getDoorState();
       return head(s.auto === "topic" ? t("path.auto.topicBubble", { name: door ? t(`doors.${door.id}.name`) : "" }) : t("path.auto.firstBubble"));
@@ -694,6 +746,19 @@ export const EveningPath = ({
             : <span className="h-9 w-9 rounded-full bg-[hsl(var(--coin-teal)/0.12)]" />}
           {t("path.backToStep")}
           {away === "up" ? <ChevronUp className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} /> : <ChevronDown className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />}
+        </button>,
+        document.body,
+      )}
+
+      {grewNow && createPortal(
+        <button type="button" onClick={() => { setGrewNow(null); onOpenMap(); }}
+          className="grew-toast fixed left-4 right-4 z-[40] flex items-center gap-3 rounded-[22px] bg-white p-3 pr-4 text-left shadow-[0_14px_34px_-14px_rgba(20,40,90,.55)] dark:bg-[hsl(var(--surface))]"
+          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          {islandPic(grewNow, 78)}
+          <span className="min-w-0">
+            <span className="block text-[18px] font-bold leading-tight">{t("path.grew", { name: islandName(t, grewNow) })}</span>
+            <span className="mt-0.5 block text-[15px] font-medium text-muted-foreground">{stageLine(grewNow)}</span>
+          </span>
         </button>,
         document.body,
       )}

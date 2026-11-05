@@ -8,7 +8,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus } from "lucide-react";
-import { art } from "@/lib/globeArt";
+import { art, artOf, stageOf, toNextStage } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
@@ -217,8 +217,19 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       <BottomSheet open={!!open && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <div className="flex items-center gap-3 pb-3 pr-10 pt-1">
-            <img src={mapPic(island ? "icon_" + island.def.icon : "icon_growth")} alt="" className="h-12 w-12" />
-            <h2 className="min-w-0 flex-1 truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
+            {/* the island as it stands now, and how far its next stage is (WORLD-BIBLE, "Рост острова") */}
+            {island ? (
+              <span aria-hidden="true" className="w-[76px] shrink-0">
+                <img className="art-day block w-full" src={art(artOf(island.id, dayCount[island.id] ?? 0), false)} alt="" />
+                <img className="art-night block w-full" src={art(artOf(island.id, dayCount[island.id] ?? 0), true)} alt="" />
+              </span>
+            ) : <img src={mapPic("icon_growth")} alt="" className="h-12 w-12" />}
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
+              {island && (() => { const n = dayCount[island.id] ?? 0, left = toNextStage(n); return (
+                <p className="truncate text-[15px] font-semibold text-muted-foreground">{t(`path.stage${stageOf(n)}`)} · {left === null ? t("path.fullyGrown") : t("path.toNext", { count: left })}</p>
+              ); })()}
+            </div>
             {island && isOwnIsland(island.id) && (
               <button type="button" onClick={() => setEditor({ id: island.id })} aria-label={t("islands.edit")}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] text-muted-foreground">

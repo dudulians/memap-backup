@@ -7,7 +7,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { CloudLightning, CloudSun, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, mapPicFor } from "@/lib/islands";
-import { ASPECT, alongCurve, art, artOf, ringOrder, routeDots } from "@/lib/globeArt";
+import { ASPECT, STAGE_SCALE, alongCurve, art, artOf, ringOrder, routeDots, stageOf } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -55,7 +55,8 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
       const f = (d - run[k - 1]) / ((run[k] - run[k - 1]) || 1);
       return { x: C.x + ring[k - 1][0] + (ring[k][0] - ring[k - 1][0]) * f, y: C.y + ring[k - 1][1] + (ring[k][1] - ring[k - 1][1]) * f };
     };
-    const list = ordered.map((isl, i) => ({ isl, ...at(i), name: artOf(isl.id, days[isl.id] ?? 0), size }));
+    // each island stands at the size of its stage
+    const list = ordered.map((isl, i) => { const stage = stageOf(days[isl.id] ?? 0); return { isl, ...at(i), name: artOf(isl.id, days[isl.id] ?? 0), stage, size: size * STAGE_SCALE[stage] }; });
     const empty = slots > ordered.length ? { ...at(ordered.length), size: size * 0.9 } : null;
     // A wake between two neighbours never runs through a name: side by side it
     // leaves from the facing shores; one above the other it leaves the upper
@@ -64,7 +65,7 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
       const P = list.find((s) => s.isl.id === a), Q = list.find((s) => s.isl.id === b);
       if (!P || !Q) return null;
       const [U, L] = P.y <= Q.y ? [P, Q] : [Q, P];
-      const hU = size * (ASPECT[U.name] ?? 0.55), hL = size * (ASPECT[L.name] ?? 0.55);
+      const hU = U.size * (ASPECT[U.name] ?? 0.55), hL = L.size * (ASPECT[L.name] ?? 0.55);
       if (L.y - U.y < size * 0.45) {
         const s = Math.sign(L.x - U.x) || 1, mx = (U.x + L.x) / 2, my = (U.y + L.y) / 2;
         return routeDots(alongCurve([[U.x + s * size * 0.4, U.y], [mx, my + (my > C.y ? -1 : 1) * size * 0.12], [L.x - s * size * 0.4, L.y]], 80));
@@ -102,7 +103,7 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
         </div>
       </button>
 
-      {spots.list.map(({ isl, x, y, name, size }) => {
+      {spots.list.map(({ isl, x, y, name, size, stage }) => {
         const h = size * (ASPECT[name] ?? 0.55), Icon = isl.weather ? WEATHER_ICON[isl.weather] : null;
         return (
           <button key={isl.id} type="button" aria-label={islandName(t, isl.id)}
@@ -112,6 +113,7 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
             <img className="art-day island-art" src={art(name, false)} alt="" />
             <img className="art-night island-art" src={art(name, true)} alt="" />
             {lit?.has(isl.id) && <><img className="lighthouse art-day" src={mapPicFor("lighthouse", false)} alt="" /><img className="lighthouse art-night" src={mapPicFor("lighthouse", true)} alt="" /></>}
+            {stage === 4 && <><img className="flag art-day" src={mapPicFor("marker_flag", false)} alt="" /><img className="flag art-night" src={mapPicFor("marker_flag", true)} alt="" /></>}
             <span className="planet-label" style={{ position: "absolute", left: "50%", top: "100%", marginTop: 4, ...label(x) }}>
               <span>{Icon && <Icon className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[isl.weather!] }} />}{islandName(t, isl.id)}</span>
             </span>

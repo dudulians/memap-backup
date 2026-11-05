@@ -20,7 +20,7 @@ import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 
-import { ASPECT, art, artOf, ringOrder, routeDots } from "@/lib/globeArt";
+import { ASPECT, STAGE_SCALE, art, artOf, ringOrder, routeDots, stageOf } from "@/lib/globeArt";
 
 const D2R = Math.PI / 180;
 type V3 = [number, number, number];
@@ -55,7 +55,7 @@ const ZMIN = 0.75, ZMAX = 2.2;
 let VIEW: { yaw: number; pitch: number; zoom: number; ox: number; oy: number } | null = null;
 
 type Kind = "area" | "cloud" | "sky" | "boat";
-interface Thing { key: string; kind: Kind; ll: [number, number]; v: V3; name: string; size: number; ar: number; island?: Island; lit?: boolean }
+interface Thing { key: string; kind: Kind; ll: [number, number]; v: V3; name: string; size: number; ar: number; island?: Island; lit?: boolean; flag?: boolean }
 
 // her picture → a 2:1 texture whose left and right edges are blended into one another
 const TW = 2048, TH = 1024;
@@ -149,8 +149,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
     const n = ordered.length, ring = n <= 6 ? 28 : 31, size = n <= 6 ? 1 : 0.86;
     const list: Thing[] = ordered.map((isl, i) => {
       const ll = dest(C0, (360 / Math.max(n, 1)) * i + (n === 1 ? 0 : 38), n === 1 ? 14 : ring);
-      const name = artOf(isl.id, days[isl.id] ?? 0);
-      return { key: isl.id, kind: "area", ll, v: vec(ll), name, size, ar: ASPECT[name] ?? 0.55, island: isl, lit: lit?.has(isl.id) };
+      const name = artOf(isl.id, days[isl.id] ?? 0), stage = stageOf(days[isl.id] ?? 0);
+      return { key: isl.id, kind: "area", ll, v: vec(ll), name, size: size * STAGE_SCALE[stage], ar: ASPECT[name] ?? 0.55, island: isl, lit: lit?.has(isl.id), flag: stage === 4 };
     });
     for (const u of UNEXPLORED) list.push({ key: u.name, kind: "cloud", ll: u.ll, v: vec(u.ll), name: u.name, size: 0.85, ar: ASPECT[u.name] });
     for (const s of SKY) list.push({ key: `sky-${s.ll.join()}`, kind: "sky", ll: s.ll, v: vec(s.ll), name: s.name, size: 1.05, ar: ASPECT[s.name] });
@@ -470,6 +470,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
                   <img src={art(th.name, night)} alt="" />
                 )}
                 {th.lit && <img className="lighthouse" src={mapPic("lighthouse")} alt="" />}
+                {th.flag && <img className="flag" src={mapPic("marker_flag")} alt="" />}
               </div>
               {th.island && (
                 <div ref={(el) => { elOf(th.key).lab = el; }} className="planet-label" style={{ opacity: 0 }}>

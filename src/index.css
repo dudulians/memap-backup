@@ -2227,6 +2227,10 @@ html[data-ui="new"] .onb [class~="bg-foreground/15"] { background-color: #FFFFFF
 html[data-ui="new"][data-theme="aurora"] .onb [class~="bg-foreground/15"] { background-color: rgba(70, 86, 160, .95); }
 html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"] { box-shadow: 0 5px 0 hsl(172 70% 30%); transition: transform .1s ease-out, box-shadow .1s ease-out; }
 html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"]:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 2px 0 hsl(172 70% 30%); }
+/* an island grew today (EveningPath): the card slides up, then away */
+.grew-toast { animation: grewIn 420ms cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes grewIn { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .grew-toast { animation: none; } }
 /* a main button in the new look: teal, raised on its lip like the path's discs */
 .raised-btn { display: inline-flex; height: 56px; align-items: center; gap: 8px; border-radius: 9999px; padding: 0 28px; background: hsl(var(--coin-teal)); color: #fff;
   font-size: 17px; font-weight: 800; box-shadow: 0 5px 0 hsl(172 70% 30%); transition: transform .1s ease-out, box-shadow .1s ease-out; }
@@ -2298,6 +2302,8 @@ html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: 
 .planet-isle img { display: block; width: 100%; filter: drop-shadow(0 6px 8px rgba(20, 60, 100, .25)); }
 .planet-cloud img { filter: drop-shadow(0 14px 10px rgba(20, 60, 100, .18)); }
 .planet-isle .lighthouse { position: absolute; right: 6%; top: -26%; width: 22%; filter: none; }
+/* stage 4 of an island: a little flag on the other side from the lighthouse */
+.planet-isle .flag { position: absolute; left: 12%; top: -20%; width: 16%; filter: drop-shadow(0 3px 3px rgba(20, 60, 100, .2)); }
 .planet-isle .ring { position: absolute; left: -22%; right: -22%; top: 48%; height: 58%; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .95);
   box-shadow: 0 0 0 10px rgba(255, 255, 255, .28), 0 0 24px rgba(255, 255, 255, .7); opacity: 0; transform: scale(.7); transition: opacity .25s, transform .35s cubic-bezier(.22, 1, .36, 1); }
 .planet-isle.on .ring { opacity: 1; transform: scale(1); }

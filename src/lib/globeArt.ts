@@ -1,7 +1,9 @@
 // Her island pack v2 and the dotted route between islands, shared by the globe, the flat
 // map and Today (Nov 4 2026). Pictures: src/assets/globe/{day,night}, made
 // from marketing/brand/map-assets-v2 by marketing/tools/prep-map-assets-v2.mjs.
-import { Island, IslandId, Route, bridgesOf, isOwnIsland } from "@/lib/islands";
+import { Island, IslandId, Route, bridgesOf, islandOf, isOwnIsland } from "@/lib/islands";
+import { isoLocal } from "@/lib/doors";
+import type { Tracker, TrackerEntry } from "@/types/tracker";
 
 const named = (files: Record<string, string>) => new Map(Object.entries(files).map(([p, url]) => [p.split("/").pop()!.replace(".webp", ""), url]));
 const DAY = named(import.meta.glob("@/assets/globe/day/*.webp", { eager: true, import: "default" }) as Record<string, string>);
@@ -23,9 +25,49 @@ const ART: Record<string, string> = {
   me: "17_lavender_garden", love: "11_sakura", kids: "20_tropical_palms", health: "09_waterfall", body: "19_grassy_terraces",
   pet: "24_oak_tree", parents: "16_cozy_cottage", world: "14_stone_arch", work: "06_snow_peak", mine: "26_flowery_island", other: "10_terraced_garden",
 };
-/** Her own islands grow with her evenings there; never a bare rock on day one (her rule). */
-export const artOf = (id: IslandId, days: number) =>
-  isOwnIsland(id) ? (days >= 14 ? "05_wide_meadow" : days >= 7 ? "04_twin_hills" : "03_flower_hill") : ART[id] ?? ART.other;
+// --- How an island grows (her note, Nov 5 2026: the world hardly changed with
+// her answers). Every island grows with the evenings answered on it and never
+// shrinks, for gaps or for hard days; never a bare rock on day one (her rule).
+// Stage 1 a flower hill, 2 two hills, 3 the island shows what it is (her
+// sakura, her waterfall…; her own island a meadow), 4 the same, bigger, with a
+// flag. The thresholds live here only (WORLD-BIBLE.md, "Рост острова").
+export type Stage = 1 | 2 | 3 | 4;
+/** Evenings at which stages 1-4 begin. */
+export const STAGE_AT = [0, 3, 7, 21] as const;
+export const stageOf = (days: number): Stage => (days >= STAGE_AT[3] ? 4 : days >= STAGE_AT[2] ? 3 : days >= STAGE_AT[1] ? 2 : 1);
+/** Evenings still to go to the next stage (null at the last). */
+export const toNextStage = (days: number): number | null => { const s = stageOf(days); return s === 4 ? null : STAGE_AT[s] - days; };
+/** How big an island stands at each stage. */
+export const STAGE_SCALE: Record<Stage, number> = { 1: 0.82, 2: 0.9, 3: 1, 4: 1.12 };
+export const artOf = (id: IslandId, days: number) => {
+  const s = stageOf(days);
+  if (s === 1) return "03_flower_hill";
+  if (s === 2) return "04_twin_hills";
+  return isOwnIsland(id) ? "05_wide_meadow" : ART[id] ?? ART.other;
+};
+/** Evenings with any answer on each island, all time (as growth.ts islandDays). */
+export const islandEvenings = (trackers: Tracker[], entries: TrackerEntry[]): Map<IslandId, number> => {
+  const where = new Map(trackers.filter((t) => !t.archived && t.source !== "play").map((t) => [t.id, islandOf(t)]));
+  const days = new Map<IslandId, Set<string>>();
+  for (const e of entries) {
+    const id = where.get(e.trackerId);
+    if (!id) continue;
+    if (!days.has(id)) days.set(id, new Set());
+    days.get(id)!.add(e.date);
+  }
+  return new Map([...days].map(([id, d]) => [id, d.size]));
+};
+/** Islands that reached a new stage with today's answers. */
+export const grewToday = (trackers: Tracker[], entries: TrackerEntry[], today = isoLocal(new Date())): { island: IslandId; stage: Stage }[] => {
+  if (!entries.some((e) => e.date === today)) return [];
+  const now = islandEvenings(trackers, entries), before = islandEvenings(trackers, entries.filter((e) => e.date !== today));
+  const out: { island: IslandId; stage: Stage }[] = [];
+  for (const [id, n] of now) {
+    const s = stageOf(n);
+    if (s > stageOf(before.get(id) ?? 0)) out.push({ island: id, stage: s });
+  }
+  return out;
+};
 
 /** Islands in ring order: linked pairs side by side (their wake is short), then the rest. */
 export const ringOrder = (islands: Island[], routes: Route[]) => {
