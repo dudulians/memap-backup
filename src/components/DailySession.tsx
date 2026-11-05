@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
 import { Pressable } from "@/components/ui/pressable";
-import { IslandPicture } from "@/components/IslandPicture";
+import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { islandDef, islandName, islandOf, mapPic } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
 import { cardQuestion } from "@/lib/cardText";
@@ -656,6 +656,8 @@ export const DailySession = ({
   // Past the line where letting go answers: one light swipe haptic each
   // time the finger crosses it (plan §3.3), not on every move.
   const crossedRef = useRef(false);
+  // evenings answered on each island: the question card shows its island at its stage
+  const islandEveningsMap = useMemo(() => islandEvenings(trackers, entries) as Map<string, number>, [trackers, entries]);
   const [showDates, setShowDates] = useState(false);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -1239,13 +1241,13 @@ export const DailySession = ({
                 instead of a tiny "filling in for" line under it. Tapping it
                 shows the date strip (hidden by default since Aurora step 3). */}
             <button type="button" disabled={!onDateChange} onClick={() => { haptics.tap(); setShowDates((v) => !v); }}
-              aria-expanded={showDates} className="inline-flex items-center gap-1 text-[17px] font-bold">
+              aria-expanded={showDates} className="inline-flex items-center gap-1 whitespace-nowrap text-[17px] font-bold">
               {stepTitle && selectedDate === todayLocal()
                 ? stepTitle
                 : selectedDate === todayLocal()
                 ? t("dailySession.tonight")
                 : (() => {
-                    const s = format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale });
+                    const s = format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM", { locale: dateLocale });
                     return s.charAt(0).toUpperCase() + s.slice(1);
                   })()}
               <span className="font-medium text-muted-foreground">
@@ -1366,7 +1368,7 @@ export const DailySession = ({
                 className="absolute inset-x-0 top-0 bottom-5 flex transition-transform duration-200 [transition-timing-function:cubic-bezier(0.34,1.56,0.64,1)]"
                 style={{ transformOrigin: "50% 100%", transform: rising ? "none" : `translateY(${depth * 10}px) scale(${1 - depth * 0.05})` }}
               >
-                <DeckCard question={q} />
+                <DeckCard question={q} evenings={islandEveningsMap} />
               </div>
             );
           })}
@@ -1394,7 +1396,7 @@ export const DailySession = ({
                 : undefined,
             }}
           >
-            <DeckCard
+            <DeckCard evenings={islandEveningsMap}
               question={currentQuestion}
               stamp={
                 swipeDirection === "right" || swipeDirection === "left"
@@ -1456,10 +1458,12 @@ export const DailySession = ({
 // the island's colour at the top, a slate lip, the island chip and picture
 // (the same one the Map uses), then the question, big. The stamp says YES
 // or NO in slate: the two never differ in colour.
-const DeckCard = ({ question, stamp }: { question: SessionQuestion; stamp?: { yes: boolean; opacity: number } | null }) => {
+const DeckCard = ({ question, stamp, evenings }: { question: SessionQuestion; stamp?: { yes: boolean; opacity: number } | null; evenings?: Map<string, number> }) => {
   const { t } = useTranslation();
   const island = islandOf(question.tracker);
   const hsl = islandHsl(island);
+  // the island as it looks on her map now (Nov 5 2026: the old flat picture was left here)
+  const pic = artOf(island, evenings?.get(island) ?? 0);
   const text = cardQuestion(question.tracker);
   const small = typeof window !== "undefined" && window.innerHeight < 720;
   return (
@@ -1486,7 +1490,10 @@ const DeckCard = ({ question, stamp }: { question: SessionQuestion; stamp?: { ye
         )}
       </div>
       <div className="flex justify-center pt-1">
-        <IslandPicture id={island} width={small ? 118 : 150} />
+        <span aria-hidden="true" className="block" style={{ width: small ? 150 : 190 }}>
+          <img className="art-day block w-full" src={art(pic, false)} alt="" />
+          <img className="art-night block w-full" src={art(pic, true)} alt="" />
+        </span>
       </div>
       <div className="flex flex-1 items-center px-6 pb-6">
         <p className={cn("font-bold leading-[1.14] tracking-tight text-foreground [text-wrap:balance]",

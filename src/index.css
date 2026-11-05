@@ -2365,7 +2365,7 @@ html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: 
   color: #1E2A33; font-size: 14px; font-weight: 700; white-space: nowrap; box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .5); }
 html[data-ui="new"][data-theme="aurora"] .planet-label span { background: none; box-shadow: none; color: #F1F5FF; text-shadow: 0 1px 6px rgba(0, 0, 0, .45); }
 .planet-hint { position: absolute; left: 50%; bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 4; white-space: nowrap; pointer-events: none;
-  border-radius: 999px; background: rgba(255, 255, 255, .85); padding: 8px 14px; font-size: 14px; font-weight: 700; color: hsl(var(--muted-foreground)); }
+  border-radius: 999px; background: hsl(var(--surface) / .9); padding: 8px 14px; font-size: 14px; font-weight: 700; color: hsl(var(--foreground) / .7); }
 
 @media (prefers-reduced-motion: reduce) {
   main.snap-y { scroll-snap-type: none; }
