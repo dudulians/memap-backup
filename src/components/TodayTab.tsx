@@ -1079,7 +1079,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
               }}
               className={cn(
                 "surface flex items-center gap-3 rounded-[20px] pl-4 pr-3 min-h-[60px] py-3 cursor-pointer active:scale-[0.99] transition-transform",
-                inSelectMode && isSelected && "border-primary bg-primary/10",
+                inSelectMode && isSelected && "pick-on",
               )}
             >
               <span className="flex-1 min-w-0 text-[17px] font-semibold leading-snug">
@@ -1088,12 +1088,9 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
               </span>
               {inSelectMode ? (
                 <span
-                  className={cn(
-                    "w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors",
-                    isSelected ? "bg-primary border-primary" : "border-muted-foreground/40",
-                  )}
+                  className={cn("tick transition-colors", isSelected && "is-on")}
                 >
-                  {isSelected && <Check className="h-4 w-4 text-primary-foreground" strokeWidth={3} />}
+                  {isSelected && <Check className="h-4 w-4" strokeWidth={3} />}
                 </span>
               ) : isPlay ? (
                 <span className="flex items-center gap-1.5">
@@ -1103,7 +1100,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
                       promotePlayTracker(tracker);
                     }}
                     aria-label={t("today.keepPlayCard")}
-                    className="h-10 w-10 rounded-full bg-primary/15 text-primary flex items-center justify-center"
+                    className="icon-dot h-10 w-10"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -1152,7 +1149,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
                     setAddTrackerModalOpen(true);
                   }}
                   aria-label={t("today.addNew")}
-                  className="h-11 w-11 shrink-0 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
+                  className="raised-btn is-icon shrink-0"
                 >
                   <Plus className="h-5 w-5" strokeWidth={2.6} />
                 </button>

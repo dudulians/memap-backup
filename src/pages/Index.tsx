@@ -11,8 +11,6 @@ import { YouSheet } from "@/components/YouSheet";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
 import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
-import seaDawn from "@/assets/bg/sea-dawn.webp";
-import seaNight from "@/assets/bg/sea-night.webp";
 import planetDay from "@/assets/globe/planet-day.webp";
 import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
@@ -89,7 +87,7 @@ const Index = () => {
   // the other theme's backgrounds load ahead, so a switch has them at once
   useEffect(() => {
     const id = window.setTimeout(() => {
-      (night ? [planetDay, seaDawn] : [planetNight, seaNight]).forEach((src) => { new Image().src = src; });
+      new Image().src = night ? planetDay : planetNight;
     }, 2000);
     return () => window.clearTimeout(id);
   }, [night]);
@@ -287,11 +285,13 @@ const Index = () => {
           2026), so nothing needs to be scattered on the path. */}
       {onGlobe && <div aria-hidden="true" className={`planet-sky ${night ? "night" : "day"} -z-10`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
       {activeTab !== "patterns" && (
-        <div aria-hidden="true" className={`memap-sea-bg pointer-events-none absolute inset-0 -z-10${activeTab === "cards" ? " memap-path-bg" : ""}`}
+        <div aria-hidden="true" className="memap-sea-bg memap-path-bg pointer-events-none absolute inset-0 -z-10"
           // Today: the open sea of her planet, as on the Map (her note, Nov 4
           // 2026: "сделай фон как на карте"); it stands still ("не надо, чтоб
           // двигался фон"), behind the header too
-          style={{ backgroundImage: `url(${activeTab === "cards" ? (night ? planetNight : planetDay) : night ? seaNight : seaDawn})` }} />
+          // Notes and the questions list too (her note, Nov 5 2026: "в ноутс
+          // должен быть такой же фон, как и везде")
+          style={{ backgroundImage: `url(${night ? planetNight : planetDay})` }} />
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}

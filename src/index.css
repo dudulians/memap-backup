@@ -2252,6 +2252,8 @@ html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"]:acti
 .raised-btn.is-gold { background: hsl(var(--coin-gold)); color: hsl(28 70% 16%); box-shadow: 0 4px 0 hsl(var(--lip-gold)); }
 .raised-btn.is-gold:active { box-shadow: 0 1px 0 hsl(var(--lip-gold)); }
 .raised-btn:disabled { transform: none; opacity: .4; }
+.raised-btn.is-icon { width: 44px; height: 44px; padding: 0; justify-content: center; box-shadow: 0 3px 0 hsl(var(--lip-teal)); }
+.raised-btn.is-icon:active { box-shadow: 0 1px 0 hsl(var(--lip-teal)); transform: translateY(2px); }
 .quiet-btn { display: inline-flex; height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: 9999px; padding: 0 20px;
   background: hsl(var(--foreground) / 0.06); color: hsl(var(--foreground)); font-size: 15px; font-weight: 700; transition: transform .1s ease-out; }
 .quiet-btn:active { transform: scale(0.98); }

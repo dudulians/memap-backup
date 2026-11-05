@@ -44,6 +44,28 @@ const useName = () => {
 };
 const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? localizeTrackerAdvice(tr.adviceAboveThreshold) : "");
 
+/** How far an action point is: one piece per day her rule needs, the days
+ *  that came filled in the hard-day colour (her note, Nov 5 2026: an orange
+ *  bar in the list and purple dots inside didn't match, "не разобраться").
+ *  The same meter in the list, on the card and in Show; in Show the filled
+ *  pieces are the dark dots under it. */
+const RuleMeter = ({ k, n, className }: { k: number; n: number; className?: string }) => {
+  const { t } = useTranslation();
+  const done = k >= n;
+  return (
+    <span className={cn("flex items-center gap-2.5", className)}>
+      <span className="flex min-w-0 flex-1 gap-[3px]" aria-hidden="true">
+        {Array.from({ length: n }, (_, i) => (
+          <span key={i} className="h-2.5 min-w-0 flex-1 rounded-full" style={{ background: i < k ? "hsl(var(--strong))" : "hsl(var(--foreground) / 0.1)" }} />
+        ))}
+      </span>
+      <span className={cn("shrink-0 text-[14px] font-bold tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
+        {t(done ? "rules.meterDone" : "rules.meterOf", { k, count: n })}
+      </span>
+    </span>
+  );
+};
+
 export const ActionPoints = ({ trackers, entries, onTry }: {
   trackers: Tracker[];
   entries: TrackerEntry[];
@@ -60,6 +82,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     .map((r) => ({ ...r, lit: r.k >= r.tr.threshold }));
   const lit = rows.filter((r) => r.lit);
   const watching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
+  /** the question under the plan; a good one is counted when it's missing */
+  const label = (tr: Tracker) => (tr.problemWhen === "no" ? t("rules.without", { name: name(tr) }) : name(tr));
   const why = (tr: Tracker, k: number) => t(tr.problemWhen === "no" ? "rules.whyGood" : "rules.whyHard", { name: name(tr), k, count: tr.periodDays });
   const evenings = answeredEvenings(trackers, entries);
   // The week's test running now (one at a time).
@@ -122,7 +146,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <img src={mapPic("lighthouse")} alt="" width={40} height={46} className="h-11 w-10 shrink-0 object-contain drop-shadow-[0_0_8px_hsl(44_96%_60%/0.7)]" />
               <div className="min-w-0 flex-1">
                 <p className="text-[20px] font-bold leading-snug">{plan || name(tr)}</p>
-                <p className="mt-1 text-[14px] font-medium leading-snug text-muted-foreground">{why(tr, k)}</p>
+                {plan && <p className="mt-1 truncate text-[14px] font-medium text-muted-foreground">{label(tr)}</p>}
+                <RuleMeter k={k} n={tr.threshold} className="mt-2" />
               </div>
             </div>
             {!plan ? (
@@ -151,17 +176,13 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             {watching.map(({ tr, k }) => {
               const mine = test?.from === tr.id;
               return (
-                <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="flex w-full items-center gap-3 px-4 py-3 text-left">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[16px] font-semibold">{planOf(tr) || name(tr)}</span>
-                    <span className={cn("mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
-                      {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
-                      {mine ? testLine : why(tr, k)}
-                    </span>
+                <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="block w-full px-4 py-3 text-left">
+                  <span className="block truncate text-[16px] font-semibold">{planOf(tr) || name(tr)}</span>
+                  <span className={cn("mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
+                    {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
+                    {mine ? testLine : planOf(tr) ? label(tr) : ""}
                   </span>
-                  <span className="h-2 w-14 shrink-0 overflow-hidden rounded-full bg-foreground/10">
-                    <span className="block h-full rounded-full bg-[hsl(var(--coin-gold))]" style={{ width: `${Math.min(100, (k / tr.threshold) * 100)}%` }} />
-                  </span>
+                  <RuleMeter k={k} n={tr.threshold} className="mt-2" />
                 </button>
               );
             })}
@@ -219,10 +240,17 @@ const ShowSheet = ({ tracker, k, entries, name, onClose }: { tracker: Tracker; k
       <div className="flex min-h-0 flex-1 flex-col space-y-5 overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
           <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{name}</p>
-          <p className="mt-2 text-[34px] font-bold leading-none tracking-tight tabular-nums">
-            {t(tracker.problemWhen === "no" ? "rules.daysWithout" : "rules.daysOf", { k, count: tracker.periodDays })}
+          <p className="mt-2 text-[30px] font-bold leading-tight tracking-tight tabular-nums">
+            {k >= tracker.threshold
+              ? t(tracker.problemWhen === "no" ? "rules.bigDoneWithout" : "rules.bigDone", { k, count: tracker.periodDays })
+              : t(tracker.problemWhen === "no" ? "rules.bigOfWithout" : "rules.bigOf", { k, count: tracker.threshold })}
           </p>
-          <div className="mt-3 flex flex-wrap gap-1.5" aria-hidden="true">
+          <RuleMeter k={k} n={tracker.threshold} className="mt-3" />
+          <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.ruleLine", { n: tracker.threshold, count: tracker.periodDays })}</p>
+          <p className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
+            {t(tracker.problemWhen === "no" ? "rules.dotsGood" : "rules.dotsHard", { count: tracker.periodDays })}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5" aria-hidden="true">
             {days.map((d) => (
               <span key={d.iso} className="h-3 w-3 rounded-full" style={{
                 background: d.look === "hit" ? "hsl(var(--strong))" : d.look === "other" ? "hsl(var(--balanced) / 0.75)" : "hsl(var(--foreground) / 0.08)",

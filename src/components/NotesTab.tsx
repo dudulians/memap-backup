@@ -103,14 +103,14 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
           </button>
         )}
 
-        <div className="sticky -top-4 z-[5] -mx-4 -mt-4 flex items-center justify-between gap-3 px-4 pb-2 pt-4 backdrop-blur-md bg-background/55 animate-fade-in">
+        <div className="flex items-center justify-between gap-3 pb-2 animate-fade-in">
           <h1 className="text-[28px] font-bold tracking-tight">{t("notesTab.title")}</h1>
           {notes.length > 0 && (
             <button
               type="button"
               onClick={() => setDraft(newDraft(today))}
               aria-label={t("notesTab.write")}
-              className="h-11 w-11 rounded-full flex items-center justify-center bg-primary text-primary-foreground active:scale-95 transition-transform"
+              className="raised-btn is-icon"
             >
               <Plus className="h-5 w-5" strokeWidth={2.6} />
             </button>
@@ -142,12 +142,9 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
           <div className="flex flex-col items-center text-center pt-10 animate-fade-in">
             {SHOW_MASCOT && <img src={maluWave} alt="" className="h-32 w-32" />}
             <p className="mt-2 text-[22px] font-bold">{t("notesTab.empty")}</p>
-            <Button
-              onClick={() => setDraft(newDraft(today))}
-              className="mt-6 w-full h-[54px] rounded-full text-[17px] font-semibold"
-            >
+            <button type="button" onClick={() => setDraft(newDraft(today))} className="raised-btn mt-6 w-full justify-center">
               {t("notesTab.write")}
-            </Button>
+            </button>
           </div>
         ) : filteredNotes.length === 0 ? (
           <p className="pt-10 text-center text-[17px] text-muted-foreground animate-fade-in">{t("addTracker.nothingFound")}</p>
@@ -157,7 +154,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               <div
                 key={date}
                 id={`notes-date-${date}`}
-                className={cn("space-y-2 rounded-[22px] transition-colors duration-700", highlightedDate === date && "bg-primary/10 -mx-2 px-2 py-2")}
+                className={cn("space-y-2 rounded-[22px] transition-colors duration-700", highlightedDate === date && "bg-foreground/[0.06] -mx-2 px-2 py-2")}
               >
                 <p className="px-1 text-[17px] font-semibold text-muted-foreground">{dayLabel(date)}</p>
                 {dateNotes.map((note) => (
@@ -165,7 +162,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
                     key={note.id}
                     type="button"
                     onClick={() => setDraft({ id: note.id, date: note.date, text: note.text, linkedPatternId: note.linkedPatternId ?? "" })}
-                    className="block w-full text-left rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] px-[18px] py-4 active:scale-[0.99] transition-transform"
+                    className="surface block w-full text-left rounded-[22px] px-[18px] py-4 active:scale-[0.99] transition-transform"
                   >
                     <p className="text-[17px] leading-snug whitespace-pre-line line-clamp-6">{note.text}</p>
                     {note.linkedPatternId && trackerName(note.linkedPatternId) && (
