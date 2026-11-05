@@ -11,7 +11,7 @@
 // - calm motion: drag 1:1, a short glide, no spinning on its own.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CloudLightning, CloudSun, Plus, Sun } from "lucide-react";
+import { CloudLightning, CloudSun, Link2, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { playBloop } from "@/lib/feedback";
@@ -118,7 +118,7 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, paused = false, sky = true, onOpen, onNewIsland }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, paused = false, sky = true, onOpen, onNewIsland, onLink }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** draw her sky here (false: the screen draws it behind its header) */
   sky?: boolean;
@@ -130,6 +130,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
   paused?: boolean;
   onOpen: (id: IslandId) => void;
   onNewIsland?: () => void;
+  /** a dotted route (or its sign) tapped: the link card */
+  onLink?: (a: IslandId, b: IslandId) => void;
 }) => {
   const { t } = useTranslation();
   const [night, setNight] = useState(isNightMap);
@@ -170,6 +172,10 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
   pausedRef.current = paused;
   const onOpenRef = useRef(onOpen);
   onOpenRef.current = onOpen;
+  const onLinkRef = useRef(onLink);
+  onLinkRef.current = onLink;
+  // each link's sign on the ball, moved every frame like the labels
+  const chipEls = useRef(new Map<string, HTMLDivElement | null>());
   useEffect(() => { if (!paused) { setOn(null); kickRef.current(); } }, [paused]);
 
   // The ball's WebGL lives as long as the globe is on screen and is freed the
@@ -284,8 +290,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
           e.lab.style.opacity = String(vis); e.lab.style.zIndex = e.el.style.zIndex;
         }
       }
-      // links: a dotted boat route between two islands
+      // links: a dotted boat route between two islands, a sign at its middle
       let h = "";
+      linkHits.length = 0;
       for (const [a, b] of wakes) {
         const A = things.find((x) => x.key === a)?.v, B = things.find((x) => x.key === b)?.v; if (!A || !B) continue;
         const N = 90, runs: { x: number; y: number; z: number; t: number }[][] = []; let run: { x: number; y: number; z: number; t: number }[] = [];
@@ -294,6 +301,15 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
           if (p[2] > 0.06) run.push({ x: CX + R * p[0], y: CY - R * p[1], z: p[2], t: tt }); else if (run.length) { runs.push(run); run = []; }
         }
         if (run.length) runs.push(run);
+        for (const P of runs) for (const q of P) linkHits.push({ a, b, x: q.x, y: q.y });
+        const chip = chipEls.current.get(`${a}|${b}`);
+        if (chip) {
+          const pm = rot(slerp(A, B, 0.5)), cv = Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2));
+          const cx = CX + R * pm[0], cy = CY - R * pm[1];
+          chip.style.transform = `translate(${(cx - 17).toFixed(1)}px, ${(cy - 17).toFixed(1)}px)`;
+          chip.style.opacity = String(cv); chip.style.zIndex = String(Math.round(150 + pm[2] * 100));
+          if (cv > 0.5) linkHits.push({ a, b, x: cx, y: cy, chip: true });
+        }
         for (const P of runs) {
           for (const d of routeDots(P.map((q) => ({ x: q.x, y: q.y, t: q.t, k: 0.55 + 0.45 * q.z })), 12 * Math.sqrt(zoom))) {
             h += `<circle class="planet-route" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${(d.r * Math.sqrt(zoom)).toFixed(2)}" opacity="${d.o.toFixed(2)}"/>`;
@@ -306,6 +322,16 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
       if (far !== wasFar) { wasFar = far; setAway(far); }
     };
     let wasFar = false;
+    // where the routes and their signs are on screen, for taps
+    const linkHits: { a: IslandId; b: IslandId; x: number; y: number; chip?: boolean }[] = [];
+    const linkAt = (x: number, y: number) => {
+      let best: (typeof linkHits)[number] | null = null, bd = Infinity;
+      for (const l of linkHits) {
+        const d = Math.hypot(l.x - x, l.y - y) - (l.chip ? 10 : 0);
+        if (d < bd) { bd = d; best = l; }
+      }
+      return best && bd < 16 ? best : null;
+    };
     const FRICTION = 0.88; // per 16.7 ms: the glide stops in about 0.7 s
     const frame = (tm: number) => {
       raf = 0; const dt = last ? Math.min(48, tm - last) : 16.7; last = tm;
@@ -382,7 +408,11 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
         const h = q.w * th.ar;
         if (Math.abs(x - q.x) < q.w * 0.55 && y > q.y - h * 0.9 && y < q.y + h * 0.4 + (th.kind === "area" ? 30 : 0) && q.z > hz) { hit = th; hz = q.z; }
       }
-      if (!hit) return;
+      if (!hit) {
+        const l = onLinkRef.current ? linkAt(x, y) : null;
+        if (l) { haptics.tap(); onLinkRef.current!(l.a, l.b); }
+        return;
+      }
       haptics.tap();
       if (hit.kind === "boat") { window.dispatchEvent(new CustomEvent("memap-open-you")); return; }
       if (hit.kind === "cloud") { turnTo(hit.ll, () => setNote(true)); return; }
@@ -480,6 +510,11 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, pa
             </div>
           );
         })}
+        {onLink && wakes.map(([a, b]) => (
+          <div key={`${a}|${b}`} ref={(el) => { chipEls.current.set(`${a}|${b}`, el); }} aria-hidden="true" className="link-chip planet-link-chip" style={{ opacity: 0 }}>
+            <Link2 className="h-4 w-4" strokeWidth={2.6} />
+          </div>
+        ))}
       </div>
       {hint && <div className="planet-hint">{t("map.hint")}</div>}
       <button type="button" onClick={() => homeRef.current()} aria-label={t("map.backToMe")}

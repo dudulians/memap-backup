@@ -11,7 +11,7 @@ import { Pencil, Plus } from "lucide-react";
 import { art, artOf, stageOf, toNextStage } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
-import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic } from "@/lib/islands";
+import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic, type Route } from "@/lib/islands";
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
@@ -22,6 +22,7 @@ import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { PlanetMap } from "./PlanetMap";
+import { LinkSheet } from "./LinkSheet";
 import { PlanetGlobe } from "./PlanetGlobe";
 import { AnswerNow, IslandMore, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
@@ -54,6 +55,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [only, setOnly] = useState<Only | null>(initialOpen && initialOpen !== "all" ? initialOpen : null);
   // Which island the calendar / chart / action points show (null: all).
   const [onlyIsland, setOnlyIsland] = useState<IslandId | null>(null);
+  // a link's card (from its route), and the two questions it shows on the chart
+  const [link, setLink] = useState<Route | null>(null);
+  const [onlyIds, setOnlyIds] = useState<string[] | null>(null);
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
   // A sheet opened from elsewhere (a step on Today): closing it goes back there.
@@ -174,7 +178,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         loaded && (
           <div className="absolute inset-0">
             <PlanetGlobe sky={false} islands={islands} routes={routes} avatar={avatarPic} lit={lit} days={dayCount} onOpen={setOpen}
-              paused={!!open || !!only || newOpen || !!editor || !!testFor} onNewIsland={() => setNewOpen(true)} />
+              onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
+              paused={!!open || !!only || newOpen || !!editor || !!testFor || !!link} onNewIsland={() => setNewOpen(true)} />
           </div>
         )
       ) : (
@@ -187,7 +192,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} onOpen={setOpen}
+              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} onOpen={setOpen} onLink={setLink}
                 onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>
           )}
@@ -256,7 +261,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         </div>
       </BottomSheet>
       {/* Calendar / chart / lighthouses for everything, straight away. */}
-      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { setOnly(null); tripDone(); } }} className="h-[88vh]"
+      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
         ariaTitle={only ? t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses") : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">
@@ -277,11 +282,13 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
             })}
           </div>
           {only && (
-            <PatternsTab key={`${only}-${onlyIsland ?? "all"}`} only={only}
-              focusIds={onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined} />
+            <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only}
+              focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)} />
           )}
         </div>
       </BottomSheet>
+      <LinkSheet route={link} trackers={trackers} days={dayCount} onClose={() => setLink(null)}
+        onChart={(ids) => { setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
       {testFor && (
         <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
       )}

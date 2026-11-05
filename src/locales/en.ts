@@ -99,6 +99,14 @@ const en = {
     lit: "Lit up · time for your plan",
   },
   // Old users meet the new MeMap (Nov 2 2026)
+  link: {
+    title: "A link",
+    chip: "Link: {{a}} and {{b}}",
+    afterNextDay: "After “{{first}}”, “{{second}}” came the next day {{k}} of {{count}} times.",
+    sameDay: "On days with “{{first}}”, “{{second}}” came too, {{k}} of {{count}} times.",
+    honest: "This is what happened together in your days, not proof that one causes the other.",
+    chart: "See it on a chart",
+  },
   upgrade: {
     title: "Try the new MeMap?",
     line: "Your answers come with you · Switch back any time",

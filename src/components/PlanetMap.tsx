@@ -5,9 +5,9 @@
 // on the ring is her cloud island, where a new island can open.
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { CloudLightning, CloudSun, Plus, Sun } from "lucide-react";
+import { CloudLightning, CloudSun, Link2, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, mapPicFor } from "@/lib/islands";
-import { ASPECT, STAGE_SCALE, alongCurve, art, artOf, ringOrder, routeDots, stageOf } from "@/lib/globeArt";
+import { ASPECT, STAGE_SCALE, alongCurve, art, artOf, ringOrder, routeDots, stageOf, type RouteDot, type WakePoint } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -19,7 +19,7 @@ const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as
 // picture pixels 28 degrees are: the crop puts the ring on her open sea.
 const PIC_W = 1774, MID_X = 779, MID_Y = 335, RING_PX = 128;
 
-export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = null, onOpen, onNewIsland, onYou }: {
+export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = null, onOpen, onNewIsland, onYou, onLink }: {
   islands: Island[]; routes: Route[];
   /** the column's width; the map adds 16 px on both sides (its parent has no padding) */
   width: number;
@@ -29,6 +29,8 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
   onOpen: (id: IslandId) => void;
   onNewIsland?: () => void;
   onYou?: () => void;
+  /** a dotted route tapped: its link card */
+  onLink?: (route: Route) => void;
 }) => {
   const { t } = useTranslation();
   // one empty place on the ring for a new island while there is room; more
@@ -63,17 +65,19 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
     // island on the boat's side, bends toward the boat and slips behind the lower one.
     const ws = links.map(([a, b]) => {
       const P = list.find((s) => s.isl.id === a), Q = list.find((s) => s.isl.id === b);
-      if (!P || !Q) return null;
+      const route = routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a));
+      if (!P || !Q || !route) return null;
+      const way = (pts: WakePoint[]) => ({ route, pts, dots: routeDots(pts) });
       const [U, L] = P.y <= Q.y ? [P, Q] : [Q, P];
       const hU = U.size * (ASPECT[U.name] ?? 0.55), hL = L.size * (ASPECT[L.name] ?? 0.55);
       if (L.y - U.y < size * 0.45) {
         const s = Math.sign(L.x - U.x) || 1, mx = (U.x + L.x) / 2, my = (U.y + L.y) / 2;
-        return routeDots(alongCurve([[U.x + s * size * 0.4, U.y], [mx, my + (my > C.y ? -1 : 1) * size * 0.12], [L.x - s * size * 0.4, L.y]], 80));
+        return way(alongCurve([[U.x + s * size * 0.4, U.y], [mx, my + (my > C.y ? -1 : 1) * size * 0.12], [L.x - s * size * 0.4, L.y]], 80));
       }
       const s = Math.sign(C.x - (U.x + L.x) / 2) || 1;
       const mid: [number, number] = [(U.x + L.x) / 2 + s * size * 0.4, (U.y + L.y) / 2];
-      return routeDots(alongCurve([[U.x + s * size * 0.48, U.y - hU * 0.05], mid, [L.x + s * size * 0.12, L.y - hL * 0.25]], 80));
-    }).filter(Boolean) as ReturnType<typeof routeDots>[];
+      return way(alongCurve([[U.x + s * size * 0.48, U.y - hU * 0.05], mid, [L.x + s * size * 0.12, L.y - hL * 0.25]], 80));
+    }).filter(Boolean) as { route: Route; pts: WakePoint[]; dots: RouteDot[] }[];
     return { spots: { list, empty }, wakes: ws };
   }, [islands, routes, days, W, H, C.x, C.y, slots, big]);
 
@@ -88,10 +92,25 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
       <div aria-hidden="true" className="planet-map-sea art-day" style={bg(planetDay)} />
       <div aria-hidden="true" className="planet-map-sea art-night" style={bg(planetNight)} />
       <svg aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1]" width={W} height={H}>
-        {wakes.map((dots, i) => (
-          <g key={i}>{dots.map((d, j) => <circle key={j} className="planet-route" cx={d.x} cy={d.y} r={d.r * 1.1} opacity={d.o} />)}</g>
+        {wakes.map((w, i) => (
+          <g key={i}>
+            {/* the whole route answers a tap, not just its dots */}
+            <path d={`M${w.pts.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(" L")}`} fill="none" stroke="transparent" strokeWidth={28}
+              style={{ pointerEvents: onLink ? "stroke" : "none", cursor: "pointer" }} onClick={() => { haptics.tap(); onLink?.(w.route); }} />
+            {w.dots.map((d, j) => <circle key={j} className="planet-route" cx={d.x} cy={d.y} r={d.r * 1.1} opacity={d.o} />)}
+          </g>
         ))}
       </svg>
+      {/* a small round sign on each route, so it reads as something to open */}
+      {onLink && wakes.map((w, i) => {
+        const m = w.pts[Math.floor(w.pts.length / 2)];
+        return (
+          <button key={`link${i}`} type="button" aria-label={t("link.chip", { a: islandName(t, w.route.a), b: islandName(t, w.route.b) })}
+            onClick={() => { haptics.tap(); onLink(w.route); }} className="link-chip absolute z-[2]" style={{ left: m.x - 17, top: m.y - 17 }}>
+            <Link2 className="h-4 w-4" strokeWidth={2.6} />
+          </button>
+        );
+      })}
 
       {/* her boat in the middle: you */}
       <button type="button" aria-label={t("map.you")} onClick={() => { haptics.tap(); onYou?.(); }}

@@ -2293,6 +2293,12 @@ header h1 { transition: opacity 200ms ease; }
 :root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; }
 html[data-ui="new"][data-theme="aurora-light"] { --strong: 232 62% 64%; --strong-foreground: 0 0% 100%; --balanced: 228 75% 84%; --balanced-foreground: 232 45% 30%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
 html[data-ui="new"][data-theme="aurora"] { --strong: 232 80% 72%; --strong-foreground: 232 60% 12%; --balanced: 228 55% 68%; --balanced-foreground: 0 0% 100%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
+/* a link's sign on its route: opens the link card (LinkSheet) */
+.link-chip { width: 34px; height: 34px; border-radius: 17px; background: #fff; color: hsl(var(--strong)); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .55); transition: transform .12s ease-out; }
+button.link-chip:active { transform: scale(.92); }
+.planet-link-chip { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+html[data-ui="new"][data-theme="aurora"] .link-chip { background: hsl(var(--surface)); }
 /* a link: a dotted boat route (globeArt routeDots, Nov 4 2026) */
 .planet-route { fill: #FFFFFF; stroke: rgba(70, 100, 170, .28); stroke-width: 1; }
 html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: rgba(10, 20, 60, .35); }
