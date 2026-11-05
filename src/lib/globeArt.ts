@@ -37,8 +37,12 @@ export const STAGE_AT = [0, 3, 7, 21] as const;
 export const stageOf = (days: number): Stage => (days >= STAGE_AT[3] ? 4 : days >= STAGE_AT[2] ? 3 : days >= STAGE_AT[1] ? 2 : 1);
 /** Evenings still to go to the next stage (null at the last). */
 export const toNextStage = (days: number): number | null => { const s = stageOf(days); return s === 4 ? null : STAGE_AT[s] - days; };
-/** How big an island stands at each stage. */
-export const STAGE_SCALE: Record<Stage, number> = { 1: 0.82, 2: 0.9, 3: 1, 4: 1.12 };
+/** How big an island stands at each stage (her note, Nov 5 2026: the first stage,
+ *  plainer but taller in shape, looked bigger than the second; each stage is
+ *  now clearly bigger than the one before). */
+export const STAGE_SCALE: Record<Stage, number> = { 1: 0.66, 2: 0.82, 3: 1, 4: 1.12 };
+/** The same steps in the growth ladder (% of a ladder cell). */
+export const LADDER_WIDTH: Record<Stage, number> = { 1: 58, 2: 74, 3: 90, 4: 100 };
 export const artOf = (id: IslandId, days: number) => {
   const s = stageOf(days);
   if (s === 1) return "03_flower_hill";

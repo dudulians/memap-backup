@@ -12,7 +12,7 @@
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
-import { STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
+import { LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
@@ -86,8 +86,11 @@ export const GrowthLadder = ({ island, days }: { island: IslandId; days: number 
         return (
           <div key={s} className="flex flex-col items-center text-center">
             <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", s === now && "surface pick-on", ahead && "opacity-50 saturate-50")}>
-              <img aria-hidden="true" className="art-day block h-[50px] w-full object-contain" src={art(name, false)} alt="" />
-              <img aria-hidden="true" className="art-night block h-[50px] w-full object-contain" src={art(name, true)} alt="" />
+              {/* each stage a step bigger, standing on the same line */}
+              <span className="flex h-[50px] items-end justify-center">
+                <img aria-hidden="true" className="art-day block max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(name, false)} alt="" />
+                <img aria-hidden="true" className="art-night block max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(name, true)} alt="" />
+              </span>
               {s === 4 && <img aria-hidden="true" className="absolute left-[22%] top-[4%] w-[15%]" src={mapPicFor("marker_flag", false)} alt="" />}
             </span>
             <span className={cn("mt-1 text-[12px] font-bold leading-tight", ahead && "text-muted-foreground")}>{t(`path.stage${s}`)}</span>
