@@ -267,6 +267,8 @@ const en = {
     title: "Unload your mind",
     step: "Unload your mind",
     sub: "Pop bubbles, any time",
+    doneToday: "Done today · any time again",
+    again: "Play again",
     hint: "Write a thought below. It turns into a bubble.",
     placeholder: "What's on your mind?",
     add: "Add",

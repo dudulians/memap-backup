@@ -564,6 +564,24 @@ export const EveningPath = ({
         </>
       );
     }
+    // "Unload your mind" and the week's test have no questions: their own card,
+    // not the questions card (her note, Nov 5 2026: it said "0 answers").
+    if (s.kind === "unload") {
+      return (
+        <>
+          {head(t("unload.step"), s.done ? t("unload.doneToday") : t("unload.sub"))}
+          {button(s.done ? t("unload.again") : t("game.play"), () => startStep(s), s.done ? "plain" : "teal")}
+        </>
+      );
+    }
+    if (s.kind === "test") {
+      return (
+        <>
+          {head(t("experiment.stepDone"), t("experiment.stepSub"))}
+          {button(t("hunch.see"), () => startStep(s))}
+        </>
+      );
+    }
     if (s.kind === "task" && s.task === "note" && s.done && !s.skipped) {
       return (
         <>
