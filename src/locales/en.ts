@@ -1264,7 +1264,7 @@ const en = {
     subtitle: "Reflections and thoughts tied to your days.",
     addNote: "Add note",
     newNote: "New Note",
-    editNote: "Edit Note",
+    editNote: "Edit note",
     date: "Date",
     linkedPattern: "Linked pattern (optional)",
     linkedPatternEdit: "Linked pattern",

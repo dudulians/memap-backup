@@ -118,9 +118,9 @@ const AddTemplateButton = ({ label, onAdd, added, locked }: { label: string; onA
       aria-pressed={added}
       style={{ touchAction: "manipulation" }}
       className={cn(
-        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center border transition-colors active:scale-95",
-        locked ? "border-foreground/10 bg-foreground/[0.08] text-muted-foreground"
-          : added ? "border-primary bg-primary text-primary-foreground" : "border-foreground/[0.22] bg-foreground/[0.06]",
+        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors active:scale-95",
+        locked ? "bg-foreground/[0.06] text-muted-foreground"
+          : added ? "bg-[hsl(var(--coin-teal))] text-white" : "icon-dot",
       )}
       aria-label={label}
     >
@@ -828,10 +828,7 @@ export const AddTrackerModal = ({
                       type="button"
                       onClick={() => setSelectedTheme(group.id)}
                       aria-pressed={on}
-                      className={cn(
-                        "shrink-0 h-[42px] px-[18px] rounded-full border text-base whitespace-nowrap transition-colors",
-                        on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-                      )}
+                      className={cn("chip whitespace-nowrap", on && "is-on")}
                     >
                       {group.id === "all" ? t("addTracker.all") : localizeGroupTitle(group.title)}
                     </button>
@@ -856,7 +853,7 @@ export const AddTrackerModal = ({
                 return <p className="py-8 text-center text-base text-muted-foreground">{t("addTracker.nothingFound")}</p>;
               }
               return (
-                <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] overflow-hidden">
+                <div className="surface overflow-hidden rounded-[22px]">
                   {rows.map((template, i) => (
                     <div
                       key={template.id}
@@ -951,7 +948,7 @@ export const AddTrackerModal = ({
                 (problemWhen "no"); Bad → the signal is a Yes day. */}
             <div>
               <p className="text-[19px] font-semibold">{t("addTracker.yesIs")}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2.5">
+              <div className="seg mt-3 w-full">
                 {([["good", "no"], ["bad", "yes"]] as const).map(([key, problemWhen]) => {
                   const on = formData.problemWhen === problemWhen;
                   return (
@@ -960,10 +957,7 @@ export const AddTrackerModal = ({
                       type="button"
                       onClick={() => setFormData({ ...formData, problemWhen })}
                       aria-pressed={on}
-                      className={cn(
-                        "h-[52px] rounded-2xl border-[1.5px] text-[17px] transition-colors",
-                        on ? "border-foreground bg-foreground/15 font-bold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-                      )}
+                      className={cn("chip h-12 min-w-0 flex-1 text-[17px]", on && "is-on")}
                     >
                       {t(`addTracker.${key}`)}
                     </button>

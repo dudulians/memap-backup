@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { CalendarDays } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -66,11 +65,8 @@ export const NoteSheet = ({
     const d = parseISO(iso);
     return format(d, d.getFullYear() === new Date().getFullYear() ? "d MMMM" : "d MMMM yyyy", { locale: dateLocale });
   };
-  const chip = (on: boolean) =>
-    cn(
-      "inline-flex items-center gap-1.5 h-11 px-4 rounded-full border text-[16px] transition-colors",
-      on ? "border-[1.5px] border-primary bg-primary/15 text-primary font-semibold" : "border-foreground/[0.18] bg-foreground/[0.05] font-medium",
-    );
+  // the Aurora kit (Nov 5 2026): switches and filters look like Map | Globe
+  const chip = (on: boolean) => cn("chip", on && "is-on");
 
   // No "Note added" popup: the note shows up where she looks (her call on
   // popups, Nov 2 2026).
@@ -108,7 +104,7 @@ export const NoteSheet = ({
               onChange={(e) => setDraft({ ...draft, text: e.target.value })}
               placeholder={t("notesTab.placeholder")}
               aria-label={t("notesTab.newNote")}
-              className="mt-4 min-h-[150px] rounded-2xl text-[17px] leading-snug bg-foreground/[0.06] border-foreground/[0.14]"
+              className="mt-4 min-h-[150px] rounded-2xl text-[17px] leading-snug bg-foreground/[0.04] border-foreground/[0.12] focus-visible:ring-2 focus-visible:ring-[hsl(var(--coin-teal))] focus-visible:ring-offset-0"
             />
             <div className="mt-3">
               <DictateButton text={draft.text} onText={(next) => setDraft({ ...draft, text: next })} />
@@ -149,7 +145,7 @@ export const NoteSheet = ({
                   const on = draft.linkedPatternId === tr.id;
                   return (
                     <button key={tr.id} type="button" onClick={() => setDraft({ ...draft, linkedPatternId: on ? "" : tr.id })}
-                      className={cn(chip(on), "shrink-0 max-w-[240px] truncate")}>
+                      className={cn(chip(on), "block max-w-[240px] truncate leading-[38px]")}>
                       {nameOf(tr.id)}
                     </button>
                   );
@@ -158,14 +154,13 @@ export const NoteSheet = ({
             )}
 
             <div className="flex-1 min-h-6" />
-            <Button onClick={save} disabled={!draft.text.trim()} className="mt-6 w-full h-[54px] rounded-full text-[17px] font-semibold">
+            <button type="button" onClick={save} disabled={!draft.text.trim()} className="raised-btn mt-6 w-full justify-center">
               {t("common.save")}
-            </Button>
+            </button>
             {draft.id && (
-              <Button variant="ghost" onClick={() => setDeleteOpen(true)}
-                className="mt-2 w-full h-11 rounded-full text-[16px] text-muted-foreground hover:bg-foreground/[0.05]">
+              <button type="button" onClick={() => setDeleteOpen(true)} className="mt-2 h-11 w-full text-[16px] font-semibold text-muted-foreground">
                 {t("common.delete")}
-              </Button>
+              </button>
             )}
             {footer}
           </div>

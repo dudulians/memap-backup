@@ -203,7 +203,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   };
 
   // Row styles shared by every Settings screen (1.8.0).
-  const card = "rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]";
+  const card = "settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]";
   const row = "w-full flex items-center gap-3 px-4 min-h-[60px] py-2.5 text-left";
   const rowBtn = cn(row, "active:bg-muted/60 transition-colors");
   // Door questions go by their door name, like everywhere else.
@@ -791,7 +791,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   );
                   return (
                     <>
-                      <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                      <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                         {/* Avatar (Aurora, optional; Malu first). */}
                         <button type="button" onClick={() => setAvatarOpen(true)} className={cn(row, "active:bg-muted/60 transition-colors")}>
                           <span className="flex-1 text-[17px] font-medium">{t("avatar.title")}</span>
@@ -817,7 +817,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         </div>
                         <div className={row}>
                           <span className="flex-1 text-[17px] font-medium">{t("settings.theme")}</span>
-                          <div className="flex rounded-full bg-foreground/[0.08] p-1">
+                          <div className="settings-seg flex rounded-full bg-foreground/[0.08] p-1">
                             {(() => {
                               // An older theme someone already uses stays as a third option.
                               const legacy = getLegacyTheme();
@@ -856,7 +856,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         {currentLang === "ru" && nav("gender", t("gender.settingsLabel"), t(`gender.${currentPol}`))}
                       </div>
 
-                      <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                      <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                         {Capacitor.getPlatform() !== "android" && (
                           <button
                             type="button"
@@ -880,7 +880,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
 
             {/* === MORE SUB-SCREEN === */}
             {screen === "more" && (
-              <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+              <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                 {([
                   ["soundHaptics", Volume2, t("settings.soundAndHaptics")],
                   ["help", HelpCircle, t("settings.helpTitle")],

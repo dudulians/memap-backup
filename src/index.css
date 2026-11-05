@@ -2269,6 +2269,24 @@ html[data-ui="new"] .onb button[class~="bg-primary"][class~="rounded-full"]:acti
   color: hsl(var(--foreground)); font-weight: 700; }
 /* at night the white "lifted" chip is the lighter surface: lift it a little more */
 html[data-theme="aurora"] .chip.is-on, html[data-theme="aurora"] .seg .chip.is-on { background: hsl(var(--foreground) / 0.16); border-color: transparent; }
+/* The old shared parts in the new screens (her note, Nov 5 2026: "тут старый дизайн
+   ещё остался?"): one teal for everything "primary" — the buttons' teal, not the
+   brighter mint — and the shared Button in the kit's shapes. Classic keeps its look. */
+html[data-ui="new"][data-theme="aurora-light"] { --primary: 174 44% 42%; --ring: 174 44% 42%; }
+html[data-ui="new"][data-theme="aurora"] { --primary: 173 70% 38%; --primary-foreground: 0 0% 100%; --ring: 173 70% 38%; }
+html[data-ui="new"] button[data-variant="default"] { border-radius: 9999px; background: hsl(var(--coin-teal)); color: #fff; font-weight: 800;
+  box-shadow: 0 4px 0 hsl(var(--lip-teal)); transition: transform .1s ease-out, box-shadow .1s ease-out; }
+html[data-ui="new"] button[data-variant="default"]:active { transform: translateY(3px); box-shadow: 0 1px 0 hsl(var(--lip-teal)); }
+html[data-ui="new"] button[data-variant="default"]:disabled { box-shadow: none; transform: none; }
+html[data-ui="new"] button[data-variant="outline"], html[data-ui="new"] button[data-variant="secondary"] { border-radius: 9999px; border-color: transparent;
+  background: hsl(var(--foreground) / 0.06); color: hsl(var(--foreground)); font-weight: 700; }
+html[data-ui="new"] button[data-variant="ghost"] { border-radius: 9999px; }
+/* Settings in the new screens: white cards, and the theme switch like Map | Globe */
+html[data-ui="new"] .settings-card { background: hsl(var(--surface) / var(--surface-alpha, 1)); border-color: var(--surface-border, transparent); box-shadow: var(--surface-shadow); }
+html[data-ui="new"] .settings-seg { background: hsl(var(--foreground) / 0.06); padding: 2px; }
+html[data-ui="new"] .settings-seg button { height: 32px; font-weight: 700; color: hsl(var(--muted-foreground)); background: transparent; }
+html[data-ui="new"] .settings-seg button[aria-pressed="true"] { background: hsl(var(--surface)); color: hsl(var(--foreground)); box-shadow: var(--surface-shadow); }
+html[data-ui="new"][data-theme="aurora"] .settings-seg button[aria-pressed="true"] { background: hsl(var(--foreground) / 0.16); }
 .pick-on { box-shadow: 0 0 0 2px hsl(var(--coin-teal)), var(--surface-shadow) !important; }
 .tick { display: flex; width: 28px; height: 28px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 9999px; border: 2px solid hsl(var(--foreground) / 0.2); }
 .tick.is-on { border-color: hsl(var(--coin-teal)); background: hsl(var(--coin-teal)); color: #fff; }
