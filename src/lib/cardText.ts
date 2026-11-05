@@ -40,7 +40,7 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   // onboarding v2 (Nov 5 2026)
   "felt-calm": { en: "Did you feel calm?", ru: "Был спокойный день?" },
   "time-for-myself": { en: "Did you have time for yourself?", ru: "Было время для себя?" },
-  "main-thing-done": { en: "Did you get the main thing done?", ru: "Удалось сделать главное?" },
+  "main-thing-done": { en: "Did you finish your most important task?", ru: "Успели сделать самое важное дело?" },
   "focus-hour": { en: "Did you work an hour without your phone?", ru: "Был час без телефона?" },
   "woke-at-night": { en: "Did you wake up at night?", ru: "Просыпался(ась) ночью?" },
   "ate-late": { en: "Did you eat late in the evening?", ru: "Был поздний плотный ужин?" },

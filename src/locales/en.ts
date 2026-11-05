@@ -1554,33 +1554,24 @@ const en = {
 
   // 1.8.0 onboarding "doors" + Today hero + echo lines. Context copy is
   // keyed by library template id (see src/lib/doors.ts).
-  discover: {
-    see: "See",
-    example: "Example",
+  tour: {
+    step: "Look around",
+    stepSub: "Where everything lives",
+    go: "Go",
+    again: "Look again",
     next: "Next",
-    progress: "Yours: {{k}} of {{n}} evenings",
-    links: {
-      title: "Your links",
-      sub: "What comes before what",
-      line: "What comes before your best days — and your hardest.",
-      sample: "{{k}} of {{n}} times",
-      a: "Short sleep",
-      b: "Headache",
-      mine: "My links",
-    },
-    calendar: {
-      sub: "Every day is a dot",
-      line: "Every evening becomes a dot. See when it happens.",
-      when: "Yours fills in every evening.",
-      mine: "My calendar",
-    },
-    chart: {
-      title: "Your weeks",
-      sub: "Better or worse?",
-      line: "See if your weeks are getting better.",
-      sample: "Hard days a week",
-      mine: "My chart",
-    },
+    skip: "Skip",
+    gotIt: "Got it",
+    example: "Example",
+    yours: "Yours: {{k}} of {{n}} evenings",
+    world: { title: "Your world", line: "Every topic is an island. It grows with your evenings." },
+    links: { title: "Your links", line: "Dotted lines show what comes before what.", sample: "{{k}} of {{n}} times", a: "Short sleep", b: "Headache" },
+    calendar: { line: "Every day is a dot. Tap to see your month." },
+    chart: { title: "Your weeks", line: "See if your weeks get better.", sample: "Hard days a week" },
+    actions: { line: "When something keeps happening, here's what to try.", sample: "3 hard nights in a week → no screens after 10 pm" },
+    notes: { line: "Anything about a day, in your own words.", sampleDay: "Tuesday", sample: "Slept badly, big meeting tomorrow" },
+    you: { line: "Your treasures, your questions, settings." },
+    end: { title: "That's your world", line: "Come back tomorrow evening. Your path goes on." },
   },
   doors: {
     pickTitle: "What keeps happening?",

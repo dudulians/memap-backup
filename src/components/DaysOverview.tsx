@@ -102,7 +102,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
 
   return (
     <div className="flex gap-2.5 px-4">
-      <button type="button" className={card} onClick={() => open("overview")}>
+      <button type="button" className={card} onClick={() => open("overview")} data-tour="calendar">
         <span className="text-[13px] font-bold leading-tight">{t("overviewCards.calendar")}</span>
         <span className="mt-1.5 grid grid-cols-7 gap-[3px]" aria-hidden="true">
           {month.map((m, i) => {
@@ -116,7 +116,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
           })}
         </span>
       </button>
-      <button type="button" className={card} onClick={() => open("trends")}>
+      <button type="button" className={card} onClick={() => open("trends")} data-tour="chart">
         <span className="text-[13px] font-bold leading-tight">{t("overviewCards.chart")}</span>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mt-1.5 overflow-visible" aria-hidden="true">
           <path d={d} fill="none" stroke="hsl(var(--data-a))" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
@@ -125,7 +125,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
         </svg>
         <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{t("overviewCards.hardPerWeek")}</span>
       </button>
-      <button type="button" className={card} onClick={() => open("signals")}>
+      <button type="button" className={card} onClick={() => open("signals")} data-tour="actions">
         <span className="text-[13px] font-bold leading-tight">{t("overviewCards.lighthouses")}</span>
         <span className="mt-1 flex items-center gap-1.5">
           <img src={mapPic("lighthouse")} alt="" width={28} height={36} className={lit > 0 ? "drop-shadow-[0_0_8px_hsl(44_96%_60%/0.8)]" : "opacity-60 grayscale"} />

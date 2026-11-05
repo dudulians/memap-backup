@@ -22,8 +22,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, getChests, markActSeen, markDiscovered, pathModel, skipTask, syncTasks, type DiscoverId, type Step, type TaskId } from "@/lib/pathSteps";
-import { DiscoverSheet } from "@/components/DiscoverSheet";
+import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
@@ -135,7 +134,12 @@ export const EveningPath = ({
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
   const hasLinks = useMemo(() => buildRoutes(trackers, entries, buildIslands(trackers, entries)).length > 0, [trackers, entries]);
-  const [discoverOpen, setDiscoverOpen] = useState<DiscoverId | null>(null);
+  // "Look around" finished or skipped (src/components/AppTour.tsx): the path moves on
+  useEffect(() => {
+    const done = () => setTick((k) => k + 1);
+    window.addEventListener("memap-tour-done", done);
+    return () => window.removeEventListener("memap-tour-done", done);
+  }, []);
   // the calendar opens on her main question, so it's named for it ("Your migraine days")
   const daysLabel = (() => { const door = getDoorState(); return t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any"); })();
   // evenings answered on each island: how far each has grown
@@ -228,7 +232,7 @@ export const EveningPath = ({
     if (s.kind === "test") return t("experiment.stepDone");
     if (s.kind === "unload") return t("unload.step");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
-    if (s.kind === "discover") return s.discover === "calendar" ? daysLabel : t(`discover.${s.discover}.title`);
+    if (s.kind === "discover") return t("tour.step");
     if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
@@ -245,7 +249,6 @@ export const EveningPath = ({
     if (s.kind === "test") return "152 36% 46%";
     if (s.kind === "unload") return "198 55% 58%";
     if (s.kind === "fill") return "205 46% 58%";
-    if (s.kind === "discover") return s.discover === "calendar" ? "232 55% 62%" : s.discover === "chart" ? "205 46% 58%" : "var(--coin-teal)";
     return "var(--coin-teal)";
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
@@ -270,7 +273,7 @@ export const EveningPath = ({
     if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
-      : s.kind === "discover" ? (s.discover === "links" ? Link2 : s.discover === "calendar" ? CalendarDays : BarChart3)
+      : s.kind === "discover" ? MapIcon
       : s.kind === "questions" ? (s.added ? Plus : s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
@@ -284,7 +287,7 @@ export const EveningPath = ({
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
     if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
-    if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t(`discover.${s.discover}.sub`), action: t("discover.see") };
+    if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
     return {
       look, icon, hue, title: stepName(s),
       sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
@@ -491,7 +494,7 @@ export const EveningPath = ({
     else if (s.kind === "task" && s.task === "experiment") setTestOpen("pick");
     else if (s.kind === "test") setTestOpen("result");
     else if (s.kind === "unload") setUnloadOpen(true);
-    else if (s.kind === "discover") setDiscoverOpen(s.discover!);
+    else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
   };
@@ -645,8 +648,8 @@ export const EveningPath = ({
     if (s.kind === "discover") {
       return (
         <>
-          {head(stepName(s), t(`discover.${s.discover}.sub`))}
-          {button(t("discover.see"), () => startStep(s), s.done ? "plain" : "teal")}
+          {head(stepName(s), t("tour.stepSub"))}
+          {button(s.done ? t("tour.again") : t("tour.go"), () => startStep(s), s.done ? "plain" : "teal")}
         </>
       );
     }
@@ -873,16 +876,6 @@ export const EveningPath = ({
         </button>,
         document.body,
       )}
-
-      <DiscoverSheet which={discoverOpen} title={discoverOpen ? (discoverOpen === "calendar" ? daysLabel : t(`discover.${discoverOpen}.title`)) : ""}
-        trackers={active} days={m.totalDays} hasLinks={hasLinks} onClose={() => setDiscoverOpen(null)}
-        onNext={() => { if (discoverOpen) markDiscovered(discoverOpen); setDiscoverOpen(null); setTick((k) => k + 1); }}
-        onOpenMine={() => {
-          const d = discoverOpen;
-          if (!d) return;
-          markDiscovered(d); setDiscoverOpen(null); setTick((k) => k + 1);
-          if (d === "links") onOpenMap(); else onTask(d === "calendar" ? "calendar" : "chart");
-        }} />
 
       {unloadOpen && <UnloadGame onClose={() => { setUnloadOpen(false); setTick((k) => k + 1); }} />}
 

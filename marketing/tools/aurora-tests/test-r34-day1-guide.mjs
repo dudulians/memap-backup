@@ -21,7 +21,7 @@ const click = async (re) => { await p.getByRole("button", { name: re }).first().
 
 // --- onboarding, as in test-r33 -------------------------------------------------
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
+await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", theme); }, { lang, theme: process.argv[3] || "aurora-light" });
 await p.reload(); await p.waitForTimeout(2200);
 await click(RU ? /Начать/ : /^Start/); await p.waitForTimeout(500);
 await click(RU ? /Что-то повторяется/ : /Something keeps happening/);
@@ -79,6 +79,20 @@ for (let move = 0; move < 18; move++) {
   await p.locator(".path-start").first().click(); await p.waitForTimeout(1300);
   await shot(`move${move}`);
   const kind = await p.evaluate(() => document.querySelector("textarea") ? "note" : document.body.innerText.match(/Your hunch|Твоя догадка|Догадка/) ? "hunch" : "other");
+  // "Look around": the tour of the real pages, stop by stop
+  if (await p.locator("[data-tour-card]").count()) {
+    const stops = [];
+    for (let k = 0; k < 12 && await p.locator("[data-tour-card]").count(); k++) {
+      await p.waitForTimeout(1100);
+      await shot(`tour${k}`);
+      stops.push(await p.evaluate(() => ({ card: document.querySelector("[data-tour-card]")?.innerText.replace(/\s+/g, " ").slice(0, 120), lit: !!document.querySelector(".tour-hole"), tab: document.querySelector("nav [aria-current=page]")?.textContent })));
+      await p.locator("[data-tour-card] button").last().click();
+    }
+    await p.waitForTimeout(1200); await toTop();
+    log.push({ move, tour: stops, next: await here(), steps: await model() });
+    await shot(`after${move}`);
+    continue;
+  }
   const hasDeck = await p.getByRole("button", { name: RU ? /^Нет$/ : /^No$/ }).first().isVisible().catch(() => false);
   const discover = p.getByRole("dialog").getByRole("button", { name: RU ? /^Дальше/ : /^Next/ });
   const isDiscover = !hasDeck && await discover.first().isVisible().catch(() => false);

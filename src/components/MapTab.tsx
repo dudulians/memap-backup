@@ -52,6 +52,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [view, setView] = useState<"map" | "globe">(() => {
     try { return localStorage.getItem("memap_map_view") === "globe" ? "globe" : "map"; } catch { return "map"; }
   });
+  // the tour shows the flat map (its calendar, chart and action points live there)
+  useEffect(() => {
+    const set = (e: Event) => { const v = (e as CustomEvent).detail; if (v === "map" || v === "globe") setView(v); };
+    window.addEventListener("memap-set-map-view", set);
+    return () => window.removeEventListener("memap-set-map-view", set);
+  }, []);
   // Calendar / chart / lighthouses straight away, no tabs inside (her note).
   const [only, setOnly] = useState<Only | null>(initialOpen && initialOpen !== "all" ? initialOpen : null);
   // Which island the calendar / chart / action points show (null: all).
@@ -198,7 +204,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
             </div>
           )}
           {loaded && islands.length > 0 && (
-            <div className="mt-3">
+            <div className="mt-3" data-tour="world">
               <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} treasures={treasures} onOpen={setOpen} onLink={setLink}
                 onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>

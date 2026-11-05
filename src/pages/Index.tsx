@@ -15,6 +15,7 @@ import planetDay from "@/assets/globe/planet-day.webp";
 import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
+import { AppTour } from "@/components/AppTour";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -377,6 +378,8 @@ const Index = () => {
           unlabeled ▶ in the middle is gone; the evening session now
           starts from the "Answer tonight's N" button on Today, and
           notification taps still open it directly (App.tsx). */}
+      {/* "Look around": the tour of the real pages, started from the path */}
+      <AppTour />
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
           <div className="nav-floating grid grid-cols-3 overflow-hidden">
@@ -389,6 +392,7 @@ const Index = () => {
               <button
                 key={tab}
                 data-coachmark={tab === "patterns" ? "patterns-tab" : undefined}
+                data-tour={`tab-${tab}`}
                 onClick={() => {
                   haptics.tap();
                   setTrip(null);

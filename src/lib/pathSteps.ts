@@ -24,9 +24,11 @@ export type TaskId = "note" | "calendar" | "ownQuestion" | "chart" | "map" | "ne
  *  calendar and the chart are shown by the "discover" steps now (Nov 5 2026). */
 const TASKS_WEEK1: TaskId[] = ["note", "ownQuestion", "map"];
 
-/** "What MeMap gives you", after the first questions: links, her days, her weeks. */
-export type DiscoverId = "links" | "calendar" | "chart";
-const DISCOVER: DiscoverId[] = ["links", "calendar", "chart"];
+/** "Look around" after the first questions: a tour of the real pages
+ *  (src/components/AppTour.tsx). It replaced three pop-up cards (links, days,
+ *  weeks), her note Nov 5 2026: "надо показать, где конкретно это лежит". */
+export type DiscoverId = "tour";
+const DISCOVER: DiscoverId[] = ["tour"];
 const DISCOVER_KEY = "memap_discover_seen";
 const readDiscover = (): Partial<Record<DiscoverId, string>> => {
   try { return JSON.parse(localStorage.getItem(DISCOVER_KEY) || "{}"); } catch { return {}; }
@@ -113,7 +115,7 @@ export interface QuestionGroup {
  *  first with the door question on top, then the biggest islands. Islands
  *  under 3 questions share one mixed step; 7 or fewer questions in all make
  *  a single step. */
-export const questionGroups = (trackers: Tracker[]): QuestionGroup[] => {
+export const questionGroups = (trackers: Tracker[], opts: { together?: boolean } = {}): QuestionGroup[] => {
   const act = activeQuestions(trackers);
   const door = getDoorState();
   const byIsland = new Map<IslandId, Tracker[]>();
@@ -131,6 +133,15 @@ export const questionGroups = (trackers: Tracker[]): QuestionGroup[] => {
     [...list].sort((a, b) => (a.id === door?.trackerId ? -1 : b.id === door?.trackerId ? 1 : 0) || (a.sortIndex ?? 0) - (b.sortIndex ?? 0));
 
   if (act.length === 0) return [];
+
+  // The first week: all her questions in one step (her note, Nov 5 2026: "слишком
+  // много нажимать… по одному вопросу на тему"; topics come once she's settled in).
+  // Up to 14 in one go, more in two halves.
+  if (opts.together) {
+    const all = doorFirst(act).map((t) => t.id);
+    const parts = all.length > 14 ? 2 : 1, size = Math.ceil(all.length / parts);
+    return Array.from({ length: parts }, (_, p) => ({ mixed: "all" as const, part: [p + 1, parts] as [number, number], ids: all.slice(p * size, (p + 1) * size) }));
+  }
 
   // An island added after the first days (all its questions newer than the
   // first ones, within two weeks) keeps its own step, so its questions are
@@ -465,7 +476,7 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     .map((t) => t.id);
   const addedSet = new Set(addedIds);
   let leftToday = addedIds.filter((id) => !answeredToday.has(id)).length;
-  for (const g of questionGroups(trackers.filter((t) => !addedSet.has(t.id)))) {
+  for (const g of questionGroups(trackers.filter((t) => !addedSet.has(t.id)), { together: week === 0 })) {
     leftToday += g.ids.filter((id) => !answeredToday.has(id)).length;
     const ids = g.ids;
     const answered = ids.filter((id) => answeredToday.has(id)).length;
