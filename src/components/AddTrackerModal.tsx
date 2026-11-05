@@ -57,77 +57,24 @@ const CLUSTER_TO_CATEGORY: Record<string, Tracker["category"]> = {
 };
 
 /**
- * Dedicated Add button that fires from whichever of pointerup/click
- * arrives first. iOS Safari is flaky about synthesizing `click` from
- * touchend in some layouts — listening to pointerup makes the tap
- * land reliably, and the ref guard prevents a second fire from the
- * mouse/keyboard `click` event on desktop.
- *
- * Tap-vs-scroll guard (1.7+): record the pointer-down position and
- * bail if the finger moved more than TAP_SLOP_PX between down and
- * up. Without this, the user reported "I scrolled the template list
- * and accidentally added 5 templates" — `onPointerUp` fires
- * regardless of movement, unlike native `onClick` which the browser
- * suppresses after a scroll-distance touchmove. 10px matches
- * iOS HIG / Material Design tap-slop conventions.
+ * The "+" on a library row. It is only a picture now: the whole row is one
+ * button (her note, Nov 5 2026: tapping "+" did nothing, only the question
+ * worked). The old "+" listened to pointerup and click; on a phone the click
+ * came after its guard reset, so one tap added the question and took it
+ * straight back. A plain click on the row also ignores scroll gestures.
  */
-const TAP_SLOP_PX = 10;
-
-const AddTemplateButton = ({ label, onAdd, added, locked }: { label: string; onAdd: () => void; added?: boolean; locked?: boolean }) => {
-  const firedRef = useRef(false);
-  const startPosRef = useRef<{ x: number; y: number } | null>(null);
-  const resetSoon = () => {
-    // Reset after the current event loop so both pointerup and click
-    // see the latched value, but a subsequent tap starts fresh.
-    setTimeout(() => {
-      firedRef.current = false;
-      startPosRef.current = null;
-    }, 0);
-  };
-  const handleDown = (e: React.PointerEvent) => {
-    startPosRef.current = { x: e.clientX, y: e.clientY };
-  };
-  const fire = (e: React.PointerEvent<HTMLElement> | React.MouseEvent<HTMLElement>) => {
-    e.stopPropagation();
-    if (firedRef.current) return;
-
-    // Tap-vs-scroll: if the finger drifted more than TAP_SLOP_PX
-    // between down and up, this is a scroll gesture — bail. Only
-    // applies to events that have client coords (pointer / mouse).
-    const start = startPosRef.current;
-    if (start && "clientX" in e) {
-      const dx = e.clientX - start.x;
-      const dy = e.clientY - start.y;
-      if (Math.sqrt(dx * dx + dy * dy) > TAP_SLOP_PX) {
-        startPosRef.current = null;
-        return;
-      }
-    }
-
-    firedRef.current = true;
-    onAdd();
-    resetSoon();
-  };
-  return (
-    <button
-      type="button"
-      onPointerDown={handleDown}
-      onPointerUp={locked ? undefined : fire}
-      onClick={locked ? undefined : fire}
-      disabled={locked}
-      aria-pressed={added}
-      style={{ touchAction: "manipulation" }}
-      className={cn(
-        "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors active:scale-95",
-        locked ? "bg-foreground/[0.06] text-muted-foreground"
-          : added ? "bg-[hsl(var(--coin-teal))] text-white" : "icon-dot",
-      )}
-      aria-label={label}
-    >
-      {added ? <Check className="h-[18px] w-[18px]" strokeWidth={2.8} /> : <Plus className="h-[18px] w-[18px]" strokeWidth={2.6} />}
-    </button>
-  );
-};
+const AddBadge = ({ added, locked }: { added?: boolean; locked?: boolean }) => (
+  <span
+    aria-hidden="true"
+    className={cn(
+      "flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center transition-colors",
+      locked ? "bg-foreground/[0.06] text-muted-foreground"
+        : added ? "bg-[hsl(var(--coin-teal))] text-white" : "icon-dot",
+    )}
+  >
+    {added ? <Check className="h-[18px] w-[18px]" strokeWidth={2.8} /> : <Plus className="h-[18px] w-[18px]" strokeWidth={2.6} />}
+  </span>
+);
 
 // Shared dropdown for the Custom-tab title and question autocomplete.
 // Anchors absolutely under the wrapper (parent must be `relative`).
@@ -508,8 +455,14 @@ export const AddTrackerModal = ({
   };
 
   /** Tap a library question: add it; tap again: take it back. */
+  // one change at a time per question: a second tap while saving is ignored
+  const busy = useRef(new Set<string>());
   const toggleTemplate = async (template: typeof TEMPLATE_GROUPS[0]["templates"][0]) => {
-    if (existingIds.has(template.id)) return;
+    if (existingIds.has(template.id) || busy.current.has(template.id)) return;
+    busy.current.add(template.id);
+    try { await toggleNow(template); } finally { busy.current.delete(template.id); }
+  };
+  const toggleNow = async (template: typeof TEMPLATE_GROUPS[0]["templates"][0]) => {
     const made = addedMade.current.get(template.id);
     if (made) {
       haptics.soft();
@@ -855,28 +808,24 @@ export const AddTrackerModal = ({
               return (
                 <div className="surface overflow-hidden rounded-[22px]">
                   {rows.map((template, i) => (
-                    <div
+                    <button
                       key={template.id}
-                      className={cn("flex items-center gap-3 pl-4 pr-3 py-3", i > 0 && "border-t border-foreground/[0.08]")}
+                      type="button"
+                      onClick={() => toggleTemplate(template)}
+                      disabled={existingIds.has(template.id)}
+                      aria-pressed={addedIds.has(template.id) || existingIds.has(template.id)}
+                      aria-label={t("addTracker.addAria", { title: templateQuestion(template) })}
+                      style={{ touchAction: "manipulation" }}
+                      className={cn("flex w-full items-center gap-3 pl-4 pr-3 py-3 text-left active:bg-foreground/[0.04]", i > 0 && "border-t border-foreground/[0.08]")}
                     >
-                      <button
-                        type="button"
-                        onClick={() => toggleTemplate(template)}
-                        disabled={existingIds.has(template.id)}
-                        className="flex-1 min-w-0 text-left text-base font-medium leading-snug"
-                      >
+                      <span className="flex-1 min-w-0 text-base font-medium leading-snug">
                         {templateQuestion(template)}
                         {existingIds.has(template.id) && (
                           <span className="block text-[13px] font-medium text-muted-foreground">{t("addTracker.alreadyHave")}</span>
                         )}
-                      </button>
-                      <AddTemplateButton
-                        label={t("addTracker.addAria", { title: templateQuestion(template) })}
-                        added={addedIds.has(template.id) || existingIds.has(template.id)}
-                        locked={existingIds.has(template.id)}
-                        onAdd={() => toggleTemplate(template)}
-                      />
-                    </div>
+                      </span>
+                      <AddBadge added={addedIds.has(template.id) || existingIds.has(template.id)} locked={existingIds.has(template.id)} />
+                    </button>
                   ))}
                 </div>
               );

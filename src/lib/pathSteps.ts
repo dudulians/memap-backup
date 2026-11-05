@@ -20,8 +20,23 @@ const MAX_PER_STEP = 7;
 const MIN_PER_STEP = 3;
 
 export type TaskId = "note" | "calendar" | "ownQuestion" | "chart" | "map" | "newIsland" | "experiment";
-/** Week 1 teaches the app; later weeks open new islands, after her own. */
-const TASKS_WEEK1: TaskId[] = ["note", "calendar", "ownQuestion", "chart", "map"];
+/** Week 1 teaches the app; later weeks open new islands, after her own. The
+ *  calendar and the chart are shown by the "discover" steps now (Nov 5 2026). */
+const TASKS_WEEK1: TaskId[] = ["note", "ownQuestion", "map"];
+
+/** "What MeMap gives you", after the first questions: links, her days, her weeks. */
+export type DiscoverId = "links" | "calendar" | "chart";
+const DISCOVER: DiscoverId[] = ["links", "calendar", "chart"];
+const DISCOVER_KEY = "memap_discover_seen";
+const readDiscover = (): Partial<Record<DiscoverId, string>> => {
+  try { return JSON.parse(localStorage.getItem(DISCOVER_KEY) || "{}"); } catch { return {}; }
+};
+/** She went through one (its "Next"): done today, gone from tomorrow. */
+export const markDiscovered = (d: DiscoverId) => {
+  const s = readDiscover();
+  if (s[d]) return;
+  try { localStorage.setItem(DISCOVER_KEY, JSON.stringify({ ...s, [d]: isoLocal(new Date()) })); } catch { /* shows again, harmless */ }
+};
 // Week 2 on: test one change (her "провёл эксперимент — сад"), then a new island.
 const TASKS_LATER: TaskId[] = ["experiment", "newIsland"];
 
@@ -32,7 +47,9 @@ export interface Step {
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
   /** "test": her week of trying one change is over: see how it went */
   /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew";
+  /** "discover": what the app will show her, with an example (src/components/DiscoverSheet.tsx) */
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover";
+  discover?: DiscoverId;
   /** grew: the stage the island reached today */
   stage?: number;
   /** fill: the day */
@@ -466,7 +483,15 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   }
 
   const hasQuestions = addedIds.length > 0 || steps.some((s) => s.kind === "questions");
-  const task = taskForToday(week, today);
+  // What MeMap gives her (her note, Nov 5 2026: after the first questions "дальше
+  // должно быть так, что ты переходишь по шагам, и он объясняет, что приложение
+  // готово тебе предложить"): right after the questions, until seen; seen today
+  // stays as done. On a day with them, no task (day 1 isn't longer).
+  const seen = readDiscover();
+  const discover = hasQuestions ? DISCOVER.filter((d) => !seen[d] || seen[d] === today) : [];
+  for (const d of discover) steps.push({ id: `discover:${d}`, kind: "discover", discover: d, trackerIds: [], answered: 0, done: seen[d] === today });
+  const discovering = discover.length > 0;
+  const task = discovering ? null : taskForToday(week, today);
   if (task && hasQuestions) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }

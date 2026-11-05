@@ -67,24 +67,26 @@ log.push({ after: "onboarding", start: await here(), steps: await model(), tasks
 await shot("today");
 
 let addedOnce = false;
-for (let move = 0; move < 14; move++) {
+for (let move = 0; move < 18; move++) {
   const at = await here();
   if (at === "NO START BUBBLE") { log.push({ move, note: "no start bubble" }); break; }
   if (/Done for today|What's next|На сегодня всё|Что дальше/.test(at)) {
     await p.locator(".path-start").first().click(); await p.waitForTimeout(900);
     await shot("end-card");
     log.push({ move, end: await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD") });
-    // the calendar button says what's there, and opens on her main question
-    await click(RU ? /Дни с мигренью/ : /Your migraine days/); await p.waitForTimeout(1600);
-    await shot("calendar");
-    log.push({ calendar: await p.evaluate(() => document.body.innerText.match(/\d+\s+(migraines?|приступ\S*)/i)?.[0] ?? "NO COUNT") });
     break;
   }
   await p.locator(".path-start").first().click(); await p.waitForTimeout(1300);
   await shot(`move${move}`);
   const kind = await p.evaluate(() => document.querySelector("textarea") ? "note" : document.body.innerText.match(/Your hunch|Твоя догадка|Догадка/) ? "hunch" : "other");
   const hasDeck = await p.getByRole("button", { name: RU ? /^Нет$/ : /^No$/ }).first().isVisible().catch(() => false);
-  if (hasDeck) await answerDeck();
+  const discover = p.getByRole("dialog").getByRole("button", { name: RU ? /^Дальше/ : /^Next/ });
+  const isDiscover = !hasDeck && await discover.first().isVisible().catch(() => false);
+  if (isDiscover) {
+    log.push({ move, discover: await p.evaluate(() => document.querySelector("[role=dialog]")?.innerText.replace(/\s+/g, " ")) });
+    await discover.first().click(); await p.waitForTimeout(1200);
+  }
+  else if (hasDeck) await answerDeck();
   else if (kind === "note") { await p.keyboard.press("Escape"); await p.waitForTimeout(1200); }
   else {
     // a game or a tab: skip it, back to Today
@@ -97,7 +99,7 @@ for (let move = 0; move < 14; move++) {
     await p.waitForTimeout(1200);
   }
   await toTop();
-  log.push({ move, did: at, kind: hasDeck ? "deck" : kind, next: await here(), steps: await model() });
+  log.push({ move, did: at, kind: hasDeck ? "deck" : isDiscover ? "discover" : kind, next: await here(), steps: await model() });
   await shot(`after${move}`);
   // after the first answered step she adds two questions (one to an island already done)
   if (!addedOnce && hasDeck) {

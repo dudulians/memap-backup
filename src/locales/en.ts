@@ -1554,6 +1554,34 @@ const en = {
 
   // 1.8.0 onboarding "doors" + Today hero + echo lines. Context copy is
   // keyed by library template id (see src/lib/doors.ts).
+  discover: {
+    see: "See",
+    example: "Example",
+    next: "Next",
+    progress: "Yours: {{k}} of {{n}} evenings",
+    links: {
+      title: "Your links",
+      sub: "What comes before what",
+      line: "What comes before your best days — and your hardest.",
+      sample: "{{k}} of {{n}} times",
+      a: "Short sleep",
+      b: "Headache",
+      mine: "My links",
+    },
+    calendar: {
+      sub: "Every day is a dot",
+      line: "Every evening becomes a dot. See when it happens.",
+      when: "Yours fills in every evening.",
+      mine: "My calendar",
+    },
+    chart: {
+      title: "Your weeks",
+      sub: "Better or worse?",
+      line: "See if your weeks are getting better.",
+      sample: "Hard days a week",
+      mine: "My chart",
+    },
+  },
   doors: {
     pickTitle: "What keeps happening?",
     goodTitle: "What do you want more of?",

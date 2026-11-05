@@ -20,6 +20,7 @@ const setup = async (p, lang, theme) => {
     localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
     for (const k of ["memap_hunch_day", "memap_act_seen"]) localStorage.setItem(k, iso(0));
+    localStorage.setItem("memap_discover_seen", JSON.stringify({ links: iso(1), calendar: iso(1), chart: iso(1) }));
     const ps = await import("/src/lib/pathSteps.ts");
     for (const s of ps.pathModel(T, E).steps) if (s.kind === "task") ps.markTaskDone(s.task);
   }, { lang, theme });
@@ -38,7 +39,7 @@ out.model = await p.evaluate(async () => {
 await p.screenshot({ path: `${D}/night-path.png` });
 await openEnd(); await p.screenshot({ path: `${D}/night-card.png` });
 out.card = await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " "));
-for (const [name, look] of [["See your links", /Globe|Links show up|Link/], ["Your days on a calendar", /Calendar/], ["Explore new questions", /Add a question/]]) {
+for (const [name, look] of [["See your links", /Globe|Links show up|Link/], ["Your days on a calendar", /Calendar/], ["See your links", /Globe|Link/], ["Explore new questions", /Add a question/]]) {
   await p.reload(); await p.waitForTimeout(2400); await openEnd();
   await p.getByRole("button", { name }).click(); await p.waitForTimeout(1600);
   await p.screenshot({ path: `${D}/${name.replace(/ /g, "-")}.png` });
