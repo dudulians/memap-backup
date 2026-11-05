@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, FlaskConical, Flame, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, Flag, FlaskConical, Flame, Layers, Lightbulb, Link2, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
@@ -63,6 +63,9 @@ const addDays = (base: Date, n: number) => {
 type PNode =
   | { kind: "past"; date: string }
   | { kind: "step"; step: Step }
+  /** "Done for today": the last light of today (her note, Nov 5 2026: the app
+   *  should always say what's next, then "всё, можешь шарики полопать…") */
+  | { kind: "end" }
   | { kind: "future"; offset: number }
   | { kind: "chest" };
 type Open = number | null;
@@ -102,6 +105,22 @@ export const EveningPath = ({
       .catch(() => setNoteDays([]));
   useEffect(() => { loadNotes(); }, []);
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
+  // Today's "Write a note": closing the note unwritten counts as "not today", so
+  // the highlight moves on (her note, Nov 5 2026: "закрыла, не стала это делать.
+  // И хочу, чтобы он дальше мне уже подсвечивал следующий шажочек").
+  const noteFromTask = useRef(false);
+  const noteSaved = useRef(false);
+  const setNote = (d: NoteDraft | null) => {
+    if (d === null && noteFromTask.current) {
+      noteFromTask.current = false;
+      // saving closes first and says "saved" right after
+      window.setTimeout(() => {
+        if (!noteSaved.current) { skipTask("note"); setTick((k) => k + 1); }
+        noteSaved.current = false;
+      }, 0);
+    }
+    setNoteDraft(d);
+  };
   // Bumped when a task is skipped or the game is played (stored outside React).
   const [tick, setTick] = useState(0);
   const m = useMemo(() => {
@@ -148,6 +167,7 @@ export const EveningPath = ({
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
     for (const step of steps) out.push({ kind: "step", step });
+    if (steps.length > 0) out.push({ kind: "end" });
     const coming = m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length;
     for (let o = 1; o <= coming; o++) out.push({ kind: "future", offset: o });
     out.push({ kind: "chest" });
@@ -158,23 +178,25 @@ export const EveningPath = ({
   // The questions stay the main step; "Unload your mind" is there any time
   // without taking the highlight (it is the main step only when nothing else is left).
   const firstOpen = steps.findIndex((s) => isOpenStep(s) && s.kind !== "unload");
-  // Tonight is done (her note, Nov 5 2026: "ты сделал большую работу сегодня, можешь
-  // ещё поизучать вопросы или поиграть в пузырики"): when every step but "Unload your
-  // mind" is done, no step is highlighted. Tapping tonight's last light says so and
-  // offers the two things left, both optional — a card on tap, never one that stays
-  // on the path (her note the same day: "не нравится эта табличка на постоянке").
+  // Tonight is done (her notes, Nov 5 2026: "ты сделал большую работу сегодня,
+  // можешь ещё поизучать вопросы или поиграть в пузырики", and "всё время надо
+  // человека навигировать по приложению"): when every step but "Unload your mind"
+  // is done, the highlight moves to the last light, "Done for today", and its
+  // card offers what's left, all optional — a card on tap, never one that stays
+  // on the path ("не нравится эта табличка на постоянке").
   const eveningDone = steps.length > 0 && firstOpen < 0;
+  const openLeft = steps.filter((s) => isOpenStep(s) && s.kind !== "unload").length;
+  const endNode = steps.length > 0 ? firstStep + steps.length : -1;
   const cur = firstOpen;
-  const currentNode = cur >= 0 ? firstStep + cur : -1;
+  const currentNode = cur >= 0 ? firstStep + cur : eveningDone ? endNode : -1;
   const chestIndex = nodes.length - 1;
-  const lastStepNode = firstStep + steps.length - 1;
-  // The node to bring into view: the current step, else the reward, else tonight's
-  // last step, else tomorrow.
-  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : eveningDone ? lastStepNode : firstStep + steps.length;
+  // The node to bring into view: the current step (or "Done for today"), else
+  // the reward, else tomorrow.
+  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + steps.length;
 
   const stops = useMemo(() => {
     // room above her step for its Start bubble (the first light included)
-    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
+    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" || n.kind === "end" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
     if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
     return out;
   }, [nodes, width, currentNode]);
@@ -199,6 +221,7 @@ export const EveningPath = ({
     if (s.kind === "test") return t("experiment.stepDone");
     if (s.kind === "unload") return t("unload.step");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
+    if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
   };
@@ -227,18 +250,24 @@ export const EveningPath = ({
         ? { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.reportReady"), action: currentNode < 0 ? t("path.openReport") : undefined }
         : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
     }
+    if (n.kind === "end") {
+      return {
+        look: current ? "current" : "todo", icon: <Flag className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />,
+        title: t("path.end.title"), action: current ? t("path.end.action") : undefined,
+      };
+    }
     const s = n.step;
     // an island grew today: done already, with a sprout
     if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
-      : s.kind === "questions" ? (s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
+      : s.kind === "questions" ? (s.added ? Plus : s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
     const icon = s.done && !s.skipped && !replay ? <Check className="h-6 w-6" strokeWidth={3} /> : <Icon className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.newQuestions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
     if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("hunch.go") };
@@ -247,7 +276,7 @@ export const EveningPath = ({
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
     return {
       look, icon, hue, title: stepName(s),
-      sub: s.answered > 0 ? t("path.left", { count: left }) : s.added ? t("path.newQuestions", { count: left }) : t("path.questions", { count: left }),
+      sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
       action: s.answered > 0 ? t("path.continue") : t("path.start"),
     };
   };
@@ -447,7 +476,7 @@ export const EveningPath = ({
     if (s.kind === "game") { if (canPlay) setGameOpen(true); }
     else if (s.kind === "act") { markActSeen(); setTick((k) => k + 1); openActionPoints(); }
     else if (s.kind === "fill") onFillDay(s.date!);
-    else if (s.kind === "task" && s.task === "note") setNoteDraft(newDraft());
+    else if (s.kind === "task" && s.task === "note") { noteFromTask.current = true; noteSaved.current = false; setNoteDraft(newDraft()); }
     else if (s.kind === "task" && s.task === "experiment") setTestOpen("pick");
     else if (s.kind === "test") setTestOpen("result");
     else if (s.kind === "unload") setUnloadOpen(true);
@@ -459,7 +488,7 @@ export const EveningPath = ({
   const tap = (i: number) => {
     const n = nodes[i];
     if (n.kind === "chest" && m.weekComplete) { setOpen(null); openThisChest(); return; }
-    const notYet = n.kind === "future" || (n.kind === "chest" && !m.weekComplete) || (n.kind === "step" && n.step.kind === "game" && !canPlay);
+    const notYet = n.kind === "future" || (n.kind === "end" && !eveningDone) || (n.kind === "chest" && !m.weekComplete) || (n.kind === "step" && n.step.kind === "game" && !canPlay);
     if (notYet && open !== i) {
       setWiggle(i);
       window.setTimeout(() => setWiggle((w) => (w === i ? null : w)), 450);
@@ -549,17 +578,23 @@ export const EveningPath = ({
         head(reportLabel, t("path.toGo", { count: toGo }))
       );
     }
-    const s = n.step;
-    // tonight is done: tapping its last light says so, and offers two optional things
-    if (eveningDone && i === lastStepNode) {
+    // "Done for today": what's left, all optional (the week's report first when it's ready)
+    if (n.kind === "end") {
+      if (!eveningDone) return head(t("path.end.title"), t("path.end.left", { count: openLeft }));
+      const go = (f: () => void) => () => { setOpen(null); f(); };
+      const ic = "h-5 w-5";
       return (
         <>
           {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
-          {button(<><Wind className="h-5 w-5" strokeWidth={2.4} /> {t("path.popBubbles")}</>, () => { setOpen(null); setUnloadOpen(true); })}
-          {button(<><Plus className="h-5 w-5" strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, () => { setOpen(null); onTask("ownQuestion"); }, "plain")}
+          {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest), "gold")}
+          {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true)), m.weekComplete ? "plain" : "teal")}
+          {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion")), "plain")}
+          {button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap), "plain")}
+          {button(<><CalendarDays className={ic} strokeWidth={2.4} /> {t("path.seeCalendar")}</>, go(() => onTask("calendar")), "plain")}
         </>
       );
     }
+    const s = n.step;
     if (s.kind === "grew") return grewBody(s.island!);
     if (s.kind === "auto") {
       const door = getDoorState();
@@ -738,7 +773,7 @@ export const EveningPath = ({
             const v = viewOf(n, i);
             const p = stops[i];
             const act = v.action
-              ? n.kind === "step" ? () => startStep(n.step) : n.kind === "chest" ? openThisChest : undefined
+              ? n.kind === "step" ? () => startStep(n.step) : n.kind === "end" ? () => tap(i) : n.kind === "chest" ? openThisChest : undefined
               : undefined;
             const lockedGame = n.kind === "step" && n.step.kind === "game" && !canPlay && !n.step.done;
             return (
@@ -776,13 +811,13 @@ export const EveningPath = ({
         <WeekStrip key={`c${n}`} week={m.week + n} width={width} kind="coming" firstOffset={comingAfter + (n - 1) * DAYS_PER_WEEK} />
       ))}
 
-      <NoteSheet draft={noteDraft} setDraft={setNoteDraft} trackers={active} onSaved={loadNotes}
+      <NoteSheet draft={noteDraft} setDraft={setNote} trackers={active} onSaved={() => { noteSaved.current = true; loadNotes(); }}
         footer={
           <div className="mt-2 flex items-center justify-between">
-            <button type="button" onClick={() => { setNoteDraft(null); window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} })); }}
+            <button type="button" onClick={() => { setNote(null); window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} })); }}
               className="h-11 px-2 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">{t("path.allNotes")}</button>
             {m.steps.some((st) => st.kind === "task" && st.task === "note" && !st.done) && (
-              <button type="button" onClick={() => { setNoteDraft(null); skipTask("note"); setTick((k) => k + 1); }}
+              <button type="button" onClick={() => setNote(null)}
                 className="h-11 px-2 text-[15px] font-semibold text-muted-foreground">{t("path.skip")}</button>
             )}
           </div>

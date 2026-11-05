@@ -19,6 +19,7 @@ import {
 } from "@/lib/notifications";
 import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door } from "@/lib/doors";
+import { markOnboarded } from "@/lib/pathSteps";
 import { DoorPickerScreen, DoorFlow, OwnFlow, CuriousFlow, PickResult, Finish } from "./DoorOnboarding";
 import { CompanionScreen, ForkScreen, PromiseScreen, WelcomeScreen } from "./OnboardingV2";
 
@@ -67,6 +68,8 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
       // ignore
     }
     localStorage.setItem(TOUR_SEEN_KEY, "true");
+    // what onboarding made is today's own set; questions added later are "New questions"
+    markOnboarded();
     track("onboarding_completed", { path });
     document.body.style.overflow = "";
     if (!reminders) {

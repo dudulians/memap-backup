@@ -48,7 +48,7 @@ export interface Step {
   part?: [number, number];
   /** questions of a newly added island */
   fresh?: boolean;
-  /** questions added today to a topic already done today: their own step, ahead */
+  /** "New questions": the ones added today after the day's own set, one step at the boat */
   added?: boolean;
   trackerIds: string[];
   task?: TaskId;
@@ -284,9 +284,46 @@ const taskForToday = (week: number, today: string): { task: TaskId; done: boolea
       continue;
     }
     if (r?.skipped === today) return { task, done: true, skipped: true };
+    // A note skipped once doesn't come back (her note, Nov 5 2026: "я сама
+    // знаю, что если что, я напишу note"): notes stay one tap away on Today.
+    if (task === "note" && r?.skipped) continue;
     return { task, done: false };
   }
   return null;
+};
+
+// --- "New questions" ------------------------------------------------------------
+
+const ONBOARDED_KEY = "memap_onboarded_at";
+/** Onboarding just finished: the questions it made are the day's own set. */
+export const markOnboarded = () => {
+  try { localStorage.setItem(ONBOARDED_KEY, new Date().toISOString()); } catch { /* they show as new today, harmless */ }
+};
+/** Questions made after this moment today are "New questions". */
+const addedBaseline = (trackers: Tracker[], now: Date): number => {
+  const today = isoLocal(now);
+  try {
+    const onb = localStorage.getItem(ONBOARDED_KEY);
+    if (onb && isoLocal(new Date(onb)) === today) return Date.parse(onb);
+  } catch { /* fall through */ }
+  const qs = activeQuestions(trackers);
+  // questions from before today: everything made today is new
+  if (qs.length === 0 || qs.some((t) => !t.createdAt || isoLocal(new Date(t.createdAt)) < today)) {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  }
+  // all made today, no onboarding record (a seeded install): the first batch is the day's own
+  return Math.min(...qs.map((t) => Date.parse(t.createdAt))) + 60_000;
+};
+const ADDED_KEY = "memap_path_added";
+/** Where today's "New questions" step sits once answered: before this step. */
+const readAddedAnchor = (today: string): string | null => {
+  try {
+    const v = JSON.parse(localStorage.getItem(ADDED_KEY) || "null") as { date: string; before: string } | null;
+    return v && v.date === today ? v.before : null;
+  } catch { return null; }
+};
+const saveAddedAnchor = (today: string, before: string) => {
+  try { localStorage.setItem(ADDED_KEY, JSON.stringify({ date: today, before })); } catch { /* it sits at the boat */ }
 };
 
 // --- Where the path starts, and the week chests ----------------------------------
@@ -399,22 +436,21 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     break;
   }
 
-  // Questions added today to a topic she had already finished today (her
-  // note, Nov 4 2026: it wasn't clear she had to sail back and finish it): that
-  // step stays done, and they wait ahead of the boat as a step of their own.
+  // Questions added today, after the day's own set (her notes, Nov 4 and 5
+  // 2026: adding questions sent the boat back to an island already done, "меня
+  // перекинуло на лав"): one step of their own, "New questions", where the boat
+  // is, never back on an earlier step. Tomorrow they join their islands.
   const byId = new Map(trackers.map((t) => [t.id, t]));
-  const isLate = (id: string) => {
-    const at = byId.get(id)?.createdAt;
-    return !answeredToday.has(id) && !!at && isoLocal(new Date(at)) === today;
-  };
-  const late = new Map<IslandId, string[]>();
-  let leftToday = 0;
-  for (const g of questionGroups(trackers)) {
+  const baseline = addedBaseline(trackers, now);
+  const addedIds = activeQuestions(trackers)
+    .filter((t) => !!t.createdAt && isoLocal(new Date(t.createdAt)) === today && Date.parse(t.createdAt) > baseline)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((t) => t.id);
+  const addedSet = new Set(addedIds);
+  let leftToday = addedIds.filter((id) => !answeredToday.has(id)).length;
+  for (const g of questionGroups(trackers.filter((t) => !addedSet.has(t.id)))) {
     leftToday += g.ids.filter((id) => !answeredToday.has(id)).length;
-    const older = g.ids.filter((id) => !isLate(id));
-    const moved = older.length > 0 && older.length < g.ids.length && older.every((id) => answeredToday.has(id));
-    const ids = moved ? older : g.ids;
-    if (moved) for (const id of g.ids) if (isLate(id)) { const k = islandOf(byId.get(id)!); late.set(k, [...(late.get(k) ?? []), id]); }
+    const ids = g.ids;
     const answered = ids.filter((id) => answeredToday.has(id)).length;
     steps.push({
       id: `q:${g.island ?? g.mixed}:${g.part[0]}`,
@@ -429,8 +465,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     });
   }
 
+  const hasQuestions = addedIds.length > 0 || steps.some((s) => s.kind === "questions");
   const task = taskForToday(week, today);
-  if (task && steps.some((s) => s.kind === "questions")) {
+  if (task && hasQuestions) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
   // A rule she set was reached (a lit lighthouse): her plan, once a day.
@@ -443,18 +480,29 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   if (test && experimentOver(test)) steps.push({ id: "test", kind: "test", trackerIds: [test.trackerId], answered: 0, done: false });
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.
-  if (steps.some((s) => s.kind === "questions")) {
+  if (hasQuestions) {
     // The day's hunch: done once made (or "not now"), unless a checked one waits.
     steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: hunchDoneToday() && !readyHunch(trackers, entries) });
     // Her "разгрузи свой мозг": a calm game any time, from day 1.
     steps.push({ id: "unload", kind: "unload", trackerIds: [], answered: 0, done: unloadPlayedToday() });
   }
-  // the late questions go where the boat is: before the first step still to
-  // do (the calm game doesn't count), else at the end
-  if (late.size > 0) {
-    const at = steps.findIndex((s) => !s.done && s.kind !== "unload");
-    const added: Step[] = [...late].map(([island, ids]) => ({ id: `q:added:${island}`, kind: "questions", island, added: true, trackerIds: ids, answered: 0, done: false }));
-    steps.splice(at >= 0 ? at : steps.length, 0, ...added);
+  // "New questions" go where the boat is: before the first step still to do
+  // (the calm game doesn't count), else at the end; once answered the step
+  // stays where it was, so the path doesn't reshuffle.
+  if (addedIds.length > 0) {
+    const answered = addedIds.filter((id) => answeredToday.has(id)).length;
+    const islands = new Set(addedIds.map((id) => islandOf(byId.get(id)!)));
+    const step: Step = {
+      id: "q:added", kind: "questions", added: true,
+      island: islands.size === 1 ? [...islands][0] : undefined,
+      trackerIds: addedIds, answered, done: answered === addedIds.length,
+    };
+    const boat = steps.findIndex((s) => !s.done && s.kind !== "unload");
+    const anchor = step.done ? readAddedAnchor(today) : null;
+    const kept = anchor === "end" ? steps.length : anchor ? steps.findIndex((s) => s.id === anchor) : -1;
+    const at = kept >= 0 ? kept : boat >= 0 ? boat : steps.length;
+    if (!step.done || kept < 0) saveAddedAnchor(today, steps[at]?.id ?? "end");
+    steps.splice(at, 0, step);
   }
   // An island that reached a new stage with today's answers: a step already
   // done, right after the questions that grew it (her note, Nov 5 2026: one

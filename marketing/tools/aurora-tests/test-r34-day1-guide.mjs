@@ -1,0 +1,109 @@
+// Day 1, guided (her notes, Nov 5 2026): a brand-new person finishes onboarding
+// (Migraines, "Yesterday") and follows the highlight on Today, step by step:
+//   - "A bit of everything" has more than 2 questions
+//   - "Write a note": Go, then close without writing → the highlight moves on, no note again
+//   - she adds questions mid-day → one "New questions" step at the boat, never back
+//   - the end: "Done for today" lights up, its card offers bubbles / questions / links / calendar
+// A picture after every move; the path's steps as the model sees them; errors.
+import { chromium } from "playwright-core";
+import { mkdirSync } from "fs";
+const D = `./aurora-tests/work/r34`; mkdirSync(D, { recursive: true });
+const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
+const errs = [], log = [];
+const lang = process.argv[2] ?? "en";
+const RU = lang === "ru";
+const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
+const p = await ctx.newPage();
+p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => m.type() === "error" && errs.push(m.text()));
+let n = 0;
+const shot = async (name) => { await p.waitForTimeout(700); await p.screenshot({ path: `${D}/${lang}-${String(++n).padStart(2, "0")}-${name}.png` }); };
+const click = async (re) => { await p.getByRole("button", { name: re }).first().click(); };
+
+// --- onboarding, as in test-r33 -------------------------------------------------
+await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
+await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
+await p.reload(); await p.waitForTimeout(2200);
+await click(RU ? /Начать/ : /^Start/); await p.waitForTimeout(500);
+await click(RU ? /Что-то повторяется/ : /Something keeps happening/);
+await click(RU ? /^Дальше/ : /^Continue/); await p.waitForTimeout(500);
+await click(RU ? /Мигрен/ : /Migraines/); await click(RU ? /^Дальше/ : /^Continue/); await p.waitForTimeout(1500);
+await click(RU ? /Начнём/ : /Let's start/); await p.waitForTimeout(500);
+await click(RU ? /^Вчера$/ : /^Yesterday$/); await p.waitForTimeout(400);
+await click(RU ? /^Дальше/ : /^Next/); await p.waitForTimeout(500);
+const yes0 = p.getByRole("button", { name: RU ? /^Да$/ : /^Yes$/ }), no0 = p.getByRole("button", { name: RU ? /^Нет$/ : /^No$/ });
+if (await yes0.count()) { await no0.nth(0).click(); await yes0.nth(1).click().catch(() => {}); await no0.nth(2).click().catch(() => {}); }
+await click(RU ? /Сохранить/ : /^Save/); await p.waitForTimeout(600);
+await p.locator("[role=switch]").first().click().catch(() => {});
+await click(RU ? /^Дальше$/ : /^Next$/); await p.waitForTimeout(600);
+await click(RU ? /В путь/ : /Set sail/); await p.waitForTimeout(2200);
+
+// --- what the path holds ----------------------------------------------------------
+const model = async () => p.evaluate(async () => {
+  const ps = await import("/src/lib/pathSteps.ts");
+  const T = JSON.parse(localStorage.getItem("memap_trackers") || "[]"), E = JSON.parse(localStorage.getItem("memap_entries") || "[]");
+  const byId = new Map(T.map((t) => [t.id, t.title]));
+  const m = ps.pathModel(T, E);
+  return m.steps.map((s, i) => `${i === m.current ? "▶ " : ""}${s.id}${s.done ? " ✓" : ""}${s.skipped ? " (skipped)" : ""}${s.trackerIds.length && s.kind === "questions" ? " [" + s.trackerIds.map((id) => byId.get(id)).join(" | ") + "]" : ""}`);
+});
+const here = async () => p.evaluate(() => {
+  const b = document.querySelector(".path-start");
+  return b ? (b.getAttribute("aria-label") || b.textContent) : "NO START BUBBLE";
+});
+const toTop = async () => { await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300); };
+const answerDeck = async () => {
+  for (let k = 0; k < 24; k++) {
+    const no = p.getByRole("button", { name: RU ? /^Нет$/ : /^No$/ }), yes = p.getByRole("button", { name: RU ? /^Да$/ : /^Yes$/ });
+    if (!(await no.count()) || !(await no.first().isVisible().catch(() => false))) break;
+    await (k % 3 === 1 ? yes : no).first().click(); await p.waitForTimeout(700);
+  }
+  await p.waitForTimeout(900);
+  await shot("deck-end");
+  const end = p.getByRole("button", { name: RU ? /Назад|Вернуться|Дальше|Готово/ : /Back to Today|Continue|Done|Next/ });
+  if (await end.count()) await end.last().click().catch(() => {});
+  await p.waitForTimeout(1500);
+};
+
+log.push({ after: "onboarding", start: await here(), steps: await model(), tasks: await p.evaluate(() => localStorage.getItem("memap_path_tasks")) });
+await shot("today");
+
+let addedOnce = false;
+for (let move = 0; move < 14; move++) {
+  const at = await here();
+  if (at === "NO START BUBBLE") { log.push({ move, note: "no start bubble" }); break; }
+  if (/Done for today|What's next|На сегодня всё|Что дальше/.test(at)) {
+    await p.locator(".path-start").first().click(); await p.waitForTimeout(900);
+    await shot("end-card");
+    log.push({ move, end: await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD") });
+    break;
+  }
+  await p.locator(".path-start").first().click(); await p.waitForTimeout(1300);
+  await shot(`move${move}`);
+  const kind = await p.evaluate(() => document.querySelector("textarea") ? "note" : document.body.innerText.match(/Your hunch|Твоя догадка|Догадка/) ? "hunch" : "other");
+  const hasDeck = await p.getByRole("button", { name: RU ? /^Нет$/ : /^No$/ }).first().isVisible().catch(() => false);
+  if (hasDeck) await answerDeck();
+  else if (kind === "note") { await p.keyboard.press("Escape"); await p.waitForTimeout(1200); }
+  else {
+    // a game or a tab: skip it, back to Today
+    const skip = p.getByRole("button", { name: RU ? /Не сегодня|Пропустить/ : /Not today|Skip/ });
+    if (await skip.count()) await skip.last().click().catch(() => {});
+    else await p.keyboard.press("Escape");
+    await p.waitForTimeout(1000);
+    const today = p.getByRole("tab", { name: RU ? /Сегодня/ : /Today/ });
+    if (await today.count()) await today.first().click().catch(() => {});
+    await p.waitForTimeout(1200);
+  }
+  await toTop();
+  log.push({ move, did: at, kind: hasDeck ? "deck" : kind, next: await here(), steps: await model() });
+  await shot(`after${move}`);
+  // after the first answered step she adds two questions (one to an island already done)
+  if (!addedOnce && hasDeck) {
+    addedOnce = true;
+    await p.evaluate(async () => { const d = await import("/src/lib/doors.ts"); await d.ensureTemplates(["headache", "exercised"]); });
+    await p.reload(); await p.waitForTimeout(2400);
+    log.push({ after: "added 2 questions", start: await here(), steps: await model() });
+    await shot("added");
+  }
+}
+log.push({ tasks: await p.evaluate(() => localStorage.getItem("memap_path_tasks")) });
+console.log(JSON.stringify({ log, errs }, null, 1));
+await b.close();

@@ -465,6 +465,12 @@ export const DoorFlow = ({
       // One after another: each call reads and rewrites the whole tracker
       // list, so running them in parallel kept only the last door's.
       const ensured: Awaited<ReturnType<typeof ensureDoorTrackers>>[] = [];
+      // "A bit of everything" (her note, Nov 5 2026): day 1 also shows a few
+      // examples from other parts of life, so it's clear what the app can follow.
+      // All in one save, so the day's questions appear at once (a second save
+      // made "Add your own question" count as done).
+      const own = doors.flatMap((d) => [d.mainTemplateId, ...d.contextTemplateIds]);
+      await ensureTemplates([...own, ...STARTER_TEMPLATES.filter((id) => !own.includes(id)).slice(0, 3)]);
       for (const d of doors) ensured.push(await ensureDoorTrackers(d));
       const byTemplate = new Map<string, string>();
       doors.forEach((d, i) => {
@@ -797,6 +803,8 @@ export const OwnFlow = ({ onBack, onFinish }: { onBack: () => void; onFinish: Fi
 // "Just curious": an example, then a one-week try --------------------------
 
 const TRIAL_TEMPLATES = ["slept-enough", "felt-happy", "had-energy"];
+/** Day-1 examples next to a door's own questions, the first three it doesn't have. */
+const STARTER_TEMPLATES = ["felt-happy", "had-energy", "saw-friends", "outside-30min", "slept-enough", "felt-calm"];
 const EXAMPLE_A = [2, 5, 6, 9, 12, 13];
 const EXAMPLE_B = [3, 6, 7, 10, 13];
 
