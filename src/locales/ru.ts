@@ -26,6 +26,7 @@ const ru: Translation = {
     today: "Сегодня",
     patterns: "Наблюдения",
     map: "Карта",
+    world: "Мир",
     notes: "Заметки",
     settings: "Настройки",
     addPattern: "Добавить наблюдение",
@@ -877,6 +878,7 @@ const ru: Translation = {
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
     fillTitle: "Заполнить {{day}}",
+    missedDay: "Дозаполнить: {{day}}",
     skip: "Не сегодня",
     skipped: "Пропущено",
     changeAnswers: "Изменить ответы",

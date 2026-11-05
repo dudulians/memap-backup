@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronUp, Compass, FileBarChart2, FlaskConical, Flame, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, FlaskConical, Flame, Layers, Lightbulb, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
@@ -141,24 +141,28 @@ export const EveningPath = ({
   // "Your hunch" works from day 1: any two questions will do.
   const canPlay = useMemo(() => hunchTarget(trackers, entries) !== null, [trackers, entries]);
   const hunchReady = useMemo(() => !!readyHunch(trackers, entries), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A missed day to fill in waits beside the path, not on it (WORLD-BIBLE,
+  // Nov 5 2026): the path holds only today's steps.
+  const steps = useMemo(() => m.steps.filter((s) => s.kind !== "fill"), [m]);
+  const missed = m.steps.find((s) => s.kind === "fill" && !s.done) ?? null;
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
-    for (const step of m.steps) out.push({ kind: "step", step });
+    for (const step of steps) out.push({ kind: "step", step });
     const coming = m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length;
     for (let o = 1; o <= coming; o++) out.push({ kind: "future", offset: o });
     out.push({ kind: "chest" });
     return out;
-  }, [m]);
+  }, [m, steps]);
   const firstStep = m.pastInWeek.length;
   const isOpenStep = (s: Step) => !s.done && (s.kind !== "game" || canPlay);
   // The questions stay the main step; "Unload your mind" is there any time
   // without taking the highlight (it is the main step only when nothing else is left).
-  const firstOpen = m.steps.findIndex((s) => isOpenStep(s) && s.kind !== "unload");
-  const cur = firstOpen >= 0 ? firstOpen : m.steps.findIndex(isOpenStep);
+  const firstOpen = steps.findIndex((s) => isOpenStep(s) && s.kind !== "unload");
+  const cur = firstOpen >= 0 ? firstOpen : steps.findIndex(isOpenStep);
   const currentNode = cur >= 0 ? firstStep + cur : -1;
   const chestIndex = nodes.length - 1;
   // The node to bring into view: the current step, else tomorrow, else the reward.
-  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + m.steps.length;
+  const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + steps.length;
 
   const stops = useMemo(() => {
     // room above her step for its Start bubble (the first light included)
@@ -674,6 +678,15 @@ export const EveningPath = ({
           <p className="path-week-label">{t("path.weekN", { n: m.week + 1 })} · {title}</p>
         </div>
       </div>
+      {/* the missed day, on the side: one small button, never a step */}
+      {missed && (
+        <button type="button" onClick={() => { haptics.tap(); onFillDay(missed.date!); }}
+          className="missed-day mx-auto mt-3 flex h-11 items-center gap-2 rounded-full px-4 text-[15px] font-bold">
+          <CalendarDays className="h-[18px] w-[18px]" strokeWidth={2.4} />
+          {t("path.missedDay", { day: weekdayName(missed.date!) })}
+          <ChevronRight className="h-4 w-4 opacity-60" strokeWidth={2.6} />
+        </button>
+      )}
 
       {/* The path. */}
       <section aria-label={title} className="animate-fade-in" style={{ marginTop: 14 }}>

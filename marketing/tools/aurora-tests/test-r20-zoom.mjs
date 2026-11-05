@@ -22,7 +22,7 @@ const open = async (theme) => {
     localStorage.setItem("memap_map_view", "globe");
   }, theme);
   await p.reload(); await p.waitForTimeout(1500);
-  await p.getByRole("button", { name: /^Map$/ }).last().click(); await p.waitForTimeout(2200);
+  await p.locator("nav button").nth(1).click(); await p.waitForTimeout(2200);
   return { ctx, p };
 };
 const labels = (p) => p.evaluate(() => [...document.querySelectorAll(".planet-label")].filter((l) => +l.style.opacity > 0.5).map((l) => { const r = l.querySelector("span").getBoundingClientRect(); return { n: l.textContent.trim(), x: Math.round(r.x + r.width / 2), y: Math.round(r.y) }; }));

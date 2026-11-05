@@ -24,6 +24,7 @@ const en = {
     today: "Today",
     patterns: "Patterns",
     map: "Map",
+    world: "World",
     notes: "Notes",
     settings: "Settings",
     addPattern: "Add new pattern",
@@ -773,6 +774,7 @@ const en = {
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
     fillTitle: "Fill in {{day}}",
+    missedDay: "Missed {{day}}? Fill it in",
     skip: "Not today",
     skipped: "Skipped",
     changeAnswers: "Change answers",

@@ -2254,6 +2254,9 @@ html[data-ui="new"][data-theme="aurora"] .path-node.disc-locked { --face: #535E9
 .path-cur-ring { position: absolute; inset: -12px; border-radius: 9999px; border: 6px solid rgba(255, 255, 255, .75); }
 html[data-ui="new"][data-theme="aurora"] .path-cur-ring { border-color: rgba(255, 255, 255, .28); }
 @media (prefers-reduced-motion: reduce) { .path-node .path-disc, .path-node .path-icon { transition: none; } }
+/* a missed day to fill in, beside the path (EveningPath) */
+.missed-day { background: rgba(255, 255, 255, .9); color: hsl(var(--foreground)); box-shadow: 0 8px 18px -12px rgba(30, 50, 110, .55); }
+html[data-ui="new"][data-theme="aurora"] .missed-day { background: hsl(var(--surface)); }
 /* the Start bubble over her step (StartBubble) */
 .path-start { transform: translate(-50%, -100%); transition: transform 120ms ease-out; }
 .path-start:active { transform: translate(-50%, -100%) scale(.95); }

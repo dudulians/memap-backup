@@ -4,7 +4,7 @@ import { TodayTab } from "@/components/TodayTab";
 import { MapTab } from "@/components/MapTab";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { NotesTab } from "@/components/NotesTab";
-import { CalendarDays, CircleUser, ListChecks, Map as MapIcon, Moon, NotebookPen, Sun, ArrowUp } from "lucide-react";
+import { CalendarDays, CircleUser, Earth, ListChecks, Map as MapIcon, Moon, NotebookPen, Sun, ArrowUp } from "lucide-react";
 import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { YouSheet } from "@/components/YouSheet";
@@ -382,7 +382,8 @@ const Index = () => {
           <div className="nav-floating grid grid-cols-3 overflow-hidden">
             {([
               { tab: "cards", icon: CalendarDays, label: t("common.today") },
-              { tab: "patterns", icon: MapIcon, label: t("common.map") },
+              // the world (her islands on the Map and the Globe), WORLD-BIBLE, Nov 5 2026
+              { tab: "patterns", icon: Earth, label: t("common.world") },
               { tab: "notes", icon: NotebookPen, label: t("common.notes") },
             ] as const).map(({ tab, icon: Icon, label }) => (
               <button
