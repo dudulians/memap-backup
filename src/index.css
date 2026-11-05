@@ -2453,7 +2453,6 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .tour { pointer-events: auto; }
 .tour-dim { position: absolute; inset: 0; background: rgba(14, 18, 44, .58); animation: tourFade .25s ease-out both; }
 .tour-hole { position: absolute; border-radius: 26px; box-shadow: 0 0 0 9999px rgba(14, 18, 44, .58); outline: 3px solid rgba(255, 255, 255, .95);
-  transition: left .35s cubic-bezier(.22, 1, .36, 1), top .35s cubic-bezier(.22, 1, .36, 1), width .35s cubic-bezier(.22, 1, .36, 1), height .35s cubic-bezier(.22, 1, .36, 1);
   animation: tourFade .25s ease-out both; }
 .tour-hole::after { content: ""; position: absolute; inset: -3px; border-radius: inherit; box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); animation: tourPulse 1.8s ease-out infinite; }
 .tour-card { box-shadow: 0 22px 50px -18px rgba(10, 20, 60, .55); animation: tourIn .3s cubic-bezier(.22, 1, .36, 1) both; }

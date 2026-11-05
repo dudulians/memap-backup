@@ -270,7 +270,8 @@ export const AppTour = () => {
   return createPortal(
     <div className="tour fixed inset-0 z-[90]" role="dialog" aria-modal="true" aria-label={title}>
       {hole
-        ? <div className="tour-hole" style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h }} />
+        // a new frame at each stop, fading in (no sliding of its size and place: layout work on a phone)
+        ? <div key={at} className="tour-hole" style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h }} />
         : <div className="tour-dim" />}
       <div data-tour-card className="tour-card surface fixed left-4 right-4 mx-auto max-w-[380px] rounded-[24px] px-5 pb-4 pt-4" style={place}>
         <p className="text-[22px] font-bold leading-tight tracking-tight">{title}</p>
