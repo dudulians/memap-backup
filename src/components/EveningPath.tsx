@@ -583,6 +583,10 @@ export const EveningPath = ({
       if (!eveningDone) return head(t("path.end.title"), t("path.end.left", { count: openLeft }));
       const go = (f: () => void) => () => { setOpen(null); f(); };
       const ic = "h-5 w-5";
+      // The calendar opens on her main question, so the button names it (her note,
+      // Nov 5 2026: "Your calendar" didn't say what she'd do there).
+      const door = getDoorState();
+      const daysLabel = t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any");
       return (
         <>
           {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
@@ -590,7 +594,7 @@ export const EveningPath = ({
           {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true)), m.weekComplete ? "plain" : "teal")}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion")), "plain")}
           {button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap), "plain")}
-          {button(<><CalendarDays className={ic} strokeWidth={2.4} /> {t("path.seeCalendar")}</>, go(() => onTask("calendar")), "plain")}
+          {button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => onTask("calendar")), "plain")}
         </>
       );
     }

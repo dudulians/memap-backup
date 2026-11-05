@@ -38,7 +38,7 @@ out.model = await p.evaluate(async () => {
 await p.screenshot({ path: `${D}/night-path.png` });
 await openEnd(); await p.screenshot({ path: `${D}/night-card.png` });
 out.card = await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " "));
-for (const [name, look] of [["See your links", /Globe|Links show up|Link/], ["Your calendar", /Calendar/], ["Explore new questions", /Add a question/]]) {
+for (const [name, look] of [["See your links", /Globe|Links show up|Link/], ["Your days on a calendar", /Calendar/], ["Explore new questions", /Add a question/]]) {
   await p.reload(); await p.waitForTimeout(2400); await openEnd();
   await p.getByRole("button", { name }).click(); await p.waitForTimeout(1600);
   await p.screenshot({ path: `${D}/${name.replace(/ /g, "-")}.png` });

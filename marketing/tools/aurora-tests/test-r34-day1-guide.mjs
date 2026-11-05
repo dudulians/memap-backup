@@ -74,6 +74,10 @@ for (let move = 0; move < 14; move++) {
     await p.locator(".path-start").first().click(); await p.waitForTimeout(900);
     await shot("end-card");
     log.push({ move, end: await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD") });
+    // the calendar button says what's there, and opens on her main question
+    await click(RU ? /Дни с мигренью/ : /Your migraine days/); await p.waitForTimeout(1600);
+    await shot("calendar");
+    log.push({ calendar: await p.evaluate(() => document.body.innerText.match(/\d+\s+(migraines?|приступ\S*)/i)?.[0] ?? "NO COUNT") });
     break;
   }
   await p.locator(".path-start").first().click(); await p.waitForTimeout(1300);
