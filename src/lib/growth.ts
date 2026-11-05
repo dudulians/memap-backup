@@ -192,7 +192,8 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
 
 export type TreasureSlot = "sky" | "left" | "right";
 export interface PlacedTreasure { id: ItemId; pic: string; slot: TreasureSlot; ghost: boolean }
-const SKY_ITEMS: ItemId[] = ["balloon", "airplane", "rainbow", "sparkles"];
+// the balloon stands on the island, landed (her note, Nov 5 2026: things "левитируют")
+const SKY_ITEMS: ItemId[] = ["airplane", "rainbow", "sparkles"];
 const HOSTS = "memap_treasure_islands";
 
 export const placeTreasures = ({ islands, days, facts, routes, trackers }: {

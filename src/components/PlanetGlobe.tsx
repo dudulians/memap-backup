@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { CloudLightning, CloudSun, Link2, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
+import { standAt } from "@/lib/islandSpots";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
 import planetNight from "@/assets/globe/planet-night.webp";
@@ -502,10 +503,10 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
                 ) : (
                   <img src={art(th.name, night)} alt="" />
                 )}
-                {th.lit && <img className="lighthouse" src={mapPic("lighthouse")} alt="" />}
-                {th.flag && <img className="flag" src={mapPic("marker_flag")} alt="" />}
+                {th.lit && <span className="stand lighthouse" style={standAt(th.name, "light")}><img src={mapPic("lighthouse")} alt="" /></span>}
+                {th.flag && <span className="stand flag" style={standAt(th.name, "flag")}><img src={mapPic("marker_flag")} alt="" /></span>}
                 {th.island && treasures?.get(th.island.id)?.map((tr) => (
-                  <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}`}><img src={mapPic(tr.pic)} alt="" /></span>
+                  <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(th.name, tr.slot) : undefined}><img src={mapPic(tr.pic)} alt="" /></span>
                 ))}
               </div>
               {th.island && (

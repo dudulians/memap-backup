@@ -9,6 +9,7 @@ import { CloudLightning, CloudSun, Link2, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, mapPicFor } from "@/lib/islands";
 import { ASPECT, STAGE_SCALE, alongCurve, art, artOf, ringOrder, routeDots, stageOf, type RouteDot, type WakePoint } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
+import { standAt } from "@/lib/islandSpots";
 import type { PlacedTreasure } from "@/lib/growth";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -134,10 +135,11 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
             <span className="ring" />
             <img className="art-day island-art" src={art(name, false)} alt="" />
             <img className="art-night island-art" src={art(name, true)} alt="" />
-            {lit?.has(isl.id) && <><img className="lighthouse art-day" src={mapPicFor("lighthouse", false)} alt="" /><img className="lighthouse art-night" src={mapPicFor("lighthouse", true)} alt="" /></>}
-            {stage === 4 && <><img className="flag art-day" src={mapPicFor("marker_flag", false)} alt="" /><img className="flag art-night" src={mapPicFor("marker_flag", true)} alt="" /></>}
+            {/* things stand on the island's ground (src/lib/islandSpots.ts) */}
+            {lit?.has(isl.id) && <span className="stand lighthouse" style={standAt(name, "light")}><img className="art-day" src={mapPicFor("lighthouse", false)} alt="" /><img className="art-night" src={mapPicFor("lighthouse", true)} alt="" /></span>}
+            {stage === 4 && <span className="stand flag" style={standAt(name, "flag")}><img className="art-day" src={mapPicFor("marker_flag", false)} alt="" /><img className="art-night" src={mapPicFor("marker_flag", true)} alt="" /></span>}
             {treasures?.get(isl.id)?.map((tr) => (
-              <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}`}><img className="art-day" src={mapPicFor(tr.pic, false)} alt="" /><img className="art-night" src={mapPicFor(tr.pic, true)} alt="" /></span>
+              <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(name, tr.slot) : undefined}><img className="art-day" src={mapPicFor(tr.pic, false)} alt="" /><img className="art-night" src={mapPicFor(tr.pic, true)} alt="" /></span>
             ))}
             <span className="planet-label" style={{ position: "absolute", left: "50%", top: "100%", marginTop: 4, ...label(x) }}>
               <span>{Icon && <Icon className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[isl.weather!] }} />}{islandName(t, isl.id)}</span>

@@ -2385,9 +2385,17 @@ html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: 
 .planet-isle { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
 .planet-isle img { display: block; width: 100%; filter: drop-shadow(0 6px 8px rgba(20, 60, 100, .25)); }
 .planet-cloud img { filter: drop-shadow(0 14px 10px rgba(20, 60, 100, .18)); }
-.planet-isle .lighthouse { position: absolute; right: 6%; top: -26%; width: 22%; filter: none; }
-/* stage 4 of an island: a little flag on the other side from the lighthouse */
-.planet-isle .flag { position: absolute; left: 12%; top: -20%; width: 16%; filter: drop-shadow(0 3px 3px rgba(20, 60, 100, .2)); }
+/* Things that stand on an island (her note, Nov 5 2026: they "левитируют"): the
+   base on a ground spot of the picture (src/lib/islandSpots.ts), a soft shadow
+   under it, small enough to belong to the island. Stage 4 has a flag, a lit rule
+   a lighthouse, treasures stand left and right. */
+.planet-isle .stand { position: absolute; display: block; transform: translate(-50%, -94%); pointer-events: none; }
+.planet-isle .stand img { width: 100%; filter: drop-shadow(0 2px 2px rgba(20, 50, 60, .18)); }
+.planet-isle .stand::after { content: ""; position: absolute; left: 8%; right: 8%; bottom: -3%; height: 10%; min-height: 4px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(30, 50, 45, .34), rgba(30, 50, 45, 0)); z-index: -1; }
+.planet-isle .stand.lighthouse { width: 13%; }
+.planet-isle .stand.flag { width: 10%; }
+.planet-isle .stand.flag::after { left: 0; right: 40%; }
 .planet-isle .ring { position: absolute; left: -22%; right: -22%; top: 48%; height: 58%; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .95);
   box-shadow: 0 0 0 10px rgba(255, 255, 255, .28), 0 0 24px rgba(255, 255, 255, .7); opacity: 0; transform: scale(.7); transition: opacity .25s, transform .35s cubic-bezier(.22, 1, .36, 1); }
 .planet-isle.on .ring { opacity: 1; transform: scale(1); }
@@ -2421,17 +2429,22 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .planet-map-sea { position: absolute; inset: 0; background-repeat: no-repeat; pointer-events: none;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 78%, transparent 97%); mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 78%, transparent 97%); }
 .planet-map-isle { will-change: auto; }
-/* Treasures on the islands (Nov 5 2026, growth.ts placeTreasures): over the
-   island, or on its left or right shore; the next one to come is pale. */
+/* Treasures on the islands (Nov 5 2026, growth.ts placeTreasures): standing on
+   its ground left and right (.stand), or in its sky: the rainbow behind the
+   island with its feet in the water, the plane and the sparkles small above.
+   The next one to come is pale. */
 .planet-isle .treasure { position: absolute; display: block; pointer-events: none; }
 .planet-isle .treasure img { width: 100%; filter: drop-shadow(0 3px 4px rgba(20, 60, 100, .22)); }
-.planet-isle .treasure.t-sky { left: 38%; top: -58%; width: 24%; }
-.planet-isle .treasure.t-sky.it-rainbow { left: 24%; top: -46%; width: 52%; }
-.planet-isle .treasure.t-sky.it-airplane { left: 34%; top: -54%; width: 30%; }
-.planet-isle .treasure.t-left { left: -13%; top: 26%; width: 23%; }
-.planet-isle .treasure.t-right { right: -13%; top: 26%; width: 23%; }
+.planet-isle .treasure.stand { width: 15%; }
+.planet-isle .treasure.stand.it-bicycle { width: 18%; }
+.planet-isle .treasure.stand.it-balloon { width: 14%; }
+.planet-isle .treasure.stand.it-books { width: 12%; }
+.planet-isle .treasure.t-sky { left: 40%; top: -40%; width: 18%; }
+.planet-isle .treasure.t-sky.it-rainbow { left: 4%; top: -30%; width: 92%; z-index: -1; }
+.planet-isle .treasure.t-sky.it-airplane { left: 58%; top: -52%; width: 22%; }
+.planet-isle .treasure.t-sky.it-sparkles { left: 70%; top: -14%; width: 14%; }
 .planet-isle .treasure.is-ghost { opacity: .5; filter: grayscale(1); }
-.planet-isle .treasure.t-sky:not(.is-ghost) { animation: treasureFloat 3.6s ease-in-out infinite; }
+.planet-isle .treasure.t-sky:not(.is-ghost):not(.it-rainbow) { animation: treasureFloat 3.6s ease-in-out infinite; }
 @keyframes treasureFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5%); } }
 @media (prefers-reduced-motion: reduce) { .planet-isle .treasure.t-sky:not(.is-ghost) { animation: none; } }
 .planet-map-isle .planet-label { z-index: 1; }
