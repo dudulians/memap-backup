@@ -71,21 +71,41 @@ export const AnswerNow = ({ island, trackers, entries }: { island: Island; track
   );
 };
 
-/** This week on an island, in one plain sentence. */
+/** This week on an island, in one plain sentence, and why its weather is
+ *  what it is (her ask via the GPT review, Nov 5 2026): the rule in a line,
+ *  then the questions whose answers made the hard days. */
 export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tracker[] }) => {
   const { t } = useTranslation();
-  const hasHard = trackers.some((tr) => island.trackerIds.includes(tr.id) && tr.problemWhen === "yes");
-  const line = island.answeredDays < 3
+  const title = useTitles(trackers);
+  const early = island.answeredDays < 3;
+  const line = early
     ? t("isle.early")
-    : hasHard
-      ? t("isle.hard", { k: island.hardDays, count: island.answeredDays }) + (island.usual ? ` · ${t(`isle.usual.${island.usual}`)}` : "")
-      : t("isle.answered", { k: island.answeredDays });
+    : t("isle.hard", { k: island.hardDays, count: island.answeredDays }) + (island.usual ? ` · ${t(`isle.usual.${island.usual}`)}` : "");
   return (
-    <div className="flex items-center gap-3 px-1 pb-1">
-      {island.weather && island.answeredDays >= 3 && (
-        <img src={mapPic(WEATHER_PIC[island.weather])} alt="" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
+    <div className="px-1 pb-1">
+      <div className="flex items-center gap-3">
+        {island.weather && !early && (
+          <img src={mapPic(WEATHER_PIC[island.weather])} alt="" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
+        )}
+        <p className="text-[17px] font-semibold leading-snug">{line}</p>
+      </div>
+      {island.weather && !early && (
+        <div className="surface mt-2.5 rounded-[18px] px-4 py-3">
+          <p className="text-[15px] font-bold leading-snug">{t(`isle.why.${island.weather}`)}</p>
+          {island.hardBy.slice(0, 3).map((h) => {
+            const tr = trackers.find((x) => x.id === h.trackerId);
+            return (
+              <p key={h.trackerId} className="mt-1.5 flex items-center gap-2 text-[15px] font-medium leading-snug">
+                <span className="min-w-0 flex-1 truncate">{title(h.trackerId)}</span>
+                <span className="shrink-0 rounded-full bg-[hsl(var(--strong)/0.14)] px-2 py-0.5 text-[13px] font-bold text-[hsl(var(--strong))]">
+                  {tr?.problemWhen === "yes" ? t("common.yes") : t("common.no")} · {t("isle.days", { count: h.days })}
+                </span>
+              </p>
+            );
+          })}
+          <p className="mt-2 text-[13px] font-medium leading-snug text-muted-foreground">{t("isle.hardDay")}</p>
+        </div>
       )}
-      <p className="text-[17px] font-semibold leading-snug">{line}</p>
     </div>
   );
 };
@@ -114,10 +134,6 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
     .filter((x) => x.both > 0)
     .sort((p, q) => q.both - p.both)
     .slice(0, 1);
-  // What grows next on this island, by days answered ("house" is a tent where a house already stands).
-  const next = (["house", "flowers", "flag"] as const).find((k) => !growth.includes(k));
-  const word = (k: GrowthKind) => (k === "house" ? homeWord(island.def.land) : k);
-  const nextPic = next ? (word(next) === "tent" ? "camping_tent" : growthLand([next]).front[0]?.[0] ?? growthLand([next]).back[0]?.[0] ?? "") : "";
   const test = currentExperiment();
   const view = (v: IslandView, icon: React.ReactNode, label: string) => (
     <button type="button" onClick={() => { haptics.tap(); onView(v); }}
@@ -164,13 +180,6 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
           </span>
         </button>
       ) : null}
-      {/* How it grows, in one line. */}
-      <div className={cn("flex items-center gap-2.5 px-1 pt-1")}>
-        {next && <img src={mapPic(nextPic)} alt="" width={26} height={26} className="h-[26px] w-[26px] object-contain" />}
-        <p className="text-[14px] font-medium leading-snug text-muted-foreground">
-          {next ? t(`isle.grows.${word(next)}`, { count: Math.max(1, GROWTH_AT[next] - days) }) : t("isle.grown")}
-        </p>
-      </div>
     </div>
   );
 };

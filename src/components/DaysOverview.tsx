@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { isoLocal } from "@/lib/doors";
-import { mapPic } from "@/lib/islands";
+import { isHardAnswer, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { haptics } from "@/lib/haptics";
 import { smooth } from "./ChartViews";
@@ -47,25 +47,25 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   // The last 28 days: answered, hard (a problem question answered YES), empty.
   const month = useMemo(() => {
     const ids = new Set(live.map((tr) => tr.id));
-    const hardIds = new Set(live.filter((tr) => tr.problemWhen === "yes").map((tr) => tr.id));
+    const byId = new Map(live.map((tr) => [tr.id, tr]));
     return Array.from({ length: 28 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (27 - i));
       const iso = isoLocal(d);
       const es = entries.filter((e) => e.date === iso && ids.has(e.trackerId));
-      return es.length === 0 ? "none" : es.some((e) => e.value && hardIds.has(e.trackerId)) ? "hard" : "calm";
+      return es.length === 0 ? "none" : es.some((e) => isHardAnswer(byId.get(e.trackerId)!, e.value)) ? "hard" : "calm";
     });
   }, [live, entries]);
 
   // Hard days per week, the last 8 weeks (oldest first).
   const weeks = useMemo(() => Array.from({ length: 8 }, (_, w) => {
-    const hardIds = new Set(live.filter((tr) => tr.problemWhen === "yes").map((tr) => tr.id));
+    const byId = new Map(live.map((tr) => [tr.id, tr]));
     const days = new Set<string>();
     for (let d = 0; d < 7; d++) {
       const day = new Date();
       day.setDate(day.getDate() - ((7 - w) * 7 + d));
       const iso = isoLocal(day);
-      if (entries.some((e) => e.date === iso && e.value && hardIds.has(e.trackerId))) days.add(iso);
+      if (entries.some((e) => e.date === iso && byId.has(e.trackerId) && isHardAnswer(byId.get(e.trackerId)!, e.value))) days.add(iso);
     }
     return days.size;
   }), [live, entries]);

@@ -136,6 +136,8 @@ export interface Island {
   usual: "rougher" | "usual" | "calmer" | null;
   /** the question that came up most this week, and on how many days */
   top: { trackerId: string; days: number } | null;
+  /** this week's hard answers by question, most first: why the weather is what it is */
+  hardBy: { trackerId: string; days: number }[];
   /** stormy in one of the four weeks before (a calm week now = a rainbow) */
   wasStormy: boolean;
   slot: (typeof SLOTS)[number];
@@ -145,9 +147,13 @@ export interface Island {
  *  (lag 1: the next day). First/second are tracker ids, in reading order. */
 export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean }
 
+/** A hard day's answer, the same rule as the lighthouses (WORLD-BIBLE, Nov 5
+ *  2026): YES to a hard question, NO to a good one ("Slept 7+ hours?" — no). */
+export const isHardAnswer = (t: Tracker, value: unknown): boolean => typeof value === "boolean" && value === (t.problemWhen === "yes");
+
 /** The islands that have questions, busiest first, with this week's
- *  weather. Honest weather (plan §3.5, Nov 2 2026): a hard day is a day a
- *  problem question was answered YES; no weather before 3 answered days;
+ *  weather. Honest weather (plan §3.5, Nov 2 2026): a hard day is a day with
+ *  a hard answer (isHardAnswer); no weather before 3 answered days;
  *  3+ hard days = often (storm), 1-2 = sometimes (clouds), 0 = calm. */
 export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Island[] => {
   const live = trackers.filter((t) => !t.archived && t.source !== "play");
@@ -173,7 +179,7 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
       for (let w = 0; w < 5; w++) {
         if (e.date > dayStart(w * 7) || e.date < dayStart(w * 7 + 6)) continue;
         weeks[w].answered.add(e.date);
-        if (t.problemWhen === "yes" && e.value === true) {
+        if (isHardAnswer(t, e.value)) {
           weeks[w].hard.add(e.date);
           if (w === 0) topCount.set(t.id, (topCount.get(t.id) ?? 0) + 1);
         }
@@ -193,6 +199,7 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
       id, def: islandDef(id), trackerIds: ts.map((t) => t.id), weather,
       hardDays: now.hard.size, answeredDays: now.answered.size, usual,
       top: best ? { trackerId: best[0], days: best[1] } : null, wasStormy,
+      hardBy: [...topCount].sort((x, y) => y[1] - x[1]).map(([trackerId, days]) => ({ trackerId, days })),
     };
   });
 

@@ -349,6 +349,10 @@ const en = {
     hard: "This week: {{k}} hard days of {{count}}",
     answered: "This week: answered on {{k}} of 7 days",
     usual: { rougher: "more than usual", usual: "about as usual", calmer: "fewer than usual" },
+    why: { storm: "Storm: 3 or more hard days in the last 7", clouds: "Clouds: 1 or 2 hard days in the last 7", sun: "Sun: no hard days in the last 7" },
+    hardDay: "A hard day: a “yes” to a hard question, or a “no” to a good one.",
+    days_one: "{{count}} day",
+    days_other: "{{count}} days",
     grows: {
       house_one: "Grows as you answer · a little house in {{count}} day",
       house_other: "Grows as you answer · a little house in {{count}} days",
