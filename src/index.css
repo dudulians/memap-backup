@@ -2437,12 +2437,13 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .planet-isle .treasure img { width: 100%; filter: drop-shadow(0 3px 4px rgba(20, 60, 100, .22)); }
 .planet-isle .treasure.stand { width: 15%; }
 .planet-isle .treasure.stand.it-bicycle { width: 18%; }
-.planet-isle .treasure.stand.it-balloon { width: 14%; }
+.planet-isle .treasure.stand.it-balloon { width: 11%; }
 .planet-isle .treasure.stand.it-books { width: 12%; }
 .planet-isle .treasure.t-sky { left: 40%; top: -40%; width: 18%; }
 .planet-isle .treasure.t-sky.it-rainbow { left: 4%; top: -30%; width: 92%; z-index: -1; }
 .planet-isle .treasure.t-sky.it-airplane { left: 58%; top: -52%; width: 22%; }
-.planet-isle .treasure.t-sky.it-sparkles { left: 70%; top: -14%; width: 14%; }
+/* sparkles: a small glint low over the island, not up in the air */
+.planet-isle .treasure.t-sky.it-sparkles { left: 56%; top: 2%; width: 11%; }
 .planet-isle .treasure.is-ghost { opacity: .5; filter: grayscale(1); }
 .planet-isle .treasure.t-sky:not(.is-ghost):not(.it-rainbow) { animation: treasureFloat 3.6s ease-in-out infinite; }
 @keyframes treasureFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5%); } }

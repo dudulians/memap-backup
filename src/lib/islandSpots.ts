@@ -17,8 +17,10 @@ const SPOTS: Record<string, Spots> = {
   "11_sakura": { flag: [22, 72], light: [80, 70], left: [36, 82], right: [66, 84] },
   "14_stone_arch": { flag: [52, 10], light: [74, 14], left: [22, 76], right: [84, 66] },
   "16_cozy_cottage": { flag: [44, 10], light: [86, 64], left: [18, 72], right: [64, 80] },
-  "17_lavender_garden": { flag: [48, 6], light: [86, 64], left: [18, 70], right: [64, 80] },
-  "19_grassy_terraces": { flag: [48, 14], light: [86, 62], left: [18, 68], right: [44, 82] },
+  // her note (Nov 5 2026): Me looked strange with the flag over the arch: on the grass by the cypress now
+  "17_lavender_garden": { flag: [80, 50], light: [88, 66], left: [26, 80], right: [64, 80] },
+  // her note: the lighthouse on the top of Body; the flag goes to the side
+  "19_grassy_terraces": { flag: [84, 60], light: [48, 14], left: [18, 68], right: [44, 82] },
   "20_tropical_palms": { flag: [22, 68], light: [84, 70], left: [40, 88], right: [68, 80] },
   "24_oak_tree": { flag: [24, 66], light: [80, 66], left: [30, 80], right: [68, 82] },
   "26_flowery_island": { flag: [52, 14], light: [86, 60], left: [36, 80], right: [64, 84] },
