@@ -372,7 +372,7 @@ export const OverviewCard = ({
                     <span
                       key={d.dateStr}
                       className={cn(
-                        "block aspect-square rounded-[3px]",
+                        "block aspect-square rounded-full",
                         !d.show && "bg-transparent",
                         d.show && d.status === "significant" && "bg-strong",
                         d.show && d.status === "balanced" && "bg-balanced/60",
@@ -385,8 +385,8 @@ export const OverviewCard = ({
             ))}
           </div>
           <div className="mt-4 flex items-center justify-center gap-5 text-[15px] text-muted-foreground">
-            <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[3px] bg-strong" />{t("overview.significant")}</span>
-            <span className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded-[3px] bg-balanced/60" />{t("overview.balanced")}</span>
+            <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-strong" />{t("overview.significant")}</span>
+            <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-balanced/60" />{t("overview.balanced")}</span>
           </div>
         </div>
       )}
@@ -441,7 +441,7 @@ export const OverviewCard = ({
                     !day.isFutureDate && day.status === "significant" && "bg-strong text-strong-foreground",
                     !day.isFutureDate && day.status === "balanced" && "bg-balanced/35",
                     !day.isFutureDate && day.status === "untracked" && !day.isToday && "text-muted-foreground",
-                    day.isToday && day.status === "untracked" && "border-2 border-dashed border-primary/70",
+                    day.isToday && day.status === "untracked" && "border-2 border-dashed border-foreground/35",
                     !multi && day.isSelected && !day.isToday && "ring-2 ring-foreground/70",
                     multi && picked.has(day.dateStr) && "ring-[2.5px] ring-foreground ring-offset-2 ring-offset-background scale-90",
                   )}
@@ -453,7 +453,7 @@ export const OverviewCard = ({
                     </span>
                   )}
                   {noteDatesSet.has(day.dateStr) && (
-                    <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-[hsl(var(--coin-gold))] ring-2 ring-background" />
+                    <span aria-hidden="true" className="absolute -right-1.5 -top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm"><FileText className="h-[11px] w-[11px]" strokeWidth={2.6} /></span>
                   )}
                 </button>
               ) : (
@@ -465,7 +465,7 @@ export const OverviewCard = ({
 
         {calendarDays.some((d) => d.isCurrentMonth && noteDatesSet.has(d.dateStr)) && (
           <p className="mt-3 flex items-center justify-center gap-2 text-[15px] font-medium text-muted-foreground">
-            <span aria-hidden="true" className="h-3 w-3 rounded-full bg-[hsl(var(--coin-gold))]" />
+            <span aria-hidden="true" className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm"><FileText className="h-[11px] w-[11px]" strokeWidth={2.6} /></span>
             {t("overview.noteDayKey")}
           </p>
         )}

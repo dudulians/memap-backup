@@ -44,19 +44,20 @@ const useName = () => {
 };
 const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? localizeTrackerAdvice(tr.adviceAboveThreshold) : "");
 
-/** How far an action point is: one piece per day her rule needs, the days
- *  that came filled in the hard-day colour (her note, Nov 5 2026: an orange
- *  bar in the list and purple dots inside didn't match, "не разобраться").
- *  The same meter in the list, on the card and in Show; in Show the filled
- *  pieces are the dark dots under it. */
+/** How far an action point is: one dot per day her rule needs, the days
+ *  that came filled in the hard-day colour (her notes, Nov 5 2026: an orange
+ *  bar in the list and purple dots inside didn't match, "не разобраться";
+ *  then "то кружками, то квадратиками" — a day is always a dot). The same
+ *  meter in the list, on the card and in Show; in Show its filled dots are
+ *  the dark dots of the last days under it. */
 const RuleMeter = ({ k, n, className }: { k: number; n: number; className?: string }) => {
   const { t } = useTranslation();
   const done = k >= n;
   return (
     <span className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex min-w-0 flex-1 gap-[3px]" aria-hidden="true">
+      <span className="flex min-w-0 flex-1 items-center gap-1" aria-hidden="true">
         {Array.from({ length: n }, (_, i) => (
-          <span key={i} className="h-2.5 min-w-0 flex-1 rounded-full" style={{ background: i < k ? "hsl(var(--strong))" : "hsl(var(--foreground) / 0.1)" }} />
+          <span key={i} className="aspect-square min-w-0 max-w-3 flex-1 rounded-full" style={{ background: i < k ? "hsl(var(--strong))" : "hsl(var(--foreground) / 0.1)" }} />
         ))}
       </span>
       <span className={cn("shrink-0 text-[14px] font-bold tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
@@ -128,7 +129,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
           <p className="text-[19px] font-bold leading-snug">{t("rules.shaping")}</p>
           <div className="mt-3 flex gap-1.5" aria-hidden="true">
             {Array.from({ length: SHAPING_EVENINGS }, (_, i) => (
-              <span key={i} className="h-3.5 w-3.5 rounded-full" style={{ background: i < evenings ? "hsl(var(--coin-teal))" : "hsl(var(--foreground) / 0.1)" }} />
+              <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < evenings ? "hsl(var(--coin-gold))" : "hsl(var(--foreground) / 0.1)" }} />
             ))}
           </div>
           <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("rules.evenings", { k: evenings, count: SHAPING_EVENINGS })}</p>

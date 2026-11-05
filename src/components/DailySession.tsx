@@ -1097,19 +1097,19 @@ export const DailySession = ({
                         }}
                         modifiersClassNames={{
                           fullyFilled:
-                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-emerald-500",
+                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-[hsl(var(--coin-gold))]",
                           partiallyFilled:
-                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:bg-amber-400",
+                            "relative after:content-[''] after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-0.5 after:w-1.5 after:h-1.5 after:rounded-full after:border after:border-[hsl(var(--coin-gold))]",
                         }}
                       />
                       {/* Tiny legend so the dots are self-explanatory. */}
                       <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-[10px] text-muted-foreground border-t">
                         <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--coin-gold))]" />
                           {t("dailySession.legendFilled")}
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          <span className="w-1.5 h-1.5 rounded-full border border-[hsl(var(--coin-gold))]" />
                           {t("dailySession.legendPartial")}
                         </span>
                       </div>
@@ -1287,8 +1287,8 @@ export const DailySession = ({
                     className={cn(
                       "flex-1 flex flex-col items-center justify-center py-1 rounded-full transition-all",
                       isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted/40"
+                        ? "surface text-foreground"
+                        : "text-muted-foreground"
                     )}
                   >
                     <span className="text-[11px] font-semibold uppercase tracking-wide opacity-80">{weekday}</span>

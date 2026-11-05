@@ -112,7 +112,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
               : real === "hard" ? "hsl(var(--strong))"
               : real === "calm" ? "hsl(var(--balanced))"
               : "hsl(var(--foreground) / 0.07)";
-            return <span key={i} className="h-[10px] w-[10px] rounded-[3px] transition-colors duration-300" style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
+            return <span key={i} className="h-[10px] w-[10px] rounded-full transition-colors duration-300" style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
           })}
         </span>
       </button>

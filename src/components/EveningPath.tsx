@@ -26,7 +26,7 @@ import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, 
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
-import { islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
+import { isHardAnswer, islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
 import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
@@ -473,12 +473,16 @@ export const EveningPath = ({
   );
   const dots = (ids: string[], date: string) => {
     const byTracker = new Map(entries.filter((e) => e.date === date).map((e) => [e.trackerId, e.value]));
+    const byId = new Map(trackers.map((tr) => [tr.id, tr]));
     return (
-      // Filled = yes, ring = no, grey = not answered. Never red or green.
+      // One dot per question, the same colours as the calendar (a day is a
+      // dot, Nov 5 2026): indigo = a hard answer, lavender = a calm one,
+      // grey = not answered yet.
       <div className="mt-2.5 flex flex-wrap gap-1.5" aria-hidden="true">
         {ids.slice(0, 40).map((id) => {
-          const v = byTracker.get(id);
-          return <span key={id} className={cn("h-2.5 w-2.5 rounded-full", v === true && "bg-[hsl(var(--coin-teal))]", v === false && "border-2 border-[hsl(var(--coin-teal))]", v === undefined && "bg-foreground/15")} />;
+          const v = byTracker.get(id), tr = byId.get(id);
+          const look = v === undefined || !tr ? "hsl(var(--foreground) / 0.12)" : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced) / 0.75)";
+          return <span key={id} className="h-3 w-3 rounded-full" style={{ background: look }} />;
         })}
       </div>
     );
