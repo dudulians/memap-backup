@@ -133,6 +133,7 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
         return (
           <button key={isl.id} type="button" aria-label={islandName(t, isl.id)}
             onClick={(e) => { haptics.tap(); playBloop(Math.min(1, Math.max(0, x / W))); const el = e.currentTarget; el.classList.add("on"); window.setTimeout(() => { el.classList.remove("on"); onOpen(isl.id); }, 150); }}
+            data-isle={isl.id}
             className="planet-isle planet-map-isle island-press absolute z-[2]" style={{ left: x - size / 2, top: y - h * 0.7, width: size }}>
             <span className="ring" />
             <img className="art-day island-art" src={art(name, false)} alt="" />

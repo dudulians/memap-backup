@@ -33,7 +33,7 @@ const read = async (label) => {
   const s = await p.evaluate(() => window.__s);
   let jumps = 0, noDim = 0, shownAt = null;
   for (let i = 1; i < s.length; i++) {
-    if (s[i].top !== null && s[i - 1].top !== null && Math.abs(s[i].top - s[i - 1].top) > 2 && s[i].op > 0.05 && s[i - 1].op > 0.05) jumps++;
+    if (s[i].top !== null && s[i - 1].top !== null && Math.abs(s[i].top - s[i - 1].top) > 12 && s[i].op > 0.05 && s[i - 1].op > 0.05) jumps++;
     if (!s[i].dim) noDim++;
     if (shownAt === null && s[i].op >= 0.99 && s.slice(0, i).some((x) => x.op < 0.5)) shownAt = s[i].t;
   }

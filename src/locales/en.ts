@@ -1572,7 +1572,7 @@ const en = {
     example: "Example",
     yours: "Yours: {{k}} of {{n}} evenings",
     world: { title: "Your world", line: "Every topic is an island. It grows with your evenings." },
-    links: { title: "Your links", line: "Dotted lines show what comes before what.", sample: "{{k}} of {{n}} times", a: "Short sleep", b: "Headache" },
+    links: { title: "Your links", line: "Dots show what comes before what.", sample: "{{k}} of {{n}} times", a: "Short sleep", b: "Headache" },
     calendar: { line: "Every day is a dot. Tap to see your month." },
     chart: { title: "Your weeks", line: "See if your weeks get better.", sample: "Hard days a week" },
     actions: { line: "When something keeps happening, here's what to try.", sample: "3 hard nights in a week → no screens after 10 pm" },
