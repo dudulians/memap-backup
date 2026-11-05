@@ -2474,7 +2474,7 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .tour-card.surface { background: hsl(var(--surface)); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .tour-card.is-moving { opacity: 0; transform: translateY(8px); pointer-events: none; }
 /* the pictures filling in live */
-.tour-pop { animation: tourPop .42s cubic-bezier(.34, 1.56, .64, 1) both; }
+.tour-pop { animation: tourPop .45s cubic-bezier(.22, 1, .36, 1) both; }
 svg .tour-pop { transform-box: fill-box; transform-origin: center; }
 @keyframes tourPop { from { opacity: 0; transform: scale(.35); } to { opacity: 1; transform: none; } }
 .tour-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tourDraw 1.2s .3s ease-out forwards; }
@@ -2487,7 +2487,7 @@ svg .tour-pop { transform-box: fill-box; transform-origin: center; }
 .tour-link { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .tour-link circle { fill: #fff; filter: drop-shadow(0 1px 2px rgba(20, 40, 90, .35)); }
 .tour-link-under { position: absolute; transform: translateX(-50%); white-space: nowrap; }
-.tour-link-count { display: inline-block; border-radius: 999px; background: #fff; padding: 4px 10px; font-size: 14px; font-weight: 800; color: hsl(var(--coin-teal)); font-variant-numeric: tabular-nums; box-shadow: 0 6px 16px -6px rgba(20, 40, 90, .5); animation: tourPop .42s cubic-bezier(.34, 1.56, .64, 1) both; }
+.tour-link-count { display: inline-block; border-radius: 999px; background: #fff; padding: 4px 10px; font-size: 14px; font-weight: 800; color: hsl(var(--coin-teal)); font-variant-numeric: tabular-nums; box-shadow: 0 6px 16px -6px rgba(20, 40, 90, .5); animation: tourPop .45s cubic-bezier(.22, 1, .36, 1) both; }
 .tour-link-chip { position: absolute; display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 999px; background: #fff; color: hsl(var(--coin-teal)); box-shadow: 0 6px 16px -6px rgba(20, 40, 90, .5); }
 @keyframes tourFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes tourPulse { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); } 100% { box-shadow: 0 0 0 14px rgba(255, 255, 255, 0); } }
