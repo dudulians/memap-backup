@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUp, Check, Circle, FastForward, NotebookPen, PenLine, Pointer, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
-import { SOUNDS_PAUSED, playBurst, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
+import { BUBBLE_SOUNDS, SOUNDS_PAUSED, playBurst, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
 import { addNote } from "@/lib/notes";
 import { isoLocal } from "@/lib/doors";
@@ -416,7 +416,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
           <X className="h-6 w-6" />
         </button>
         <p className="min-w-0 flex-1 truncate text-[17px] font-bold">{t("unload.title")}</p>
-        {!SOUNDS_PAUSED && <button type="button" onClick={() => { haptics.soft(); setMuted((m) => { try { localStorage.setItem("memap_unload_sound", m ? "on" : "off"); } catch { /* ignore */ } return !m; }); }}
+        {(!SOUNDS_PAUSED || BUBBLE_SOUNDS) && <button type="button" onClick={() => { haptics.soft(); setMuted((m) => { try { localStorage.setItem("memap_unload_sound", m ? "on" : "off"); } catch { /* ignore */ } return !m; }); }}
           aria-label={muted ? t("unload.soundOn") : t("unload.soundOff")} aria-pressed={!muted}
           className="surface flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
           {muted ? <VolumeX className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Volume2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}

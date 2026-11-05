@@ -36,6 +36,11 @@ type FeedbackKind = "yes" | "no" | "skip";
  *  плохие", vibrations instead). Each place that played one also taps, so
  *  nothing goes quiet; false brings them all back with the Settings switch. */
 export const SOUNDS_PAUSED = true;
+/** …except the bubbles (her note, Nov 5 2026: "надо оставить их в баблз"):
+ *  "Unload your mind" keeps its pops, merges, bursts and quiet sea, with its
+ *  own mute button. Everything else stays quiet while SOUNDS_PAUSED. */
+export const BUBBLE_SOUNDS = true;
+const BUBBLE_SET = new Set<string>(["pop1", "pop2", "pop3", "pop4", "drop", "sea"]);
 
 let audioCtx: AudioContext | null = null;
 let unlockAttached = false;
@@ -60,7 +65,7 @@ const getCtx = (): AudioContext | null => {
  * swipe after app launch plays audibly.
  */
 export const primeAudio = () => {
-  if (SOUNDS_PAUSED || unlockAttached || typeof window === "undefined") return;
+  if ((SOUNDS_PAUSED && !BUBBLE_SOUNDS) || unlockAttached || typeof window === "undefined") return;
   unlockAttached = true;
   const unlock = () => {
     const ctx = getCtx();
@@ -172,6 +177,9 @@ export const soundOn = (): boolean => {
   }
 };
 
+/** The bubbles' own sound switch: on while BUBBLE_SOUNDS (the game's mute button decides). */
+const bubbleSoundOn = (): boolean => BUBBLE_SOUNDS || soundOn();
+
 const ready = (): AudioContext | null => {
   const ctx = getCtx();
   if (!ctx) return null;
@@ -267,9 +275,10 @@ const load = (ctx: AudioContext, name: Sound): Promise<AudioBuffer | null> => {
 
 /** Start loading what a game will play, so its first sound is on time. */
 export const preloadSounds = (...names: Sound[]) => {
-  if (SOUNDS_PAUSED) return;
+  const list = SOUNDS_PAUSED ? names.filter((n) => BUBBLE_SOUNDS && BUBBLE_SET.has(n)) : names;
+  if (!list.length) return;
   const ctx = getCtx();
-  if (ctx) names.forEach((n) => void load(ctx, n));
+  if (ctx) list.forEach((n) => void load(ctx, n));
 };
 
 /** Plays a recording now; false while it hasn't loaded (the caller falls back). */
@@ -301,7 +310,7 @@ const BIG = ["pop2", "pop3"] as const;
 
 /** A bubble popping; size 0 (small) .. 1 (big), x 0 (left) .. 1 (right). */
 export const playPop = (size = 0.3, x = 0.5) => {
-  if (!soundOn()) return;
+  if (!bubbleSoundOn()) return;
   const ctx = ready();
   if (!ctx) return;
   const z = Math.max(0, Math.min(1, size));
@@ -312,7 +321,7 @@ export const playPop = (size = 0.3, x = 0.5) => {
 };
 /** Two bubbles joining: a soft low blub. */
 export const playMerge = (x = 0.5) => {
-  if (!soundOn()) return;
+  if (!bubbleSoundOn()) return;
   const ctx = ready();
   if (!ctx) return;
   try {
@@ -337,7 +346,7 @@ export const playMerge = (x = 0.5) => {
 };
 /** A big bubble bursting: one round pop and a spray of small ones. */
 export const playBurst = (x = 0.5) => {
-  if (!soundOn()) return;
+  if (!bubbleSoundOn()) return;
   const ctx = ready();
   if (!ctx) return;
   const pan = (x - 0.5) * 1.4;
@@ -405,7 +414,7 @@ const madeSea = (ctx: AudioContext) => {
 };
 /** A quiet sea under the game. Returns a stop function (fades out). */
 export const startSea = (): (() => void) => {
-  if (!soundOn()) return () => undefined;
+  if (!bubbleSoundOn()) return () => undefined;
   const ctx = ready();
   if (!ctx) return () => undefined;
   let stop: (() => void) | null = null;
