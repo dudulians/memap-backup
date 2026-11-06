@@ -5,7 +5,7 @@
 // map set (marketing/brand/map-assets), shipped as small webp files.
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import type { TFunction } from "i18next";
-import { computeCorrelations } from "@/lib/correlations";
+import { computeCorrelations, correlationFrame, isHighlySignificant, trackerPolarity, type CorrelationResult } from "@/lib/correlations";
 import { isoLocal } from "@/lib/doors";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
@@ -149,8 +149,42 @@ export interface Island {
 }
 
 /** k of n: the second question came on k of the n days the first one did
- *  (lag 1: the next day). First/second are tracker ids, in reading order. */
-export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean }
+ *  (lag 1: the next day). First/second are tracker ids, in reading order.
+ *  firstYes false: the days WITHOUT the first (her note, Nov 6 2026: "no walk →
+ *  tired" read as "walk → tired"); secondYes false: the second did NOT come.
+ *  other: the second (that same answer) on the rest of the days. */
+export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean; firstYes: boolean; secondYes: boolean; other: { k: number; n: number } }
+
+/** A pattern as she reads it. Together (phi > 0): "with A → B". Apart (phi < 0):
+ *  the second is told by its hard answer, as a hard day is (WORLD-BIBLE): "without
+ *  a walk → tired", "anxious → not slept enough". k of n counts those days; other
+ *  counts the same second answer on the rest. */
+export const linkOf = (c: CorrelationResult) => {
+  const flip = c.lag === -1;
+  const second0 = flip ? c.trackerA : c.trackerB;
+  const secondYes = c.phi >= 0 || trackerPolarity(second0) !== "good";
+  const firstYes = c.phi >= 0 || !secondYes;
+  const { bothYes, aYesBNo, aNoBYes, bothNo } = c.counts;
+  const cell = (a: boolean, b: boolean) => (a ? (b ? bothYes : aYesBNo) : b ? aNoBYes : bothNo);
+  // in reading order: the first is A, or B when B came the day before
+  const at = (f: boolean, s: boolean) => (flip ? cell(s, f) : cell(f, s));
+  const k = at(firstYes, secondYes), ok = at(!firstYes, secondYes);
+  return {
+    first: flip ? c.trackerB : c.trackerA, second: second0, firstYes, secondYes, nextDay: c.lag !== 0,
+    k, n: k + at(firstYes, !secondYes), other: { k: ok, n: ok + at(!firstYes, !secondYes) },
+  };
+};
+
+/** Worth showing as a link. Against intuition (a good thing before a hard one, a
+ *  hard thing before a good one) only when it held many times: stable and
+ *  p < 0.01. "Without" links only from the counted tiers (early and fresh count
+ *  "both yes" only). */
+export const linkWorthShowing = (c: CorrelationResult): boolean => {
+  if (c.phi === 0) return false;
+  if (correlationFrame(trackerPolarity(c.trackerA), trackerPolarity(c.trackerB), c.phi) === "unexpected") return c.stage === "stable" && isHighlySignificant(c.chiSquare);
+  if (c.phi < 0) return c.stage === "stable" || c.stage === "emerging";
+  return true;
+};
 
 /** A hard day's answer, the same rule as the lighthouses (WORLD-BIBLE, Nov 5
  *  2026): YES to a hard question, NO to a good one ("Slept 7+ hours?" — no). */
@@ -222,17 +256,15 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
   const seen = new Set<string>();
   const out: Route[] = [];
   for (const c of computeCorrelations(trackers, entries, 12)) {
-    if (c.phi <= 0) continue;
-    const a = where.get(c.trackerA.id), b = where.get(c.trackerB.id);
+    if (!linkWorthShowing(c)) continue;
+    const l = linkOf(c);
+    // islands in reading order: the first question's island, then the second's
+    const a = where.get(l.first.id), b = where.get(l.second.id);
     if (!a || !b || a === b) continue;
     const key = [a, b].sort().join("|");
     if (seen.has(key)) continue;
     seen.add(key);
-    // lag -1: B the day before goes with A, so B is read first, and n
-    // counts the days the first one came.
-    const flip = c.lag === -1;
-    const n = c.counts.bothYes + (flip ? c.counts.aNoBYes : c.counts.aYesBNo);
-    out.push({ a, b, k: c.counts.bothYes, n, first: flip ? c.trackerB.id : c.trackerA.id, second: flip ? c.trackerA.id : c.trackerB.id, nextDay: c.lag !== 0 });
+    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, other: l.other });
   }
   return out.slice(0, 4);
 };

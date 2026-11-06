@@ -13,7 +13,8 @@
 import i18n from "@/lib/i18n";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
-import { islandName, islandOf, isHardAnswer, mapPicFor, type IslandId } from "@/lib/islands";
+import { islandName, islandOf, isHardAnswer, linkOf, linkWorthShowing, mapPicFor, type IslandId } from "@/lib/islands";
+import { linkOther, linkSentence } from "@/lib/linkText";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { isoLocal } from "@/lib/doors";
@@ -120,14 +121,14 @@ const collect = (r: ReportInput): Data => {
   const vals = new Map<string, Map<string, unknown>>();
   for (const e of inPeriod) { if (!vals.has(e.trackerId)) vals.set(e.trackerId, new Map()); vals.get(e.trackerId)!.set(e.date, e.value); }
   const answeredDays = new Set(inPeriod.filter((e) => qs.some((q) => q.id === e.trackerId)).map((e) => e.date)).size;
-  const pairs = computeCorrelations(qs, inPeriod, 6).filter((c) => c.phi > 0).slice(0, 4);
+  const pairs = computeCorrelations(qs, inPeriod, 6).filter(linkWorthShowing).slice(0, 4);
   return { days, first, last, qs, main: qs.find((q) => q.id === r.mainId) ?? qs[0], vals, answeredDays, pairs };
 };
 const linkLine = (c: CorrelationResult) => {
-  const flip = c.lag === -1;
-  const a = flip ? c.trackerB : c.trackerA, b = flip ? c.trackerA : c.trackerB;
-  const n = c.counts.bothYes + (flip ? c.counts.aNoBYes : c.counts.aYesBNo);
-  return { a, b, text: i18n.t(c.lag !== 0 ? "link.afterNextDay" : "link.sameDay", { first: localizeTrackerTitle(a.title), second: localizeTrackerTitle(b.title), k: c.counts.bothYes, count: n }) };
+  const l = linkOf(c);
+  const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
+  const title = (id: string) => localizeTrackerTitle((id === l.first.id ? l.first : l.second).title);
+  return { a: l.first, b: l.second, text: `${linkSentence(i18n.t, route, title)} ${linkOther(i18n.t, route)}` };
 };
 
 // --- a month calendar ------------------------------------------------------------

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, mapPicFor, type Route } from "@/lib/islands";
+import { linkArrow, linkSentence } from "@/lib/linkText";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { firstLinkState, markFirstLinkSeen } from "@/lib/firstLink";
 import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
@@ -79,7 +80,7 @@ export const LinkMoment = () => {
       // stands on the island (the first-link treasure) glows instead of a second one
       document.documentElement.classList.add("link-moment-on");
       ea.querySelector(".it-camera")?.classList.add("link-moment-new");
-      setShown({ route, titles: [title(route.first), title(route.second)], rect: r, a: centre(ea), b: centre(eb), aRect: ea.getBoundingClientRect() });
+      setShown({ route, titles: [linkArrow(t, route, title), linkSentence(t, route, title)], rect: r, a: centre(ea), b: centre(eb), aRect: ea.getBoundingClientRect() });
       await frames(2);
       setLit(true);
       haptics.success();
@@ -117,7 +118,7 @@ export const LinkMoment = () => {
   const place: React.CSSProperties = below >= cardH ? { top: hole.y + hole.h + GAP }
     : above >= cardH ? { bottom: vh - hole.y + GAP }
     : below >= above ? { bottom: BOTTOM } : { top: TOP };
-  const sentence = t(route.nextDay ? "link.afterNextDay" : "link.sameDay", { first: shown.titles[0], second: shown.titles[1], k: route.k, count: route.n });
+  const sentence = shown.titles[1];
 
   return createPortal(
     <div className="tour fixed inset-0 z-[90]" role="dialog" aria-modal="true" aria-label={t("firstLink.title")}>

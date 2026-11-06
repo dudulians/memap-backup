@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { BarChart3 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { islandName, type IslandId, type Route } from "@/lib/islands";
+import { linkArrow, linkOther, linkSentence } from "@/lib/linkText";
 import { art, artOf } from "@/lib/globeArt";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
@@ -52,7 +53,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           </div>
 
           <p className="mt-5 text-[22px] font-bold leading-snug tracking-tight">
-            {title(r.first)} → {title(r.second)}
+            {linkArrow(t, r, title)}
             {r.nextDay && <span className="ml-2 inline-flex h-7 translate-y-[-2px] items-center rounded-full bg-[hsl(var(--strong)/0.14)] px-2.5 align-middle text-[14px] font-bold text-[hsl(var(--strong))]">{t("map.nextDay")}</span>}
           </p>
 
@@ -64,10 +65,10 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
             ))}
           </div>
           <p className="mt-3 text-[16px] font-medium leading-snug text-muted-foreground">
-            {r.nextDay
-              ? t("link.afterNextDay", { first: title(r.first), second: title(r.second), k: r.k, count: r.n })
-              : t("link.sameDay", { first: title(r.first), second: title(r.second), k: r.k, count: r.n })}
+            {linkSentence(t, r, title)}
           </p>
+          {/* the other days, so a coincidence looks like one */}
+          <p className="mt-1 text-[16px] font-bold leading-snug">{linkOther(t, r)}</p>
 
           <p className="surface mt-4 rounded-[18px] px-4 py-3 text-[15px] font-semibold leading-snug text-foreground/80">{t("link.honest")}</p>
 

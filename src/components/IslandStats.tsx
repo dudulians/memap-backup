@@ -12,6 +12,7 @@
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
+import { linkArrow } from "@/lib/linkText";
 import { LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -45,7 +46,7 @@ const LinkLine = ({ r, title }: { r: Route; title: (id: string) => string }) => 
   return (
     <div className="surface rounded-[20px] px-4 py-3">
       <p className="text-[16px] font-bold leading-snug">
-        {title(r.first)} → {title(r.second)}{r.nextDay ? ` ${t("map.nextDay")}` : ""}
+        {linkArrow(t, r, title)}{r.nextDay ? ` ${t("map.nextDay")}` : ""}
       </p>
       <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{t("map.timesOf", { k: r.k, count: r.n })}</p>
     </div>
