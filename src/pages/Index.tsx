@@ -16,6 +16,7 @@ import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
 import { AppTour } from "@/components/AppTour";
+import { LinkMoment } from "@/components/LinkMoment";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -380,6 +381,8 @@ const Index = () => {
           notification taps still open it directly (App.tsx). */}
       {/* "Look around": the tour of the real pages, started from the path */}
       <AppTour />
+      {/* the day her first link is found: see it happen on her map */}
+      <LinkMoment />
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
           <div className="nav-floating grid grid-cols-3 overflow-hidden">

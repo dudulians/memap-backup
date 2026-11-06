@@ -1561,6 +1561,15 @@ const en = {
 
   // 1.8.0 onboarding "doors" + Today hero + echo lines. Context copy is
   // keyed by library template id (see src/lib/doors.ts).
+  firstLink: {
+    step: "Your first link!",
+    sub: "Something comes before something",
+    see: "See it",
+    title: "Your first link!",
+    treasure: "New treasure: Camera",
+    open: "Open it",
+    close: "Close",
+  },
   tour: {
     step: "Look around",
     stepSub: "Where everything lives",

@@ -11,6 +11,7 @@ import { Pencil, Plus } from "lucide-react";
 import { art, artOf, stageOf, toNextStage } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
+import { firstLinkState } from "@/lib/firstLink";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic, type Route } from "@/lib/islands";
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
@@ -117,6 +118,23 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
 
   const islands = useMemo(() => buildIslands(trackers, entries), [trackers, entries]);
   const routes = useMemo(() => buildRoutes(trackers, entries, islands), [trackers, entries, islands]);
+  // the first link moment's "Open it": the link's own card
+  useEffect(() => {
+    const open = (e: Event) => {
+      const d = (e as CustomEvent).detail as { a: string; b: string } | undefined;
+      if (!d) return;
+      window.setTimeout(() => setLink(routes.find((r) => (r.a === d.a && r.b === d.b) || (r.a === d.b && r.b === d.a)) ?? null), 200);
+    };
+    window.addEventListener("memap-open-link", open);
+    return () => window.removeEventListener("memap-open-link", open);
+  }, [routes]);
+  // opening World the day her first link is found plays its moment (once)
+  useEffect(() => {
+    if (!loaded || entries.length === 0) return;
+    if (!firstLinkState(routes, true).route) return;
+    const id = window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-link-moment")), 650);
+    return () => window.clearTimeout(id);
+  }, [loaded, routes, entries.length]);
   const island = open ? islands.find((i) => i.id === open) : undefined;
   // How much of each island is answered today: a calm ring by its name.
   const fill = useMemo(() => {

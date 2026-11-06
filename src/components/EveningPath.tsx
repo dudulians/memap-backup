@@ -138,7 +138,8 @@ export const EveningPath = ({
   useEffect(() => {
     const done = () => setTick((k) => k + 1);
     window.addEventListener("memap-tour-done", done);
-    return () => window.removeEventListener("memap-tour-done", done);
+    window.addEventListener("memap-first-link-seen", done);
+    return () => { window.removeEventListener("memap-tour-done", done); window.removeEventListener("memap-first-link-seen", done); };
   }, []);
   // the calendar opens on her main question, so it's named for it ("Your migraine days")
   const daysLabel = (() => { const door = getDoorState(); return t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any"); })();
@@ -233,6 +234,7 @@ export const EveningPath = ({
     if (s.kind === "unload") return t("unload.step");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     if (s.kind === "discover") return t("tour.step");
+    if (s.kind === "link") return t("firstLink.step");
     if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
@@ -249,6 +251,7 @@ export const EveningPath = ({
     if (s.kind === "test") return "152 36% 46%";
     if (s.kind === "unload") return "198 55% 58%";
     if (s.kind === "fill") return "205 46% 58%";
+    if (s.kind === "link") return "174 52% 42%";
     return "var(--coin-teal)";
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
@@ -273,7 +276,7 @@ export const EveningPath = ({
     if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
-      : s.kind === "discover" ? MapIcon
+      : s.kind === "discover" ? MapIcon : s.kind === "link" ? Link2
       : s.kind === "questions" ? (s.added ? Plus : s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
@@ -288,6 +291,7 @@ export const EveningPath = ({
     if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
     if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
+    if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t("firstLink.sub"), action: t("firstLink.see") };
     return {
       look, icon, hue, title: stepName(s),
       sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
@@ -495,6 +499,7 @@ export const EveningPath = ({
     else if (s.kind === "test") setTestOpen("result");
     else if (s.kind === "unload") setUnloadOpen(true);
     else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
+    else if (s.kind === "link") window.dispatchEvent(new CustomEvent("memap-link-moment"));
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
   };
@@ -642,6 +647,15 @@ export const EveningPath = ({
         <>
           {head(t("unload.step"), s.done ? t("unload.doneToday") : t("unload.sub"))}
           {button(s.done ? t("unload.again") : t("game.play"), () => startStep(s), s.done ? "plain" : "teal")}
+        </>
+      );
+    }
+    if (s.kind === "link") {
+      return (
+        <>
+          {head(stepName(s), s.done ? t("path.done") : t("firstLink.sub"))}
+          {!s.done && button(t("firstLink.see"), () => startStep(s))}
+          {s.done && button(t("path.seeLinks"), () => { setOpen(null); onOpenMap(); }, "plain")}
         </>
       );
     }

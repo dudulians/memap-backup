@@ -6,7 +6,8 @@
 // steps are already done; then one small task. Seven counted days make a
 // week. Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top note).
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { islandOf, type IslandId } from "@/lib/islands";
+import { buildIslands, buildRoutes, islandOf, type IslandId } from "@/lib/islands";
+import { firstLinkState } from "@/lib/firstLink";
 import { grewToday } from "@/lib/globeArt";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
@@ -50,7 +51,8 @@ export interface Step {
   /** "test": her week of trying one change is over: see how it went */
   /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
   /** "discover": what the app will show her, with an example (src/components/DiscoverSheet.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover";
+  /** "link": her first link was found today: see it happen on her map (src/components/LinkMoment.tsx) */
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover" | "link";
   discover?: DiscoverId;
   /** grew: the stage the island reached today */
   stage?: number;
@@ -550,6 +552,14 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     const at = kept >= 0 ? kept : boat >= 0 ? boat : steps.length;
     if (!step.done || kept < 0) saveAddedAnchor(today, steps[at]?.id ?? "end");
     steps.splice(at, 0, step);
+  }
+  // Her first link (Nov 6 2026): where the boat is, the day it's found; seen = done.
+  const fl = entries.length > 0 ? firstLinkState(buildRoutes(trackers, entries, buildIslands(trackers, entries)), true) : { route: null, seenToday: false };
+  if (fl.route || fl.seenToday) {
+    const step: Step = { id: "link", kind: "link", trackerIds: [], answered: 0, done: !fl.route };
+    const boat = steps.findIndex((s) => !s.done && s.kind !== "unload");
+    let lastQ = -1; steps.forEach((s, i) => { if (s.kind === "questions") lastQ = i; });
+    steps.splice(step.done ? lastQ + 1 : boat >= 0 ? boat : steps.length, 0, step);
   }
   // An island that reached a new stage with today's answers: a step already
   // done, right after the questions that grew it (her note, Nov 5 2026: one

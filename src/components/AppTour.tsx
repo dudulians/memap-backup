@@ -15,6 +15,7 @@ import { getEntries, getTrackers } from "@/lib/storage";
 import { art, artOf, STAGE_AT, LADDER_WIDTH } from "@/lib/globeArt";
 import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { countedDays, markDiscovered } from "@/lib/pathSteps";
+import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
 
 type Tab = "cards" | "patterns" | "notes";
@@ -54,19 +55,7 @@ const Box = ({ children, example }: { children: ReactNode; example?: boolean }) 
 // The pictures fill in live once the card is up (her note, Nov 5 2026: "чтобы это
 // интерактивно заполнялось красиво… мы же это умеем"). Only opacity, transform and
 // a line's dash move; with reduced motion everything is simply there.
-const still = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 const delay = (s: number): React.CSSProperties => ({ animationDelay: `${s}s` });
-/** a number counting up to `to` */
-const useCount = (to: number, delay: number, step = 280) => {
-  const [n, setN] = useState(() => (still() ? to : 0));
-  useEffect(() => {
-    if (still()) return;
-    let k = 0;
-    let timer = window.setTimeout(function tick() { k += 1; setN(k); if (k < to) timer = window.setTimeout(tick, step); }, delay);
-    return () => window.clearTimeout(timer);
-  }, [to, delay, step]);
-  return n;
-};
 /** words typed letter by letter */
 const useTyped = (text: string, delay: number, speed = 34) => {
   const [n, setN] = useState(() => (still() ? text.length : 0));
@@ -203,30 +192,6 @@ const Treasures = () => (
 );
 
 // --- the tour -----------------------------------------------------------------------
-
-const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
-const frames = (n: number) => new Promise<void>((r) => { const go = (k: number) => (k <= 0 ? r() : requestAnimationFrame(() => go(k - 1))); go(n); });
-const findTarget = async (sel: string): Promise<HTMLElement | null> => {
-  for (let i = 0; i < 60; i++) {
-    const el = document.querySelector<HTMLElement>(sel);
-    if (el && el.getBoundingClientRect().width > 0) return el;
-    await wait(40);
-  }
-  return null;
-};
-const MAP_VIEW = "memap_map_view";
-type Pt = { x: number; y: number };
-const centre = (el: HTMLElement): Pt => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * 0.55 }; };
-/** an island on the map with its name under it */
-const isleRects = (els: HTMLElement[]): DOMRect[] => els.flatMap((e) => {
-  const lab = e.querySelector<HTMLElement>(".planet-label");
-  return lab ? [e.getBoundingClientRect(), lab.getBoundingClientRect()] : [e.getBoundingClientRect()];
-});
-const union = (rs: DOMRect[]): DOMRect => {
-  const l = Math.min(...rs.map((r) => r.left)), t = Math.min(...rs.map((r) => r.top));
-  const rr = Math.max(...rs.map((r) => r.right)), b = Math.max(...rs.map((r) => r.bottom));
-  return new DOMRect(l, t, rr - l, b - t);
-};
 
 export const AppTour = () => {
   const { t } = useTranslation();
@@ -375,16 +340,7 @@ export const AppTour = () => {
   const vh = window.innerHeight, pad = 8, rect = view.rect;
   const hole = rect && (stop.target || stop.isle) ? { x: rect.left - pad, y: rect.top - pad, w: rect.width + pad * 2, h: rect.height + pad * 2 } : null;
   // the link drawn on the map, dot by dot, from her island to the next one
-  const linkDots = (() => {
-    const l = view.link;
-    if (!l) return null;
-    const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y, len = Math.hypot(dx, dy) || 1;
-    const c = { x: (l.a.x + l.b.x) / 2 - (dy / len) * len * 0.16, y: (l.a.y + l.b.y) / 2 + (dx / len) * len * 0.16 };
-    const pt = (u: number) => ({ x: (1 - u) ** 2 * l.a.x + 2 * (1 - u) * u * c.x + u * u * l.b.x, y: (1 - u) ** 2 * l.a.y + 2 * (1 - u) * u * c.y + u * u * l.b.y });
-    const n = Math.max(5, Math.round(len / 17));
-    const dots = Array.from({ length: n + 1 }, (_, i) => pt(i / n)).filter((p) => Math.hypot(p.x - l.a.x, p.y - l.a.y) > 54 && Math.hypot(p.x - l.b.x, p.y - l.b.y) > 54);
-    return { dots, mid: pt(0.5) };
-  })();
+  const linkDots = view.link ? curveDots(view.link.a, view.link.b) : null;
   const TOP = 52, BOTTOM = 92, GAP = 14;
   const below = hole ? vh - BOTTOM - (hole.y + hole.h) - GAP : 0, above = hole ? hole.y - TOP - GAP : 0;
   const place: React.CSSProperties = !hole ? { top: "50%", transform: "translateY(-50%)" }
