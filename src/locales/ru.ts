@@ -140,7 +140,7 @@ const ru: Translation = {
     lighthouses_other: "{{count}} порога → маяки",
     open: "Открыть мою карту",
     back: "Старый вид — в Настройках → Ещё.",
-    oldLook: "Старый вид",
+    oldLook: "Вернуть старый вид",
   },
   // "Guess", the daily mini-game (Nov 2 2026)
   // "Пора действовать" на пути (2 ноября 2026)

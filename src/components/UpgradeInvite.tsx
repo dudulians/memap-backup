@@ -18,6 +18,17 @@ import { Tracker } from "@/types/tracker";
 import { Pressable } from "@/components/ui/pressable";
 
 const KEY = "memap_upgrade_invite";
+/** Whoever said no (or went back to the old look) is asked again two weeks
+ *  later, so the new look is never lost for good (Nov 6 2026). */
+const ASK_AGAIN_DAYS = 14;
+const declined = () => `declined:${isoLocal(new Date())}`;
+const askAgain = (v: string | null): boolean => {
+  if (!v) return true;
+  const at = v.startsWith("declined:") ? v.slice(9) : v === "declined" ? null : undefined;
+  if (at === undefined) return false; // accepted
+  if (at === null) return false; // an older "no" without a date: stays as it was
+  return (Date.now() - new Date(at + "T00:00:00").getTime()) / 86_400_000 >= ASK_AGAIN_DAYS;
+};
 
 export const switchToNew = () => {
   try {
@@ -32,7 +43,7 @@ export const switchToNew = () => {
 export const switchToOld = () => {
   try {
     localStorage.setItem("memap_ui", "classic");
-    localStorage.setItem(KEY, "declined");
+    localStorage.setItem(KEY, declined());
   } catch { /* stays new */ }
   window.location.reload();
 };
@@ -44,7 +55,7 @@ export const UpgradeInvite = () => {
 
   useEffect(() => {
     let seen = true;
-    try { seen = !!localStorage.getItem(KEY); } catch { /* keep hidden */ }
+    try { seen = !askAgain(localStorage.getItem(KEY)); } catch { /* keep hidden */ }
     if (seen) return;
     const id = window.setTimeout(async () => {
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
@@ -58,7 +69,7 @@ export const UpgradeInvite = () => {
 
   if (stage === "hidden" || !data) return null;
   const later = () => {
-    try { localStorage.setItem(KEY, "declined"); } catch { /* shows again next launch */ }
+    try { localStorage.setItem(KEY, declined()); } catch { /* shows again next launch */ }
     setStage("hidden");
   };
   const title = (id: string) => {

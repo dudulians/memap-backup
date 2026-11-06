@@ -86,6 +86,9 @@ const CLUSTER: Record<string, BuiltinIsland> = {
 const CATEGORY: Record<Tracker["category"], BuiltinIsland> = {
   Emotions: "me", Voice: "me", Connections: "love", Social: "love", Health: "health", Body: "body", Curious: "other", Fun: "other",
 };
+/** Movement lives on Body & habits (her note, Nov 6 2026: choosing "Movement" in
+ *  onboarding brought up the Health island — "мужа выбесило"). */
+export const BODY_TEMPLATES = new Set(["exercised"]);
 export const WORK_TEMPLATES = new Set([
   "burned-out-after-work", "didnt-want-to-work", "worked-overtime", "felt-fulfilled-at-work", "boss-was-difficult",
   "conflict-with-colleague", "wanted-leave-job", "thought-career-change", "long-commute", "dealt-with-paperwork",
@@ -107,6 +110,7 @@ export const islandOf = (t: Tracker): IslandId => {
   const tpl = matchTemplateIdByTitle(t.title);
   const id: IslandId =
     (tpl && WORK_TEMPLATES.has(tpl) && "work") ||
+    (tpl && BODY_TEMPLATES.has(tpl) && "body") ||
     (t.cluster && CLUSTER[t.cluster]) ||
     (tpl && CLUSTER[STREAM_OF.get(tpl) ?? ""]) ||
     (!tpl ? "mine" : CATEGORY[t.category]) ||

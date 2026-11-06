@@ -124,7 +124,7 @@ const en = {
     lighthouses_other: "{{count}} limits → lighthouses",
     open: "Open my map",
     back: "The old look is in Settings → More.",
-    oldLook: "Old look",
+    oldLook: "Back to the old look",
   },
   // "Guess", the daily mini-game (Nov 2 2026)
   // "Time to act" on the path (Nov 2 2026)

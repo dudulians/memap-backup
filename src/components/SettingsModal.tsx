@@ -871,6 +871,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                           </button>
                         )}
                         {nav("more", t("settings.more"))}
+                        {/* Back to the old screens, right here (her note, Nov 6 2026: ads bring
+                            people to the old version; whoever tries the new one and doesn't
+                            like it must find the way back without digging into "More"). */}
+                        <button type="button" onClick={switchToOld} className={cn(row, "active:bg-muted/60 transition-colors")}>
+                          <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                          <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
+                          <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                        </button>
                       </div>
                     </>
                   );
