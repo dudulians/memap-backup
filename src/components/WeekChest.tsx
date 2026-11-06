@@ -28,6 +28,23 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { chestContent, type ChestStat } from "@/lib/weekChest";
 import { getChests, rewardFor, saveChest, titleFor, type ChestRecord } from "@/lib/pathSteps";
 import { isoLocal } from "@/lib/doors";
+import { useCount } from "@/lib/spotlight";
+
+// The report fills in live as each card lands (Nov 6 2026, from the hooks list:
+// "a live week report"): the numbers count up, the week's days pop in as dots, what
+// grew comes in one by one.
+const KofN = ({ k, n, delay }: { k: number; n: number; delay: number }) => {
+  const { t } = useTranslation();
+  const v = useCount(k, delay * 1000, Math.max(60, Math.round(700 / Math.max(1, k))));
+  return <span className="tabular-nums">{t("path.chest.kOfN", { k: v, count: n })}</span>;
+};
+const WeekDots = ({ k, n, calm, delay }: { k: number; n: number; calm?: boolean; delay: number }) => (
+  <span className="mt-1.5 flex gap-1.5" aria-hidden="true">
+    {Array.from({ length: n }, (_, i) => (
+      <span key={i} className="tour-pop h-3.5 w-3.5 rounded-full" style={{ animationDelay: `${delay + i * 0.07}s`, background: i < k ? (calm ? "hsl(var(--balanced) / 0.85)" : "hsl(var(--strong))") : "hsl(var(--foreground) / 0.12)" }} />
+    ))}
+  </span>
+);
 import { Pressable } from "@/components/ui/pressable";
 
 export const WeekChest = ({
@@ -196,8 +213,9 @@ export const WeekChest = ({
           <div key={i} className={i > 0 ? "mt-3 border-t border-foreground/[0.06] pt-3" : "mt-2"}>
             {l.calm && <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[hsl(var(--coin-teal))]">{t("path.chest.calm")}</p>}
             <p className={l.main ? "text-[19px] font-bold leading-tight" : "text-[17px] font-semibold leading-tight"}>
-              {l.label} · {t("path.chest.kOfN", { k: l.k, count: l.n })}
+              {l.label} · <KofN k={l.k} n={l.n} delay={0.3 + i * 0.35} />
             </p>
+            {l.n <= 14 && <WeekDots k={l.k} n={l.n} calm={l.calm} delay={0.3 + i * 0.35} />}
           </div>
         ))}
       </div>,
@@ -233,7 +251,7 @@ export const WeekChest = ({
       out.push(
         <div className="surface rounded-[22px] px-5 py-4 text-left">
           {kicker(<Sparkles className="h-4 w-4 text-[hsl(var(--coin-gold))]" strokeWidth={2.4} />, rows.length ? t("path.chest.grew") : t("path.chest.nextUp"))}
-          {rows.length > 0 ? rows : (r.nextUp ?? []).map((x) => {
+          {rows.length > 0 ? rows.map((x, i) => <div key={i} className="tour-pop" style={{ animationDelay: `${0.25 + i * 0.22}s` }}>{x}</div>) : (r.nextUp ?? []).map((x) => {
             const [id, p] = x.split(":") as [ItemId, string];
             const it = ITEMS.find((y) => y.id === id);
             return it ? row(it.pic, t(`items.${id}.name`), `${t(`items.${id}.how`)} · ${p}`, false, true) : null;
