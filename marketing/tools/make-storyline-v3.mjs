@@ -329,6 +329,23 @@ const valueScreen = ({ title, rows }) => P3(`<div class="screen">${navTop(2, 7)}
     <div style="min-width:0"><div style="font-size:16.5px;font-weight:800;line-height:1.2">${i + 1} · ${t}</div><div style="font-size:14.5px;font-weight:600;color:#6B7184;line-height:1.28;margin-top:2px">${line}</div><div style="margin-top:6px">${ex}</div></div></div>`).join("")}</div>
   <div class="grow"></div><div class="btn">Let's start ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>`);
 
+// the first month, week by week: one screen, plain sentences
+const monthScreen = ({ title, sub, weeks }) => P3(`<div class="screen">${navTop(2, 6)}
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:4px"><h1 style="font-size:26px">${title}</h1><span class="ex" style="margin-top:6px">Example</span></div>
+  <div class="sub" style="margin-top:2px">${sub}</div>
+  <div style="position:relative;margin-top:12px">
+    <div style="position:absolute;left:21px;top:24px;bottom:24px;width:3px;border-radius:2px;background:rgba(58,63,78,.12)"></div>
+    ${weeks.map(([n, part, ic, head, line, ex]) => `<div style="display:flex;gap:12px;align-items:flex-start;position:relative;margin-top:${n === 1 ? 0 : 10}px">
+      <span style="width:45px;height:45px;flex-shrink:0;border-radius:50%;background:#fff;box-shadow:0 0 0 3px hsl(${TEAL} / .25), 0 6px 14px -8px rgba(20,40,90,.5);display:flex;align-items:center;justify-content:center;color:${TEALD};position:relative;z-index:1">${ic === "lighthouse" ? `<img src="${MAP("lighthouse")}" style="height:30px">` : icon(ic, { size: 21, sw: 2.3 })}</span>
+      <div class="card" style="flex:1;min-width:0;padding:9px 13px">
+        <div style="font-size:12px;font-weight:800;letter-spacing:.06em;color:${TEALD}">WEEK ${n} · ${part}</div>
+        <div style="font-size:16.5px;font-weight:800;line-height:1.2;margin-top:2px">${head}</div>
+        <div style="font-size:14px;font-weight:600;color:#6B7184;line-height:1.28;margin-top:2px">${line}</div>
+        ${ex ? `<div style="margin-top:6px">${ex}</div>` : ""}</div></div>`).join("")}
+  </div>
+  <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;color:${TEALD}">${icon("bell-ring", { size: 16, sw: 2.4 })} All along: 1 minute a night, kind reminders</div>
+  <div class="grow"></div><div class="btn">Let's start ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>`);
+
 const s3 = {
   // slide 1 · My days: the evening card, and the days it makes
   "a1-days": slide(0, `
@@ -408,6 +425,43 @@ const s3 = {
     ["lighthouse", "Know when to act", "Set your rule. MeMap reminds you of your plan when it's time.", `<div style="font-size:14px;font-weight:800">4 low-energy days a week → early night</div>`],
     ["sprout", "Try what helps", "One change for 2 weeks. MeMap checks if energy days grow — and cheers you on.", `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">${icon("footprints", { size: 14, sw: 2.4 })} Morning walk · energy days <span class="pill" style="height:22px;font-size:12px;padding:0 8px">3 → 5</span></div>`],
   ] }),
+
+  // ---- the first month, week by week (board 68) ----
+  "m1-month-migraine": monthScreen({ title: "Your first month", sub: "Migraines · about 1 minute a night", weeks: [
+    [1, "MY DAYS", "calendar-days", "See how often migraines really come", "Your calendar fills in. On day 7 — your first week report.", weekdots([0, 3, 4], HARDC, GOODL)],
+    [2, "LINKS", "spline", "See what comes before them", "Usually by day 10.", exline("Short night → migraine", "6 of 7")],
+    [3, "TIME TO ACT", "lighthouse", "Do one thing about it", "Pick one change, like in bed by 11. Set your rule: 8+ migraine days → see a neurologist, with a report.", ""],
+    [4, "WHAT HELPS", "sprout", "See if it helped", "Keep what works.", `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">Migraine days, 2 weeks <span class="pill" style="height:22px;font-size:12px;padding:0 8px">4 → 1</span></div>`],
+  ] }),
+  "m2-month-energy": monthScreen({ title: "Your first month", sub: "More energy · about 1 minute a night", weeks: [
+    [1, "MY DAYS", "calendar-days", "See how many days you have energy", "Your calendar fills in. On day 7 — your first week report.", weekdots([0, 2, 3, 6], GOODC, HARDL)],
+    [2, "LINKS", "spline", "See what gives you energy", "Usually by day 10.", exline("Morning walk → energy", "9 of 11")],
+    [3, "TIME TO ACT", "lighthouse", "Do one thing about it", "Pick one change, like a morning walk. Set your rule: 4 low-energy days a week → early night.", ""],
+    [4, "WHAT HELPS", "sprout", "See if it helped", "Keep what works.", `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">Energy days a week <span class="pill" style="height:22px;font-size:12px;padding:0 8px">3 → 5</span></div>`],
+  ] }),
+  // the same weeks on Today: the week says what it's for and what's next
+  "m3-today-week2": P3(`${head("Week 2 · 3/7", "9")}
+    <div style="position:absolute;top:104px;left:0;right:0;text-align:center"><div class="wk" style="font-size:14px">WEEK 2 · LINKS</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;height:34px;padding:0 14px;border-radius:17px;background:#fff;font-size:15px;font-weight:800;box-shadow:0 8px 18px -12px rgba(20,40,90,.5)">${icon("spline", { size: 16, sw: 2.6, color: TEALD })} First links in about 3 evenings</div></div>
+    ${disc(120, 226, 32, "done", icon("check", { size: 26, sw: 3.2 }))}${disc(285, 262, 32, "done", icon("check", { size: 26, sw: 3.2 }))}
+    ${cur(195, 420, 46, HUE.lilac, icon("layers", { size: 36, sw: 2.4 }))}<div class="startb" style="left:195px;top:348px">Start</div>${lab(195, 480, "Your questions")}
+    ${boat(48, 380, 82)}
+    ${disc(160, 580, 36, "lock", icon("flag", { size: 28, sw: 2.4 }))}${lab(160, 628, "Done for today", true)}
+    ${disc(250, 700, 34, "lock", icon("spline", { size: 26, sw: 2.4 }))}${lab(250, 746, "Day 14 · your links", true)}
+    ${tabbar(0)}`),
+  // the end of week 4: what helped
+  "m4-week4": P3(`<div class="sheet"><div class="grab"></div>
+    <div style="font-size:12px;font-weight:800;letter-spacing:.06em;color:${TEALD}">WEEK 4 · WHAT HELPS</div>
+    <div style="font-size:27px;font-weight:800;margin-top:4px">It helped</div>
+    <div class="card" style="margin-top:14px;padding:16px;background:rgba(58,63,78,.04);box-shadow:none">
+      <div style="font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px">${icon("moon", { size: 17, sw: 2.4 })} In bed by 11 · 2 weeks</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-around;margin-top:14px">
+        <div style="text-align:center"><div style="font-size:24px;font-weight:800">4</div>${bars([84], HARDL, 50, 84)}<div style="font-size:13px;font-weight:800;color:#6B7184;margin-top:6px">weeks 1–2</div></div>
+        ${icon("arrow-right", { size: 24, sw: 2.6, color: "#9AA0B0" })}
+        <div style="text-align:center"><div style="font-size:24px;font-weight:800">1</div>${bars([22], HARDC, 50, 84)}<div style="font-size:13px;font-weight:800;color:#6B7184;margin-top:6px">weeks 3–4</div></div></div>
+      <div style="font-size:14px;font-weight:700;color:#6B7184;margin-top:8px;text-align:center">migraine days</div></div>
+    <div style="display:flex;gap:8px;margin-top:14px"><span class="btn" style="flex:1;height:50px;font-size:16px">Keep it</span><span style="flex:1;height:50px;border-radius:25px;background:rgba(58,63,78,.07);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px">Try another</span></div>
+    <div style="margin-top:14px;font-size:14px;font-weight:600;color:#6B7184;text-align:center;line-height:1.4">What happened together in your days — not proof. Your month: the report for the doctor is ready.</div></div>`),
 
   // ---- World with the 4 parts ----
   // A · four cards on top, 2 × 2
@@ -557,5 +611,12 @@ await board(["w0-welcome", "r-list", "e3-value-migraine", "e4-value-energy", "r-
    "<i>Как в v2.</i> Главный вопрос и то, что вокруг (примеры, можно свои).", "<i>Как в v2.</i> Что увидишь и когда.", "<i>Как в v2.</i> Напоминания.",
    "<b>4-я часть «Что помогает»</b> — что пробуешь сейчас, что уже сработало, идеи из твоих связей, добрые напоминания (доска 65)."],
   "Онбординг v4: дверь → вся ценность на одном экране → свои вопросы", "Её заметка: «мало слов не нравится; ценность сразу на первом экране, а не листать; можно с дверью в начале»", "67-onboarding-v4.png");
+await board(["w0-welcome", "r-list", "m1-month-migraine", "m2-month-energy", "m3-today-week2", "m4-week4"],
+  ["<b>Дверь</b> — как в v4.", "<b>Тема</b> — как сейчас.",
+   "<b>Ценность = твой первый месяц, на одном экране.</b> Неделя 1 — Мои дни: как часто на самом деле, отчёт на 7-й день. Неделя 2 — Связи: что бывает перед этим (обычно к 10-му дню). Неделя 3 — Действуй: одно изменение и своё правило (к неврологу — с отчётом). Неделя 4 — Что помогает: помогло ли, оставь, что работает.",
+   "<b>То же для «энергии»</b> — недели те же, примеры свои.",
+   "<b>В приложении недели называются так же:</b> «Неделя 2 · Связи» и что дальше — «первые связи примерно через 3 вечера». Отчёт недели — про её часть.",
+   "<b>Конец 4-й недели — «Помогло»:</b> было 4 дня с мигренью за 2 недели, стало 1; «Оставить» или «Попробовать другое». Попытка — 2 недели (сейчас в приложении 1)."],
+  "Ценность как первый месяц: неделя за неделей", "Её идея: в 1-ю неделю увидите…, во 2-ю — связи, в 3-ю — что-то предпринять, в 4-ю — что помогает. Заменяет и экран ценности, и «что и когда» — онбординг короче", "68-first-month.png");
 console.log("ok", Object.keys(s3).length);
 await b.close();
