@@ -2365,14 +2365,14 @@ header h1 { transition: opacity 200ms ease; }
 /* Data colours in the new look. Nov 4 2026 (her note: teal, yellow and pink "совсем
    не те"): indigo and lavender. Nov 6 2026 (her note: "колор-кодинг на плохое и
    хорошее — красноватое, зеленоватое, а то неочевидно"): a hard day (--strong) is
-   soft coral red, a good / calm day (--balanced) soft green, by what the answer
+   soft rose red (v73: "больше в розовинку"), a good / calm day (--balanced) soft green, by what the answer
    means, not yes/no. Indigo (--data-a) stays for neutral things: a pair's first
    line, a link's sign; warm amber the second line. The old screens keep theirs. */
 :root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; }
 /* Text: soft graphite #3A3F4E, quieter text #6B7184 (her pick, Nov 5 2026, board 51) */
 html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --muted-foreground: 226 10% 47%; }
-html[data-ui="new"][data-theme="aurora-light"] { --strong: 5 76% 65%; --strong-foreground: 0 0% 100%; --balanced: 146 45% 60%; --balanced-foreground: 150 50% 18%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
-html[data-ui="new"][data-theme="aurora"] { --strong: 5 82% 70%; --strong-foreground: 5 60% 14%; --balanced: 146 48% 58%; --balanced-foreground: 150 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
+html[data-ui="new"][data-theme="aurora-light"] { --strong: 348 70% 69%; --strong-foreground: 0 0% 100%; --balanced: 146 45% 60%; --balanced-foreground: 150 50% 18%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
+html[data-ui="new"][data-theme="aurora"] { --strong: 348 78% 73%; --strong-foreground: 348 60% 14%; --balanced: 146 48% 58%; --balanced-foreground: 150 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
 /* a link's sign on its route: opens the link card (LinkSheet) */
 .link-chip { width: 34px; height: 34px; border-radius: 17px; background: #fff; color: hsl(var(--data-a)); display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .55); transition: transform .12s ease-out; }

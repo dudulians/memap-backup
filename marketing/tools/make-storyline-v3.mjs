@@ -236,14 +236,23 @@ const world = (extra = "") => `
 // the good side clearer; adding questions visible.
 const TEALD = "hsl(172 60% 30%)";
 // her note (Nov 6 2026): hard days reddish, good days greenish
-const HARDC = "hsl(5 76% 65%)", GOODC = "hsl(146 45% 60%)", HARDL = "hsl(5 76% 65% / .5)", GOODL = "hsl(146 45% 60% / .5)";
+const HARDC = "hsl(348 70% 69%)", GOODC = "hsl(146 45% 60%)", HARDL = "hsl(348 70% 69% / .45)", GOODL = "hsl(146 45% 60% / .45)";
 const step = (n, ic, title, line, ex) => `<div class="card" style="padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
   <span class="tile" style="background:hsl(${TEAL} / .14);color:${TEALD};margin-top:2px">${icon(ic, { size: 21, sw: 2.3 })}</span>
   <div style="min-width:0;flex:1"><div style="font-size:18px;font-weight:800">${n} · ${title}</div>${line ? `<div style="font-size:14px;font-weight:600;color:#6B7184;line-height:1.3;margin-top:1px">${line}</div>` : ""}${ex ? `<div style="margin-top:8px">${ex}</div>` : ""}</div></div>`;
 const minichips = (xs) => `<div style="display:flex;flex-wrap:wrap;gap:5px">${xs.map((x, i) => `<span style="height:24px;padding:0 9px;border-radius:12px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;${i === 0 ? `background:${IND};color:#fff` : "background:rgba(58,63,78,.07)"}">${x}</span>`).join("")}</div>`;
 const exline = (txt, pill) => `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">${icon("spline", { size: 15, sw: 2.6, color: IND })}${txt}${pill ? ` <span class="pill" style="height:22px;font-size:12px;padding:0 8px">${pill}</span>` : ""}</div>`;
 // a month as dots (5 weeks): on = indices with "yes"
-const month = (on, { size = 13, gap = 5, col = IND, off = LAV, ring = [] } = {}) => `<div style="display:grid;grid-template-columns:repeat(7,${size}px);gap:${gap}px">${Array.from({ length: 35 }, (_, i) => i > 30 ? `<i style="width:${size}px;height:${size}px"></i>` : `<i style="display:block;width:${size}px;height:${size}px;border-radius:50%;background:${on.includes(i) ? col : off};${ring.includes(i) ? `box-shadow:0 0 0 2px #fff, 0 0 0 4px ${AMB}` : ""}"></i>`).join("")}</div>`;
+const month = (on, { size = 13, gap = 5, col = IND, off = LAV, ring = [], start = 6, days = 30 } = {}) => {
+  // a real calendar (her note, Nov 6 2026: "дотс как календарь с датами"): weekdays, Monday first, the date in each day
+  const f = Math.max(7, Math.round(size * 0.42));
+  const head = ["M", "T", "W", "T", "F", "S", "S"].map((d) => `<span style="text-align:center;font-size:${Math.max(9, f)}px;font-weight:800;color:#9AA0B0">${d}</span>`).join("");
+  const blanks = Array.from({ length: start }, () => "<i></i>").join("");
+  const cells = Array.from({ length: days }, (_, i) => { const lit = on.includes(i); return `<i style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${lit ? col : off};color:${lit ? "#fff" : "#6B7184"};font-style:normal;font-size:${f}px;font-weight:800;${ring.includes(i) ? `box-shadow:0 0 0 2px #fff, 0 0 0 4px ${AMB}` : ""}">${i + 1}</i>`; }).join("");
+  return `<div style="display:grid;grid-template-columns:repeat(7,${size}px);gap:${gap}px">${head}${blanks}${cells}</div>`;
+};
+// a week as a calendar strip: weekday on top, date inside
+const weekstrip = (on, col, off, { s = 30, from = 2 } = {}) => `<div style="display:flex;gap:8px">${["M", "T", "W", "T", "F", "S", "S"].map((d, i) => `<div style="text-align:center"><div style="font-size:12px;font-weight:800;color:#9AA0B0">${d}</div><i style="display:flex;margin-top:3px;align-items:center;justify-content:center;width:${s}px;height:${s}px;border-radius:50%;background:${on.includes(i) ? col : off};color:${on.includes(i) ? "#fff" : "#6B7184"};font-style:normal;font-size:${Math.round(s * 0.42)}px;font-weight:800">${from + i}</i></div>`).join("")}</div>`;
 const OCT = [3, 6, 9, 10, 13, 16, 20, 23, 27], SHORTN = [2, 5, 8, 12, 15, 18, 26];
 const notif = (title, body, time = "20:00") => `<div style="background:rgba(255,255,255,.9);border-radius:22px;padding:12px 14px;display:flex;gap:10px;box-shadow:0 12px 26px -16px rgba(20,40,90,.55)">
   <img src="${url("src/assets/memap-icon-192.png")}" style="width:38px;height:38px;border-radius:10px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800">MeMap<span style="font-weight:600;color:#6B7184">${time}</span></div>
@@ -319,8 +328,8 @@ const s3 = {
       <span class="itag"><b style="background:hsl(${HUE.health})"></b>Health</span>
       <div style="font-size:24px;font-weight:800;margin-top:10px">Headache today?</div>
       <div class="yn" style="margin-top:18px"><span style="height:46px">No</span><span class="on" style="height:46px">Yes</span></div></div>
-    <div style="position:absolute;left:0;right:0;top:250px;display:flex;justify-content:center">${icon("arrow-down", { size: 26, sw: 2.6, color: "#9AA0B0" })}</div>
-    <div style="position:absolute;left:0;right:0;top:290px;display:flex;justify-content:center">${dotrow([2, 5, 6, 9], HARDC, GOODL, 10, 22)}</div>
+    <div style="position:absolute;left:0;right:0;top:232px;display:flex;justify-content:center">${icon("arrow-down", { size: 24, sw: 2.6, color: "#9AA0B0" })}</div>
+    <div style="position:absolute;left:0;right:0;top:262px;display:flex;justify-content:center">${weekstrip([0, 3, 4], HARDC, GOODL)}</div>
     <div style="position:absolute;left:0;right:0;top:330px;display:flex;justify-content:center;gap:16px;font-size:14px;font-weight:800;color:#6B7184"><span><i style="display:inline-block;width:11px;height:11px;border-radius:6px;background:${HARDC}"></i> hard</span><span><i style="display:inline-block;width:11px;height:11px;border-radius:6px;background:${GOODC}"></i> good</span></div>`,
     "My days", "A few yes/no questions each evening. Every day becomes a dot."),
 
@@ -363,8 +372,19 @@ const s3 = {
     ${[["sun", HUE.amber, "More good days", "Energy, sleep, calm", [0, 1, 3, 4, 6, 7, 8], GOODC, HARDL, true], ["repeat", HUE.love, "Something keeps happening", "Headaches, bad nights, fights", [1, 4, 5, 8], HARDC, GOODL, false]].map(([ic, h, t, l, on, c, off, sel]) =>
       `<div class="card" style="margin-top:${sel ? 18 : 12}px;padding:18px;${sel ? `box-shadow:0 0 0 2px hsl(${TEAL}), 0 10px 24px -18px rgba(30,50,110,.6)` : ""}">
         <div style="display:flex;align-items:center;gap:12px">${tile(ic, h)}<div><div style="font-size:21px;font-weight:800">${t}</div><div style="font-size:15px;font-weight:600;color:#6B7184">${l}</div></div>${sel ? `<span class="tick">${icon("check", { size: 15, sw: 3, color: "#fff" })}</span>` : ""}</div>
-        <div style="margin-top:14px">${dotrow(on, c, off, 10, 20)}</div></div>`).join("")}
+        <div style="margin-top:12px">${weekstrip(on.filter((x) => x < 7), c, off, { s: 30 })}</div></div>`).join("")}
     <div class="grow"></div><div class="link">Just looking around</div><div class="btn">Continue</div></div>`),
+
+  // order B, first screen: one plain line of value, and the choice at once
+  "w0-welcome": P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
+    ${isle(110, 230, 150, "19_grassy_terraces")}${isle(290, 190, 130, "09_waterfall")}
+    <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([160, 200], [206, 128], [236, 168], 14).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
+    <div class="screen" style="padding-top:290px">
+      <h1 style="font-size:29px">See what affects your days — and change it</h1>
+      <div class="sub" style="margin-top:6px">What do you want to look at first?</div>
+      ${[["sun", HUE.amber, "More good days", "Energy, sleep, calm", false], ["repeat", HUE.love, "Something keeps happening", "Headaches, bad nights, fights", true]].map(([ic, h, t, l, sel]) =>
+        `<div class="card" style="margin-top:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;${sel ? `box-shadow:0 0 0 2px hsl(${TEAL}), 0 10px 24px -18px rgba(30,50,110,.6)` : ""}">${tile(ic, h)}<div><div style="font-size:19px;font-weight:800">${t}</div><div style="font-size:14px;font-weight:600;color:#6B7184">${l}</div></div>${sel ? `<span class="tick">${icon("check", { size: 15, sw: 3, color: "#fff" })}</span>` : ""}</div>`).join("")}
+      <div class="grow"></div><div class="link">Just looking around</div><div class="btn">Continue</div></div>`),
 
   // ---- World with the 4 parts ----
   // A · four cards on top, 2 × 2
@@ -373,7 +393,7 @@ const s3 = {
     <div class="seg" style="top:62px"><span class="on">Map</span><span>Globe</span></div>
     <div class="g4">
       <div class="card"><div class="t"><span class="n">1</span>My days</div>
-        <div style="display:flex;gap:10px;align-items:flex-end;margin-top:9px">${month([1, 4, 5, 9, 12, 16, 19, 23], { size: 8, gap: 3, col: HARDC, off: GOODL })}${bars([10, 16, 8, 20, 12, 6], HARDC, 6, 40, 3)}</div></div>
+        <div style="margin-top:5px">${month([1, 4, 5, 9, 12, 16, 19, 23], { size: 13, gap: 2, col: HARDC, off: GOODL, days: 14, start: 6 })}</div></div>
       <div class="card"><div class="t"><span class="n">2</span>Links</div>
         <div style="display:flex;align-items:center;gap:4px;margin-top:8px"><img src="${ISL("19_grassy_terraces")}" style="width:40px"><svg width="26" height="10">${[3, 11, 19].map((x) => `<circle cx="${x}" cy="5" r="3" fill="#fff" stroke="rgba(70,100,170,.45)"/>`).join("")}</svg><img src="${ISL("09_waterfall")}" style="width:40px"></div>
         <div style="font-size:13px;font-weight:800;margin-top:4px">Short night → headache <span style="color:${IND}">6/7</span></div></div>
@@ -482,5 +502,29 @@ await board(["b1-grid", "b2-stones", "c1-days", "c2-links", "c3-act", "c4-helps"
    "<b>3 · Когда действовать</b> — твои правила-маяки; горит → твой план, «Сделать отчёт» или «Сначала попробую».",
    "<b>4 · Что помогает</b> — что пробуешь сейчас, что уже сработало, идеи, добрые напоминания."],
   "Страница мира: 4 части — те же, что в онбординге", "Одни и те же 4 названия и значка везде: онбординг, мир, экскурсия, шпаргалка", "63-world-4-parts.png");
+shots["r-list"] = pathToFileURL(path.join(R, "marketing/tools/aurora-tests/work/r33/A-04-list.png")).href;
+shots["r-when"] = pathToFileURL(path.join(R, "marketing/tools/aurora-tests/work/r33/A-07-when.png")).href;
+shots["r-good"] = pathToFileURL(path.join(OUT, "60-storyline-v2", "v4-good.png")).href;
+{
+  const rowA = ["a1-days", "a2-links", "a3-act", "a4-helps", "a5-fork", "r-good", "r-v5-main"];
+  const rowB = ["w0-welcome", "r-list", "a1-days", "a2-links", "a3-act", "a4-helps", "r-when"];
+  const cell = (k, i, n) => `<div class="c"><img src="${shots[k]}"><span>${i + 1}</span></div>${i < n - 1 ? `<div class="ar">→</div>` : ""}`;
+  const row = (keys, label, sub, pick) => `<div class="row${pick ? " pick" : ""}"><div class="lab"><b>${label}</b><span>${sub}</span></div><div class="cells">${keys.map((k, i) => cell(k, i, keys.length)).join("")}</div></div>`;
+  await p.setViewportSize({ width: 1640, height: 1000 });
+  await p.setContent(`<html><head><style>@font-face{font-family:DM;src:url(${FONT});font-weight:100 900}@font-face{font-family:DM;src:url(${FONT.replace("latin", "cyrillic")});unicode-range:U+0400-04FF;font-weight:100 900}
+    body{margin:0;background:#EEF1FA;font-family:DM,sans-serif;color:#3A3F4E}h2{margin:0;padding:26px 30px 4px;font-size:32px;font-weight:800}
+    .row{margin:18px 30px 0;padding:18px;border-radius:26px;background:#fff8}.row.pick{background:#fff;box-shadow:0 0 0 3px hsl(174 44% 42%)}
+    .lab b{display:block;font-size:22px;font-weight:800}.lab span{display:block;font-size:17px;font-weight:600;color:#6B7184;margin-top:4px;line-height:1.35}
+    .cells{display:flex;align-items:center;gap:6px;margin-top:14px}.c{position:relative}.c img{width:180px;border-radius:16px;box-shadow:0 10px 22px -14px rgba(20,40,80,.5);display:block}
+    .c span{position:absolute;left:8px;top:8px;width:24px;height:24px;border-radius:12px;background:hsl(174 44% 42%);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+    .ar{font-size:22px;color:#9AA0B0;font-weight:800}.note{margin:16px 30px 30px;font-size:18px;font-weight:600;line-height:1.45;max-width:1500px}</style></head><body>
+    <h2>Порядок онбординга: что сначала — ценность или дверь?</h2>
+    ${row(rowA, "A · Сначала ценность, потом дверь (как в v3)", "4 картинки про общий пример → развилка → тема → главный вопрос. Человек ещё не выбрал своё, поэтому пример чужой — про головную боль, даже если он пришёл за энергией.", false)}
+    ${row(rowB, "B · Одна строка ценности + дверь сразу, потом 4 картинки на его теме (моя рекомендация)", "Первый экран: что делает MeMap (обычными словами) и выбор. Потом тема → те же 4 картинки, но про то, что он выбрал: «Твои дни с мигренью», «Короткая ночь → мигрень», «8+ дней → к неврологу», «Лечь до 23: 9 → 3». Для «энергии» — про энергию.", true)}
+    <div class="note"><b>Почему B:</b> ценность всё равно первая — строкой на первом экране, а не загадкой; примеры сразу про его жизнь, а не про чужую; на один экран короче (приветствие и развилка — один экран); кто пришёл по рекламе про мигрень, сразу попадает на свою тему и видит картинки про мигрень.</div>
+    </body></html>`);
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: path.join(OUT, "66-onboarding-order.png"), fullPage: true });
+}
 console.log("ok", Object.keys(s3).length);
 await b.close();

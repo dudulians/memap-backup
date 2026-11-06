@@ -8,12 +8,15 @@
 // Nov 3 2026 (her brief): about 12% more compact, less empty space.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { format } from "date-fns";
+import { ru as ruLocale } from "date-fns/locale";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { isHardAnswer, isNeutralQuestion, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
 import { smooth } from "./ChartViews";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -64,12 +67,21 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
     };
   }, [live, entries]);
 
-  // The last 28 days: hard (red), calm / good (green), empty.
-  const month = useMemo(() => Array.from({ length: 28 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (27 - i));
-    return dayLook(isoLocal(d));
-  }), [dayLook]);
+  // The last 4 weeks as a calendar (her note, Nov 6 2026: "дотс как календарь с
+  // датами"): Monday first, the date in each day; days after today stay empty.
+  const { i18n } = useTranslation();
+  const ru = i18n.language === "ru";
+  const cal = useMemo(() => {
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7) - 21);
+    return Array.from({ length: 28 }, (_, i) => {
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      const iso = isoLocal(d);
+      return { iso, n: d.getDate(), future: d > now, today: iso === isoLocal(now), look: d > now ? ("none" as const) : dayLook(iso) };
+    });
+  }, [dayLook]);
+  const weekdays = useMemo(() => cal.slice(0, 7).map((c) => format(new Date(c.iso + "T00:00:00"), "EEEEE", ru ? { locale: ruLocale } : undefined).toUpperCase()), [cal, ru]);
+  const month = cal.map((c) => c.look);
 
   // Hard days per week, the last 8 weeks (oldest first), by the same rule.
   const weeks = useMemo(() => Array.from({ length: 8 }, (_, w) => {
@@ -95,7 +107,7 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   const wave = useProgress(1100, 300);
   const toReal = useProgress(700, 1500);
 
-  const W = 88, H = 38;
+  const W = 70, H = 38;
   const max = Math.max(4, ...weeks);
   const pts = weeks.map((v, i) => {
     const x = (i / (weeks.length - 1)) * W;
@@ -109,21 +121,27 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   const len = useRef(260);
 
   const card = "surface flex min-w-0 flex-1 flex-col items-start rounded-[18px] px-2.5 pb-2.5 pt-2 text-left active:scale-[0.98] transition-transform";
+  const wide = "surface flex min-w-0 flex-[1.55] flex-col items-start rounded-[18px] px-2.5 pb-2.5 pt-2 text-left active:scale-[0.98] transition-transform";
   const open = (s: "overview" | "trends" | "signals") => { haptics.tap(); onOpen(s); };
 
   return (
     <div className="flex gap-2.5 px-4">
-      <button type="button" className={card} onClick={() => open("overview")} data-tour="calendar">
+      <button type="button" className={wide} onClick={() => open("overview")} data-tour="calendar">
         <span className="text-[13px] font-bold leading-tight">{t("overviewCards.calendar")}</span>
-        <span className="mt-1.5 grid grid-cols-7 gap-[3px]" aria-hidden="true">
-          {month.map((m, i) => {
+        <span className="mt-1 grid w-full grid-cols-7 justify-items-center gap-x-[2px] gap-y-[3px]" aria-hidden="true">
+          {weekdays.map((w, i) => <span key={`w${i}`} className="text-[8px] font-bold leading-none text-muted-foreground">{w}</span>)}
+          {cal.map((c, i) => {
             const on = fill * 28 > i;
-            const real = settle > 0 ? m : "calm";
-            const bg = !on ? "hsl(var(--foreground) / 0.07)"
+            const real = c.future ? "none" : settle > 0 ? month[i] : "calm";
+            const coloured = on && (real === "hard" || real === "calm");
+            const bg = !on || c.future ? "transparent"
               : real === "hard" ? "hsl(var(--strong))"
               : real === "calm" ? "hsl(var(--balanced))"
               : "hsl(var(--foreground) / 0.07)";
-            return <span key={i} className="h-[10px] w-[10px] rounded-full transition-colors duration-300" style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
+            return (
+              <span key={c.iso} className={cn("flex h-[15px] w-[15px] items-center justify-center rounded-full text-[8px] font-bold tabular-nums leading-none", coloured ? "text-white" : "text-muted-foreground", c.today && "ring-[1.5px] ring-foreground/40")}
+                style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }}>{c.n}</span>
+            );
           })}
         </span>
       </button>

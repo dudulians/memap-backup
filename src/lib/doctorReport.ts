@@ -57,7 +57,7 @@ const FONT = "'MeMap Sans', Manrope, system-ui, sans-serif";
 const INK = "#2f3448", SOFT = "#6a7088", FAINT = "#b6bbcc", LINE = "rgba(47,52,72,.12)";
 const YES = "#5b63d6", NO = "#c9cdf3", NONE = "#e6e8ef", TEAL = "#2f9c90", PANEL = "#f4f5f9";
 // her version: hard days reddish, good ones greenish (as in the app, Nov 6 2026); the specialist's stays neutral
-const HARD = "#ec7366", CALM = "#7fcf9c";
+const HARD = "#e8798d", CALM = "#7fcf9c";
 
 const ru = () => !!i18n.language?.startsWith("ru");
 const locale = () => (ru() ? "ru-RU" : "en-GB");

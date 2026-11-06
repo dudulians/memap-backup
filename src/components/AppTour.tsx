@@ -114,15 +114,19 @@ const LinkCount = ({ from }: { from: number }) => {
   return k > 0 ? <span className="tour-link-count">{t("tour.links.sample", { k, n: 5 })}</span> : null;
 };
 
-/** A month filling in, day by day. */
+/** A month filling in, day by day: a real calendar, weekdays and dates (her
+ *  note, Nov 6 2026: "дотс как календарь с датами"). */
 const Month = () => {
+  const { i18n } = useTranslation();
   const HARD = new Set([2, 3, 9, 15, 16, 22]);
+  const days = i18n.language === "ru" ? ["П", "В", "С", "Ч", "П", "С", "В"] : ["M", "T", "W", "T", "F", "S", "S"];
   return (
     <Box example>
-      <div className="mx-auto grid w-fit grid-cols-7 gap-1.5" aria-hidden="true">
+      <div className="mx-auto grid w-fit grid-cols-7 gap-x-1.5 gap-y-1" aria-hidden="true">
+        {days.map((d, i) => <span key={`d${i}`} className="text-center text-[11px] font-bold text-muted-foreground">{d}</span>)}
         {Array.from({ length: 28 }, (_, i) => i > 23
-          ? <span key={i} className="h-5 w-5 rounded-full" style={{ background: "hsl(var(--foreground) / 0.1)" }} />
-          : <span key={i} className="tour-pop h-5 w-5 rounded-full" style={{ background: HARD.has(i) ? "hsl(var(--strong))" : "hsl(var(--balanced) / 0.75)", ...delay(0.3 + i * 0.045) }} />)}
+          ? <span key={i} className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-muted-foreground" style={{ background: "hsl(var(--foreground) / 0.06)" }}>{i + 1}</span>
+          : <span key={i} className="tour-pop flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: HARD.has(i) ? "hsl(var(--strong))" : "hsl(var(--balanced) / 0.85)", ...delay(0.3 + i * 0.045) }}>{i + 1}</span>)}
       </div>
     </Box>
   );

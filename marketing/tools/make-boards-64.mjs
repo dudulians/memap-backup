@@ -236,14 +236,23 @@ const world = (extra = "") => `
 // the good side clearer; adding questions visible.
 const TEALD = "hsl(172 60% 30%)";
 // her note (Nov 6 2026): hard days reddish, good days greenish
-const HARDC = "hsl(5 76% 65%)", GOODC = "hsl(146 45% 60%)", HARDL = "hsl(5 76% 65% / .5)", GOODL = "hsl(146 45% 60% / .5)";
+const HARDC = "hsl(348 70% 69%)", GOODC = "hsl(146 45% 60%)", HARDL = "hsl(348 70% 69% / .45)", GOODL = "hsl(146 45% 60% / .45)";
 const step = (n, ic, title, line, ex) => `<div class="card" style="padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
   <span class="tile" style="background:hsl(${TEAL} / .14);color:${TEALD};margin-top:2px">${icon(ic, { size: 21, sw: 2.3 })}</span>
   <div style="min-width:0;flex:1"><div style="font-size:18px;font-weight:800">${n} · ${title}</div>${line ? `<div style="font-size:14px;font-weight:600;color:#6B7184;line-height:1.3;margin-top:1px">${line}</div>` : ""}${ex ? `<div style="margin-top:8px">${ex}</div>` : ""}</div></div>`;
 const minichips = (xs) => `<div style="display:flex;flex-wrap:wrap;gap:5px">${xs.map((x, i) => `<span style="height:24px;padding:0 9px;border-radius:12px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;${i === 0 ? `background:${IND};color:#fff` : "background:rgba(58,63,78,.07)"}">${x}</span>`).join("")}</div>`;
 const exline = (txt, pill) => `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">${icon("spline", { size: 15, sw: 2.6, color: IND })}${txt}${pill ? ` <span class="pill" style="height:22px;font-size:12px;padding:0 8px">${pill}</span>` : ""}</div>`;
 // a month as dots (5 weeks): on = indices with "yes"
-const month = (on, { size = 13, gap = 5, col = IND, off = LAV, ring = [] } = {}) => `<div style="display:grid;grid-template-columns:repeat(7,${size}px);gap:${gap}px">${Array.from({ length: 35 }, (_, i) => i > 30 ? `<i style="width:${size}px;height:${size}px"></i>` : `<i style="display:block;width:${size}px;height:${size}px;border-radius:50%;background:${on.includes(i) ? col : off};${ring.includes(i) ? `box-shadow:0 0 0 2px #fff, 0 0 0 4px ${AMB}` : ""}"></i>`).join("")}</div>`;
+const month = (on, { size = 13, gap = 5, col = IND, off = LAV, ring = [], start = 6, days = 30 } = {}) => {
+  // a real calendar (her note, Nov 6 2026: "дотс как календарь с датами"): weekdays, Monday first, the date in each day
+  const f = Math.max(7, Math.round(size * 0.42));
+  const head = ["M", "T", "W", "T", "F", "S", "S"].map((d) => `<span style="text-align:center;font-size:${Math.max(9, f)}px;font-weight:800;color:#9AA0B0">${d}</span>`).join("");
+  const blanks = Array.from({ length: start }, () => "<i></i>").join("");
+  const cells = Array.from({ length: days }, (_, i) => { const lit = on.includes(i); return `<i style="display:flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:50%;background:${lit ? col : off};color:${lit ? "#fff" : "#6B7184"};font-style:normal;font-size:${f}px;font-weight:800;${ring.includes(i) ? `box-shadow:0 0 0 2px #fff, 0 0 0 4px ${AMB}` : ""}">${i + 1}</i>`; }).join("");
+  return `<div style="display:grid;grid-template-columns:repeat(7,${size}px);gap:${gap}px">${head}${blanks}${cells}</div>`;
+};
+// a week as a calendar strip: weekday on top, date inside
+const weekstrip = (on, col, off, { s = 30, from = 2 } = {}) => `<div style="display:flex;gap:8px">${["M", "T", "W", "T", "F", "S", "S"].map((d, i) => `<div style="text-align:center"><div style="font-size:12px;font-weight:800;color:#9AA0B0">${d}</div><i style="display:flex;margin-top:3px;align-items:center;justify-content:center;width:${s}px;height:${s}px;border-radius:50%;background:${on.includes(i) ? col : off};color:${on.includes(i) ? "#fff" : "#6B7184"};font-style:normal;font-size:${Math.round(s * 0.42)}px;font-weight:800">${from + i}</i></div>`).join("")}</div>`;
 const OCT = [3, 6, 9, 10, 13, 16, 20, 23, 27], SHORTN = [2, 5, 8, 12, 15, 18, 26];
 const notif = (title, body, time = "20:00") => `<div style="background:rgba(255,255,255,.9);border-radius:22px;padding:12px 14px;display:flex;gap:10px;box-shadow:0 12px 26px -16px rgba(20,40,90,.55)">
   <img src="${url("src/assets/memap-icon-192.png")}" style="width:38px;height:38px;border-radius:10px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800">MeMap<span style="font-weight:600;color:#6B7184">${time}</span></div>
