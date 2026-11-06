@@ -43,7 +43,7 @@
 
 | # | Экран | Что на нём |
 |---|---|---|
-| 1 | Дверь | «Find patterns in your days». Строка: «A few yes/no questions each evening. See what happens together — and what changes when you try something.» Доверие: «1 min a day · no account · answers stay on your phone». Выбор: «Something I want to understand» / «More good days» / «Not sure yet? Start simple» |
+| 1 | Дверь | **«Make sense of your days» / «Разберись в своих днях»** — её выбор из 6 вариантов (доска `72-door-headlines.png`); «Find patterns in your days» ей не понравилось. Строка: «A few yes/no questions each evening. See what happens together — and what changes when you try something.» Доверие: «1 min a day · no account · answers stay on your phone». Выбор: «Something I want to understand» / «More good days» / «Not sure yet? Start simple» |
 | 2 | Тема | «Pick one to start with». Сначала здоровье и самочувствие, «More topics», «Write your own» |
 | 3 | Твои вопросы | Главный (можно править) и 2–3 вопроса вокруг (примеры, убрать, свой) на одном экране |
 | 4 | Что увидишь со временем | 4 недели честно, примеры на теме с «other days», «patterns, not causes» |

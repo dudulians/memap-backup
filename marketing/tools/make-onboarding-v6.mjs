@@ -428,7 +428,8 @@ const today = (morning) => P3(`${head("Week 1 · 0/7", "")}
 // Door → pick one topic → your daily questions (main + around, one screen) → what you'll
 // see over time (honest) → the first real check-in (swipe cards) → reminder → Today 1/7.
 const trust = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${[["clock", "1 min a day"], ["user-x", "No account"], ["lock", "Answers stay on your phone"]].map(([ic, t]) => `<span style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:15px;background:rgba(255,255,255,.75);font-size:13px;font-weight:800">${icon(ic, { size: 14, sw: 2.4, color: TEALD })}${t}</span>`).join("")}</div>`;
-const door6 = (sel, headline = "Find patterns in your days", size = 31) => P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
+// her pick (Nov 6 2026, board 72): "Make sense of your days" / «Разберись в своих днях»
+const door6 = (sel, headline = "Make sense of your days", size = 31) => P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
   ${isle(110, 200, 130, "19_grassy_terraces")}${isle(285, 166, 116, "09_waterfall")}
   <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([152, 172], [200, 104], [232, 146], 14).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
   <div class="screen" style="padding-top:244px">
@@ -576,7 +577,7 @@ const board = async (keys, caps, title, sub, file) => {
   await p.screenshot({ path: path.join(OUT, file), fullPage: true });
 };
 await board(["1-door", "2-topic", "3-questions", "4-learn", "5-checkin", "6-done-remind", "7-today"],
-  ["<b>Дверь.</b> «Find patterns in your days» и как это работает одной строкой. Доверие: 1 минута · без аккаунта · ответы на телефоне. Выбор: понять что-то / больше хороших дней / «не знаю — начать просто».",
+  ["<b>Дверь.</b> «Make sense of your days» (твой выбор, доска 72) и как это работает одной строкой. Доверие: 1 минута · без аккаунта · ответы на телефоне. Выбор: понять что-то / больше хороших дней / «не знаю — начать просто».",
    "<b>Одна тема для начала</b>, «добавишь потом». Сначала здоровье и самочувствие, остальное — под «More topics», плюс «Write your own».",
    "<b>Все вопросы на одном экране:</b> главный (можно править) и 2–3 вокруг — «чтобы замечать совпадения». Это примеры, можно менять.",
    "<b>Что увидишь со временем</b> — честно: «часто на 2-й неделе, когда накопятся ответы», в примере обе группы (6 из 7, в остальные дни 3 из 24), «совпадения, не причины». Кнопка ведёт к первому ответу.",
