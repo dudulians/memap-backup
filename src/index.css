@@ -2374,6 +2374,17 @@ html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --mu
 html[data-ui="new"][data-theme="aurora-light"] { --strong: 348 70% 69%; --strong-foreground: 0 0% 100%; --balanced: 146 45% 60%; --balanced-foreground: 150 50% 18%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
 html[data-ui="new"][data-theme="aurora"] { --strong: 348 78% 73%; --strong-foreground: 348 60% 14%; --balanced: 146 48% 58%; --balanced-foreground: 150 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
 /* a link's sign on its route: opens the link card (LinkSheet) */
+/* World (board 76 A, Nov 6 2026): her topic's island lit; New island as a tool */
+.planet-map-isle .main-glow { position: absolute; left: -32%; right: -32%; top: -14%; bottom: -24%; border-radius: 50%; background: radial-gradient(ellipse at 50% 58%, rgba(255, 228, 150, .95), rgba(255, 236, 170, .45) 40%, rgba(255, 236, 170, 0) 68%); z-index: 0; pointer-events: none; }
+.planet-map-isle.is-main > img.island-art { position: relative; z-index: 1; }
+.planet-map-isle.is-main > .stand, .planet-map-isle.is-main > .treasure { z-index: 1; }
+.planet-map-isle.is-main > .planet-label { z-index: 2; }
+html[data-ui="new"][data-theme="aurora"] .planet-map-isle .main-glow { background: radial-gradient(ellipse at 50% 58%, rgba(255, 214, 120, .55), rgba(255, 214, 120, .2) 40%, rgba(255, 214, 120, 0) 68%); }
+.planet-label .main-dot { display: block; width: 8px; height: 8px; border-radius: 4px; background: hsl(var(--coin-teal)); flex-shrink: 0; }
+.planet-map-isle .new-tool { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: 46px; height: 46px; border-radius: 14px; background: #fff; color: hsl(var(--coin-teal));
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px -10px rgba(20, 40, 90, .55); }
+html[data-ui="new"][data-theme="aurora"] .planet-map-isle .new-tool { background: hsl(var(--surface)); }
+.planet-map-isle .new-tool-cap { position: absolute; left: 50%; top: calc(42% + 30px); transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 800; color: hsl(var(--muted-foreground)); }
 /* the language button on the first screen: a soft teal ring so it's noticed (Nov 6 2026) */
 .lang-btn { box-shadow: 0 0 0 2px hsl(var(--coin-teal) / 0.35), 0 8px 18px -12px rgba(20, 40, 90, .45); }
 .link-chip { width: 34px; height: 34px; border-radius: 17px; background: #fff; color: hsl(var(--data-a)); display: flex; align-items: center; justify-content: center;

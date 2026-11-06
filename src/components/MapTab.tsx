@@ -14,7 +14,10 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { firstLinkState } from "@/lib/firstLink";
 import { growSeen } from "@/lib/growMoment";
 import { grewToday } from "@/lib/globeArt";
-import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic, type Route } from "@/lib/islands";
+import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, mapPic, type Route } from "@/lib/islands";
+import { computeCorrelations } from "@/lib/correlations";
+import { currentExperiment, experimentOver, type Experiment } from "@/lib/experiments";
+import { getDoorState } from "@/lib/doors";
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
 import { litTrackers } from "@/lib/lighthouses";
@@ -37,7 +40,7 @@ import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { track } from "@/lib/analytics";
 
-type Only = "overview" | "trends" | "signals";
+type Only = "overview" | "trends" | "signals" | "findings";
 export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   initialOpen?: "all" | Only | null;
   /** back from answering an island's questions on Today: its sheet again */
@@ -179,6 +182,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
+  // What helps: a finished try's result
+  const [helpsResult, setHelpsResult] = useState<Experiment | null>(null);
   // "I'll try" on an action point: the Action points sheet steps aside for the
   // week's test, and comes back after it (Nov 5 2026).
   const [trying, setTrying] = useState<TryAction | null>(null);
@@ -201,6 +206,23 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     const on = litTrackers(trackers, entries);
     return new Set(islands.filter((i) => i.trackerIds.some((id) => on.has(id))).map((i) => i.id));
   }, [islands, trackers, entries]);
+
+  // her topic's island: lit on the map (board 76 A)
+  const mainIsland = useMemo(() => {
+    const id = getDoorState()?.trackerId;
+    const tr = id ? trackers.find((x) => x.id === id && !x.archived) : undefined;
+    return tr ? islandOf(tr) : null;
+  }, [trackers]);
+  // every link worth showing, not only the ones drawn between islands
+  const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length, [trackers, entries]);
+  const onHelps = () => {
+    const x = currentExperiment();
+    if (x && experimentOver(x)) { setHelpsResult(x); return; }
+    if (x) { setOpen(x.island as IslandId); return; }
+    const first = mainIsland && islands.some((i) => i.id === mainIsland) ? mainIsland : islands.find((i) => i.trackerIds.length > 0)?.id;
+    if (first) setTestFor(first);
+  };
+  const onlyTitle = (o: Only) => t(o === "findings" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");
 
   return (
     <div ref={boxRef} className={`map-sea relative h-full overscroll-contain ${view === "globe" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
@@ -238,12 +260,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {/* Calendar, chart, lighthouses: on view, each opens straight to itself. */}
           {loaded && islands.length > 0 && (
             <div className="mt-3">
-              <DaysOverview trackers={trackers} entries={entries} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
+              <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
             </div>
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3" data-tour="world">
-              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} days={dayCount} avatar={avatarPic} treasures={treasures} garden={garden} onOpen={setOpen} onLink={setLink}
+              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} main={mainIsland} days={dayCount} avatar={avatarPic} treasures={treasures} garden={garden} onOpen={setOpen} onLink={setLink}
                 onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>
           )}
@@ -316,11 +338,19 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       </BottomSheet>
       {/* Calendar / chart / lighthouses for everything, straight away. */}
       <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
-        ariaTitle={only ? t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses") : ""}>
+        ariaTitle={only ? onlyTitle(only) : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
-          <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">
-            {only && t(only === "overview" ? "overviewCards.calendar" : only === "trends" ? "overviewCards.chart" : "overviewCards.lighthouses")}
-          </h2>
+          <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
+          {/* My days holds both the calendar and the chart (her note, Nov 6 2026) */}
+          {(only === "overview" || only === "trends") && (
+            <div className="seg mb-3 w-full" role="tablist" aria-label={t("world4.myDays")}>
+              {(["overview", "trends"] as const).map((v) => (
+                <button key={v} type="button" role="tab" aria-selected={only === v} onClick={() => { haptics.tap(); setOnly(v); }} className={`chip flex-1 ${only === v ? "is-on" : ""}`}>
+                  {t(v === "overview" ? "overviewCards.calendar" : "overviewCards.chart")}
+                </button>
+              ))}
+            </div>
+          )}
           {/* All islands, or one. */}
           <div className="-mx-4 mb-3 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide" role="tablist" aria-label={t("map.filterAria")}>
             {[null, ...islands.filter((i) => i.trackerIds.length > 0).map((i) => i.id)].map((id) => {
@@ -344,6 +374,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       </BottomSheet>
       <LinkSheet route={link} trackers={trackers} days={dayCount} onClose={() => setLink(null)}
         onChart={(ids) => { setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
+      {helpsResult && (
+        <ExperimentSheet mode="result" experiment={helpsResult} trackers={trackers} entries={entries} onClose={() => setHelpsResult(null)} />
+      )}
       {testFor && (
         <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
       )}

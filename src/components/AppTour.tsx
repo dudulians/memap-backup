@@ -34,7 +34,6 @@ const STOPS: Stop[] = [
   { id: "world", tab: "patterns", isle: "main" },
   { id: "links", tab: "patterns", isle: "pair" },
   { id: "calendar", tab: "patterns", target: '[data-tour="calendar"]' },
-  { id: "chart", tab: "patterns", target: '[data-tour="chart"]' },
   { id: "actions", tab: "patterns", target: '[data-tour="actions"]' },
   { id: "notes", tab: "notes", target: '[data-tour="tab-notes"]' },
   { id: "you", tab: "cards", target: '[data-coachmark="settings-button"]' },

@@ -546,6 +546,23 @@ const ru: Translation = {
     weekA_other: "«{{x}}»: {{count}} дня из {{n}} с ответами.",
   },
   // Calendar, chart, lighthouses on the Map (Nov 2 2026)
+  // 4 части над картой (доска 76 A, 6 нояб. 2026)
+  world4: {
+    myDays: "Мои дни",
+    links: "Связи",
+    whenToAct: "Когда действовать",
+    whatHelps: "Что помогает",
+    last2weeks: "2 недели",
+    found: "найдено",
+    soon: "~10 вечеров",
+    ofRules: "из {{count}}",
+    shaping: "складывается",
+    tryOne: "пока нет",
+    tried_one: "{{count}} попытка",
+    tried_few: "{{count}} попытки",
+    tried_many: "{{count}} попыток",
+    tried_other: "{{count}} попытки",
+  },
   overviewCards: {
     calendar: "Календарь",
     chart: "График",

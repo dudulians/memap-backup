@@ -21,8 +21,10 @@ const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as
 // picture pixels 28 degrees are: the crop puts the ring on her open sea.
 const PIC_W = 1774, MID_X = 779, MID_Y = 335, RING_PX = 128;
 
-export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = null, treasures, garden, onOpen, onNewIsland, onYou, onLink }: {
+export const PlanetMap = ({ islands, routes, width, lit, main = null, days = {}, avatar = null, treasures, garden, onOpen, onNewIsland, onYou, onLink }: {
   islands: Island[]; routes: Route[];
+  /** her topic's island: a soft light under it and a dot in its name */
+  main?: IslandId | null;
   /** the column's width; the map adds 16 px on both sides (its parent has no padding) */
   width: number;
   lit?: Set<IslandId>;
@@ -134,7 +136,8 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
           <button key={isl.id} type="button" aria-label={islandName(t, isl.id)}
             onClick={(e) => { haptics.tap(); playBloop(Math.min(1, Math.max(0, x / W))); const el = e.currentTarget; el.classList.add("on"); window.setTimeout(() => { el.classList.remove("on"); onOpen(isl.id); }, 150); }}
             data-isle={isl.id}
-            className="planet-isle planet-map-isle island-press absolute z-[2]" style={{ left: x - size / 2, top: y - h * 0.7, width: size }}>
+            className={`planet-isle planet-map-isle island-press absolute z-[2]${isl.id === main ? " is-main" : ""}`} style={{ left: x - size / 2, top: y - h * 0.7, width: size }}>
+            {isl.id === main && <span className="main-glow" aria-hidden="true" />}
             <span className="ring" />
             <img className="art-day island-art" src={art(name, false)} alt="" />
             <img className="art-night island-art" src={art(name, true)} alt="" />
@@ -148,7 +151,7 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
               <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(name, tr.slot) : undefined}><img className="art-day" src={mapPicFor(tr.pic, false)} alt="" /><img className="art-night" src={mapPicFor(tr.pic, true)} alt="" /></span>
             ))}
             <span className="planet-label" style={{ position: "absolute", left: "50%", top: "100%", marginTop: 4, ...label(x) }}>
-              <span>{Icon && <Icon className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[isl.weather!] }} />}{islandName(t, isl.id)}</span>
+              <span>{isl.id === main && <i className="main-dot" aria-hidden="true" />}{Icon && <Icon className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[isl.weather!] }} />}{islandName(t, isl.id)}</span>
             </span>
           </button>
         );
@@ -157,11 +160,11 @@ export const PlanetMap = ({ islands, routes, width, lit, days = {}, avatar = nul
       {spots.empty && (
         <button type="button" aria-label={t("islands.new")} onClick={() => { haptics.tap(); onNewIsland?.(); }}
           className="planet-isle planet-map-isle island-press absolute z-[2]" style={{ left: spots.empty.x - spots.empty.size / 2, top: spots.empty.y - spots.empty.size * 0.32, width: spots.empty.size }}>
-          <img className="art-day island-art" src={art("cloud_island_03", false)} alt="" />
-          <img className="art-night island-art" src={art("cloud_island_03", true)} alt="" />
-          <span className="planet-label" style={{ position: "absolute", left: "50%", top: "100%", marginTop: 2, ...label(spots.empty.x) }}>
-            <span className="is-new"><Plus className="h-4 w-4" strokeWidth={2.6} />{t("islands.new")}</span>
-          </span>
+          {/* a tool, not an island name (board 76 A): a faint cloud, a + tile, a small caption */}
+          <img className="art-day island-art opacity-50" src={art("cloud_island_03", false)} alt="" />
+          <img className="art-night island-art opacity-50" src={art("cloud_island_03", true)} alt="" />
+          <span className="new-tool" aria-hidden="true"><Plus className="h-6 w-6" strokeWidth={2.6} /></span>
+          <span className="new-tool-cap">{t("islands.new")}</span>
         </button>
       )}
     </div>

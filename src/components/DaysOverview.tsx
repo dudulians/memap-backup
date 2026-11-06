@@ -14,6 +14,8 @@ import { isHardAnswer, isNeutralQuestion, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
+import { Spline, Sprout } from "lucide-react";
+import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments } from "@/lib/experiments";
 import { cn } from "@/lib/utils";
 import { smooth } from "./ChartViews";
 
@@ -38,10 +40,16 @@ const useProgress = (ms: number, delay = 0) => {
 };
 const ease = (k: number) => 1 - Math.pow(1 - k, 3);
 
-export const DaysOverview = ({ trackers, entries, onOpen }: {
+/** The 4 parts of the app as a light row over the map (her pick, Nov 6 2026,
+ *  board 76 A): My days (calendar + chart) · Links · When to act · What helps. */
+export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: {
   trackers: Tracker[];
   entries: TrackerEntry[];
-  onOpen: (section: "overview" | "trends" | "signals") => void;
+  onOpen: (section: "overview" | "trends" | "signals" | "findings") => void;
+  /** links found now (linkWorthShowing) */
+  links?: number;
+  /** What helps: the try now, or pick one */
+  onHelps?: () => void;
 }) => {
   const { t } = useTranslation();
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
@@ -115,44 +123,53 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   const d = smooth(pts.map(([x, y]) => [x, y] as [number, number]));
   const len = useRef(260);
 
-  const card = "surface flex min-w-0 flex-1 flex-col items-start rounded-[18px] px-2.5 pb-2.5 pt-2 text-left active:scale-[0.98] transition-transform";
-  const open = (s: "overview" | "trends" | "signals") => { haptics.tap(); onOpen(s); };
+  // the last 2 weeks, oldest first: a picture, no dates (her v74 rule for this card)
+  const twoWeeks = useMemo(() => Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (13 - i));
+    return dayLook(isoLocal(d));
+  }), [dayLook]);
+  const test = currentExperiment();
+  const tried = finishedExperiments().length;
+  const card = "surface flex min-w-0 flex-1 flex-col items-start rounded-[16px] px-2 pb-2 pt-1.5 text-left active:scale-[0.97] transition-transform";
+  const open = (s: "overview" | "trends" | "signals" | "findings") => { haptics.tap(); onOpen(s); };
+  const head = (k: string) => <span className="line-clamp-2 min-h-[30px] text-[12.5px] font-bold leading-[1.2]">{t(k)}</span>;
+  const sub = (s: string) => <span className="mt-0.5 line-clamp-2 w-full break-words text-[11px] font-semibold leading-[1.2] text-muted-foreground">{s}</span>;
 
   return (
-    <div className="flex gap-2.5 px-4">
-      {/* a picture of the last 4 weeks, Monday first: plain dots, no dates (her note,
-          Nov 6 2026: "там не нужно даты"); the Calendar sheet behind it has them */}
+    <div className="flex gap-1.5 px-4">
       <button type="button" className={card} onClick={() => open("overview")} data-tour="calendar">
-        <span className="text-[13px] font-bold leading-tight">{t("overviewCards.calendar")}</span>
-        <span className="mt-1.5 grid grid-cols-7 gap-[3px]" aria-hidden="true">
-          {cal.map((c, i) => {
-            const on = fill * 28 > i;
-            const real = c.future ? "none" : settle > 0 ? month[i] : "calm";
-            const bg = c.future ? "hsl(var(--foreground) / 0.05)"
-              : !on ? "hsl(var(--foreground) / 0.07)"
-              : real === "hard" ? "hsl(var(--strong))"
-              : real === "calm" ? "hsl(var(--balanced))"
-              : "hsl(var(--foreground) / 0.07)";
-            return <span key={c.iso} className={cn("h-[10px] w-[10px] rounded-full", c.today && "ring-[1.5px] ring-foreground/40")} style={{ background: bg, transform: on ? "scale(1)" : "scale(0.6)", transition: "transform 200ms ease-out, background-color 300ms" }} />;
+        {head("world4.myDays")}
+        <span className="mt-1 grid grid-cols-7 gap-[2.5px]" aria-hidden="true">
+          {twoWeeks.map((m, i) => {
+            const on = fill * 14 > i;
+            const real = settle > 0 ? m : "calm";
+            const bg = !on ? "hsl(var(--foreground) / 0.07)" : real === "hard" ? "hsl(var(--strong))" : real === "calm" ? "hsl(var(--balanced))" : "hsl(var(--foreground) / 0.08)";
+            return <span key={i} className="h-[7px] w-[7px] rounded-full" style={{ background: bg, transition: "background-color 300ms" }} />;
           })}
         </span>
+        {sub(t("world4.last2weeks"))}
       </button>
-      <button type="button" className={card} onClick={() => open("trends")} data-tour="chart">
-        <span className="text-[13px] font-bold leading-tight">{t("overviewCards.chart")}</span>
-        <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="mt-1.5 overflow-visible" aria-hidden="true">
-          <path d={d} fill="none" stroke="hsl(var(--data-a))" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round"
-            strokeDasharray={len.current} strokeDashoffset={len.current * (1 - ease(wave))} />
-          {toReal >= 1 && pts.map(([x, y], i) => i === pts.length - 1 && <circle key={i} cx={x} cy={y} r={3.5} fill="hsl(var(--data-a))" />)}
-        </svg>
-        <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{t("overviewCards.hardPerWeek")}</span>
+      <button type="button" className={card} onClick={() => open("findings")} data-tour="links-card">
+        {head("world4.links")}
+        <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
+          <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links}
+        </span>
+        {sub(links > 0 ? t("world4.found") : t("world4.soon"))}
       </button>
       <button type="button" className={card} onClick={() => open("signals")} data-tour="actions">
-        <span className="text-[13px] font-bold leading-tight">{t("overviewCards.lighthouses")}</span>
-        <span className="mt-1 flex items-center gap-1.5">
-          <img src={mapPic("lighthouse")} alt="" width={28} height={36} className={lit > 0 ? "drop-shadow-[0_0_8px_hsl(44_96%_60%/0.8)]" : "opacity-60 grayscale"} />
-          <span className="text-[20px] font-bold tabular-nums">{lit}</span>
+        {head("world4.whenToAct")}
+        <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
+          <img src={mapPic("lighthouse")} alt="" width={14} height={18} className={lit > 0 ? "drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" : "opacity-60 grayscale"} />{lit}
         </span>
-        <span className="mt-1 text-[12px] font-semibold leading-tight text-muted-foreground">{lit === 0 && shaping ? t("overviewCards.shaping") : t("overviewCards.litOf", { count: rules })}</span>
+        {sub(lit === 0 && shaping ? t("world4.shaping") : t("world4.ofRules", { count: rules }))}
+      </button>
+      <button type="button" className={card} onClick={() => { haptics.tap(); onHelps?.(); }} data-tour="helps">
+        {head("world4.whatHelps")}
+        <span className="mt-1 flex h-[17px] items-center gap-1 text-[15px] font-bold tabular-nums">
+          <Sprout className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
+          {test ? `${Math.min(experimentDay(test), EXPERIMENT_DAYS)}/${EXPERIMENT_DAYS}` : tried}
+        </span>
+        {sub(test ? test.change : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
       </button>
     </div>
   );

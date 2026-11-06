@@ -306,7 +306,8 @@ const Index = () => {
         {/* Today puts "Week N · k/7" here once its week card has rolled away;
             the title gives way (index.css). */}
         <div id="memap-header-center" className="pointer-events-none absolute inset-x-24 bottom-2.5 flex justify-center" />
-        <h1 className="text-[17px] font-bold text-center tracking-tight text-foreground">MeMap</h1>
+        {/* World has its own big title "Your world" (board 76 A): no second one above it */}
+        <h1 className={`text-[17px] font-bold text-center tracking-tight text-foreground${activeTab === "patterns" ? " invisible" : ""}`}>MeMap</h1>
         <button
           type="button"
           onClick={() => { haptics.soft(); toggleNight(); }}

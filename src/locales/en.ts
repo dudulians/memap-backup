@@ -448,6 +448,21 @@ const en = {
     weekA_other: "“{{x}}”: {{count}} days of the {{n}} you answered.",
   },
   // Calendar, chart, lighthouses on the Map (Nov 2 2026)
+  // the 4 parts over the map (board 76 A, Nov 6 2026)
+  world4: {
+    myDays: "My days",
+    links: "Links",
+    whenToAct: "When to act",
+    whatHelps: "What helps",
+    last2weeks: "last 2 weeks",
+    found: "found",
+    soon: "~10 evenings",
+    ofRules: "of {{count}} rules",
+    shaping: "taking shape",
+    tryOne: "not yet",
+    tried_one: "{{count}} tried",
+    tried_other: "{{count}} tried",
+  },
   overviewCards: {
     calendar: "Calendar",
     chart: "Chart",
