@@ -32,7 +32,7 @@ import { isHardAnswer, isNeutralQuestion, islandDef, islandName, mapPicFor, type
 import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
-import { getDoorState } from "@/lib/doors";
+import { getDoorState, isoLocal } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
 import { DAY_AHEAD, LightLabel, PathNode, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
@@ -72,6 +72,11 @@ type PNode =
   | { kind: "future"; offset: number }
   | { kind: "chest" };
 type Open = number | null;
+
+/** Day 1, she chose to start tonight (onboarding v7): no "fill in yesterday" that day. */
+const firstDayTonight = () => {
+  try { const d = getDoorState(); return localStorage.getItem("memap_first_day_pick") === "tonight" && (!d || d.startedAt === isoLocal(new Date())); } catch { return false; }
+};
 
 export const EveningPath = ({
   trackers,
@@ -191,7 +196,7 @@ export const EveningPath = ({
   // прошлые дни, как у меня было"): the latest of the last 3 days without its
   // answers, on a pill that stays in sight; the evening card then shows all 7 days.
   // Not while yesterday waits on the path itself (day 1 morning).
-  const pastPick = useMemo(() => (m.steps.some((s) => s.onPath) ? null : pastDays(trackers, entries).slice(-3).reverse().find((d) => d.state !== "done") ?? null), [m, trackers, entries]);
+  const pastPick = useMemo(() => (m.steps.some((s) => s.onPath) || firstDayTonight() ? null : pastDays(trackers, entries).slice(-3).reverse().find((d) => d.state !== "done") ?? null), [m, trackers, entries]);
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
     for (const step of steps) out.push({ kind: "step", step });

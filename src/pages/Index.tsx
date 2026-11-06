@@ -18,6 +18,7 @@ import skyNight from "@/assets/globe/sky-night.webp";
 import { AppTour } from "@/components/AppTour";
 import { LinkMoment } from "@/components/LinkMoment";
 import { GrowMoment } from "@/components/GrowMoment";
+import { WorldBegun } from "@/components/WorldBegun";
 import { ShareWorld } from "@/components/ShareWorld";
 import { DoctorReport } from "@/components/DoctorReport";
 
@@ -389,6 +390,7 @@ const Index = () => {
       <LinkMoment />
       {/* an island reaching its next stage: see it grow on her map */}
       <GrowMoment />
+      <WorldBegun />
       <ShareWorld />
       <DoctorReport />
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">

@@ -36,7 +36,8 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "ate-sweets": { en: "Did you eat sweets?", ru: "Было сладкое?" },
   "screen-time-long": { en: "Did you spend 4+ hours on screens?", ru: "Было больше 4 часов в экране?" },
   "felt-happy": { en: "Was it a happy day?", ru: "Был счастливый день?" },
-  "had-energy": { en: "Did you have enough energy?", ru: "Хватило энергии?" },
+  "had-energy": { en: "Did you have enough energy for your day?", ru: "Хватило энергии на день?" },
+  "wanted-leave-job": { en: "Did you seriously consider quitting today?", ru: "Всерьёз думал(а) уволиться сегодня?" },
   // onboarding v2 (Nov 5 2026)
   "felt-calm": { en: "Did you feel calm?", ru: "Был спокойный день?" },
   "time-for-myself": { en: "Did you have time for yourself?", ru: "Было время для себя?" },

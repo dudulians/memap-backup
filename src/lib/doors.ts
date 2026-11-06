@@ -8,7 +8,7 @@
 // `TrackerEntry.tags` (reason chips) and the door state below, which
 // the Today hero and the echo lines read.
 import type { LucideIcon } from "lucide-react";
-import { Heart, Activity, Wine, Smile, CloudRain, Moon, Zap, Leaf, BedDouble, HeartHandshake, Target, Footprints, Sparkles } from "lucide-react";
+import { Heart, Activity, Wine, Smile, CloudRain, Moon, Zap, Leaf, BedDouble, HeartHandshake, Target, Footprints, Sparkles, Droplet, Wind, Briefcase, Plane } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, saveTrackers, getEntries, saveEntries } from "./storage";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
@@ -21,7 +21,9 @@ import { uuid } from "./uuid";
 
 export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid" | "sleep"
   // onboarding v2 (Nov 5 2026): "I want more good days"
-  | "energy" | "calm" | "goodSleep" | "closeness" | "focus" | "movement" | "joy";
+  | "energy" | "calm" | "goodSleep" | "closeness" | "focus" | "movement" | "joy"
+  // onboarding v7 (Nov 6 2026): health first; "a thought keeps coming back"
+  | "period" | "stress" | "quit" | "move";
 
 export interface Door {
   id: DoorId;
@@ -40,7 +42,7 @@ export interface Door {
   /** Tailwind text colour class for the door icon. */
   iconClass: string;
   /** Onboarding v2 (Nov 5 2026): "Something keeps happening" or "I want more good days". */
-  branch: "pain" | "good";
+  branch: "pain" | "good" | "thought";
   /** The answer that means "it happened" (default yes). A bad night is a "no"
    *  to "Slept enough", so the Bad nights door logs no. */
   mainValue?: boolean;
@@ -110,6 +112,12 @@ export const DOORS: Door[] = [
     icon: Moon,
     iconClass: "text-[hsl(232_62%_62%)]",
   },
+  // onboarding v7 (Nov 6 2026): cycle and stress among the first five; a thought
+  // that keeps coming back (her original idea: "правда ли я этого хочу?") — no right answer
+  { id: "period", branch: "pain", kind: "event", mainTemplateId: "period-symptoms", contextTemplateIds: ["slept-enough", "felt-stressed", "felt-fatigued"], reasons: ["dontKnow"], icon: Droplet, iconClass: "text-[hsl(340_62%_60%)]" },
+  { id: "stress", branch: "pain", kind: "event", mainTemplateId: "felt-stressed", contextTemplateIds: ["slept-enough", "worked-overtime", "exercised"], reasons: ["dontKnow"], icon: Wind, iconClass: "text-[hsl(262_48%_62%)]" },
+  { id: "quit", branch: "thought", kind: "event", mainTemplateId: "wanted-leave-job", contextTemplateIds: ["slept-enough", "burned-out-after-work", "argued-with-partner"], reasons: ["dontKnow"], icon: Briefcase, iconClass: "text-[hsl(212_60%_56%)]" },
+  { id: "move", branch: "thought", kind: "event", mainTemplateId: "thought-about-emigrating", contextTemplateIds: ["slept-enough", "felt-lonely", "burned-out-after-work"], reasons: ["dontKnow"], icon: Plane, iconClass: "text-[hsl(36_86%_52%)]" },
   // "I want more good days" (onboarding v2): the good question is the main one
   ...([
     ["energy", "had-energy", ["slept-enough", "outside-30min", "exercised"], Zap, "text-[hsl(36_86%_52%)]"],

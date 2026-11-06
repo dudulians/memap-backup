@@ -77,6 +77,8 @@ interface DailySessionProps {
   // Change answers (her note: "если заполнил в 9 вечера, а потом заболела
   // голова"): answered questions come too, each card shows the answer now.
   includeAnswered?: boolean;
+  /** onboarding v7's first check-in: no "Done" card, straight to "Your world has begun" */
+  autoComplete?: boolean;
 }
 
 interface SessionQuestion {
@@ -167,6 +169,7 @@ export const DailySession = ({
   onlyIds,
   stepTitle,
   includeAnswered = false,
+  autoComplete = false,
 }: DailySessionProps) => {
   const { t } = useTranslation();
   // The swipe sounds, ready before the first card goes.
@@ -758,6 +761,10 @@ export const DailySession = ({
 
   // A step (one topic) ends on a small card: what was done, then back to
   // the path, where the next step is waiting.
+  if (completed && autoComplete) {
+    window.setTimeout(onComplete, 0);
+    return null;
+  }
   if (completed && (onlyIds || includeAnswered)) {
     return createPortal(
       <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center animate-fade-in">

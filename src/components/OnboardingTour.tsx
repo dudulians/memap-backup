@@ -20,8 +20,9 @@ import {
 import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door } from "@/lib/doors";
 import { markOnboarded } from "@/lib/pathSteps";
-import { DoorPickerScreen, DoorFlow, OwnFlow, CuriousFlow, PickResult, Finish } from "./DoorOnboarding";
-import { CompanionScreen, ForkScreen, PromiseScreen, WelcomeScreen } from "./OnboardingV2";
+import type { Finish } from "./DoorOnboarding";
+import { OwnV7, QuestionsV7, TopicV7, ValueV7, WelcomeV7, type V7Pick, type V7Setup } from "./OnboardingV7";
+import { isoLocal } from "@/lib/doors";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
 const INTERVIEW_KEY = "memap_interview";
@@ -35,22 +36,22 @@ interface OnboardingTourProps {
 // "something keeps happening" or "I want more good days" (or just looking) → the list →
 // the promise in her words, her first island from a cloud → the first answer and that
 // day's questions (DoorOnboarding) → the first light → who sails with her → Today.
-type Step = "welcome" | "fork" | "pain" | "good" | "promise" | "door" | "own" | "curious" | "companion";
+// v7 (Nov 6 2026, boards 70–75): welcome → one topic (or your own, or start simple) →
+// your daily questions → what you'll discover → the first real check-in on Today.
+type Step = "welcome" | "topic" | "own" | "questions" | "value";
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   const [step, setStep] = useState<Step>("welcome");
   // where people stop in onboarding (2.0 funnel)
   useEffect(() => { track("onboarding_screen", { screen: String(step) }); }, [step]);
-  const [branch, setBranch] = useState<"pain" | "good">("pain");
-  const [doors, setDoors] = useState<Door[]>([]);
-  // the path's end waits for "who sails with you"
-  const [ending, setEnding] = useState<Parameters<Finish>[0] | null>(null);
+  const [pick, setPick] = useState<V7Pick | null>(null);
+  const [setup, setSetup] = useState<V7Setup | null>(null);
 
   useEffect(() => {
     if (open) {
       setStep("welcome");
-      setDoors([]);
-      setEnding(null);
+      setPick(null);
+      setSetup(null);
       document.body.style.overflow = "hidden";
     }
     return () => {
@@ -94,35 +95,28 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
     onClose();
   }, [onClose]);
 
-  const onPick = (r: PickResult) => {
-    if (r.kind === "own") return setStep("own");
-    if (r.kind === "curious") return setStep("curious");
-    setDoors(r.ids.map((id) => getDoor(id)).filter((d): d is Door => !!d));
-    setStep("promise");
+  // the first real check-in happens on Today's own cards, right after onboarding closes
+  const start = (day: "today" | "yesterday" | "tonight") => {
+    if (!setup) return;
+    try { localStorage.setItem("memap_first_day_pick", day); } catch { /* ignore */ }
+    finish({ path: pick?.kind === "own" ? "own" : pick?.kind === "simple" ? "curious" : "door", reminders: false });
+    window.setTimeout(() => {
+      if (day === "tonight") { window.dispatchEvent(new Event("memap-world-waiting")); return; }
+      const d = new Date(); if (day === "yesterday") d.setDate(d.getDate() - 1);
+      window.dispatchEvent(new CustomEvent("memap-first-checkin", { detail: { date: isoLocal(d), ids: setup.ids } }));
+    }, 350);
   };
-  // every path ends with "who sails with you", then Today
-  const toCompanion: Finish = (opts) => { setEnding(opts); setStep("companion"); };
 
   if (!open) return null;
 
   return (
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto">
-        {step === "welcome" && <WelcomeScreen onStart={() => setStep("fork")} />}
-        {step === "fork" && (
-          <ForkScreen onBack={() => setStep("welcome")}
-            onPick={(b) => { if (b === "look") { setStep("curious"); return; } setBranch(b); setStep(b); }} />
-        )}
-        {(step === "pain" || step === "good") && <DoorPickerScreen key={step} branch={step} onBack={() => setStep("fork")} onPick={onPick} />}
-        {step === "promise" && doors.length > 0 && (
-          <PromiseScreen door={doors[0]} onBack={() => setStep(branch)} onNext={() => setStep("door")} />
-        )}
-        {step === "door" && doors.length > 0 && (
-          <DoorFlow doors={doors} onBack={() => setStep("promise")} onFinish={toCompanion} />
-        )}
-        {step === "own" && <OwnFlow onBack={() => setStep("pain")} onFinish={toCompanion} />}
-        {step === "curious" && <CuriousFlow onBack={() => setStep("fork")} onFinish={toCompanion} />}
-        {step === "companion" && <CompanionScreen onDone={() => finish(ending ?? { path: "curious", reminders: false })} />}
+        {step === "welcome" && <WelcomeV7 onStart={() => setStep("topic")} onSimple={() => { setPick({ kind: "simple" }); setStep("questions"); }} />}
+        {step === "topic" && <TopicV7 initial={pick?.kind === "door" ? pick.id : null} onBack={() => setStep("welcome")} onOwn={() => setStep("own")} onPick={(id) => { setPick({ kind: "door", id }); setStep("questions"); }} />}
+        {step === "own" && <OwnV7 onBack={() => setStep("topic")} onDone={(text) => { setPick({ kind: "own", text }); setStep("questions"); }} />}
+        {step === "questions" && pick && <QuestionsV7 key={JSON.stringify(pick)} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "welcome" : pick.kind === "own" ? "own" : "topic")} onDone={(s) => { setSetup(s); setStep("value"); }} />}
+        {step === "value" && setup && pick && <ValueV7 setup={setup} pickKind={pick.kind} onBack={() => setStep("questions")} onStart={start} />}
       </div>
     </div>
   );

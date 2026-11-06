@@ -174,6 +174,30 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   const [dailySessionOpen, setDailySessionOpen] = useState(false);
   // A step on Today's path answers one topic only (Aurora, Nov 2 2026).
   const [step, setStep] = useState<{ ids?: string[]; title?: string; redo?: boolean } | null>(null);
+  // onboarding v7: the first real check-in (its date), then "Your world has begun"
+  const [firstCheckin, setFirstCheckin] = useState<string | null>(null);
+  useEffect(() => {
+    const go = async (e: Event) => {
+      const { date, ids } = (e as CustomEvent<{ date: string; ids?: string[] }>).detail ?? {};
+      if (!date) return;
+      await loadData();
+      extendPathStart(date);
+      setPlayMode(false);
+      setSelectedDate(date);
+      setStep(ids?.length ? { ids } : null);
+      setFirstCheckin(date);
+      setDailySessionOpen(true);
+    };
+    window.addEventListener("memap-first-checkin", go);
+    return () => window.removeEventListener("memap-first-checkin", go);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const endFirst = (ids?: string[]) => {
+    if (!firstCheckin) return false;
+    const date = firstCheckin;
+    setFirstCheckin(null);
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-world-begun", { detail: { date, ids } })), 200);
+    return true;
+  };
   // When true, the next session opens in random-play mode (10 random new
   // templates, saved as source="play" trackers). Reset after the session
   // closes so the next manual ▶ tap goes back to normal mode.
@@ -937,18 +961,22 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
           onAnswer={handleAnswer}
           onClearAnswer={handleClearEntryForDate}
           onClose={() => {
+            const ids = step?.ids;
             setDailySessionOpen(false);
             setPlayMode(false);
             setStep(null);
             loadData();
+            if (endFirst(ids)) return;
             // came here from an island on the Map: back there (Index)
             window.dispatchEvent(new Event("memap-trip-done"));
           }}
           onComplete={() => {
+            const ids = step?.ids;
             setDailySessionOpen(false);
             setPlayMode(false);
             setStep(null);
             loadData();
+            if (endFirst(ids)) return;
             window.dispatchEvent(new Event("memap-trip-done"));
           }}
           onGoToPatterns={() => {
@@ -959,7 +987,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
               new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all" } })
             );
           }}
-          onDateChange={setSelectedDate}
+          onDateChange={firstCheckin ? undefined : setSelectedDate}
+          autoComplete={!!firstCheckin}
           onPlayRandom={async () => {
             // Refresh trackers from storage BEFORE building the next
             // round's deck. Without this, async tracker writes from

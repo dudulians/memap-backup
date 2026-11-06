@@ -155,4 +155,9 @@ export type AnalyticsEvent =
   | "unload_played" | "hunch_made" | "note_saved" | "experiment_started"
   | "report_opened" | "island_opened" | "link_opened" | "map_view_changed"
   | "ui_switched" | "reminders_changed" | "world_shared"
-  | "doctor_report_made";
+  | "doctor_report_made"
+  // onboarding v7 (Nov 6 2026)
+  | "onboarding_questions"
+  | "onboarding_reminder"
+  | "world_begun"
+  | "world_waiting";

@@ -498,7 +498,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // Day 1 before the evening (her note, Nov 6 2026: "если онбординг проходит днём
   // или утром, предлагать вопросы за вчера"): today isn't over yet, so yesterday's
   // questions come first, on the path itself; tonight is today's.
-  const dayOneMorning = started === today && now.getHours() < 17;
+  let pickedTonight = false;
+  try { pickedTonight = localStorage.getItem("memap_first_day_pick") === "tonight"; } catch { /* ignore */ }
+  const dayOneMorning = started === today && now.getHours() < 17 && !pickedTonight;
   for (const back of [1, 2]) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
     const iso = isoLocal(d);
