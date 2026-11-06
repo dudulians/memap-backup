@@ -658,7 +658,9 @@ export const DailySession = ({
   const crossedRef = useRef(false);
   // evenings answered on each island: the question card shows its island at its stage
   const islandEveningsMap = useMemo(() => islandEvenings(trackers, entries) as Map<string, number>, [trackers, entries]);
-  const [showDates, setShowDates] = useState(false);
+  // the 7 days in sight at once, to answer for any of them (her note, Nov 6 2026:
+  // "заполнять за прошлые дни, как у меня было"); the title still folds them away
+  const [showDates, setShowDates] = useState(() => !!onDateChange);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     crossedRef.current = false;
@@ -1270,6 +1272,9 @@ export const DailySession = ({
             Future dates are excluded — you can't pre-fill tomorrow. */}
         {onDateChange && showDates && (() => {
           const todayStr = todayLocal();
+          // which days already have answers: a gold dot; a missed one: an empty ring
+          const ids = new Set(trackers.filter((tr) => !tr.archived).map((tr) => tr.id));
+          const answered = new Set(entries.filter((e) => ids.has(e.trackerId)).map((e) => e.date));
           const days = Array.from({ length: 7 }, (_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - (6 - i));
@@ -1298,6 +1303,7 @@ export const DailySession = ({
                       "text-base font-semibold tabular-nums",
                       isToday && !isSelected && "text-foreground"
                     )}>{dayNum}</span>
+                    <span aria-hidden="true" className={cn("mt-0.5 h-1.5 w-1.5 rounded-full", answered.has(iso) ? "bg-[#F6B92B]" : "ring-[1.5px] ring-inset ring-foreground/25")} />
                   </button>
                 );
               })}

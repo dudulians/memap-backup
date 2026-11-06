@@ -35,7 +35,7 @@ import { AddTrackerModal } from "./AddTrackerModal";
 import { DailySession } from "./DailySession";
 import { EveningPath } from "./EveningPath";
 import { DaySheet } from "./DaySheet";
-import { markTaskDone, pathModel, type Step, type TaskId } from "@/lib/pathSteps";
+import { extendPathStart, markTaskDone, pathModel, type Step, type TaskId } from "@/lib/pathSteps";
 import { haptics } from "@/lib/haptics";
 import { DateSelector } from "./DateSelector";
 import {
@@ -1017,6 +1017,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
         onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
         onFillDay={(date, redo) => {
           if (redo) { setDayOpen({ date }); return; }
+          extendPathStart(date);
           setStep(redo ? { redo: true } : null);
           setSelectedDate(date);
           setDailySessionOpen(true);

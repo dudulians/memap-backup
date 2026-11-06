@@ -153,7 +153,7 @@ export interface Island {
  *  firstYes false: the days WITHOUT the first (her note, Nov 6 2026: "no walk →
  *  tired" read as "walk → tired"); secondYes false: the second did NOT come.
  *  other: the second (that same answer) on the rest of the days. */
-export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean; firstYes: boolean; secondYes: boolean; other: { k: number; n: number } }
+export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean; firstYes: boolean; secondYes: boolean; other: { k: number; n: number }; /** the counted answer is a hard one (red), a good one (green), or neither */ secondHard: boolean | null }
 
 /** A pattern as she reads it. Together (phi > 0): "with A → B". Apart (phi < 0):
  *  the second is told by its hard answer, as a hard day is (WORLD-BIBLE): "without
@@ -169,8 +169,10 @@ export const linkOf = (c: CorrelationResult) => {
   // in reading order: the first is A, or B when B came the day before
   const at = (f: boolean, s: boolean) => (flip ? cell(s, f) : cell(f, s));
   const k = at(firstYes, secondYes), ok = at(!firstYes, secondYes);
+  const pol = trackerPolarity(second0);
+  const secondHard = pol === "neutral" ? null : secondYes === (pol === "bad");
   return {
-    first: flip ? c.trackerB : c.trackerA, second: second0, firstYes, secondYes, nextDay: c.lag !== 0,
+    first: flip ? c.trackerB : c.trackerA, second: second0, firstYes, secondYes, secondHard, nextDay: c.lag !== 0,
     k, n: k + at(firstYes, !secondYes), other: { k: ok, n: ok + at(!firstYes, !secondYes) },
   };
 };
@@ -264,7 +266,7 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
     const key = [a, b].sort().join("|");
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, other: l.other });
+    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other });
   }
   return out.slice(0, 4);
 };

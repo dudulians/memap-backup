@@ -838,6 +838,8 @@ const en = {
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
     fillTitle: "Fill in {{day}}",
+    fillYesterday: "Yesterday's questions",
+    pastFill: "Fill in {{day}}",
     missedDay: "Missed {{day}}? Fill it in",
     skip: "Not today",
     skipped: "Skipped",

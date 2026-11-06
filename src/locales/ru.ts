@@ -967,6 +967,8 @@ const ru: Translation = {
     // Aurora step 2 (Nov 2 2026): the raised path
     // Steps, not evenings (Nov 2 2026)
     fillTitle: "Заполнить {{day}}",
+    fillYesterday: "Вопросы за вчера",
+    pastFill: "Заполнить: {{day}}",
     missedDay: "Дозаполнить: {{day}}",
     skip: "Не сегодня",
     skipped: "Пропущено",

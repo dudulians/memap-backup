@@ -47,6 +47,8 @@ const TASKS_LATER: TaskId[] = ["experiment", "newIsland"];
 export interface Step {
   id: string;
   /** "fill": a missed day (yesterday or the day before) to answer first */
+  /** a fill drawn on the path itself (day 1 before the evening: yesterday's questions) */
+  onPath?: boolean;
   /** "game": the day's hunch (src/components/HunchGame.tsx; was "Guess") */
   /** "act": a rule she set was reached: time for her plan (lighthouses) */
   /** "test": her week of trying one change is over: see how it went */
@@ -388,6 +390,31 @@ export const pathStart = (today: string): string => {
   }
 };
 
+/** A past day she fills in counts on a young path (her note, Nov 6 2026: "дать
+ *  возможность заполнять за прошлые дни"): a path that began in the last 7 days
+ *  moves its start back to that day, so the day is an evening of week 1. An older
+ *  path stays as it is (its weeks don't shift). */
+export const extendPathStart = (date: string, now = new Date()) => {
+  try {
+    const today = isoLocal(now);
+    const start = pathStart(today);
+    const weekAgo = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7));
+    if (date < start && date >= weekAgo && start >= weekAgo) localStorage.setItem(START_KEY, date);
+  } catch { /* the day is saved; it just won't count on the path */ }
+};
+
+/** The last 7 days before today, oldest first: answered (counted), started (some answers) or empty. */
+export const pastDays = (trackers: Tracker[], entries: TrackerEntry[], now = new Date()): { date: string; state: "done" | "some" | "empty" }[] => {
+  const today = isoLocal(now);
+  const counted = new Set(countedDays(trackers, entries, today));
+  const ids = new Set(activeQuestions(trackers).map((t) => t.id));
+  const some = new Set(entries.filter((e) => ids.has(e.trackerId)).map((e) => e.date));
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (7 - i)));
+    return { date, state: counted.has(date) ? "done" : some.has(date) ? "some" : "empty" };
+  });
+};
+
 const CHESTS_KEY = "memap_week_chests";
 /** What a week's chest showed when it was opened: saved once, reopened as is. */
 export interface ChestLine { label: string; k: number; n: number; main?: boolean; calm?: boolean }
@@ -468,13 +495,18 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   const started = door?.startedAt ?? start;
   const firstEntry = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
   const counted = new Set(all);
+  // Day 1 before the evening (her note, Nov 6 2026: "если онбординг проходит днём
+  // или утром, предлагать вопросы за вчера"): today isn't over yet, so yesterday's
+  // questions come first, on the path itself; tonight is today's.
+  const dayOneMorning = started === today && now.getHours() < 17;
   for (const back of [1, 2]) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
     const iso = isoLocal(d);
-    if (iso < started || !firstEntry || firstEntry >= iso || counted.has(iso)) continue;
+    const onPath = back === 1 && dayOneMorning;
+    if (counted.has(iso) || (!onPath && (iso < started || !firstEntry || firstEntry >= iso))) continue;
     const ids = activeQuestions(trackers).map((t) => t.id);
     const got = new Set(entries.filter((e) => e.date === iso).map((e) => e.trackerId));
-    steps.push({ id: `fill:${iso}`, kind: "fill", date: iso, trackerIds: ids, answered: ids.filter((id) => got.has(id)).length, done: false });
+    steps.push({ id: `fill:${iso}`, kind: "fill", date: iso, trackerIds: ids, answered: ids.filter((id) => got.has(id)).length, done: false, onPath });
     break;
   }
 

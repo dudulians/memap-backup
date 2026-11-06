@@ -235,13 +235,15 @@ const world = (extra = "") => `
 // "these are examples, change them or write your own"; calendars instead of animals;
 // the good side clearer; adding questions visible.
 const TEALD = "hsl(172 60% 30%)";
+// her note (Nov 6 2026): hard days reddish, good days greenish
+const HARDC = "hsl(5 76% 65%)", GOODC = "hsl(146 45% 60%)", HARDL = "hsl(5 76% 65% / .5)", GOODL = "hsl(146 45% 60% / .5)";
 const step = (n, ic, title, line, ex) => `<div class="card" style="padding:12px 14px;display:flex;gap:12px;align-items:flex-start">
   <span class="tile" style="background:hsl(${TEAL} / .14);color:${TEALD};margin-top:2px">${icon(ic, { size: 21, sw: 2.3 })}</span>
   <div style="min-width:0;flex:1"><div style="font-size:18px;font-weight:800">${n} · ${title}</div>${line ? `<div style="font-size:14px;font-weight:600;color:#6B7184;line-height:1.3;margin-top:1px">${line}</div>` : ""}${ex ? `<div style="margin-top:8px">${ex}</div>` : ""}</div></div>`;
 const minichips = (xs) => `<div style="display:flex;flex-wrap:wrap;gap:5px">${xs.map((x, i) => `<span style="height:24px;padding:0 9px;border-radius:12px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;${i === 0 ? `background:${IND};color:#fff` : "background:rgba(58,63,78,.07)"}">${x}</span>`).join("")}</div>`;
 const exline = (txt, pill) => `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">${icon("spline", { size: 15, sw: 2.6, color: IND })}${txt}${pill ? ` <span class="pill" style="height:22px;font-size:12px;padding:0 8px">${pill}</span>` : ""}</div>`;
 // a month as dots (5 weeks): on = indices with "yes"
-const month = (on, { size = 13, gap = 5, col = IND, ring = [] } = {}) => `<div style="display:grid;grid-template-columns:repeat(7,${size}px);gap:${gap}px">${Array.from({ length: 35 }, (_, i) => i > 30 ? `<i style="width:${size}px;height:${size}px"></i>` : `<i style="display:block;width:${size}px;height:${size}px;border-radius:50%;background:${on.includes(i) ? col : LAV};${ring.includes(i) ? `box-shadow:0 0 0 2px #fff, 0 0 0 4px ${AMB}` : ""}"></i>`).join("")}</div>`;
+const month = (on, { size = 13, gap = 5, col = IND, off = LAV, ring = [] } = {}) => `<div style="display:grid;grid-template-columns:repeat(7,${size}px);gap:${gap}px">${Array.from({ length: 35 }, (_, i) => i > 30 ? `<i style="width:${size}px;height:${size}px"></i>` : `<i style="display:block;width:${size}px;height:${size}px;border-radius:50%;background:${on.includes(i) ? col : off};${ring.includes(i) ? `box-shadow:0 0 0 2px #fff, 0 0 0 4px ${AMB}` : ""}"></i>`).join("")}</div>`;
 const OCT = [3, 6, 9, 10, 13, 16, 20, 23, 27], SHORTN = [2, 5, 8, 12, 15, 18, 26];
 const notif = (title, body, time = "20:00") => `<div style="background:rgba(255,255,255,.9);border-radius:22px;padding:12px 14px;display:flex;gap:10px;box-shadow:0 12px 26px -16px rgba(20,40,90,.55)">
   <img src="${url("src/assets/memap-icon-192.png")}" style="width:38px;height:38px;border-radius:10px;flex-shrink:0"><div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800">MeMap<span style="font-weight:600;color:#6B7184">${time}</span></div>
@@ -252,7 +254,7 @@ const worldE = (extra = "") => `
   <div style="position:absolute;top:58px;left:20px;font-size:30px;font-weight:800;letter-spacing:-.02em">World</div>
   <div class="seg" style="top:62px"><span class="on">Map</span><span>Globe</span></div>
   <div class="wcards">
-    <div class="card"><div class="h">Energy days</div><div class="cal">${Array.from({ length: 21 }, (_, i) => `<i style="${[1, 2, 5, 8, 9, 12, 15, 16].includes(i) ? `background:${IND}` : i > 17 ? `background:${EMPTY}` : ""}"></i>`).join("")}</div></div>
+    <div class="card"><div class="h">Energy days</div><div class="cal">${Array.from({ length: 21 }, (_, i) => `<i style="${[1, 2, 5, 8, 9, 12, 15, 16].includes(i) ? `background:${GOODC}` : i > 17 ? `background:${EMPTY}` : `background:${HARDL}`}"></i>`).join("")}</div></div>
     <div class="card"><div class="h">Your weeks</div><svg width="90" height="56" style="margin-top:8px">${[14, 18, 16, 26, 30, 36].map((v, i) => `<rect x="${i * 15}" y="${56 - v}" width="10" height="${v}" rx="5" fill="${IND}" opacity="${0.45 + i * 0.1}"/>`).join("")}</svg></div>
     <div class="card"><div class="h">Action points</div><div style="display:flex;align-items:center;gap:6px;margin-top:10px"><img src="${MAP("lighthouse")}" style="height:44px"><b style="font-size:20px">0<span style="font-size:14px;color:#6B7184"> of 1</span></b></div></div>
   </div>
@@ -284,14 +286,14 @@ const screens = {
   "v2-example": P(`<div class="screen">${navTop(1, 8)}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px"><h1 style="font-size:26px">How it works</h1><span class="ex">Example</span></div>
     <div class="card blk" style="margin-top:12px"><div class="bt"><span class="num">1</span>October: she tracks</div>
-      <div style="display:flex;gap:14px;margin-top:10px;align-items:flex-start">${month(OCT, { ring: SHORTN })}
-        <div style="font-size:13px;font-weight:700;color:#6B7184;line-height:1.5"><div><i style="display:inline-block;width:11px;height:11px;border-radius:6px;background:${IND};vertical-align:-1px"></i> headache</div><div><i style="display:inline-block;width:11px;height:11px;border-radius:6px;background:${LAV};box-shadow:0 0 0 2px #fff,0 0 0 3.5px ${AMB};vertical-align:-1px"></i> short night</div><div style="margin-top:6px;color:#3A3F4E;font-weight:800">9 headache days</div></div></div></div>
+      <div style="display:flex;gap:14px;margin-top:10px;align-items:flex-start">${month(OCT, { ring: SHORTN, col: HARDC, off: GOODL })}
+        <div style="font-size:13px;font-weight:700;color:#6B7184;line-height:1.5"><div><i style="display:inline-block;width:11px;height:11px;border-radius:6px;background:${HARDC};vertical-align:-1px"></i> headache</div><div><i style="display:inline-block;width:11px;height:11px;border-radius:6px;background:${GOODL};box-shadow:0 0 0 2px #fff,0 0 0 3.5px ${AMB};vertical-align:-1px"></i> short night</div><div style="margin-top:6px;color:#3A3F4E;font-weight:800">9 headache days</div></div></div></div>
     <div class="card blk"><div class="bt"><span class="num">2</span>MeMap finds a link</div>
       <div class="result" style="margin-top:6px">Headache after a short night <span class="pill">6 of 7</span></div><div class="bl">Other days: 3 of 24</div></div>
     <div class="card blk"><div class="bt"><span class="num">3</span>Time to act</div>
       <div style="display:flex;align-items:center;gap:10px;margin-top:6px"><img src="${MAP("lighthouse")}" style="height:40px"><div style="font-size:15px;font-weight:700;line-height:1.3">Her rule: 8+ headache days → see a neurologist.<br><span style="color:#6B7184">MeMap made the report for the visit.</span></div></div></div>
     <div class="card blk"><div class="bt"><span class="num">4</span>November: she tries</div>
-      <div style="display:flex;gap:14px;margin-top:8px;align-items:center">${month([7, 18, 26], { size: 11, gap: 4 })}<div style="font-size:15px;font-weight:700;line-height:1.35">In bed by 11<br><span class="pill">9 → 3</span> <span style="color:#6B7184">headache days</span></div></div></div>
+      <div style="display:flex;gap:14px;margin-top:8px;align-items:center">${month([7, 18, 26], { size: 11, gap: 4, col: HARDC, off: GOODL })}<div style="font-size:15px;font-weight:700;line-height:1.35">In bed by 11<br><span class="pill">9 → 3</span> <span style="color:#6B7184">headache days</span></div></div></div>
     <div class="grow"></div><div class="btn">Continue</div></div>`),
 
   // 3 · the fork: the good side first and as concrete as the hard one
@@ -340,9 +342,9 @@ const screens = {
   "v7-calendars": P(`<div class="screen">${navTop(6, 8)}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px"><h1 style="font-size:26px">What you'll see</h1><span class="ex">Example</span></div>
     <div class="card blk" style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:17px;font-weight:800">Your energy days</span><span style="font-size:14px;font-weight:700;color:#6B7184">14 of 31</span></div>
-      <div style="margin-top:10px;display:flex;justify-content:center">${month([0, 1, 4, 5, 7, 8, 11, 14, 15, 18, 21, 22, 25, 28], { size: 22, gap: 9 })}</div></div>
+      <div style="margin-top:10px;display:flex;justify-content:center">${month([0, 2, 5, 6, 8, 11, 12, 15, 17, 19, 20, 23, 26, 27], { size: 22, gap: 9, col: GOODC, off: HARDL })}</div></div>
     <div class="card blk"><span style="font-size:17px;font-weight:800">What goes with them</span>
-      ${drow("Walk outside", [0, 2, 3, 5, 7, 9, 10, 12], AMB)}${drow("Energy", [0, 3, 5, 6, 7, 10, 12], IND)}
+      ${drow("Walk outside", [0, 2, 3, 5, 7, 9, 10, 12], AMB)}${drow("Energy", [0, 3, 5, 6, 7, 10, 12], GOODC)}
       <div class="result">Energy after a walk <span class="pill">9 of 11</span></div></div>
     <div class="card" style="margin-top:12px;padding:10px 16px;display:flex;justify-content:space-between;text-align:center">${[["Tonight", "first dot"], ["Day 10", "first links"], ["Day 30", "clear picture"]].map(([a, b]) => `<div><div class="when" style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#6B7184">${a}</div><div style="font-size:15px;font-weight:800">${b}</div></div>`).join("")}</div>
     <div class="grow"></div><div class="btn">Continue</div></div>`),
@@ -370,8 +372,8 @@ const screens = {
     <div class="dash" style="position:absolute;left:40px;right:40px;top:650px;background:rgba(255,255,255,.75)">${icon("plus", { size: 18, sw: 2.6 })}&nbsp;Add a question</div>
     ${tabbar(0)}`),
   // tour: track → a dot
-  "w2-track": P(worldE(veil([{ x: 16, y: 108, w: 112, h: 104, r: 22 }]) + coach(236, 0, "Every evening becomes a dot", "Dark — a day with energy. Light — without.",
-    `<div class="exbox"><div style="display:flex;gap:8px">${["M", "T", "W", "T", "F", "S", "S"].map((d, i) => `<div style="text-align:center;font-size:12px;font-weight:800;color:#6B7184">${d}<i style="display:block;margin-top:4px;width:22px;height:22px;border-radius:11px;background:${[0, 2, 3].includes(i) ? IND : i === 6 ? EMPTY : LAV}"></i></div>`).join("")}</div></div>`))),
+  "w2-track": P(worldE(veil([{ x: 16, y: 108, w: 112, h: 104, r: 22 }]) + coach(236, 0, "Every evening becomes a dot", "Green — a day with energy. Red — without.",
+    `<div class="exbox"><div style="display:flex;gap:8px">${["M", "T", "W", "T", "F", "S", "S"].map((d, i) => `<div style="text-align:center;font-size:12px;font-weight:800;color:#6B7184">${d}<i style="display:block;margin-top:4px;width:22px;height:22px;border-radius:11px;background:${[0, 2, 3].includes(i) ? GOODC : i === 6 ? EMPTY : HARDL}"></i></div>`).join("")}</div></div>`))),
   // tour: links
   "w3-links": P(worldE(dotted([150, 400], [196, 452], [178, 520], 14) +
     `<div class="badge" style="left:182px;top:458px;z-index:6">${icon("spline", { size: 15, sw: 2.6 })}9 of 11</div>` +
@@ -392,6 +394,7 @@ const screens = {
     <div class="wk" style="margin-top:14px;text-align:left">ON YOUR MAP</div>
     <div style="margin-top:2px">
       <div class="leg"><span class="pic"><img src="${ISL("17_lavender_garden")}"></span><div><b>Island</b><span>a part of your life, its questions</span></div></div>
+      <div class="leg"><span class="pic" style="gap:4px"><i style="width:14px;height:14px;border-radius:7px;background:${HARDC};display:block"></i><i style="width:14px;height:14px;border-radius:7px;background:${GOODC};display:block"></i></span><div><b>Dot</b><span>one day: red — hard, green — good</span></div></div>
       <div class="leg"><span class="pic"><svg width="50" height="20">${[4, 13, 22, 31, 40].map((x) => `<circle cx="${x + 3}" cy="10" r="3.4" fill="#fff" stroke="rgba(70,100,170,.45)"/>`).join("")}</svg></span><div><b>Dotted line</b><span>two things that go together</span></div></div>
       <div class="leg"><span class="pic"><img src="${MAP("lighthouse")}"></span><div><b>Lighthouse</b><span>your rule was reached — time for your plan</span></div></div>
       <div class="leg"><span class="pic"><img src="${MAP("hot_air_balloon")}"></span><div><b>Growth & treasures</b><span>for coming back — not for good days</span></div></div>
@@ -427,7 +430,7 @@ await board(["v1-what", "v2-example", "v3-fork", "v4-good", "v5-main", "v6-aroun
    "<b>Хороший список:</b> энергия, сон, спокойствие, фокус, близость, движение, радость. (Трудный — как сейчас.)",
    "<b>Главный вопрос — отдельно.</b> «С ним сравнивается всё остальное», «изменить слова». Ответ за сегодня — первая точка прямо тут.",
    "<b>Сопутствующие — отдельно</b>, с подписью «это примеры: оставь, убери или напиши свой» и кнопкой «Написать свой вопрос».",
-   "<b>Календари вместо зверей:</b> твой месяц дней с энергией, что идёт вместе, и когда что будет. Зверёк — на второй день (или при первом заходе на карту).",
+   "<b>Календари вместо зверей</b> (цвета по смыслу: трудное — красноватое, хорошее — зеленоватое): твой месяц дней с энергией, что идёт вместе, и когда что будет. Зверёк — на второй день (или при первом заходе на карту).",
    "<b>Поддержка:</b> какие будут напоминания — короткие и добрые, никогда не предупреждения. Твой план, когда правило сработало, и похвала за новую привычку."],
   "Новый пользователь, v2: что делает → как → выбор → свои вопросы", "По твоим заметкам: сначала ценность и метод, потом выборы; цикл «отмечай → связи → когда действовать → пробуй» виден сразу", "60-storyline-v2-onboarding.png");
 await board(["w1-today", "w2-track", "w3-links", "w4-act", "w5-try", "w6-how"],

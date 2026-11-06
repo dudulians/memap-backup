@@ -12,6 +12,9 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
 
+/** A counted day's colour: hard red, good green, neutral indigo. */
+const dot = (hard: boolean | null, a = 1) => (hard === null ? `hsl(var(--data-a) / ${a})` : hard ? `hsl(var(--strong) / ${a})` : `hsl(var(--balanced) / ${a})`);
+
 export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
   route: Route | null;
   trackers: Tracker[];
@@ -54,14 +57,14 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
 
           <p className="mt-5 text-[22px] font-bold leading-snug tracking-tight">
             {linkArrow(t, r, title)}
-            {r.nextDay && <span className="ml-2 inline-flex h-7 translate-y-[-2px] items-center rounded-full bg-[hsl(var(--strong)/0.14)] px-2.5 align-middle text-[14px] font-bold text-[hsl(var(--strong))]">{t("map.nextDay")}</span>}
+            {r.nextDay && <span className="ml-2 inline-flex h-7 translate-y-[-2px] items-center rounded-full bg-[hsl(var(--data-a)/0.14)] px-2.5 align-middle text-[14px] font-bold text-[hsl(var(--strong))]">{t("map.nextDay")}</span>}
           </p>
 
           {/* k of n, as dots: filled = it came */}
           <p className="mt-4 text-[34px] font-bold leading-none tracking-tight tabular-nums">{t("map.timesOf", { k: r.k, count: r.n })}</p>
           <div className="mt-3 flex flex-wrap gap-1.5" aria-hidden="true">
             {Array.from({ length: Math.min(r.n, 40) }, (_, i) => (
-              <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < r.k ? "hsl(var(--strong))" : "hsl(var(--balanced) / 0.7)" }} />
+              <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < r.k ? dot(r.secondHard) : r.secondHard === null ? "hsl(var(--foreground) / 0.12)" : dot(!r.secondHard, 0.7) }} />
             ))}
           </div>
           <p className="mt-3 text-[16px] font-medium leading-snug text-muted-foreground">

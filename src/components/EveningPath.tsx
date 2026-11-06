@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, getChests, markActSeen, pastDays, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -186,8 +186,12 @@ export const EveningPath = ({
   const hunchReady = useMemo(() => !!readyHunch(trackers, entries), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   // A missed day to fill in waits beside the path, not on it (WORLD-BIBLE,
   // Nov 5 2026): the path holds only today's steps.
-  const steps = useMemo(() => m.steps.filter((s) => s.kind !== "fill"), [m]);
-  const missed = m.steps.find((s) => s.kind === "fill" && !s.done) ?? null;
+  const steps = useMemo(() => m.steps.filter((s) => s.kind !== "fill" || s.onPath), [m]);
+  // A past day to fill in (her note, Nov 6 2026: "дать возможность заполнять за
+  // прошлые дни, как у меня было"): the latest of the last 3 days without its
+  // answers, on a pill that stays in sight; the evening card then shows all 7 days.
+  // Not while yesterday waits on the path itself (day 1 morning).
+  const pastPick = useMemo(() => (m.steps.some((s) => s.onPath) ? null : pastDays(trackers, entries).slice(-3).reverse().find((d) => d.state !== "done") ?? null), [m, trackers, entries]);
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
     for (const step of steps) out.push({ kind: "step", step });
@@ -239,7 +243,7 @@ export const EveningPath = ({
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "grew") return t("path.grew", { name: islandName(t, s.island!) });
-    if (s.kind === "fill") return t("path.fillTitle", { day: weekdayName(s.date!) });
+    if (s.kind === "fill") return s.onPath ? t("path.fillYesterday") : t("path.fillTitle", { day: weekdayName(s.date!) });
     if (s.kind === "game") return t("hunch.step");
     if (s.kind === "act") return t("act.step");
     if (s.kind === "test") return t("experiment.stepDone");
@@ -835,15 +839,7 @@ export const EveningPath = ({
           <p className="path-week-label">{t("path.weekN", { n: m.week + 1 })} · {title}</p>
         </div>
       </div>
-      {/* the missed day, on the side: one small button, never a step */}
-      {missed && (
-        <button type="button" onClick={() => { haptics.tap(); onFillDay(missed.date!); }}
-          className="missed-day mx-auto mt-3 flex h-11 items-center gap-2 rounded-full px-4 text-[15px] font-bold">
-          <CalendarDays className="h-[18px] w-[18px]" strokeWidth={2.4} />
-          {t("path.missedDay", { day: weekdayName(missed.date!) })}
-          <ChevronRight className="h-4 w-4 opacity-60" strokeWidth={2.6} />
-        </button>
-      )}
+
 
       {/* The path. */}
       <section aria-label={title} className="animate-fade-in" style={{ marginTop: 14 }}>
@@ -905,6 +901,17 @@ export const EveningPath = ({
           </div>
         } />
 
+
+      {/* a past day to fill in: always in sight, bottom left (the "back" pill is right) */}
+      {pastPick && createPortal(
+        <button type="button" onClick={() => { haptics.tap(); onFillDay(pastPick.date); }}
+          className="past-pill fixed left-4 z-[30] flex h-12 items-center gap-2 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg animate-fade-in active:scale-95 transition-transform dark:bg-[hsl(var(--surface))]"
+          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          <CalendarDays className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
+          {t("path.pastFill", { day: weekdayName(pastPick.date) })}
+        </button>,
+        document.body,
+      )}
 
       {/* Away from her step: back to it, her avatar on the button. */}
       {away && createPortal(

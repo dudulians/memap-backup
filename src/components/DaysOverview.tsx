@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { isoLocal } from "@/lib/doors";
+import { getDoorState, isoLocal } from "@/lib/doors";
 import { isHardAnswer, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
@@ -45,31 +45,41 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   const { t } = useTranslation();
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
 
-  // The last 28 days: answered, hard (a problem question answered YES), empty.
-  const month = useMemo(() => {
-    const ids = new Set(live.map((tr) => tr.id));
+  // What a day was (Nov 6 2026, the colours turned red / green: "any hard answer"
+  // made nearly every day red with many questions): her main question decides
+  // when it was answered; otherwise most of the day's answers do.
+  const dayLook = useMemo(() => {
     const byId = new Map(live.map((tr) => [tr.id, tr]));
-    return Array.from({ length: 28 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (27 - i));
-      const iso = isoLocal(d);
-      const es = entries.filter((e) => e.date === iso && ids.has(e.trackerId));
-      return es.length === 0 ? "none" : es.some((e) => isHardAnswer(byId.get(e.trackerId)!, e.value)) ? "hard" : "calm";
-    });
+    const main = getDoorState()?.trackerId;
+    const byDay = new Map<string, TrackerEntry[]>();
+    for (const e of entries) if (byId.has(e.trackerId)) byDay.set(e.date, [...(byDay.get(e.date) ?? []), e]);
+    return (iso: string): "none" | "hard" | "calm" => {
+      const es = byDay.get(iso) ?? [];
+      if (es.length === 0) return "none";
+      const m = main ? es.find((e) => e.trackerId === main) : undefined;
+      if (m) return isHardAnswer(byId.get(m.trackerId)!, m.value) ? "hard" : "calm";
+      const hard = es.filter((e) => isHardAnswer(byId.get(e.trackerId)!, e.value)).length;
+      return hard * 2 > es.length ? "hard" : "calm";
+    };
   }, [live, entries]);
 
-  // Hard days per week, the last 8 weeks (oldest first).
+  // The last 28 days: hard (red), calm / good (green), empty.
+  const month = useMemo(() => Array.from({ length: 28 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (27 - i));
+    return dayLook(isoLocal(d));
+  }), [dayLook]);
+
+  // Hard days per week, the last 8 weeks (oldest first), by the same rule.
   const weeks = useMemo(() => Array.from({ length: 8 }, (_, w) => {
-    const byId = new Map(live.map((tr) => [tr.id, tr]));
-    const days = new Set<string>();
+    let n = 0;
     for (let d = 0; d < 7; d++) {
       const day = new Date();
       day.setDate(day.getDate() - ((7 - w) * 7 + d));
-      const iso = isoLocal(day);
-      if (entries.some((e) => e.date === iso && byId.has(e.trackerId) && isHardAnswer(byId.get(e.trackerId)!, e.value))) days.add(iso);
+      if (dayLook(isoLocal(day)) === "hard") n++;
     }
-    return days.size;
-  }), [live, entries]);
+    return n;
+  }), [dayLook]);
 
   const lit = useMemo(() => litTrackers(trackers, entries).size, [trackers, entries]);
   const rules = live.filter((tr) => tr.threshold > 0).length;
