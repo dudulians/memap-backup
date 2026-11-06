@@ -1074,6 +1074,7 @@ const ru: Translation = {
     popBubbles: "Полопать пузыри",
     exploreQuestions: "Найти новые вопросы",
     seeLinks: "Посмотреть связи",
+    seeGrow: "Посмотреть, как вырос",
     nextTomorrow: "Завтра: {{k}} из {{n}}",
     nextYours: "Завтра — твоё!",
     daysLabel: {
@@ -1773,6 +1774,10 @@ const ru: Translation = {
     settingsBody: "Язык, тема, бэкап данных, уведомления — всё здесь.",
   },
 
+  growMoment: {
+    title: "Остров «{{island}}» вырос!",
+    see: "Посмотреть остров",
+  },
   firstLink: {
     step: "Первая связь!",
     sub: "Нашлось, что бывает перед чем",

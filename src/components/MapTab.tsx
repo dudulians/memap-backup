@@ -12,6 +12,8 @@ import { art, artOf, stageOf, toNextStage } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { firstLinkState } from "@/lib/firstLink";
+import { growSeen } from "@/lib/growMoment";
+import { grewToday } from "@/lib/globeArt";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, mapPic, type Route } from "@/lib/islands";
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
@@ -128,6 +130,20 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     window.addEventListener("memap-open-link", open);
     return () => window.removeEventListener("memap-open-link", open);
   }, [routes]);
+  // "See the island" after it grew: its card
+  useEffect(() => {
+    const open = (e: Event) => { const d = (e as CustomEvent).detail as { island: IslandId } | undefined; if (d) window.setTimeout(() => setOpen(d.island), 200); };
+    window.addEventListener("memap-open-island", open);
+    return () => window.removeEventListener("memap-open-island", open);
+  }, []);
+  // an island that grew today and hasn't been seen growing: its moment (after a first link's)
+  useEffect(() => {
+    if (!loaded || entries.length === 0 || firstLinkState(routes, true).route) return;
+    const g = grewToday(trackers, entries).find((x) => x.stage >= 2 && !growSeen(x.island, x.stage));
+    if (!g) return;
+    const id = window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-grow-moment", { detail: g })), 700);
+    return () => window.clearTimeout(id);
+  }, [loaded, routes, trackers, entries]);
   // opening World the day her first link is found plays its moment (once)
   useEffect(() => {
     if (!loaded || entries.length === 0) return;

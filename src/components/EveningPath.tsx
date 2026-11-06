@@ -582,7 +582,7 @@ export const EveningPath = ({
         {islandPic(island, 92)}
         <div className="min-w-0">{head(t("path.grew", { name: islandName(t, island) }), stageLine(island))}</div>
       </div>
-      {button(t("path.seeWorld"), () => { setOpen(null); onOpenMap(); }, "plain")}
+      {button(t("path.seeGrow"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-grow-moment", { detail: { island, stage: stageOf(evenings.get(island) ?? 0) } })); })}
     </>
   );
 
@@ -919,7 +919,7 @@ export const EveningPath = ({
       )}
 
       {grewNow && createPortal(
-        <button type="button" onClick={() => { setGrewNow(null); onOpenMap(); }}
+        <button type="button" onClick={() => { const island = grewNow; setGrewNow(null); window.dispatchEvent(new CustomEvent("memap-grow-moment", { detail: { island, stage: stageOf(evenings.get(island) ?? 0) } })); }}
           className="grew-toast fixed left-4 right-4 z-[40] flex items-center gap-3 rounded-[22px] bg-white p-3 pr-4 text-left shadow-[0_14px_34px_-14px_rgba(20,40,90,.55)] dark:bg-[hsl(var(--surface))]"
           style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
           {islandPic(grewNow, 78)}

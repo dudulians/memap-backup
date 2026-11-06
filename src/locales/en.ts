@@ -923,6 +923,7 @@ const en = {
     popBubbles: "Pop bubbles",
     exploreQuestions: "Explore new questions",
     seeLinks: "See your links",
+    seeGrow: "See it grow",
     nextTomorrow: "Tomorrow: {{k}} of {{n}}",
     nextYours: "Tomorrow it's yours!",
     // the end card's calendar button: what she'll see there (the calendar opens on her main question)
@@ -1572,6 +1573,10 @@ const en = {
 
   // 1.8.0 onboarding "doors" + Today hero + echo lines. Context copy is
   // keyed by library template id (see src/lib/doors.ts).
+  growMoment: {
+    title: "{{island}} island grew!",
+    see: "See the island",
+  },
   firstLink: {
     step: "Your first link!",
     sub: "Something comes before something",
