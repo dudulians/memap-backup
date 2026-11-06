@@ -620,6 +620,79 @@ Object.assign(S6, {
   "G4-today-no-reminders": todayV({ chip: "1 of 7 check-ins · report on day 7", note: "Reminders are off · turn on in You → Settings" }),
 });
 
+// ---- v7 ----
+const globeBtn = `<div style="position:absolute;right:18px;top:56px;height:40px;padding:0 14px;border-radius:20px;background:#fff;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800;box-shadow:0 0 0 2px hsl(${TEAL} / .35), 0 8px 18px -12px rgba(20,40,90,.45)">${icon("globe", { size: 18, sw: 2.4, color: TEALD })}EN${icon("chevron-down", { size: 15, sw: 2.6, color: "#6B7184" })}</div>`;
+const welcome7 = P3(`${globeBtn}
+  ${isle(122, 262, 168, "11_sakura")}${isle(282, 190, 150, "09_waterfall")}${isle(296, 372, 112, "17_lavender_garden")}
+  <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([176, 222], [222, 142], [236, 176], 14).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
+  ${boat(40, 316, 92)}
+  <div class="screen" style="padding-top:470px">
+    <h1 style="font-size:33px">Make sense of your days</h1>
+    <div class="sub" style="margin-top:6px;font-size:16.5px">A few yes/no questions each evening. Your world grows — and shows what happens together.</div>
+    ${trust}
+    <div class="grow"></div><div class="link">Not sure yet? Start simple</div><div class="btn">Get started ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>`);
+const topic7 = topic6("Headaches & migraines").replace("Pick one to start with</h1>", "What would you like to understand?</h1>").replace("You can add more anytime.", "Pick one to start with. Add more anytime.");
+const valueRow = (pic, t, line) => `<div class="card" style="padding:11px 14px;display:flex;gap:12px;align-items:center">
+  <span style="width:64px;height:52px;flex-shrink:0;display:flex;align-items:center;justify-content:center">${pic}</span>
+  <div style="min-width:0"><div style="font-size:16.5px;font-weight:800;line-height:1.2">${t}</div><div style="font-size:14px;font-weight:600;color:#6B7184;line-height:1.28;margin-top:2px">${line}</div></div></div>`;
+const miniWeek = `<div style="display:grid;grid-template-columns:repeat(4,12px);gap:4px">${[1, 0, 0, 1, 0, 1, 0, 0].map((h) => `<i style="display:block;width:12px;height:12px;border-radius:6px;background:${h ? HARDC : GOODC}"></i>`).join("")}</div>`;
+const miniLink = `<div style="position:relative;width:64px;height:48px"><img src="${ISL("19_grassy_terraces")}" style="position:absolute;left:-2px;bottom:2px;width:30px"><img src="${ISL("09_waterfall")}" style="position:absolute;right:-2px;bottom:6px;width:30px">
+  <svg style="position:absolute;inset:0" width="64" height="48">${[12, 20, 28, 36, 44, 52].map((x, i) => `<circle cx="${x}" cy="${22 - Math.sin((i + .5) / 6 * Math.PI) * 12}" r="2.2" fill="#fff" stroke="rgba(70,100,170,.45)"/>`).join("")}</svg></div>`;
+const value7 = P3(`<div class="screen">${navTop(3, 6)}
+  <h1 style="font-size:25px;margin-top:4px">What you'll discover over time</h1>
+  <div class="sub" style="margin-top:2px;font-size:15px">As your answers add up:</div>
+  <div style="display:flex;flex-direction:column;gap:9px;margin-top:12px">
+    ${valueRow(miniWeek, "How often it really happens", "Your calendar fills in, evening by evening.")}
+    ${valueRow(miniLink, "What happens together", "Often after a week or two — e.g. 6 of 7 after short nights vs 3 of 24 other days.")}
+    ${valueRow(`<img src="${MAP("lighthouse")}" style="height:48px">`, "When you've reached your limit", "Set your own rule — the lighthouse lights up.")}
+    ${valueRow(`<img src="${MAP("green_tree")}" style="height:46px">`, "What changed after a change", "Try one thing for two weeks and compare.")}
+  </div>
+  <div style="margin-top:10px;font-size:14px;font-weight:700;color:#6B7184;text-align:center">Patterns, not causes.</div>
+  <div class="grow"></div><div class="btn">Answer today's questions ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>`);
+const ladder = (cur) => `<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:6px">${[["03_flower_hill", "Day 1", 58], ["04_twin_hills", "3 evenings", 66], ["09_waterfall", "7 evenings", 74], ["09_waterfall", "21 evenings", 82]].map(([a, l, w], i) => `<div style="flex:1;text-align:center;${i + 1 > cur ? "opacity:.38;filter:saturate(.6)" : ""}"><div style="position:relative;display:flex;justify-content:center;align-items:flex-end;height:60px;${i + 1 === cur ? `border-radius:14px;box-shadow:0 0 0 2px hsl(${TEAL})` : ""}"><img src="${ISL(a)}" style="width:${w}%">${i === 3 ? `<img src="${MAP("marker_flag")}" style="position:absolute;top:2px;right:18%;height:22px">` : ""}</div><div style="font-size:11.5px;font-weight:800;color:#6B7184;margin-top:4px">${l}</div></div>`).join("")}</div>`;
+const reveal7 = (sheet = false) => P3(`<div style="position:absolute;left:50%;top:150px;transform:translateX(-50%);width:300px;height:300px;border-radius:50%;background:radial-gradient(circle, rgba(255,231,160,.75), rgba(255,231,160,0) 66%)"></div>
+  <img src="${MAP("sparkles")}" style="position:absolute;left:84px;top:170px;width:34px;opacity:.9"><img src="${MAP("sparkles")}" style="position:absolute;right:86px;top:236px;width:24px;opacity:.8">
+  ${isle(195, 330, 196, "03_flower_hill")}${ilab(195, 342, "Health")}
+  <div class="screen" style="padding-top:410px">
+    <h1 class="c" style="font-size:30px">Your world has begun</h1>
+    <div class="c sub" style="margin-top:6px;font-size:16px">Your Health island is here. It grows every evening you answer.</div>
+    <div class="card" style="margin-top:14px;padding:12px 14px">${ladder(1)}
+      <div class="c" style="font-size:14px;font-weight:800;color:${TEALD};margin-top:8px">Next stage in 2 evenings</div></div>
+    <div class="grow"></div><div class="btn">See your world ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>
+  ${sheet ? `<div style="position:absolute;inset:0;background:rgba(14,24,60,.32)"></div>
+    <div class="sheet" style="top:470px"><div class="grab"></div>
+      <div style="font-size:22px;font-weight:800">When should we remind you?</div>
+      <div style="font-size:15px;font-weight:600;color:#6B7184;margin-top:3px">A gentle nudge for your evening questions.</div>
+      <div class="grid2" style="margin-top:12px">${["20:00", "21:00", "22:00", "Other"].map((t) => `<div class="big${t === "21:00" ? " on" : ""}" style="background:${t === "21:00" ? "#fff" : "rgba(58,63,78,.05)"};height:50px">${t}</div>`).join("")}</div>
+      <div class="btn" style="margin-top:14px">Turn on reminders</div><div class="link">Not now</div></div>` : ""}`);
+const tonight7 = P3(`${isle(195, 330, 170, "cloud_island_03")}
+  <div class="screen" style="padding-top:410px">
+    <h1 class="c" style="font-size:29px">Your world is waiting</h1>
+    <div class="c sub" style="margin-top:6px;font-size:16px">Tonight's 4 questions start it — your Health island appears after your first answers.</div>
+    <div class="card" style="margin-top:16px;padding:14px 16px">
+      <div style="font-size:17px;font-weight:800">When should we remind you tonight?</div>
+      <div class="grid2" style="margin-top:10px">${["20:00", "21:00", "22:00", "Other"].map((t) => `<div class="big${t === "21:00" ? " on" : ""}" style="background:${t === "21:00" ? "#fff" : "rgba(58,63,78,.05)"};height:46px">${t}</div>`).join("")}</div></div>
+    <div class="grow"></div><div class="link">Not now</div><div class="btn">Turn on reminders</div></div>`);
+const nothing7 = P3(`${isle(195, 330, 170, "cloud_island_03")}
+  <div class="screen" style="padding-top:410px">
+    <h1 class="c" style="font-size:29px">Nothing saved — that's okay</h1>
+    <div class="c sub" style="margin-top:6px;font-size:16px">You answered “Not sure” to everything. Your world starts with your first yes or no — tonight or tomorrow.</div>
+    <div class="grow"></div><div class="link">Answer again now</div><div class="btn">Go to today</div></div>`);
+const worldInIsland = P3(`
+  <div style="position:absolute;top:58px;left:20px;font-size:30px;font-weight:800;letter-spacing:-.02em">World</div>
+  <div class="seg" style="top:62px"><span class="on">Map</span><span>Globe</span></div>
+  ${isle(92, 330, 124, "17_lavender_garden")}${ilab(92, 342, "Me")}
+  ${isle(300, 300, 116, "06_snow_peak")}${ilab(300, 310, "Work")}
+  ${isle(195, 520, 176, "09_waterfall")}${ilab(195, 534, "Health")}
+  <svg style="position:absolute;left:0;top:0" width="390" height="844">${Array.from({ length: 13 }, (_, i) => { const t = (i + .5) / 13 * Math.PI * 1.6 + Math.PI * .7; return `<circle cx="${(195 + Math.cos(t) * 78).toFixed(1)}" cy="${(452 + Math.sin(t) * 34).toFixed(1)}" r="3" fill="#fff" stroke="rgba(70,100,170,.4)"/>`; }).join("")}</svg>
+  <div class="badge" style="left:195px;top:410px">${icon("spline", { size: 15, sw: 2.6 })}6 of 7</div>
+  <div class="card" style="position:absolute;left:24px;right:24px;top:600px;padding:12px 14px">
+    <div style="font-size:12px;font-weight:800;letter-spacing:.06em;color:${TEALD}">A LINK ON THIS ISLAND</div>
+    <div style="font-size:17px;font-weight:800;margin-top:2px">Short night → migraine next day</div>
+    <div style="font-size:14px;font-weight:700;color:#6B7184">6 of 7 · other days 3 of 24</div></div>
+  ${boat(36, 420, 70)}${tabbar(1)}`);
+Object.assign(S6, { "v7-1-welcome": welcome7, "v7-2-topic": topic7, "v7-4-value": value7, "v7-6-reveal": reveal7(false), "v7-6b-remind": reveal7(true), "v7-6c-tonight": tonight7, "v7-6d-nothing": nothing7, "v7-world-in-island": worldInIsland });
+
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--allow-file-access-from-files"] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const p = await ctx.newPage();
@@ -715,5 +788,18 @@ await board(HEADLINES.map(([k]) => "door-" + k),
   await p.waitForTimeout(600);
   await p.screenshot({ path: path.join(VD, "0-MAP.png"), fullPage: true });
 }
+await board(["v7-1-welcome", "v7-2-topic", "3-questions", "v7-4-value", "5-checkin", "v7-6-reveal", "v7-6b-remind", "7-today"],
+  ["<b>Welcome.</b> «Make sense of your days» — польза в заголовке, мир в картинке и подписи («твой мир растёт и показывает, что идёт вместе»). Строка доверия, «Get started», «Not sure yet? Start simple», кнопка-глобус.",
+   "<b>Тема:</b> «What would you like to understand?» — одна для начала.", "<b>Твои вопросы</b> — как в v6.",
+   "<b>Ценность (вариант C):</b> четыре строки, иконки — настоящие объекты приложения (кружки дней, пунктир между островами, маяк, дерево сада за попытку), без номеров недель; «Patterns, not causes».",
+   "<b>Первый настоящий ответ</b> — как в v6.",
+   "<b>«Your world has begun».</b> Свечение, искорки, остров темы появляется — честно, 1-я стадия; лестница из 4 стадий и «следующая через 2 вечера».",
+   "<b>Напоминание — листом поверх награды</b>, после радости, «Not now» рядом.", "<b>Today</b> — как в v6."],
+  "Онбординг v7: польза в заголовке, мир — в картинке и в награде", "По разбору брифа «сначала мир»: экран «Твой мир начался» после первого ответа, напоминание после него", "74-onboarding-v7.png");
+await board(["v7-6c-tonight", "v7-6d-nothing", "v7-world-in-island"],
+  ["<b>Если выбрал «вечером» (онбординг днём):</b> ответа ещё нет — значит, и острова нет. Честно: «твой мир ждёт, вечером 4 вопроса его начнут», и напоминание тут особенно нужно.",
+   "<b>Если на всё ответил «Not sure»:</b> ничего не записано, награды нет. «Ничего не сохранено — это нормально, мир начнётся с первого да или нет».",
+   "<b>Связь внутри одного острова</b> (сейчас на карте не видна): пунктир-петля на самом острове и знак «6 из 7»; по нажатию — «связь на этом острове: короткая ночь → мигрень, 6 из 7, в остальные дни 3 из 24»."],
+  "v7: другие концовки и связь внутри острова", "То, что «сначала мир» должен закрыть, чтобы обещание сходилось с приложением", "75-v7-endings-and-island-link.png");
 console.log("ok", Object.keys(S6).length);
 await b.close();
