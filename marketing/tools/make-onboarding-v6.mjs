@@ -693,6 +693,42 @@ const worldInIsland = P3(`
   ${boat(36, 420, 70)}${tabbar(1)}`);
 Object.assign(S6, { "v7-1-welcome": welcome7, "v7-2-topic": topic7, "v7-4-value": value7, "v7-6-reveal": reveal7(false), "v7-6b-remind": reveal7(true), "v7-6c-tonight": tonight7, "v7-6d-nothing": nothing7, "v7-world-in-island": worldInIsland });
 
+// ---- World v2 ----
+const wHead = `<div style="position:absolute;top:52px;left:20px;right:20px;display:flex;align-items:center;justify-content:space-between">
+  <span style="font-size:28px;font-weight:800;letter-spacing:-.02em">Your world</span>
+  <span style="display:flex;align-items:center;gap:10px"><span style="height:34px;border-radius:17px;background:rgba(255,255,255,.75);display:flex;padding:3px;font-size:13px;font-weight:800"><span style="padding:0 10px;display:flex;align-items:center;border-radius:14px;background:#fff">Map</span><span style="padding:0 10px;display:flex;align-items:center;color:#6B7184">Globe</span></span>
+  <img src="${ANI("01_malu")}" style="width:34px;height:34px;border-radius:17px;background:#fff;box-shadow:0 4px 10px -6px rgba(20,40,90,.5)"></span></div>`;
+const PARTS4 = (style) => [
+  ["My days", `<div style="display:grid;grid-template-columns:repeat(7,6px);gap:2px">${[1,0,0,1,0,1,0,0,0,1,0,0,1,0].map((h) => `<i style="display:block;width:6px;height:6px;border-radius:3px;background:${h ? HARDC : GOODC}"></i>`).join("")}</div>`, "last 2 weeks"],
+  ["Links", `<span style="display:flex;align-items:center;gap:4px;font-size:18px;font-weight:800">${icon("spline", { size: 17, sw: 2.6, color: IND })}2</span>`, "found"],
+  ["When to act", `<span style="display:flex;align-items:center;gap:3px;font-size:18px;font-weight:800"><img src="${MAP("lighthouse")}" style="height:22px">1</span>`, "rule lit"],
+  ["What helps", `<span style="display:flex;align-items:center;gap:4px;font-size:15px;font-weight:800">${icon("sprout", { size: 16, sw: 2.6, color: TEALD })}5/14</span>`, "in bed by 11"],
+];
+const tile4 = ([t, vis, sub]) => `<div style="flex:1;min-width:0;background:#fff;border-radius:16px;padding:8px 8px 7px;box-shadow:0 8px 18px -14px rgba(20,40,90,.55)">
+  <div style="font-size:12px;font-weight:800;white-space:nowrap">${t}</div><div style="margin-top:5px;height:22px;display:flex;align-items:center">${vis}</div><div style="font-size:10.5px;font-weight:700;color:#6B7184;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div></div>`;
+// the map: one label style (white pill under each island), the main island lit
+const lbl = (x, y, t, main = false) => `<div style="position:absolute;left:${x}px;top:${y}px;transform:translateX(-50%);height:28px;padding:0 12px;border-radius:14px;background:#fff;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;box-shadow:0 6px 14px -8px rgba(20,50,90,.5)">${main ? `<i style="display:block;width:8px;height:8px;border-radius:4px;background:hsl(${TEAL})"></i>` : ""}${t}</div>`;
+const worldMap = (dy) => `
+  <div style="position:absolute;left:50%;top:${300 + dy}px;transform:translateX(-50%);width:260px;height:200px;border-radius:50%;background:radial-gradient(ellipse, rgba(255,236,170,.6), rgba(255,236,170,0) 68%)"></div>
+  ${isle(195, 380 + dy, 190, "09_waterfall")}${lbl(195, 392 + dy, "Health", true)}
+  ${isle(84, 240 + dy, 120, "17_lavender_garden")}${lbl(84, 250 + dy, "Me")}
+  ${isle(306, 236 + dy, 118, "19_grassy_terraces")}${lbl(306, 246 + dy, "Body")}
+  ${isle(96, 520 + dy, 116, "11_sakura")}${lbl(96, 530 + dy, "Love")}
+  <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([120, 262 + dy], [128, 320 + dy], [150, 352 + dy], 11).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}${dotsAlong([284, 262 + dy], [270, 320 + dy], [246, 350 + dy], 11).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
+  <div class="badge" style="left:126px;top:${312 + dy}px">${icon("spline", { size: 14, sw: 2.6 })}6/7</div><div class="badge" style="left:272px;top:${312 + dy}px">${icon("spline", { size: 14, sw: 2.6 })}5/6</div>
+  ${boat(196, 470 + dy, 74, "01_malu")}
+  <img src="${ISL("cloud_island_03")}" style="position:absolute;left:250px;top:${500 + dy}px;width:96px;opacity:.55">
+  <div style="position:absolute;left:332px;top:${520 + dy}px;width:46px;height:46px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px -10px rgba(20,40,90,.55)">${icon("plus", { size: 22, sw: 2.6, color: TEALD })}</div>
+  <div style="position:absolute;left:355px;top:${570 + dy}px;transform:translateX(-50%);font-size:11.5px;font-weight:800;color:#6B7184;white-space:nowrap">New island</div>`;
+const worldA = P3(`${wHead}
+  <div style="position:absolute;top:100px;left:16px;right:16px;display:flex;gap:7px">${PARTS4().map(tile4).join("")}</div>
+  ${worldMap(20)}${tabbar(1)}`);
+const worldB = P3(`${wHead}
+  ${worldMap(-40)}
+  <div style="position:absolute;left:16px;right:16px;top:590px;background:#fff;border-radius:22px;padding:10px 8px;display:flex;gap:2px;box-shadow:0 14px 30px -16px rgba(20,40,90,.55)">
+    ${PARTS4().map(([t, vis, sub], i) => `<div style="flex:1;min-width:0;text-align:center;padding:2px 4px;${i ? "border-left:1px solid rgba(58,63,78,.08)" : ""}"><div style="height:24px;display:flex;align-items:center;justify-content:center">${vis}</div><div style="font-size:12px;font-weight:800;margin-top:4px;white-space:nowrap">${t}</div><div style="font-size:10.5px;font-weight:700;color:#6B7184;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</div></div>`).join("")}</div>
+  ${tabbar(1)}`);
+Object.assign(S6, { "w2-A-top-row": worldA, "w2-B-dock": worldB });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--allow-file-access-from-files"] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const p = await ctx.newPage();
@@ -801,5 +837,11 @@ await board(["v7-6c-tonight", "v7-6d-nothing", "v7-world-in-island"],
    "<b>Если на всё ответил «Not sure»:</b> ничего не записано, награды нет. «Ничего не сохранено — это нормально, мир начнётся с первого да или нет».",
    "<b>Связь внутри одного острова</b> (сейчас на карте не видна): пунктир-петля на самом острове и знак «6 из 7»; по нажатию — «связь на этом острове: короткая ночь → мигрень, 6 из 7, в остальные дни 3 из 24»."],
   "v7: другие концовки и связь внутри острова", "То, что «сначала мир» должен закрыть, чтобы обещание сходилось с приложением", "75-v7-endings-and-island-link.png");
+shots["w2-now"] = pathToFileURL(path.join(R, "marketing/tools/aurora-tests/work/r49/C-2-world.png")).href;
+await board(["w2-now", "w2-A-top-row", "w2-B-dock"],
+  ["<b>Сейчас.</b> Сверху «MeMap» и «Твой мир» — два заголовка; три больших карточки (Календарь · График · Точки действия) забирают верх; подписи островов и «+ Новый остров» одного вида.",
+   "<b>Вариант A — 4 части тонкой строкой сверху:</b> Мои дни (две недели точками) · Связи (2) · Когда действовать (маяк, 1) · Что помогает (5/14). Одна шапка «Your world». Мир крупнее и ведёт экран; главный остров (твоя тема) подсвечен и с бирюзовой точкой; все подписи одного вида; «New island» — кнопка-инструмент «+» сбоку.",
+   "<b>Вариант B — мир на весь экран, 4 части плотной панелью внизу</b> над вкладками (не прозрачной — твоё правило). Сверху ничего не отвлекает от мира."],
+  "Экран мира v2: мир — главная сцена, 4 части компактно", "По отзыву GPT и нашим 4 частям; верхние карточки не убираем, а делаем лёгкими — экран остаётся инструментом", "76-world-v2.png");
 console.log("ok", Object.keys(S6).length);
 await b.close();
