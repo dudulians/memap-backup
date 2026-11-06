@@ -5,6 +5,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
 import { getTrackers, getEntries } from "@/lib/storage";
+import { getNotes } from "@/lib/notes";
+import { progressLines } from "@/lib/reminderLines";
 import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 
 const NOTIFICATION_ENABLED_KEY = "memap_notification_enabled";
@@ -157,28 +159,12 @@ export const cancelNotification = async (): Promise<void> => {
 
 // Re-builds the daily notification queue from scratch. Call this:
 //   - on cold app start
-//   - after the user finishes a session (so today gets cancelled)
-//   - after settings change (time / enabled flag)
-//   - after the UI language changes
-// It cancels everything, then schedules the next DAYS_AHEAD days,
-// skipping today if today is already fully filled.
-export const scheduleNotification = async (
+
+/** What will be scheduled: one reminder a day for DAYS_AHEAD days (none today if
+ *  today is done). Apart from scheduling so it can be checked anywhere. */
+export const reminderPlan = async (
   settings: NotificationSettings,
-): Promise<void> => {
-  // Kill old schedule no matter what — keeps state consistent.
-  await cancelNotification();
-
-  if (!settings.enabled) return;
-
-  const granted = await requestNotificationPermission();
-  if (!granted) return;
-
-  if (Capacitor.getPlatform() === "web") {
-    // Web: no per-day scheduling. The setting is just remembered for
-    // when the user installs the native app.
-    return;
-  }
-
+): Promise<{ id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[]> => {
   const [hour, minute] = settings.time.split(":").map(Number);
   const now = new Date();
   const todayFilled = await isTodayFilled();
@@ -195,6 +181,15 @@ export const scheduleNotification = async (
   // settings change). Acceptable tradeoff for keeping the pipeline
   // simple — the queue is rebuilt often enough in practice.
   const activeTrackers = (await getTrackers()).filter((t) => !t.archived);
+  // how close she is to the next things, for the new screens' reminders
+  const progress = getUiMode() === "new"
+    ? await (async () => {
+      try {
+        const [all, entries, notes] = await Promise.all([getTrackers(), getEntries(), getNotes()]);
+        return progressLines(all, entries, notes.length);
+      } catch { return []; }
+    })()
+    : [];
 
   // Language-sensitive fallback strings, resolved in the user's
   // CURRENT UI language at schedule time. iOS stores the literal
@@ -260,10 +255,16 @@ export const scheduleNotification = async (
       // how much there is. Classic keeps its rotating question.
       if (getUiMode() === "new") {
         dayTitle = fallbackTitle;
-        dayBody = i18n.t("notifications.privateBody", {
+        const today = i18n.t("notifications.privateBody", {
           count: activeTrackers.length,
           min: Math.max(1, Math.round((activeTrackers.length * 4) / 60)),
         });
+        // How close she is (Nov 6 2026, src/lib/reminderLines.ts): the first reminder
+        // says the closest thing; after it, every other day, the next ones in turn.
+        // Each stays true until she answers again (which reschedules them all).
+        const k = notifications.length;
+        const line = progress.length === 0 ? null : k === 0 ? progress[0] : k % 2 === 0 ? progress[(k / 2) % progress.length] : null;
+        dayBody = line ? `${line}\n${today}` : today;
       }
     }
 
@@ -274,6 +275,32 @@ export const scheduleNotification = async (
       schedule: { at: fireAt, allowWhileIdle: true },
     });
   }
+
+  return notifications;
+};
+//   - after the user finishes a session (so today gets cancelled)
+//   - after settings change (time / enabled flag)
+//   - after the UI language changes
+// It cancels everything, then schedules the next DAYS_AHEAD days,
+// skipping today if today is already fully filled.
+export const scheduleNotification = async (
+  settings: NotificationSettings,
+): Promise<void> => {
+  // Kill old schedule no matter what — keeps state consistent.
+  await cancelNotification();
+
+  if (!settings.enabled) return;
+
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  if (Capacitor.getPlatform() === "web") {
+    // Web: no per-day scheduling. The setting is just remembered for
+    // when the user installs the native app.
+    return;
+  }
+
+  const notifications = await reminderPlan(settings);
 
   if (notifications.length > 0) {
     await LocalNotifications.schedule({ notifications });

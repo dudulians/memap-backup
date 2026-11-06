@@ -779,6 +779,15 @@ const en = {
     // New screens: no question on the lock screen (privacy).
     privateBody_one: "Today · {{count}} question · ~{{min}} min",
     privateBody_other: "Today · {{count}} questions · ~{{min}} min",
+    // how close she is (Nov 6 2026): each count is evenings left from now
+    grows_one: "{{island}} island grows in {{count}} evening",
+    grows_other: "{{island}} island grows in {{count}} evenings",
+    firstLinks_one: "Your first links in about {{count}} evening",
+    firstLinks_other: "Your first links in about {{count}} evenings",
+    treasure_one: "{{count}} more evening to your {{treasure}}",
+    treasure_other: "{{count}} more evenings to your {{treasure}}",
+    report_one: "Your week's report in {{count}} evening",
+    report_other: "Your week's report in {{count}} evenings",
     thresholdTitle: "{{emoji}} Action signal reached",
     thresholdBody: "\"{{title}}\" hit {{threshold}} signals. Time to act.",
     thresholdBodyWithAction: "\"{{title}}\" — {{threshold}} signals. Your action: {{action}}",
