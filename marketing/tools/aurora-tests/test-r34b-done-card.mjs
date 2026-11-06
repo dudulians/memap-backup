@@ -20,7 +20,7 @@ const setup = async (p, lang, theme) => {
     localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
     for (const k of ["memap_hunch_day", "memap_act_seen"]) localStorage.setItem(k, iso(0));
-    localStorage.setItem("memap_discover_seen", JSON.stringify({ links: iso(1), calendar: iso(1), chart: iso(1) }));
+    localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
     const ps = await import("/src/lib/pathSteps.ts");
     for (const s of ps.pathModel(T, E).steps) if (s.kind === "task") ps.markTaskDone(s.task);
   }, { lang, theme });

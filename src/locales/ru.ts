@@ -1058,6 +1058,8 @@ const ru: Translation = {
     popBubbles: "Полопать пузыри",
     exploreQuestions: "Найти новые вопросы",
     seeLinks: "Посмотреть связи",
+    nextTomorrow: "Завтра: {{k}} из {{n}}",
+    nextYours: "Завтра — твоё!",
     daysLabel: {
       fights: "Дни ссор",
       mood: "Плохие дни",

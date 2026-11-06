@@ -914,6 +914,8 @@ const en = {
     popBubbles: "Pop bubbles",
     exploreQuestions: "Explore new questions",
     seeLinks: "See your links",
+    nextTomorrow: "Tomorrow: {{k}} of {{n}}",
+    nextYours: "Tomorrow it's yours!",
     // the end card's calendar button: what she'll see there (the calendar opens on her main question)
     daysLabel: {
       fights: "Days you fought",

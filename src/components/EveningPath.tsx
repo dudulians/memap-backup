@@ -24,6 +24,7 @@ import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, getChests, markActSeen, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
 import { buildIslands, buildRoutes } from "@/lib/islands";
+import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
@@ -133,7 +134,17 @@ export const EveningPath = ({
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
-  const hasLinks = useMemo(() => buildRoutes(trackers, entries, buildIslands(trackers, entries)).length > 0, [trackers, entries]);
+  const world = useMemo(() => { const islands = buildIslands(trackers, entries); return { islands, routes: buildRoutes(trackers, entries, islands) }; }, [trackers, entries]);
+  const hasLinks = world.routes.length > 0;
+  // The next treasure (Nov 6 2026, her pick from the hooks): the one she's closest to,
+  // said on "Done for today" with how far she is and what tomorrow brings — a reason
+  // to come back. Ties go to the shorter way.
+  const nextUp = useMemo(() => {
+    const f = worldFacts(trackers, entries, world.islands, world.routes, noteDays?.length ?? 0);
+    const left = ITEMS.filter((it) => !owned(it.id, f)).map((it) => { const [k, n] = itemProgress(it.id, f); return { id: it.id, pic: it.pic, k, n }; }).filter((x) => x.n > 0 && x.k < x.n);
+    left.sort((a, b) => b.k / b.n - a.k / a.n || a.n - b.n);
+    return left[0] ?? null;
+  }, [trackers, entries, world, noteDays]);
   // "Look around" finished or skipped (src/components/AppTour.tsx): the path moves on
   useEffect(() => {
     const done = () => setTick((k) => k + 1);
@@ -575,6 +586,34 @@ export const EveningPath = ({
     </>
   );
 
+  /** Treasures that come with evenings: tomorrow brings the next dot. */
+  const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
+  const nextTreasure = (x: { id: ItemId; pic: string; k: number; n: number }, onOpen: () => void) => {
+    const daily = DAILY.includes(x.id);
+    return (
+      <button type="button" onClick={onOpen} className="next-treasure mt-3 flex w-full items-center gap-3 rounded-[18px] px-3 py-2.5 text-left">
+        <span className="tour-pop relative h-12 w-12 shrink-0" style={{ animationDelay: ".1s" }} aria-hidden="true">
+          <img className="art-day h-12 w-12 object-contain" src={mapPicFor(x.pic, false)} alt="" />
+          <img className="art-night h-12 w-12 object-contain" src={mapPicFor(x.pic, true)} alt="" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[17px] font-bold leading-tight">{t(`items.${x.id}.name`)}</span>
+          <span className="block text-[14px] font-semibold leading-snug text-muted-foreground">{t("items.toGet", { how: t(`items.${x.id}.how`), k: x.k, count: x.n })}</span>
+          {x.n <= 14 && (
+            <span className="mt-1.5 flex flex-wrap gap-1" aria-hidden="true">
+              {Array.from({ length: x.n }, (_, i) => (
+                <span key={i} className={cn("h-2.5 w-2.5 rounded-full", daily && m.todayCounted && i === x.k - 1 && "tour-pop next-treasure-today")}
+                  style={{ background: i < x.k ? "hsl(var(--coin-gold))" : "hsl(var(--foreground) / 0.12)", animationDelay: ".45s" }} />
+              ))}
+            </span>
+          )}
+          {daily && <span className="mt-1 block text-[14px] font-bold text-[hsl(var(--coin-teal))]">{x.k + 1 >= x.n ? t("path.nextYours") : t("path.nextTomorrow", { k: x.k + 1, n: x.n })}</span>}
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+      </button>
+    );
+  };
+
   const bubbleBody = (i: number): ReactNode => {
     const n = nodes[i];
     if (n.kind === "past") {
@@ -609,6 +648,7 @@ export const EveningPath = ({
       return (
         <>
           {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
+          {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you"))))}
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest), "gold")}
           {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true)), m.weekComplete ? "plain" : "teal")}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion")), "plain")}
