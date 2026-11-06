@@ -1,5 +1,6 @@
-// Report for a specialist (Nov 6 2026): open from You, pick Therapist, 3 months, with
-// notes; the first page shows; "Make PDF" downloads a real PDF (saved here to look at).
+// Reports (Nov 6 2026, two kinds): "For a specialist" (Doctor, 3 months, a name,
+// notes) and "For me" (4 weeks, with islands and treasures), EN and RU. The sheet,
+// every page as a picture, and a real PDF from the button.
 import { chromium } from "playwright-core";
 import { mkdirSync, writeFileSync, readFileSync } from "fs";
 const D = `./aurora-tests/work/r46`; mkdirSync(D, { recursive: true });
@@ -17,6 +18,10 @@ for (const lang of ["en", "ru"]) {
     const ids = new Set(T.map((t) => t.id)); E = E.filter((e) => ids.has(e.trackerId));
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
+    // her topic: the headache question, so the summary and calendar are about it
+    const head = T.find((t) => /headache/i.test(t.title));
+    if (head) localStorage.setItem("memap_door", JSON.stringify({ id: "migraine", trackerId: head.id, contextTrackerIds: [], startedAt: iso(60) }));
+    localStorage.setItem("memap_treasures", JSON.stringify({ balloon: iso(20), camera: iso(12), moon: iso(5), books: iso(2) }));
     const now = new Date().toISOString();
     localStorage.setItem("memap_notes", JSON.stringify([
       { id: "n1", date: iso(3), text: lang === "ru" ? "Плохо спала, утром болела голова. Много работы перед дедлайном." : "Slept badly, headache in the morning. Lots of work before a deadline.", createdAt: now, updatedAt: now },
@@ -26,21 +31,27 @@ for (const lang of ["en", "ru"]) {
   }, lang);
   await p.reload(); await p.waitForTimeout(2200);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))); await p.waitForTimeout(1200);
-  await p.getByRole("button", { name: lang === "ru" ? /^Психолог$/ : /^Therapist$/ }).click();
+  // for a specialist
+  await p.getByRole("button", { name: lang === "ru" ? /^Врач$/ : /^Doctor$/ }).click();
   await p.getByRole("button", { name: lang === "ru" ? /3 месяца/ : /3 months/ }).click();
-  await p.getByRole("switch").click(); await p.waitForTimeout(1500);
-  await p.screenshot({ path: `${D}/${lang}-sheet.png` });
-  await p.locator("[role=dialog] .overflow-y-auto").evaluate((el) => el.scrollTo(0, 9999)); await p.waitForTimeout(500);
-  await p.screenshot({ path: `${D}/${lang}-sheet-bottom.png` });
-  const prev = await p.evaluate(() => document.querySelector("[role=dialog] img[src^='data:image/jpeg']")?.getAttribute("src"));
-  if (prev) writeFileSync(`${D}/${lang}-page1.jpg`, Buffer.from(prev.split(",")[1], "base64"));
+  await p.getByRole("textbox").fill(lang === "ru" ? "Ульяна" : "Uliana");
+  await p.getByRole("switch").click(); await p.waitForTimeout(1800);
+  await p.screenshot({ path: `${D}/${lang}-sheet-pro.png` });
+  const dump = async (style, days) => p.evaluate(async ({ style, days, lang }) => {
+    const r = await import("/src/lib/doctorReport.ts"), s = await import("/src/lib/storage.ts"), n = await import("/src/lib/notes.ts"), d = await import("/src/lib/doors.ts");
+    const door = d.getDoorState();
+    return r.drawReport({ trackers: await s.getTrackers(), entries: await s.getEntries(), notes: await n.getNotes(), style, audience: "doctor", islands: ["me", "health", "body", "love", "work"], days, withNotes: true, name: lang === "ru" ? "Ульяна" : "Uliana", mainId: door?.trackerId, daysLabel: lang === "ru" ? "Дни с мигренью" : "Your migraine days" });
+  }, { style, days, lang });
+  (await dump("pro", 91)).forEach((u, i) => writeFileSync(`${D}/${lang}-pro-p${i + 1}.jpg`, Buffer.from(u.split(",")[1], "base64")));
   await p.evaluate(() => { Object.defineProperty(navigator, "canShare", { value: undefined, configurable: true }); });
-  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 15000 }), p.getByRole("button", { name: lang === "ru" ? /Сделать PDF/ : /Make PDF/ }).click()]);
-  await dl.saveAs(`${D}/${lang}-report.pdf`);
-  const head = readFileSync(`${D}/${lang}-report.pdf`).subarray(0, 8).toString();
-  out[lang] = { preview: !!prev, pdf: head, bytes: readFileSync(`${D}/${lang}-report.pdf`).length };
-  const all = await p.evaluate(async () => { const r = await import("/src/lib/doctorReport.ts"); const s = await import("/src/lib/storage.ts"); const n = await import("/src/lib/notes.ts"); return r.drawReport({ trackers: await s.getTrackers(), entries: await s.getEntries(), notes: await n.getNotes(), audience: "therapist", islands: ["me", "love", "health", "body", "work"], days: 91, withNotes: true }); });
-  all.forEach((u, i) => writeFileSync(`${D}/${lang}-p${i + 1}.jpg`, Buffer.from(u.split(",")[1], "base64")));
+  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 20000 }), p.getByRole("button", { name: lang === "ru" ? /Сделать PDF/ : /Make PDF/ }).click()]);
+  await dl.saveAs(`${D}/${lang}-pro.pdf`);
+  // for me
+  await p.getByRole("button", { name: lang === "ru" ? /^Для себя$/ : /^For me$/ }).click();
+  await p.getByRole("button", { name: lang === "ru" ? /4 недели/ : /4 weeks/ }).click(); await p.waitForTimeout(1800);
+  await p.screenshot({ path: `${D}/${lang}-sheet-me.png` });
+  (await dump("me", 28)).forEach((u, i) => writeFileSync(`${D}/${lang}-me-p${i + 1}.jpg`, Buffer.from(u.split(",")[1], "base64")));
+  out[lang] = { pdf: readFileSync(`${D}/${lang}-pro.pdf`).subarray(0, 8).toString() };
   await ctx.close();
 }
 console.log(JSON.stringify({ ...out, errs }, null, 1));

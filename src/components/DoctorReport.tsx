@@ -1,6 +1,8 @@
-// "Report for a specialist" (Nov 6 2026, her idea): she picks who it's for, the
-// topics and the period, sees the first page, and sends a PDF. Opened from You
-// (memap-doctor-report).
+// Reports from her days (Nov 6 2026, her idea; two kinds after her note "две
+// версии — для себя с картинками и для врача серьёзнее, но с нашим названием"):
+// "For a specialist" (who it's for, her name if she wants it) or "For me" (with
+// her islands and treasures); topics, period, notes; the first page shows live;
+// a PDF goes to the share sheet. Opened from You (memap-doctor-report).
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, FileText } from "lucide-react";
@@ -15,17 +17,19 @@ import { getEntries, getTrackers } from "@/lib/storage";
 import { getNotes, type Note } from "@/lib/notes";
 import { getDoorState } from "@/lib/doors";
 import { islandName, islandOf, type IslandId } from "@/lib/islands";
-import { AUDIENCE_TOPICS, REPORT_PX, drawReport, type Audience } from "@/lib/doctorReport";
+import { AUDIENCE_TOPICS, REPORT_PX, drawReport, type Audience, type ReportStyle } from "@/lib/doctorReport";
 import { jpegsToPdf } from "@/lib/pdfImages";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 
-const AUDIENCES: Audience[] = ["doctor", "therapist", "coach", "me"];
+const AUDIENCES: Audience[] = ["doctor", "therapist", "coach"];
 
 export const DoctorReport = () => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<{ trackers: Tracker[]; entries: TrackerEntry[]; notes: Note[] } | null>(null);
+  const [style, setStyle] = useState<ReportStyle>("pro");
   const [audience, setAudience] = useState<Audience>("doctor");
+  const [name, setName] = useState("");
   const [picked, setPicked] = useState<Set<IslandId>>(new Set());
   const [days, setDays] = useState(28);
   const [withNotes, setWithNotes] = useState(false);
@@ -50,29 +54,33 @@ export const DoctorReport = () => {
   }, [data]);
   // the reader picks the topics first; she can change them
   useEffect(() => {
-    const want = AUDIENCE_TOPICS[audience];
+    const want = AUDIENCE_TOPICS[style === "me" ? "me" : audience];
     const next = new Set(want === "all" ? islands : islands.filter((i) => want.includes(i)));
     setPicked(next.size ? next : new Set(islands));
-  }, [audience, islands]);
+  }, [style, audience, islands]);
+  const input = () => {
+    const door = getDoorState();
+    return { ...data!, style, audience, islands: [...picked], days, withNotes, name, mainId: door?.trackerId, daysLabel: t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any") };
+  };
   // the first page, redrawn as she changes things
   useEffect(() => {
     if (!data || !open || picked.size === 0) return;
     let alive = true;
     const id = window.setTimeout(async () => {
-      const pages = await drawReport({ ...data, audience, islands: [...picked], days, withNotes, mainId: getDoorState()?.trackerId });
+      const pages = await drawReport(input());
       if (alive) setPreview(pages[0] ?? null);
-    }, 250);
+    }, 300);
     return () => { alive = false; window.clearTimeout(id); };
-  }, [data, open, audience, picked, days, withNotes]);
+  }, [data, open, style, audience, picked, days, withNotes, name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const make = async () => {
     if (!data || busy) return;
     setBusy(true); haptics.tap();
     try {
-      const pages = await drawReport({ ...data, audience, islands: [...picked], days, withNotes, mainId: getDoorState()?.trackerId });
+      const pages = await drawReport(input());
       const pdf = jpegsToPdf(pages, REPORT_PX);
       const name = `memap-report-${new Date().toISOString().slice(0, 10)}.pdf`;
-      track("doctor_report_made", { audience, topics: picked.size, days, notes: withNotes, pages: pages.length });
+      track("doctor_report_made", { style, audience: style === "me" ? "me" : audience, topics: picked.size, days, notes: withNotes, named: !!name.trim(), pages: pages.length });
       if (Capacitor.isNativePlatform()) {
         let bin = ""; for (let i = 0; i < pdf.length; i += 0x8000) bin += String.fromCharCode(...pdf.subarray(i, i + 0x8000));
         const written = await Filesystem.writeFile({ path: name, data: btoa(bin), directory: Directory.Cache });
@@ -92,14 +100,27 @@ export const DoctorReport = () => {
     <BottomSheet open={open} onOpenChange={(o) => !o && setOpen(false)} ariaTitle={t("report.title")} className="h-[90vh]">
       <div className="flex-1 overflow-y-auto px-5 pb-8">
         <h2 className="pr-10 text-[26px] font-bold leading-tight tracking-tight">{t("report.title")}</h2>
-        <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{t("report.line")}</p>
+        <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{t(style === "me" ? "report.lineMe" : "report.line")}</p>
 
-        <p className="mt-5 text-[15px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("report.who")}</p>
-        <div className="mt-2 grid grid-cols-2 gap-2.5">
-          {AUDIENCES.map((a) => (
-            <button key={a} type="button" aria-pressed={audience === a} onClick={() => { haptics.tap(); setAudience(a); }} className={chip(audience === a)}>{t(`report.audience.${a}`)}</button>
+        {/* two kinds: a serious one for a specialist, a picture one for herself */}
+        <div className="seg mt-4 w-full" role="group">
+          {(["pro", "me"] as const).map((s) => (
+            <button key={s} type="button" aria-pressed={style === s} onClick={() => { haptics.tap(); setStyle(s); }} className={cn("chip flex-1", style === s && "is-on")}>{t(`report.style.${s}`)}</button>
           ))}
         </div>
+
+        {style === "pro" && (
+          <>
+            <p className="mt-5 text-[15px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("report.who")}</p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {AUDIENCES.map((a) => (
+                <button key={a} type="button" aria-pressed={audience === a} onClick={() => { haptics.tap(); setAudience(a); }} className={chip(audience === a)}>{t(`report.audience.${a}`)}</button>
+              ))}
+            </div>
+            <input value={name} onChange={(e) => setName(e.target.value.slice(0, 60))} placeholder={t("report.namePlaceholder")} aria-label={t("report.namePlaceholder")}
+              className="surface mt-3 h-12 w-full rounded-[16px] px-4 text-[16px] font-semibold outline-none placeholder:font-medium placeholder:text-muted-foreground" />
+          </>
+        )}
 
         <p className="mt-5 text-[15px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("report.topics")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
