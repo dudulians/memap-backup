@@ -14,6 +14,7 @@ import { islandName, isNightMap, mapPicFor, type IslandId } from "@/lib/islands"
 import { getEntries, getTrackers } from "@/lib/storage";
 import { MAP_VIEW, findTarget, frames, isleRects, union, wait } from "@/lib/spotlight";
 import { markGrowSeen } from "@/lib/growMoment";
+import { track } from "@/lib/analytics";
 
 interface Shown { island: IslandId; stage: Stage; days: number; rect: DOMRect; art: DOMRect }
 
@@ -61,6 +62,7 @@ export const GrowMoment = () => {
   if (!shown) return null;
   const close = (open: boolean) => {
     haptics.tap();
+    track("island_grew_seen", { stage: shown.stage, action: open ? "open" : "close" });
     markGrowSeen(shown.island, shown.stage);
     window.clearTimeout(timer.current);
     isleEl.current?.classList.remove("grow-pulse");

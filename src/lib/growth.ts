@@ -18,6 +18,7 @@ import { finishedExperiments, currentExperiment, experimentDay } from "@/lib/exp
 import { getOwnIslands } from "@/lib/ownIslands";
 import { getHunches } from "@/lib/hunches";
 import { isoLocal } from "@/lib/doors";
+import { track } from "@/lib/analytics";
 
 // --- Island growth ---------------------------------------------------------
 
@@ -150,7 +151,8 @@ export const syncTreasures = (f: WorldFacts): void => {
   const kept = keptTreasures();
   let changed = false;
   const today = isoLocal(new Date());
-  for (const it of ITEMS) if (!kept[it.id] && itemEarned(it.id, f)) { kept[it.id] = today; changed = true; }
+  const fresh = !!Object.keys(kept).length;
+  for (const it of ITEMS) if (!kept[it.id] && itemEarned(it.id, f)) { kept[it.id] = today; changed = true; if (fresh) track("treasure_earned", { id: it.id }); }
   if (changed) { try { localStorage.setItem(KEPT, JSON.stringify(kept)); } catch { /* shown, not kept */ } }
 };
 /** She has it: kept, or earned right now. */

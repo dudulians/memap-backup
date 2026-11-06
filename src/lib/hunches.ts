@@ -11,6 +11,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { getRelatedTemplateIds, getTemplatesByIds, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import type { LifeStreamTemplate } from "@/lib/lifeStreams";
+import { track } from "@/lib/analytics";
 
 const KEY = "memap_hunches";
 const DAY_KEY = "memap_hunch_day";
@@ -45,6 +46,7 @@ export const addHunches = (target: string, suspects: string[]) => {
   const rest = getHunches().filter((h) => !(h.target === target && suspects.includes(h.suspect)));
   save([...rest, ...suspects.map((suspect, i) => ({ id: `${now}-${i}`, target, suspect, made: today }))]);
   markHunchDay();
+  track("hunch_made", { suspects: suspects.length });
 };
 export const markHunchSeen = (id: string) => save(getHunches().map((h) => (h.id === id ? { ...h, seen: isoLocal(new Date()) } : h)));
 

@@ -39,6 +39,8 @@ type Step = "welcome" | "fork" | "pain" | "good" | "promise" | "door" | "own" | 
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   const [step, setStep] = useState<Step>("welcome");
+  // where people stop in onboarding (2.0 funnel)
+  useEffect(() => { track("onboarding_screen", { screen: String(step) }); }, [step]);
   const [branch, setBranch] = useState<"pain" | "good">("pain");
   const [doors, setDoors] = useState<Door[]>([]);
   // the path's end waits for "who sails with you"

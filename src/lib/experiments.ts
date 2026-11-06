@@ -8,6 +8,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { isoLocal } from "@/lib/doors";
 import { isHardAnswer, isTestQuestion, islandOf } from "@/lib/islands";
+import { track } from "@/lib/analytics";
 
 export const EXPERIMENT_DAYS = 7;
 const KEY = "memap_experiments";
@@ -76,6 +77,7 @@ export const finishedExperiments = () => getExperiments().filter((x) => !!x.revi
 
 /** Start a test: adds "Did you…?" to the island, from today. */
 export const startExperiment = async (island: string, change: string, question: string, from?: string): Promise<Experiment> => {
+  track("experiment_started", { from: from ? "action_point" : "pick" });
   const existing = await getTrackers();
   const tracker: Tracker = {
     id: `${Date.now()}-test`,

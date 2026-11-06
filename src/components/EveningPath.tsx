@@ -40,6 +40,7 @@ import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
+import { track } from "@/lib/analytics";
 
 const PATH_MAX = 440;
 type Rect = { x: number; y: number; w: number; h: number };
@@ -502,6 +503,7 @@ export const EveningPath = ({
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
   const startStep = (s: Step) => {
     setOpen(null);
+    track("path_step_started", { kind: s.kind, week: m.week + 1, ...(s.task ? { task: s.task } : {}) });
     if (s.kind === "game") { if (canPlay) setGameOpen(true); }
     else if (s.kind === "act") { markActSeen(); setTick((k) => k + 1); openActionPoints(); }
     else if (s.kind === "fill") onFillDay(s.date!);
@@ -640,7 +642,7 @@ export const EveningPath = ({
     // "Done for today": what's left, all optional (the week's report first when it's ready)
     if (n.kind === "end") {
       if (!eveningDone) return head(t("path.end.title"), t("path.end.left", { count: openLeft }));
-      const go = (f: () => void) => () => { setOpen(null); f(); };
+      const go = (f: () => void, action = "") => () => { setOpen(null); if (action) track("end_card_action", { action }); f(); };
       const ic = "h-5 w-5";
       // Links and the calendar only once there's something on them (her note, Nov 5
       // 2026: on day 1 "See your links" showed nothing; the first days have the
@@ -648,12 +650,12 @@ export const EveningPath = ({
       return (
         <>
           {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
-          {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you"))))}
-          {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest), "gold")}
-          {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true)), m.weekComplete ? "plain" : "teal")}
-          {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion")), "plain")}
-          {hasLinks && button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap), "plain")}
-          {m.totalDays >= 7 && button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => onTask("calendar")), "plain")}
+          {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
+          {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"), "gold")}
+          {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), m.weekComplete ? "plain" : "teal")}
+          {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}
+          {hasLinks && button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap, "links"), "plain")}
+          {m.totalDays >= 7 && button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => onTask("calendar"), "calendar"), "plain")}
         </>
       );
     }

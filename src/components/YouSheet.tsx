@@ -6,7 +6,7 @@
 // from the header, the boat on the map and the animal beside her step.
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, CircleUser, ListChecks, Settings, type LucideProps } from "lucide-react";
+import { ChevronRight, CircleUser, ListChecks, Settings, Share2, type LucideProps } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { WorldStats } from "@/components/IslandStats";
@@ -88,6 +88,8 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
             <Row icon={ListChecks} label={data ? `${t("today.myQuestions")} · ${questions}` : t("today.myQuestions")} onClick={onQuestions} />
             <div className="ml-[66px] h-px bg-foreground/[0.07]" />
             <Row icon={Settings} label={t("common.settings")} onClick={onSettings} />
+            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
+            <Row icon={Share2} label={t("share.button")} onClick={() => window.dispatchEvent(new CustomEvent("memap-share-world", { detail: { from: "you" } }))} />
           </div>
           <div className="mt-5 shrink-0">
             {data && <WorldStats key={visit} islands={islands} routes={routes} trackers={data.trackers} entries={data.entries} facts={facts} />}

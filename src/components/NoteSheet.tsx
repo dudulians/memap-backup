@@ -20,6 +20,7 @@ import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { daysAgoIso, getDoorState } from "@/lib/doors";
 import { Tracker } from "@/types/tracker";
+import { track } from "@/lib/analytics";
 
 export type NoteDraft = { id?: string; date: string; text: string; linkedPatternId: string };
 
@@ -77,6 +78,7 @@ export const NoteSheet = ({
     if (draft.id) await updateNote(draft.id, { text, date: draft.date, linkedPatternId: draft.linkedPatternId || undefined });
     else await addNote({ date: draft.date, text, linkedPatternId: draft.linkedPatternId || undefined });
     haptics.success();
+    track("note_saved", { edited: !!draft.id });
     setDraft(null);
     window.dispatchEvent(new CustomEvent("memap-notes-changed"));
     onSaved();

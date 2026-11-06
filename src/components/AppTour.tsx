@@ -17,6 +17,7 @@ import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { countedDays, markDiscovered } from "@/lib/pathSteps";
 import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
+import { track } from "@/lib/analytics";
 
 type Tab = "cards" | "patterns" | "notes";
 interface Stop {
@@ -219,6 +220,7 @@ export const AppTour = () => {
       mainIsle.current = main ? islandOf(main) : null;
       setData({ trackers, days: countedDays(trackers, entries).length });
       setAt(0);
+      track("tour_started");
     };
     window.addEventListener("memap-start-tour", start);
     return () => window.removeEventListener("memap-start-tour", start);
@@ -278,6 +280,7 @@ export const AppTour = () => {
         if (els.length === 2) link = { a: centre(els[0]), b: centre(els[1]) };
       }
       setView({ at, rect: r, link, isle });
+      track("tour_stop_viewed", { stop: stop.id, index: at });
       shown.current = true;
       await frames(2);
       if (!alive) return;
@@ -303,6 +306,7 @@ export const AppTour = () => {
 
   if (at === null || !data) return null;
   const finish = () => {
+    track("tour_finished", { completed: view?.at === STOPS.length - 1, at: view ? STOPS[view.at].id : "start" });
     markDiscovered("tour");
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
     // her own Map | Globe choice back

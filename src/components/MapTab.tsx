@@ -35,6 +35,7 @@ import { NewIslandSheet } from "./NewIslandSheet";
 import { DaysOverview } from "./DaysOverview";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { track } from "@/lib/analytics";
 
 type Only = "overview" | "trends" | "signals";
 export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
@@ -47,7 +48,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [open, setOpen] = useState<IslandId | null>(null);
+  const [open, setOpenRaw] = useState<IslandId | null>(null);
+  const setOpen = (id: IslandId | null) => { if (id) track("island_opened", { island: id.startsWith("own-") ? "own" : id }); setOpenRaw(id); };
   // Her own island being made (null id) or changed.
   const [editor, setEditor] = useState<{ id: IslandId | null } | null>(null);
   // One switch: the flat map or the rolling globe (her note: one place to
@@ -66,7 +68,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // Which island the calendar / chart / action points show (null: all).
   const [onlyIsland, setOnlyIsland] = useState<IslandId | null>(null);
   // a link's card (from its route), and the two questions it shows on the chart
-  const [link, setLink] = useState<Route | null>(null);
+  const [link, setLinkRaw] = useState<Route | null>(null);
+  const setLink = (r: Route | null) => { if (r) track("link_opened", { next_day: r.nextDay }); setLinkRaw(r); };
   const [onlyIds, setOnlyIds] = useState<string[] | null>(null);
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
@@ -210,7 +213,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {loaded && islands.length > 0 && (
             <div className="seg shrink-0" role="tablist" aria-label={t("map.viewAria")}>
               {(["map", "globe"] as const).map((v) => (
-                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } window.dispatchEvent(new CustomEvent("memap-map-view", { detail: v })); }}
+                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); track("map_view_changed", { view: v }); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } window.dispatchEvent(new CustomEvent("memap-map-view", { detail: v })); }}
                   className={`chip ${view === v ? "is-on" : ""}`}>
                   {v === "map" ? t("map.flat") : t("map.globe")}
                 </button>

@@ -1573,6 +1573,21 @@ const en = {
 
   // 1.8.0 onboarding "doors" + Today hero + echo lines. Context copy is
   // keyed by library template id (see src/lib/doors.ts).
+  share: {
+    button: "Share my world",
+    title: "My world",
+    sub: "Week {{week}} · MeMap",
+    evenings_one: "{{count}} evening",
+    evenings_other: "{{count}} evenings",
+    links_one: "{{count}} link",
+    links_other: "{{count}} links",
+    treasures_one: "{{count}} treasure",
+    treasures_other: "{{count}} treasures",
+    footer: "What comes before my best days",
+    private: "Only islands and numbers. No questions, no answers.",
+    send: "Share",
+    text: "My world in MeMap",
+  },
   growMoment: {
     title: "{{island}} island grew!",
     see: "See the island",

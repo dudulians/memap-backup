@@ -16,6 +16,7 @@ import { buildIslands, buildRoutes, mapPicFor, type Route } from "@/lib/islands"
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { firstLinkState, markFirstLinkSeen } from "@/lib/firstLink";
 import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
+import { track } from "@/lib/analytics";
 
 const delay = (s: number): React.CSSProperties => ({ animationDelay: `${s}s` });
 
@@ -93,6 +94,7 @@ export const LinkMoment = () => {
   const { route } = shown;
   const close = (open: boolean) => {
     haptics.tap();
+    track("first_link_seen", { action: open ? "open" : "close", next_day: route.nextDay });
     markFirstLinkSeen();
     document.documentElement.classList.remove("link-moment-on");
     document.querySelectorAll(".link-moment-new").forEach((el) => el.classList.remove("link-moment-new"));

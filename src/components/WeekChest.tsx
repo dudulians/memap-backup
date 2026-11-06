@@ -12,7 +12,7 @@
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Clock, Crown, FileBarChart2, FlaskConical, Lightbulb, Link2, Sparkles, Target, X } from "lucide-react";
+import { Clock, Crown, FileBarChart2, FlaskConical, Lightbulb, Link2, Share2, Sparkles, Target, X } from "lucide-react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { playSparkle, playThump, preloadSounds } from "@/lib/feedback";
@@ -46,6 +46,7 @@ const WeekDots = ({ k, n, calm, delay }: { k: number; n: number; calm?: boolean;
   </span>
 );
 import { Pressable } from "@/components/ui/pressable";
+import { track } from "@/lib/analytics";
 
 export const WeekChest = ({
   week,
@@ -80,6 +81,7 @@ export const WeekChest = ({
   };
 
   const open = async () => {
+    track("report_opened", { week: week + 1 });
     haptics.soft();
     preloadSounds("sparkle", "thump");
     // Her world now, to say what grew since the last chest.
@@ -344,9 +346,16 @@ export const WeekChest = ({
               ) : (
                 // Nothing is promised a place on the map that isn't drawn: a
                 // new treasure goes to her shelf, the rest to the map.
+                <>
                 <Pressable tone="gold" haptic="none" onClick={hasTreasure ? toTreasures : place} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                   {hasTreasure ? t("path.chest.seeTreasures") : t("path.chest.seeMap")}
                 </Pressable>
+                {/* her week as a picture to share (Nov 6 2026) */}
+                <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("memap-share-world", { detail: { from: "report" } }))}
+                  className="quiet-btn mt-3 h-12 w-full justify-center gap-2 text-[16px]">
+                  <Share2 className="h-5 w-5" strokeWidth={2.4} /> {t("share.button")}
+                </button>
+                </>
               )}
             </div>
           </>

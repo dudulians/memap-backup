@@ -16,6 +16,7 @@ import { isoLocal } from "@/lib/doors";
 import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
 import { Pressable } from "@/components/ui/pressable";
+import { track } from "@/lib/analytics";
 
 const KEY = "memap_upgrade_invite";
 /** Whoever said no (or went back to the old look) is asked again two weeks
@@ -31,6 +32,7 @@ const askAgain = (v: string | null): boolean => {
 };
 
 export const switchToNew = () => {
+  track("ui_switched", { to: "new" });
   try {
     localStorage.setItem("memap_ui", "new");
     localStorage.setItem("memap_path_start", isoLocal(new Date()));
@@ -41,6 +43,7 @@ export const switchToNew = () => {
 };
 
 export const switchToOld = () => {
+  track("ui_switched", { to: "classic" });
   try {
     localStorage.setItem("memap_ui", "classic");
     localStorage.setItem(KEY, declined());

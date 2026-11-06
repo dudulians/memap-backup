@@ -8,6 +8,7 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { progressLines } from "@/lib/reminderLines";
 import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { track } from "@/lib/analytics";
 
 const NOTIFICATION_ENABLED_KEY = "memap_notification_enabled";
 const NOTIFICATION_TIME_KEY = "memap_notification_time";
@@ -77,6 +78,7 @@ export const getNotificationSettings = (): NotificationSettings => {
 };
 
 export const saveNotificationSettings = (settings: NotificationSettings): void => {
+  track("reminders_changed", { enabled: settings.enabled, hour: Number(settings.time.split(":")[0]) || 0 });
   localStorage.setItem(NOTIFICATION_ENABLED_KEY, settings.enabled.toString());
   localStorage.setItem(NOTIFICATION_TIME_KEY, settings.time);
   localStorage.setItem(THRESHOLD_ALERTS_KEY, settings.thresholdAlerts.toString());

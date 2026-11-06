@@ -1,6 +1,9 @@
 /**
  * Mixpanel analytics — minimal anonymous event tracking.
  *
+ * 2.0 adds the new screens' events (the list at the bottom, Nov 6 2026) and a few
+ * user properties (days answered, questions, islands, topic, week).
+ *
  * Track 8 key events that answer "is the product working?":
  *   1. app_opened — every session start (powers DAU / retention)
  *   2. onboarding_step_completed — funnel step granularity
@@ -141,4 +144,15 @@ export type AnalyticsEvent =
   // Return from background. app_opened only fires on a cold start,
   // so without this most real returns were invisible in retention.
   | "app_foregrounded"
-  | "rate_app_tapped";
+  | "rate_app_tapped"
+  // 2.0 (Nov 6 2026, her ask: "намного больше данных"). Same rule: the fact of an
+  // action and its kind, never a question, an answer or a note.
+  | "onboarding_screen" // screen: welcome, fork, pain, good, promise, door, own, curious, companion
+  | "path_step_started" // kind of step, week number
+  | "end_card_action" // what she chose on "Done for today"
+  | "tour_started" | "tour_stop_viewed" | "tour_finished"
+  | "first_link_seen" | "island_grew_seen" | "treasure_earned"
+  | "unload_played" | "hunch_made" | "note_saved" | "experiment_started"
+  | "report_opened" | "island_opened" | "link_opened" | "map_view_changed"
+  | "ui_switched" | "reminders_changed" | "world_shared"
+  | "doctor_report_made";

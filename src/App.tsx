@@ -111,6 +111,20 @@ const App = () => {
     setUserProperty("theme", getTheme());
     setUserProperty("ui", getUiMode());
     setUserProperty("language", getLanguage());
+    // 2.0: where she is (counts and kinds only, never content)
+    void (async () => {
+      try {
+        const [{ getTrackers, getEntries }, { countedDays, pathModel }, { buildIslands }, { getDoorState }] = await Promise.all([
+          import("@/lib/storage"), import("@/lib/pathSteps"), import("@/lib/islands"), import("@/lib/doors"),
+        ]);
+        const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
+        setUserProperty("days_answered", countedDays(trackers, entries).length);
+        setUserProperty("questions", trackers.filter((x) => !x.archived).length);
+        setUserProperty("islands", buildIslands(trackers, entries).length);
+        setUserProperty("week", pathModel(trackers, entries).week + 1);
+        setUserProperty("topic", getDoorState()?.id ?? "none");
+      } catch { /* best effort */ }
+    })();
 
     // Returns from background. iOS keeps the WebView alive for hours,
     // so most "I opened MeMap again" moments never hit app_opened.

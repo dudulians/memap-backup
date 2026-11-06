@@ -14,6 +14,7 @@ import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { litTrackers } from "@/lib/lighthouses";
 import { currentExperiment, experimentOver, getExperiments } from "@/lib/experiments";
 import { hunchDoneToday, readyHunch } from "@/lib/hunches";
+import { track } from "@/lib/analytics";
 
 export const DAYS_PER_WEEK = 7;
 const MAX_PER_STEP = 7;
@@ -264,7 +265,7 @@ export const markUnloadPlayed = () => {
     localStorage.setItem(UNLOAD_KEY, today);
     // the days she played, for the lavender treasure (7 days)
     const days = JSON.parse(localStorage.getItem(UNLOAD_DAYS) || "[]") as string[];
-    if (!days.includes(today)) localStorage.setItem(UNLOAD_DAYS, JSON.stringify([...days, today].slice(-60)));
+    if (!days.includes(today)) { localStorage.setItem(UNLOAD_DAYS, JSON.stringify([...days, today].slice(-60))); track("unload_played", { days: days.length + 1 }); }
   } catch { /* plays again, harmless */ }
 };
 const UNLOAD_DAYS = "memap_unload_days";
