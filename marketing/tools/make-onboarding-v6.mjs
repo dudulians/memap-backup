@@ -476,7 +476,7 @@ const learn6 = ({ sub, weeks }) => P3(`<div class="screen">${navTop(3, 6)}
   </div>
   <div style="margin-top:8px;font-size:13.5px;font-weight:700;color:#6B7184;text-align:center">Patterns depend on your answers. They show what happens together — not causes.</div>
   <div class="grow"></div><div class="btn">Answer today's questions ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>`);
-const checkin = ({ q, isl, h, art, k = 1, n = 4, day = "Tonight", about = "About today" }) => P3(`<div style="position:absolute;inset:0;background:rgba(244,246,252,.94)"></div>
+const checkin = ({ q, isl, h, art, k = 1, n = 4, day = "Tonight", about = "About today", toast = "" }) => P3(`<div style="position:absolute;inset:0;background:rgba(244,246,252,.94)"></div>
   <div style="position:absolute;top:56px;left:0;right:0;text-align:center"><div style="font-size:17px;font-weight:800">${day} · ${k} of ${n}</div><div style="font-size:14px;font-weight:800;color:hsl(${TEAL})">${about}</div></div>
   <div style="position:absolute;left:30px;right:22px;top:132px;height:500px;border-radius:30px;background:#fff;transform:rotate(-3deg);opacity:.6;box-shadow:0 18px 40px -22px rgba(20,40,90,.5)"></div>
   <div style="position:absolute;left:22px;right:22px;top:124px;height:500px;border-radius:30px;background:#fff;box-shadow:0 22px 44px -22px rgba(20,40,90,.55);padding:22px">
@@ -485,7 +485,8 @@ const checkin = ({ q, isl, h, art, k = 1, n = 4, day = "Tonight", about = "About
     <div style="position:absolute;left:24px;right:24px;bottom:34px;font-size:30px;font-weight:800;line-height:1.15;letter-spacing:-.01em">${q}</div></div>
   <div style="position:absolute;left:0;right:0;top:648px;display:flex;justify-content:center"><span style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border-radius:16px;background:#fff;font-size:14px;font-weight:800;color:#6B7184;box-shadow:0 8px 18px -12px rgba(20,40,90,.5)">${icon("hand", { size: 15, sw: 2.4 })} Swipe right for yes, left for no</span></div>
   <div style="position:absolute;left:20px;right:20px;top:698px;display:flex;gap:10px"><span style="flex:1;height:56px;border-radius:20px;background:rgba(58,63,78,.07);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800">← No</span><span style="flex:1;height:56px;border-radius:20px;background:rgba(58,63,78,.07);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800">Yes →</span></div>
-  <div style="position:absolute;left:0;right:0;top:770px;text-align:center;font-size:16px;font-weight:700;color:#6B7184">Not sure</div>`);
+  <div style="position:absolute;left:0;right:0;top:770px;text-align:center;font-size:16px;font-weight:700;color:#6B7184">Not sure</div>
+  ${toast ? `<div style="position:absolute;left:24px;right:24px;top:92px;z-index:5;padding:12px 16px;border-radius:18px;background:#3A3F4E;color:#fff;font-size:15px;font-weight:700;line-height:1.3;box-shadow:0 14px 30px -12px rgba(10,20,40,.6)">${toast}</div>` : ""}`);
 const remind6 = P3(`<div class="screen">${navTop(5, 6)}
   <div style="display:flex;justify-content:center;margin-top:6px"><span style="width:70px;height:70px;border-radius:50%;background:linear-gradient(180deg,#FFD866,#F6B92B);box-shadow:0 5px 0 #CF8E17;display:flex;align-items:center;justify-content:center">${icon("check", { size: 38, sw: 3.2, color: "#fff" })}</span></div>
   <h1 class="c" style="font-size:26px;margin-top:14px">Your first check-in is done</h1>
@@ -496,6 +497,14 @@ const remind6 = P3(`<div class="screen">${navTop(5, 6)}
   <div style="margin-top:12px">${notif("Your 4 questions · 1 min", "First week report in 6 evenings.", "21:00")}</div>
   <div style="margin-top:8px;font-size:13px;font-weight:600;color:#6B7184;text-align:center">At most 2 a day. Only kind words — never warnings.</div>
   <div class="grow"></div><div class="link">Skip</div><div class="btn">Turn on reminders</div></div>`);
+const todayV = ({ chip, done = "First check-in", next = "Look around · 1 min", nextIc = "compass", later = "Tomorrow · 4 questions", doneDisc = true, note = "" }) => P3(`${head("Week 1", doneDisc ? "1" : "")}
+  <div style="position:absolute;top:104px;left:0;right:0;text-align:center"><div class="wk" style="font-size:14px">WEEK 1 · MY DAYS</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;height:34px;padding:0 14px;border-radius:17px;background:#fff;font-size:15px;font-weight:800;box-shadow:0 8px 18px -12px rgba(20,40,90,.5)">${icon("calendar-days", { size: 16, sw: 2.4, color: TEALD })} ${chip}</div></div>
+  ${doneDisc ? `${disc(195, 200, 34, "done", icon("check", { size: 28, sw: 3.2 }))}${lab(195, 244, done)}` : ""}
+  ${cur(195, 420, 44, HUE.lilac, icon(nextIc, { size: 34, sw: 2.4 }))}<div class="startb" style="left:195px;top:350px">Start</div>${lab(195, 478, next)}${boat(48, 382, 80)}
+  ${disc(195, 590, 36, "lock", icon("layers", { size: 28, sw: 2.4 }))}${lab(195, 636, later, true)}
+  ${note ? `<div style="position:absolute;left:36px;right:36px;top:672px;text-align:center;font-size:14px;font-weight:700;color:#6B7184">${note}</div>` : `<div class="dash" style="position:absolute;left:44px;right:44px;top:690px;background:rgba(255,255,255,.75)">${icon("plus", { size: 18, sw: 2.6 })}&nbsp;Add a question</div>`}
+  ${tabbar(0)}`);
 const today6 = P3(`${head("Week 1", "1")}
   <div style="position:absolute;top:104px;left:0;right:0;text-align:center"><div class="wk" style="font-size:14px">WEEK 1 · MY DAYS</div>
     <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;height:34px;padding:0 14px;border-radius:17px;background:#fff;font-size:15px;font-weight:800;box-shadow:0 8px 18px -12px rgba(20,40,90,.5)">${icon("calendar-days", { size: 16, sw: 2.4, color: TEALD })} 1 of 7 check-ins · report on day 7</div></div>
@@ -555,6 +564,62 @@ const HEADLINES = [
 ];
 for (const [k, h, size] of HEADLINES) S6["door-" + k] = door6("understand", h, size);
 
+// ---- every branch, end to end ----
+const GOODT = [["zap", HUE.amber, "Energy"], ["moon", HUE.sleep, "Good sleep"], ["leaf", HUE.health, "Calm"], ["target", HUE.work, "Focus"], ["heart", HUE.love, "Closeness"], ["footprints", HUE.coral, "Movement"], ["smile", HUE.lilac, "Joy"]];
+const goodTopic = (sel) => P3(`<div class="screen">${navTop(1, 6)}
+  <h1 style="font-size:27px;margin-top:4px">What do you want more of?</h1>
+  <div class="sub" style="margin-top:2px;font-size:15px">Pick one to start with. Add more anytime.</div>
+  ${GOODT.map(([ic, h, t]) => lrow(ic, h, t, sel === t)).join("").replace(/height:50px;margin-top:8px/g, "height:46px;margin-top:7px")}
+  ${lrow("pencil", TEAL, "Write your own question").replace("height:50px;margin-top:8px", "height:46px;margin-top:7px")}
+  <div class="grow"></div><div class="btn">Continue</div></div>`);
+const ENEW = [["WEEK 1", "MY DAYS", "calendar-days", "How many days you have enough energy", "Your calendar fills in. Day 7: your first week report.", weekdots([0, 2, 3, 6], GOODC, HARDL)],
+  ["WEEK 2+", "LINKS", "spline", "What happens together", "Often in week 2 — as your answers grow.", twoGroups("Outside 30 min → energy", "9 of 11", "4 of 17")],
+  ["WEEK 3", "WHEN TO ACT", "lighthouse", "Your own rule, or one small change", "E.g. 4 low-energy days a week → early night. Or try: a morning walk.", ""],
+  ["WEEK 4+", "WHAT HELPS", "sprout", "See what changed", "Compare the weeks before and during the change.", `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">Energy days a week <span class="pill" style="height:22px;font-size:12px;padding:0 8px">3 → 5</span></div>`]];
+const OWNW = [["WEEK 1", "MY DAYS", "calendar-days", "How often it really happens", "Your calendar fills in. Day 7: your first week report.", weekdots([1, 2, 5], GOODC, HARDL)],
+  ["WEEK 2+", "LINKS", "spline", "What happens together", "Often in week 2 — as your answers grow.", twoGroups("Long workday → no lunch break", "7 of 9", "2 of 14")],
+  ["WEEK 3", "WHEN TO ACT", "lighthouse", "Your own rule, or one small change", "E.g. 3 days without a break in a week → block lunch in the calendar.", ""],
+  ["WEEK 4+", "WHAT HELPS", "sprout", "See what changed", "Compare the weeks before and during the change.", ""]];
+const SIMPLEW = [["WEEK 1", "MY DAYS", "calendar-days", "How your days go", "Sleep, energy, stress — your calendar fills in.", weekdots([0, 2, 3, 6], GOODC, HARDL)],
+  ["WEEK 2+", "LINKS", "spline", "What happens together", "Often in week 2 — as your answers grow.", twoGroups("7+ hours of sleep → energy", "8 of 10", "3 of 11")],
+  ["WEEK 3", "WHEN TO ACT", "lighthouse", "Your own rule, or one small change", "Or add a topic that matters to you — anytime.", ""],
+  ["WEEK 4+", "WHAT HELPS", "sprout", "See what changed", "Compare the weeks before and during the change.", ""]];
+Object.assign(S6, {
+  // B · daytime
+  "B5-checkin-yesterday": checkin({ q: "Did you have a migraine?", isl: "Health", h: HUE.health, art: "09_waterfall", day: "Yesterday", about: "About Thu 5 Nov" }),
+  "B6-done-yesterday": remind6.replace("4 answers for today · tomorrow, the same 4", "4 answers for Thu 5 Nov · tonight, the same 4"),
+  "B7-today-after-yesterday": todayV({ chip: "1 of 7 check-ins · report on day 7", done: "Yesterday", next: "Tonight · 4 questions", nextIc: "layers", later: "Look around · 1 min" }),
+  "B7b-today-tonight": todayV({ chip: "Your first check-in is tonight", doneDisc: false, next: "Tonight · 4 questions", nextIc: "layers", later: "Look around · 1 min" }),
+  // C · good days
+  "C1-door": door6("good"),
+  "C2-topic": goodTopic("Energy"),
+  "C4-learn": learn6({ sub: "Enough energy", weeks: ENEW }),
+  "C5-checkin": checkin({ q: "Did you have enough energy for your day?", isl: "Me", h: HUE.lilac, art: "17_lavender_garden" }),
+  // D · the quitting thought
+  "D5-checkin": checkin({ q: "Did you seriously consider quitting today?", isl: "Work", h: HUE.work, art: "06_snow_peak" }),
+  // E · own question
+  "E2-topic": topic6("Write your own question"),
+  "E3-own-typed": P3(`<div class="screen">${navTop(1, 6)}
+    <h1 style="font-size:27px;margin-top:4px">Write your own question</h1>
+    <div class="sub" style="margin-top:2px;font-size:15px">One thing you can answer yes or no each evening.</div>
+    <div class="card" style="margin-top:14px;padding:16px;box-shadow:0 0 0 2px hsl(${TEAL}), 0 10px 24px -18px rgba(30,50,110,.6)"><span style="font-size:19px;font-weight:700">Did I take a proper lunch break?</span><span style="display:inline-block;width:2px;height:22px;background:hsl(${TEAL});vertical-align:-4px;margin-left:2px"></span></div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:${TEALD}">${icon("check", { size: 15, sw: 3 })} Works as a yes/no question</div>
+    ${sec("OR TAP AN IDEA")}
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${["Did I drink 2 liters of water?", "Did I call my family?", "Did I spend over my budget?"].map((t) => `<div class="card" style="padding:12px 14px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px">${icon("plus", { size: 16, sw: 2.6, color: TEALD })}${t}</div>`).join("")}</div>
+    <div class="grow"></div><div class="btn">Continue</div></div>`),
+  "E4-questions": questions6({ main: "Did I take a proper lunch break?", mainIsl: "WORK", h: HUE.work, note: "Ideas for your question — change them anytime.", around: [[HUE.work, "Work", "Long workday (9+ hours)?", 1], [HUE.lilac, "Me", "Was today stressful?", 1], [HUE.health, "Body", "Did you sleep 7+ hours?", 1], [HUE.work, "Work", "Back-to-back meetings?", 0]] }),
+  "E5-learn": learn6({ sub: "Lunch breaks", weeks: OWNW }),
+  "E6-checkin": checkin({ q: "Did I take a proper lunch break?", isl: "Work", h: HUE.work, art: "06_snow_peak" }),
+  // F · start simple
+  "F4-learn": learn6({ sub: "Sleep, energy, stress", weeks: SIMPLEW }),
+  "F5-checkin": checkin({ q: "Did you have enough energy for your day?", isl: "Me", h: HUE.lilac, art: "17_lavender_garden", n: 4 }),
+  // G · edge cases
+  "G1-topic-switch": topic6("Bad nights"),
+  "G2-no-around": questions6({ main: "Did you have a migraine today?", mainIsl: "HEALTH", h: HUE.health, note: "Without other questions MeMap still counts how often — links need at least one.", around: [[HUE.health, "Body", "Did you sleep 7+ hours?", 0], [HUE.amber, "Body", "Coffee after 2 pm?", 0], [HUE.lilac, "Me", "Was today stressful?", 0]] }),
+  "G3-not-sure": checkin({ q: "Did you have a migraine today?", isl: "Health", h: HUE.health, art: "09_waterfall", toast: "Left blank — not counted as no. You can fill it in later." }),
+  "G4-today-no-reminders": todayV({ chip: "1 of 7 check-ins · report on day 7", note: "Reminders are off · turn on in You → Settings" }),
+});
+
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--allow-file-access-from-files"] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const p = await ctx.newPage();
@@ -599,5 +664,56 @@ await board(HEADLINES.map(([k]) => "door-" + k),
    "<b>«Найди свои триггеры — и то, что помогает».</b> Слово «триггеры» люди сами используют (наше исследование), но оно звучит как «причины» — так строго нельзя обещать.",
    "<b>«Пойми свои дни».</b> Самое короткое, но немного общее."],
   "Первый экран: 6 заголовков вместо «Find patterns in your days»", "Всё остальное на экране то же; подпись под заголовком объясняет, как это работает", "72-door-headlines.png");
+{
+  const VD = path.join(OUT, "73-onboarding-v6-variants"); mkdirSync(path.join(VD, "for-gpt"), { recursive: true });
+  const strip = async (file, title, sub, items) => {
+    await p.setViewportSize({ width: items.length * 236 + 40, height: 560 });
+    const cells = items.map(([k, note], i) => `<div class="c"><img src="${shots[k]}"><span class="n">${i + 1}</span><p>${note}</p></div>${i < items.length - 1 ? `<div class="ar">→</div>` : ""}`).join("");
+    await p.setContent(`<html><head><style>@font-face{font-family:DM;src:url(${FONT});font-weight:100 900}
+      body{margin:0;background:#EEF1FA;font-family:DM,sans-serif;color:#3A3F4E}h2{margin:0;padding:24px 24px 0;font-size:28px;font-weight:800}h3{margin:6px 24px 0;font-size:17px;font-weight:600;color:#6B7184}
+      .r{display:flex;align-items:flex-start;gap:4px;padding:16px 24px 24px}.c{position:relative;width:206px}.c img{width:206px;border-radius:18px;box-shadow:0 10px 22px -14px rgba(20,40,80,.5);display:block}
+      .n{position:absolute;left:8px;top:8px;width:24px;height:24px;border-radius:12px;background:hsl(174 44% 42%);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+      .c p{margin:8px 2px 0;font-size:14px;font-weight:600;line-height:1.3}.ar{font-size:22px;color:#9AA0B0;font-weight:800;margin-top:200px}</style></head><body><h2>${title}</h2><h3>${sub}</h3><div class="r">${cells}</div></body></html>`);
+    await p.waitForTimeout(700);
+    await p.screenshot({ path: path.join(VD, file), fullPage: true });
+  };
+  await strip("A-migraine-evening.png", "Path A · Something I want to understand → Headaches & migraines (evening)", "Setup (1–4) is apart from the first real check-in (5): door → one topic → your daily questions → what you'll see over time → first check-in → reminder → Today",
+    [["1-door", "Door: what MeMap does, a trust line, the choice"], ["2-topic", "Pick one to start with"], ["3-questions", "Main question + a few around it, one screen"], ["4-learn", "What you'll see over time (honest)"], ["5-checkin", "First real check-in: swipe cards, all 4 for today"], ["6-done-remind", "Done → when to remind you (or Skip)"], ["7-today", "Today: 1 of 7, one next step"]]);
+  await strip("B-migraine-daytime.png", "Path A' · the same, but onboarding happens in the daytime", "Today isn't over yet: answer for yesterday now, or start tonight",
+    [["4-learn", "What you'll see over time"], ["b8-daytime", "It's still daytime: tonight or yesterday?"], ["B5-checkin-yesterday", "If yesterday: all 4 answers for Thu 5 Nov"], ["B6-done-yesterday", "Done (for Thu 5 Nov) → reminder"], ["B7-today-after-yesterday", "Today: yesterday done, tonight next"], ["B7b-today-tonight", "If tonight: Today waits for the first check-in"]]);
+  await strip("C-energy.png", "Path B · More good days → Energy", "Same steps; green = a good day for this question",
+    [["C1-door", "Door: More good days"], ["C2-topic", "What do you want more of? (one)"], ["b7-energy-questions", "Your daily questions"], ["C4-learn", "What you'll see over time"], ["C5-checkin", "First check-in"], ["6-done-remind", "Done → reminder"], ["7-today", "Today"]]);
+  await strip("D-thought.png", "Path C · More topics → Thinking of quitting my job", "A thought, not a problem: neutral blue, no right answer, the decision stays with the person",
+    [["b3-more-topics", "More topics → a thought keeps coming back"], ["b4-quit-questions", "Main: seriously consider quitting today?"], ["b5-quit-learn", "When it comes — and when it doesn't"], ["D5-checkin", "First check-in"], ["6-done-remind", "Done → reminder"], ["7-today", "Today"]]);
+  await strip("E-own-question.png", "Path D · Write your own question", "Any yes/no question; ideas are full questions, not topics",
+    [["E2-topic", "“Write your own question”"], ["E3-own-typed", "Typed, checked as yes/no — or tap an idea"], ["E4-questions", "Your question + ideas around it"], ["E5-learn", "What you'll see over time"], ["E6-checkin", "First check-in"], ["6-done-remind", "Done → reminder"], ["7-today", "Today"]]);
+  await strip("F-start-simple.png", "Path E · Not sure yet? Start simple", "No topic yet: a simple main question + 3 around it; a topic can be added later",
+    [["b1-simple-door", "“Not sure yet? Start simple”"], ["b2-simple", "A simple start: main = enough energy"], ["F4-learn", "What you'll see over time"], ["F5-checkin", "First check-in"], ["6-done-remind", "Done → reminder"], ["7-today", "Today"]]);
+  await strip("G-edge-cases.png", "Edge cases", "One topic at a time · no questions around it · not sure · no reminders",
+    [["G1-topic-switch", "Tapping another topic switches the choice (one at a time)"], ["G2-no-around", "All questions around it removed: still counts, no links"], ["G3-not-sure", "“Not sure” = left blank, not “no”"], ["G4-today-no-reminders", "Reminders skipped: where to turn them on"]]);
+  const box = (t, sub = "", cls = "") => `<div class="bx ${cls}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</div>`;
+  const AR = `<div class="ar">→</div>`;
+  await p.setViewportSize({ width: 1700, height: 600 });
+  await p.setContent(`<html><head><style>@font-face{font-family:DM;src:url(${FONT});font-weight:100 900}
+    body{margin:0;background:#EEF1FA;font-family:DM,sans-serif;color:#3A3F4E;padding:28px}h2{margin:0;font-size:30px;font-weight:800}h3{margin:6px 0 18px;font-size:17px;font-weight:600;color:#6B7184}
+    .g{display:grid;grid-template-columns:230px 40px 330px 40px 1fr;align-items:center;row-gap:12px}.ar{text-align:center;font-size:22px;color:#9AA0B0;font-weight:800}
+    .bx{background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 8px 20px -14px rgba(20,40,80,.5)}.bx b{display:block;font-size:16px}.bx span{display:block;font-size:13px;font-weight:600;color:#6B7184;margin-top:2px;line-height:1.3}
+    .door{grid-row:1 / span 5;height:100%;display:flex;flex-direction:column;justify-content:center}.end{background:hsl(174 44% 42% / .12)}.e{background:#FFF8E6}
+    .tail{margin-top:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}</style></head><body>
+    <h2>MeMap onboarding v6 · every branch</h2><h3>All branches share one flow; only texts and examples change. Setup first, then the first real check-in.</h3>
+    <div class="g">
+      ${box("1 · Door", "Make sense of your days · 1 min a day · no account · answers stay on your phone", "door")}
+      ${AR}${box("Something I want to understand", "Headaches & migraines · Bad nights · Low energy · Period & cycle · Stress")}${AR}${box("Path A · Migraines (strips A, B)", "evening, or daytime → tonight or yesterday")}
+      ${AR}${box("… More topics", "Relationships · Kids · Habits · A thought keeps coming back")}${AR}${box("Path C · Thinking of quitting (strip D)", "neutral blue — no right answer")}
+      ${AR}${box("… Write your own question", "checked as yes/no; ideas are full questions")}${AR}${box("Path D · Own question (strip E)", "e.g. “Did I take a proper lunch break?”")}
+      ${AR}${box("More good days", "Energy · Good sleep · Calm · Focus · Closeness · Movement · Joy")}${AR}${box("Path B · Energy (strip C)", "green = a good day for this question")}
+      ${AR}${box("Not sure yet? Start simple", "a simple main question + 3 around it")}${AR}${box("Path E · Start simple (strip F)", "a topic can be added later")}
+    </div>
+    <div class="tail">${["Pick one to start with", "Your daily questions (main + around)", "What you'll see over time", "First real check-in (Yes · No · Not sure)", "When to remind you (or Skip)", "Today · 1 of 7"].map((t, i) => (i ? AR : "") + box(t, "", "end")).join("")}</div>
+    <div class="tail">${box("Edge cases (strip G)", "one topic at a time · no questions around it → still counts, no links · Not sure = blank, not no · reminders skipped → where to turn them on", "e")}</div>
+    </body></html>`);
+  await p.waitForTimeout(600);
+  await p.screenshot({ path: path.join(VD, "0-MAP.png"), fullPage: true });
+}
 console.log("ok", Object.keys(S6).length);
 await b.close();
