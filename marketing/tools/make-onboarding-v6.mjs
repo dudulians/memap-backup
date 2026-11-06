@@ -428,11 +428,11 @@ const today = (morning) => P3(`${head("Week 1 · 0/7", "")}
 // Door → pick one topic → your daily questions (main + around, one screen) → what you'll
 // see over time (honest) → the first real check-in (swipe cards) → reminder → Today 1/7.
 const trust = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${[["clock", "1 min a day"], ["user-x", "No account"], ["lock", "Answers stay on your phone"]].map(([ic, t]) => `<span style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:15px;background:rgba(255,255,255,.75);font-size:13px;font-weight:800">${icon(ic, { size: 14, sw: 2.4, color: TEALD })}${t}</span>`).join("")}</div>`;
-const door6 = (sel) => P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
+const door6 = (sel, headline = "Find patterns in your days", size = 31) => P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
   ${isle(110, 200, 130, "19_grassy_terraces")}${isle(285, 166, 116, "09_waterfall")}
   <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([152, 172], [200, 104], [232, 146], 14).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
   <div class="screen" style="padding-top:244px">
-    <h1 style="font-size:31px">Find patterns in your days</h1>
+    <h1 style="font-size:${size}px">${headline}</h1>
     <div class="sub" style="margin-top:6px;font-size:16px">A few yes/no questions each evening. See what happens together — and what changes when you try something.</div>
     ${trust}
     ${doorCard("search", HUE.love, "Something I want to understand", "Headaches, bad nights, low energy…", sel === "understand")}
@@ -544,6 +544,16 @@ const S6 = {
       <div class="btn" style="margin-top:18px">Continue</div></div>`),
 };
 
+const HEADLINES = [
+  ["h1", "Make sense of your days", 31],
+  ["h2", "See what goes together in your days", 29],
+  ["h3", "What comes before your hard days — and your good ones?", 26],
+  ["h4", "One minute a night. A clearer picture of your days.", 26],
+  ["h5", "Spot your triggers — and what helps", 29],
+  ["h6", "Understand your days", 31],
+];
+for (const [k, h, size] of HEADLINES) S6["door-" + k] = door6("understand", h, size);
+
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe", args: ["--allow-file-access-from-files"] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const p = await ctx.newPage();
@@ -580,5 +590,13 @@ await board(["b1-simple-door", "b2-simple", "b3-more-topics", "b4-quit-questions
    "<b>Её месяц:</b> «когда мысль приходит — и когда нет», своё правило, «решение — твоё».", "<b>Свой вопрос:</b> поле пустое, идеи — это готовые вопросы «да/нет» (обед, вода, позвонить семье, бюджет), без собаки.",
    "<b>Энергия:</b> «Хватило ли энергии на твой день?» — понятнее, чем «была ли энергия».", "<b>Если онбординг днём:</b> выбор «сегодня вечером» или «за вчера» — все ответы за один день."],
   "Онбординг v6 — ветки", "Те же шаги, разные тексты; особые случаи — правила внутри одного потока, а не отдельные ветки", "71-onboarding-v6-branches.png");
+await board(HEADLINES.map(([k]) => "door-" + k),
+  ["<b>«Разберись в своих днях».</b> Просто и тепло, без обещания причин. <b>Мой выбор.</b>",
+   "<b>«Посмотри, что в твоих днях идёт вместе».</b> Точно описывает, что делает приложение, но длиннее.",
+   "<b>«Что бывает перед трудными днями — и перед хорошими?»</b> Твоя первая идея, теперь с подписью, которая объясняет, как это узнать. Вопрос, а не обещание.",
+   "<b>«Минута вечером — и ясная картина твоих дней».</b> Сразу говорит про усилие и про то, что получишь.",
+   "<b>«Найди свои триггеры — и то, что помогает».</b> Слово «триггеры» люди сами используют (наше исследование), но оно звучит как «причины» — так строго нельзя обещать.",
+   "<b>«Пойми свои дни».</b> Самое короткое, но немного общее."],
+  "Первый экран: 6 заголовков вместо «Find patterns in your days»", "Всё остальное на экране то же; подпись под заголовком объясняет, как это работает", "72-door-headlines.png");
 console.log("ok", Object.keys(S6).length);
 await b.close();
