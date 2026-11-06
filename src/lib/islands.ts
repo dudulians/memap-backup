@@ -78,7 +78,7 @@ const CLUSTER: Record<string, BuiltinIsland> = {
   parenting: "kids", "child-wellbeing": "kids", "trending-yelled": "kids",
   health: "health",
   habits: "body", "trending-alcohol": "body",
-  state: "me", "trending-cried": "me", "big-decisions": "me",
+  state: "me", "trending-cried": "me", "big-decisions": "me", growth: "me",
   pet: "pet",
   "elderly-parent": "parents",
   "external-events": "world", expat: "world",
