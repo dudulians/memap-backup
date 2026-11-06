@@ -12,7 +12,7 @@
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
-import { linkArrow } from "@/lib/linkText";
+import { linkArrow, trackerLookup, type TrackerOf } from "@/lib/linkText";
 import { LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -41,12 +41,12 @@ const useTitles = (trackers: Tracker[]) => (id: string) => {
   return tr ? localizeTrackerTitle(tr.title) : "";
 };
 
-const LinkLine = ({ r, title }: { r: Route; title: (id: string) => string }) => {
+const LinkLine = ({ r, of }: { r: Route; of: TrackerOf }) => {
   const { t } = useTranslation();
   return (
     <div className="surface rounded-[20px] px-4 py-3">
       <p className="text-[16px] font-bold leading-snug">
-        {linkArrow(t, r, title)}{r.nextDay ? ` ${t("map.nextDay")}` : ""}
+        {linkArrow(t, r, of)}{r.nextDay ? ` ${t("map.nextDay")}` : ""}
       </p>
       <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{t("map.timesOf", { k: r.k, count: r.n })}</p>
     </div>
@@ -183,7 +183,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
       {(mine.length > 0 || maybe.length > 0) && (
         <>
           <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.links")}</p>
-          {mine.map((r, i) => <LinkLine key={i} r={r} title={title} />)}
+          {mine.map((r, i) => <LinkLine key={i} r={r} of={trackerLookup(trackers)} />)}
           {maybe.map(({ o, both }) => (
             <div key={o.id} className="flex items-center gap-3 rounded-[20px] border-2 border-dashed border-foreground/15 px-4 py-3">
               <img src={mapPic("icon_" + o.def.icon)} alt="" width={28} height={28} />
@@ -309,7 +309,7 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
       {routes.length > 0 && (
         <>
           <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.links")}</p>
-          {routes.slice(0, 3).map((r, i) => <LinkLine key={i} r={r} title={title} />)}
+          {routes.slice(0, 3).map((r, i) => <LinkLine key={i} r={r} of={trackerLookup(trackers)} />)}
           <p className="text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
         </>
       )}

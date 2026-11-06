@@ -6,9 +6,8 @@ import { useTranslation } from "react-i18next";
 import { BarChart3 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { islandName, type IslandId, type Route } from "@/lib/islands";
-import { linkArrow, linkOther, linkSentence } from "@/lib/linkText";
+import { linkArrow, linkOther, linkSentence, trackerLookup } from "@/lib/linkText";
 import { art, artOf } from "@/lib/globeArt";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
 
@@ -25,10 +24,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
   onChart: (ids: string[]) => void;
 }) => {
   const { t } = useTranslation();
-  const title = (id: string) => {
-    const tr = trackers.find((x) => x.id === id);
-    return tr ? localizeTrackerTitle(tr.title) : "";
-  };
+  const of = trackerLookup(trackers);
   const pic = (id: IslandId) => {
     const name = artOf(id, days[id] ?? 0);
     return (
@@ -65,7 +61,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           )}
 
           <p className="mt-5 text-[22px] font-bold leading-snug tracking-tight">
-            {linkArrow(t, r, title)}
+            {linkArrow(t, r, of)}
             {r.nextDay && <span className="ml-2 inline-flex h-7 translate-y-[-2px] items-center rounded-full bg-[hsl(var(--data-a)/0.14)] px-2.5 align-middle text-[14px] font-bold text-[hsl(var(--strong))]">{t("map.nextDay")}</span>}
           </p>
 
@@ -77,7 +73,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
             ))}
           </div>
           <p className="mt-3 text-[16px] font-medium leading-snug text-muted-foreground">
-            {linkSentence(t, r, title)}
+            {linkSentence(t, r, of)}
           </p>
           {/* the other days, so a coincidence looks like one */}
           <p className="mt-1 text-[16px] font-bold leading-snug">{linkOther(t, r)}</p>

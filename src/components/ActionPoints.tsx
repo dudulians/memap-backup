@@ -10,6 +10,7 @@
 //                 or turn it off.
 // No "all calm" before there is data: "Your world is still taking shape"
 // until a week of evenings. Gold, never red; no alarms.
+import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, FlaskConical, RotateCcw } from "lucide-react";
@@ -50,7 +51,7 @@ const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? localizeTrackerAdvice
  *  then "то кружками, то квадратиками" — a day is always a dot). The same
  *  meter in the list, on the card and in Show; in Show its filled dots are
  *  the dark dots of the last days under it. */
-const RuleMeter = ({ k, n, className }: { k: number; n: number; className?: string }) => {
+const RuleMeter = ({ k, n, period, bare, className }: { k: number; n: number; period: number; bare?: boolean; className?: string }) => {
   const { t } = useTranslation();
   const done = k >= n;
   return (
@@ -60,9 +61,12 @@ const RuleMeter = ({ k, n, className }: { k: number; n: number; className?: stri
           <span key={i} className="aspect-square min-w-0 max-w-3 flex-1 rounded-full" style={{ background: i < k ? "hsl(var(--strong))" : "hsl(var(--foreground) / 0.1)" }} />
         ))}
       </span>
-      <span className={cn("shrink-0 text-[14px] font-bold tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
-        {t(done ? "rules.meterDone" : "rules.meterOf", { k, count: n })}
-      </span>
+      {/* in Show the big line above already says it */}
+      {!bare && (
+        <span className={cn("shrink-0 text-[14px] font-bold tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
+          {t(done ? "rules.meterDone" : "rules.meterOf", { k, n, count: period })}
+        </span>
+      )}
     </span>
   );
 };
@@ -84,8 +88,9 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const lit = rows.filter((r) => r.lit);
   const watching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
   /** the question under the plan; a good one is counted when it's missing */
-  const label = (tr: Tracker) => (tr.problemWhen === "no" ? t("rules.without", { name: name(tr) }) : name(tr));
-  const why = (tr: Tracker, k: number) => t(tr.problemWhen === "no" ? "rules.whyGood" : "rules.whyHard", { name: name(tr), k, count: tr.periodDays });
+  // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
+  const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
+  const why = (tr: Tracker, k: number) => t("rules.whyHard", { name: label(tr), k, count: tr.periodDays });
   const evenings = answeredEvenings(trackers, entries);
   // The week's test running now (one at a time).
   const test = currentExperiment();
@@ -148,7 +153,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <div className="min-w-0 flex-1">
                 <p className="text-[20px] font-bold leading-snug">{plan || name(tr)}</p>
                 {plan && <p className="mt-1 truncate text-[14px] font-medium text-muted-foreground">{label(tr)}</p>}
-                <RuleMeter k={k} n={tr.threshold} className="mt-2" />
+                <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} className="mt-2" />
               </div>
             </div>
             {!plan ? (
@@ -183,7 +188,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                     {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
                     {mine ? testLine : planOf(tr) ? label(tr) : ""}
                   </span>
-                  <RuleMeter k={k} n={tr.threshold} className="mt-2" />
+                  <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} className="mt-2" />
                 </button>
               );
             })}
@@ -192,10 +197,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       )}
 
       {current && sheet?.mode === "show" && (
-        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={name(current.tr)} onClose={() => setSheet(null)} />
+        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={label(current.tr)} onClose={() => setSheet(null)} />
       )}
       {current && sheet?.mode === "change" && (
-        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={name(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
+        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={label(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
       )}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
@@ -243,13 +248,13 @@ const ShowSheet = ({ tracker, k, entries, name, onClose }: { tracker: Tracker; k
           <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{name}</p>
           <p className="mt-2 text-[30px] font-bold leading-tight tracking-tight tabular-nums">
             {k >= tracker.threshold
-              ? t(tracker.problemWhen === "no" ? "rules.bigDoneWithout" : "rules.bigDone", { k, count: tracker.periodDays })
-              : t(tracker.problemWhen === "no" ? "rules.bigOfWithout" : "rules.bigOf", { k, count: tracker.threshold })}
+              ? t("rules.bigDone", { k, count: tracker.periodDays })
+              : t("rules.bigOf", { k, count: tracker.threshold })}
           </p>
-          <RuleMeter k={k} n={tracker.threshold} className="mt-3" />
+          <RuleMeter k={k} n={tracker.threshold} period={tracker.periodDays} bare className="mt-3" />
           <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.ruleLine", { n: tracker.threshold, count: tracker.periodDays })}</p>
           <p className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
-            {t(tracker.problemWhen === "no" ? "rules.dotsGood" : "rules.dotsHard", { count: tracker.periodDays })}
+            {t("rules.dotsHard", { count: tracker.periodDays })}
           </p>
           <div className="mt-2 flex flex-wrap gap-1.5" aria-hidden="true">
             {days.map((d) => (

@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { getDoor, getDoorState } from "@/lib/doors";
 import { isHardAnswer } from "@/lib/islands";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { answerPhrase, cap } from "@/lib/answerPhrases";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 
 const MIN_DAYS = 7;
@@ -16,10 +16,17 @@ export const SteadyCard = ({ trackers, entries }: { trackers: Tracker[]; entries
   const { t } = useTranslation();
   const data = useMemo(() => {
     const door = getDoorState();
-    if (!door || getDoor(door.id)?.branch !== "thought") return null;
-    const main = trackers.find((x) => x.id === door.trackerId && !x.archived);
+    if (!door) return null;
+    // a thought topic, first picked or not (several topics, Nov 6 2026)
+    const all = [{ id: door.id, trackerId: door.trackerId }, ...(door.extra ?? [])];
+    const thought = all.find((x) => getDoor(x.id)?.branch === "thought");
+    if (!thought) return null;
+    const main = trackers.find((x) => x.id === thought.trackerId && !x.archived);
     if (!main) return null;
-    const ctx = door.contextTrackerIds.map((id) => trackers.find((x) => x.id === id && !x.archived)).filter((x): x is Tracker => !!x);
+    // the days around it: its questions, and the other topics' own (a bad night, a fight)
+    const others = all.filter((x) => getDoor(x.id)?.branch !== "thought").map((x) => x.trackerId);
+    const ctxIds = [...new Set([...door.contextTrackerIds, ...others])].filter((id) => id !== main.id);
+    const ctx = ctxIds.map((id) => trackers.find((x) => x.id === id && !x.archived)).filter((x): x is Tracker => !!x);
     const byDay = new Map<string, Map<string, unknown>>();
     for (const e of entries) { if (!byDay.has(e.date)) byDay.set(e.date, new Map()); byDay.get(e.date)!.set(e.trackerId, e.value); }
     const days = [...byDay.entries()].filter(([, m]) => typeof m.get(main.id) === "boolean");
@@ -39,7 +46,7 @@ export const SteadyCard = ({ trackers, entries }: { trackers: Tracker[]; entries
     return { main, rows, other, verdict, answered: days.length };
   }, [trackers, entries]);
   if (!data) return null;
-  const label = (c: Tracker) => (c.problemWhen === "no" ? t("link.without", { q: localizeTrackerTitle(c.title) }) : localizeTrackerTitle(c.title));
+  const label = (c: Tracker) => cap(answerPhrase(t, c, c.problemWhen === "yes"));
   const bar = (k: number, n: number, strong = false) => (
     <span className="mt-1 block h-2.5 overflow-hidden rounded-full bg-foreground/[0.08]">
       <i className={cn("block h-full rounded-full bg-[hsl(var(--data-a))]", !strong && "opacity-60")} style={{ width: `${n ? Math.round((k / n) * 100) : 0}%` }} />
@@ -48,7 +55,7 @@ export const SteadyCard = ({ trackers, entries }: { trackers: Tracker[]; entries
   return (
     <div className="surface mb-4 rounded-[20px] px-4 py-3.5">
       <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("steady.kicker")}</p>
-      <p className="mt-1 text-[18px] font-bold leading-snug">{t("steady.when", { q: localizeTrackerTitle(data.main.title) })}</p>
+      <p className="mt-1 text-[18px] font-bold leading-snug">{t("steady.when", { q: cap(answerPhrase(t, data.main, true)) })}</p>
       {data.rows.map((r) => (
         <div key={r.c.id} className="mt-2.5">
           <div className="flex justify-between gap-3 text-[15px] font-bold"><span className="min-w-0 truncate">{label(r.c)}</span><span className="shrink-0 tabular-nums text-muted-foreground">{t("steady.kOf", { k: r.k, count: r.n })}</span></div>

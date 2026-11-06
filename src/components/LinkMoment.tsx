@@ -14,7 +14,6 @@ import { haptics } from "@/lib/haptics";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, mapPicFor, type Route } from "@/lib/islands";
 import { linkArrow, linkSentence } from "@/lib/linkText";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { firstLinkState, markFirstLinkSeen } from "@/lib/firstLink";
 import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import { track } from "@/lib/analytics";
@@ -75,12 +74,12 @@ export const LinkMoment = () => {
         r = union(isleRects([ea, eb]));
       }
       const byId = new Map(trackers.map((x) => [x.id, x]));
-      const title = (id: string) => { const tr = byId.get(id); return tr ? localizeTrackerTitle(tr.title) : ""; };
+      const of = (id: string) => byId.get(id);
       // the map's own drawn links step back while this one is drawn; the camera that
       // stands on the island (the first-link treasure) glows instead of a second one
       document.documentElement.classList.add("link-moment-on");
       ea.querySelector(".it-camera")?.classList.add("link-moment-new");
-      setShown({ route, titles: [linkArrow(t, route, title), linkSentence(t, route, title)], rect: r, a: centre(ea), b: centre(eb), aRect: ea.getBoundingClientRect() });
+      setShown({ route, titles: [linkArrow(t, route, of), linkSentence(t, route, of)], rect: r, a: centre(ea), b: centre(eb), aRect: ea.getBoundingClientRect() });
       await frames(2);
       setLit(true);
       haptics.success();

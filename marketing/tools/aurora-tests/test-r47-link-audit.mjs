@@ -28,8 +28,8 @@ const out = await p.evaluate(async ({ lang, seed }) => {
     frame: c.correlationFrame(c.trackerPolarity(r.trackerA), c.trackerPolarity(r.trackerB), r.phi), counts: r.counts,
   }));
   const lt = await import("/src/lib/linkText.ts").catch(() => null);
-  const title = (id) => { const t = T.find((x) => x.id === id); return t ? (tt?.localizeTrackerTitle ? tt.localizeTrackerTitle(t.title) : t.title) : id; };
-  const routes = isl.buildRoutes(T, E, islands).map((r) => ({ a: r.a, b: r.b, k: r.k, n: r.n, other: r.other, text: lt ? lt.linkSentence(i18n.t, r, title) : `${title(r.first)} → ${title(r.second)}`, otherText: lt?.linkOther ? lt.linkOther(i18n.t, r) : "" }));
+  const title = (id) => T.find((x) => x.id === id); // linkText takes the question itself (answer phrases, v80)
+  const routes = isl.buildRoutes(T, E, islands).map((r) => ({ a: r.a, b: r.b, k: r.k, n: r.n, other: r.other, text: lt ? lt.linkSentence(i18n.t, r, title) : `${r.first} → ${r.second}`, otherText: lt?.linkOther ? lt.linkOther(i18n.t, r) : "" }));
   // every link that may show, in words (the "without" ones too)
   const words = c.computeCorrelations(T.filter((t) => !t.archived), E, 40).filter(isl.linkWorthShowing).map((r) => {
     const l = isl.linkOf(r), rt = { ...l, first: l.first.id, second: l.second.id };

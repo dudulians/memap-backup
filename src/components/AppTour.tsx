@@ -7,21 +7,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Link2, Sprout } from "lucide-react";
+import { ArrowRight, Check, Link2, Spline, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { getDoorState } from "@/lib/doors";
+import { getDoorState, isoLocal } from "@/lib/doors";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { art, artOf, STAGE_AT, LADDER_WIDTH } from "@/lib/globeArt";
 import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
-import { countedDays, markDiscovered } from "@/lib/pathSteps";
+import { countedDays, markDiscovered, pathModel } from "@/lib/pathSteps";
 import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
 import { track } from "@/lib/analytics";
 
 type Tab = "cards" | "patterns" | "notes";
 interface Stop {
-  id: "world" | "links" | "calendar" | "chart" | "actions" | "helps" | "notes" | "you" | "end";
+  id: "week" | "steps" | "world" | "links" | "calendar" | "chart" | "actions" | "helps" | "notes" | "you" | "end";
   tab: Tab;
   /** what lights up (none: the card stands in the middle) */
   target?: string;
@@ -29,14 +29,22 @@ interface Stop {
    *  link drawn between them ("pair") — her note, Nov 5 2026: the light was on
    *  the whole map, "на другое что-то указывало" */
   isle?: "main" | "pair";
+  /** Today's path: the step before, the one to do now and the next */
+  steps?: boolean;
 }
+// Her note, Nov 6 2026: after onboarding nothing said that Today is there and has steps,
+// and the tour went My days (top row) → a link on the map → back up to the row. Now:
+// Today first (the week's part, then the steps), then the World's row left to right,
+// then down to her island on the map, then Notes and You. It starts by itself after
+// "Your world has begun".
 const STOPS: Stop[] = [
-  { id: "world", tab: "patterns", isle: "main" },
-  // the 4 parts in their order (Nov 6 2026)
+  { id: "week", tab: "cards", target: '[data-tour="week"]' },
+  { id: "steps", tab: "cards", steps: true },
   { id: "calendar", tab: "patterns", target: '[data-tour="calendar"]' },
-  { id: "links", tab: "patterns", isle: "pair" },
+  { id: "links", tab: "patterns", target: '[data-tour="links-card"]' },
   { id: "actions", tab: "patterns", target: '[data-tour="actions"]' },
   { id: "helps", tab: "patterns", target: '[data-tour="helps"]' },
+  { id: "world", tab: "patterns", isle: "main" },
   { id: "notes", tab: "notes", target: '[data-tour="tab-notes"]' },
   { id: "you", tab: "cards", target: '[data-coachmark="settings-button"]' },
   { id: "end", tab: "cards" },
@@ -105,9 +113,79 @@ const Growth = ({ island }: { island: IslandId }) => {
   );
 };
 
-/** Only how far hers is: the link itself is being drawn on her map, island to
- *  island, so the card stays small and clear of it. */
-const Links = ({ days }: { days: number }) => <Dots k={days} n={10} from={1.6} />;
+/** Two islands and the dots between them, drawn in the card (the light stays on the
+ *  row's Links tile, so the tour doesn't jump down to the map and back), then how far
+ *  hers is. */
+const Links = ({ days }: { days: number }) => {
+  const { t } = useTranslation();
+  const k = useCount(4, 1050, 280);
+  const dots = Array.from({ length: 9 }, (_, i) => { const u = (i + 1) / 10; return { x: 62 + u * 158, y: 64 - Math.sin(u * Math.PI) * 26 }; });
+  const isle = (name: string, label: string, left: boolean) => (
+    <span className={cn("absolute bottom-0 flex w-[92px] flex-col items-center", left ? "left-0" : "right-0")}>
+      <span className="block w-[64px]" aria-hidden="true">
+        <img className="art-day block w-full" src={art(name, false)} alt="" />
+        <img className="art-night block w-full" src={art(name, true)} alt="" />
+      </span>
+      <span className="mt-0.5 max-w-full truncate text-[13px] font-bold">{label}</span>
+    </span>
+  );
+  return (
+    <>
+      <Box example>
+        <div className="relative mx-auto h-[104px] w-[282px] max-w-full">
+          <svg viewBox="0 0 282 104" className="absolute inset-0 h-full w-full" aria-hidden="true">
+            {dots.map((p, i) => <circle key={i} className="tour-pop" style={delay(0.3 + i * 0.07)} cx={p.x} cy={p.y} r="3.6" fill="hsl(var(--data-a))" />)}
+          </svg>
+          {isle("19_grassy_terraces", t("tour.links.a"), true)}
+          {isle("09_waterfall", t("tour.links.b"), false)}
+          <span className="tour-pop absolute left-1/2 top-[2px] flex -translate-x-1/2 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[13px] font-extrabold text-[hsl(var(--data-a))] shadow-sm dark:bg-[hsl(var(--surface))]" style={delay(1)}>
+            <Link2 className="h-3.5 w-3.5" strokeWidth={2.8} /><span className="tabular-nums">{t("tour.links.sample", { k: Math.max(1, k), n: 5 })}</span>
+          </span>
+        </div>
+      </Box>
+      <Dots k={days} n={10} from={1.6} />
+    </>
+  );
+};
+
+/** The month's 4 parts, one a week; this week's is lit (board 68). */
+const WeekParts = ({ part }: { part: number }) => {
+  const { t } = useTranslation();
+  const pics = [
+    <span key="d" className="grid grid-cols-3 gap-[3px]">{[0, 0, 1, 0, 1, 0].map((h, i) => <i key={i} className="block h-[7px] w-[7px] rounded-full" style={{ background: h ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />)}</span>,
+    <Spline key="l" className="h-6 w-6 text-[hsl(var(--data-a))]" strokeWidth={2.6} />,
+    <img key="a" src={mapPicFor("lighthouse", false)} alt="" className="h-7 w-auto" />,
+    <Sprout key="h" className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />,
+  ];
+  return (
+    <Box>
+      <div className="grid grid-cols-4 gap-1.5" aria-hidden="true">
+        {pics.map((pic, i) => (
+          <div key={i} className={cn("tour-pop flex flex-col items-center rounded-[14px] px-1 pb-1.5 pt-2 text-center", i === part ? "bg-white shadow-sm ring-2 ring-[hsl(var(--coin-teal))] dark:bg-[hsl(var(--surface))]" : "opacity-70")} style={delay(0.25 + i * 0.22)}>
+            <span className="flex h-7 items-center">{pic}</span>
+            <span className="mt-1 text-[11px] font-extrabold uppercase tracking-[0.04em] text-muted-foreground">{t("how.week", { n: i + 1 })}</span>
+            <span className="text-[12.5px] font-bold leading-tight">{t(`path.title${i}`)}</span>
+          </div>
+        ))}
+      </div>
+    </Box>
+  );
+};
+
+/** What the lights mean: done, the one to do now, later. */
+const StepsLegend = () => {
+  const { t } = useTranslation();
+  const one = (look: ReactNode, label: string, i: number) => (
+    <span className="tour-pop flex items-center gap-2" style={delay(0.25 + i * 0.2)}>{look}<span className="text-[14px] font-bold">{label}</span></span>
+  );
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-1" aria-hidden="true">
+      {one(<span className="flex h-7 w-7 items-center justify-center rounded-full bg-[hsl(var(--coin-gold))] text-white"><Check className="h-4 w-4" strokeWidth={3.2} /></span>, t("tour.steps.done"), 0)}
+      {one(<span className="h-7 w-7 rounded-full bg-[hsl(var(--coin-teal))] ring-[3px] ring-[hsl(var(--coin-teal)/0.25)] ring-offset-2" />, t("tour.steps.now"), 1)}
+      {one(<span className="h-7 w-7 rounded-full border border-foreground/10 bg-white dark:bg-[hsl(var(--surface))]" />, t("tour.steps.later"), 2)}
+    </div>
+  );
+};
 /** "4 of 5 times", counting up under the link on the map. */
 const LinkCount = ({ from }: { from: number }) => {
   const { t } = useTranslation();
@@ -235,7 +313,7 @@ export const AppTour = () => {
   const [moving, setMoving] = useState(true);
   /** the place is lit (it stays lit when the next stop shows the same place) */
   const [lit, setLit] = useState(false);
-  const [data, setData] = useState<{ trackers: Tracker[]; days: number } | null>(null);
+  const [data, setData] = useState<{ trackers: Tracker[]; days: number; week: number; today: boolean } | null>(null);
   const shown = useRef(false);
   const target = useRef<HTMLElement | null>(null);
   const viewBefore = useRef<string | null>(null);
@@ -246,7 +324,12 @@ export const AppTour = () => {
       try { viewBefore.current = localStorage.getItem(MAP_VIEW); } catch { viewBefore.current = null; }
       const door = getDoorState(), main = door ? trackers.find((x) => x.id === door.trackerId) : undefined;
       mainIsle.current = main ? islandOf(main) : null;
-      setData({ trackers, days: countedDays(trackers, entries).length });
+      const counted = countedDays(trackers, entries);
+      setData({ trackers, days: counted.length, week: pathModel(trackers, entries).week, today: counted.includes(isoLocal(new Date())) });
+      // the tour is the "Look around" step: done as it starts, so Today's lit step is
+      // the one after it while the tour shows the path
+      markDiscovered("tour");
+      window.dispatchEvent(new CustomEvent("memap-path-refresh"));
       setAt(0);
       track("tour_started");
     };
@@ -269,6 +352,9 @@ export const AppTour = () => {
     (async () => {
       // the card fades out fully before anything changes place (CSS: .2s)
       if (shown.current) await wait(same ? 210 : 230);
+      // the first stop: Today's path is still gliding to its new step (the tour marks
+      // "Look around" done as it starts), so measure once it has settled
+      else await wait(650);
       if (!alive) return;
       if (stop.tab === "patterns") {
         try { localStorage.setItem(MAP_VIEW, "map"); } catch { /* the globe has no cards; the event below still asks */ }
@@ -293,19 +379,35 @@ export const AppTour = () => {
             if (near) els.push(near);
           }
         }
+      } else if (stop.steps) {
+        // the step to do now (with its Start bubble) and the next one
+        const cur = await findTarget(".path-node.disc-current") ?? await findTarget("[data-path-stop]");
+        if (cur) {
+          const next = document.querySelector<HTMLElement>(`[data-path-stop="${Number(cur.dataset.pathStop) + 1}"]`);
+          els = next ? [cur, next] : [cur];
+        }
       } else if (stop.target) {
         const el = await findTarget(stop.target);
         if (el) els = [el];
       }
       if (!alive) return;
+      // a light on the path with its name under it and (now) its Start bubble
+      const rectsOf = (es: HTMLElement[]) => stop.steps
+        ? es.flatMap((e) => [e, ...e.parentElement!.querySelectorAll<HTMLElement>(":scope > .path-label, :scope > .path-start")].map((x) => x.getBoundingClientRect()))
+        : isleRects(es);
       if (els.length) {
-        const b = union(isleRects(els));
-        if (b.top < 70 || b.bottom > window.innerHeight - 90) els[0].scrollIntoView({ block: b.height > window.innerHeight * 0.5 ? "start" : "center" });
+        const b = union(rectsOf(els));
+        const main = els[0].closest("main");
+        if (stop.steps && main) {
+          // her step a bit below the middle, so the card fits over it
+          const c = els[0].getBoundingClientRect();
+          main.scrollTop += c.top + c.height / 2 - window.innerHeight * 0.6;
+        } else if (b.top < 70 || b.bottom > window.innerHeight - 90) els[0].scrollIntoView({ block: b.height > window.innerHeight * 0.5 ? "start" : "center" });
         await frames(2); await wait(120);
         if (!alive) return;
-        r = union(isleRects(els));
+        r = union(rectsOf(els));
         target.current = els[0]; placed.current = els;
-        if (els.length === 2) link = { a: centre(els[0]), b: centre(els[1]) };
+        if (stop.isle === "pair" && els.length === 2) link = { a: centre(els[0]), b: centre(els[1]) };
       }
       setView({ at, rect: r, link, isle });
       track("tour_stop_viewed", { stop: stop.id, index: at });
@@ -322,7 +424,7 @@ export const AppTour = () => {
   useEffect(() => {
     const re = () => {
       const els = placed.current;
-      if (els.length) setView((v) => (v ? { ...v, rect: union(isleRects(els)), link: els.length === 2 ? { a: centre(els[0]), b: centre(els[1]) } : undefined } : v));
+      if (els.length) setView((v) => (v ? { ...v, rect: union(isleRects(els)), link: v.link && els.length === 2 ? { a: centre(els[0]), b: centre(els[1]) } : undefined } : v));
     };
     window.addEventListener("resize", re);
     return () => window.removeEventListener("resize", re);
@@ -353,7 +455,9 @@ export const AppTour = () => {
   const last = view.at === STOPS.length - 1;
   const next = () => { if (moving) return; haptics.tap(); if (last) finish(); else setAt(view.at + 1); };
 
-  const title = stop.id === "calendar"
+  const part = data.week % 4;
+  const title = stop.id === "week" ? `${t("path.weekN", { n: data.week + 1 })} · ${t(`path.title${part}`)}`
+    : stop.id === "calendar"
     ? t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any")
     : stop.id === "links" ? t("world4.links")
     : stop.id === "actions" ? t("world4.whenToAct")
@@ -361,7 +465,9 @@ export const AppTour = () => {
     : stop.id === "notes" ? t("common.notes")
     : stop.id === "you" ? t("map.you")
     : t(`tour.${stop.id}.title`);
-  const visual = stop.id === "world" ? <Growth island={island} />
+  const visual = stop.id === "week" ? <WeekParts part={part} />
+    : stop.id === "steps" ? <StepsLegend />
+    : stop.id === "world" ? <Growth island={island} />
     : stop.id === "links" ? <Links days={data.days} />
     : stop.id === "calendar" ? <Month />
     : stop.id === "chart" ? <Weeks days={data.days} />
@@ -373,7 +479,14 @@ export const AppTour = () => {
 
   // the card goes where there's room: under the light, over it, or at the bottom
   const vh = window.innerHeight, pad = 8, rect = view.rect;
-  const hole = rect && (stop.target || stop.isle) ? { x: rect.left - pad, y: rect.top - pad, w: rect.width + pad * 2, h: rect.height + pad * 2 } : null;
+  // kept on screen (the path's first step sits under the header)
+  const hole = rect && (stop.target || stop.isle || stop.steps)
+    ? (() => {
+      const vw = window.innerWidth, x = Math.max(4, rect.left - pad), right = Math.min(vw - 4, rect.right + pad);
+      const y = Math.max(4, rect.top - pad), bottom = Math.min(vh - 4, rect.bottom + pad);
+      return { x, y, w: right - x, h: bottom - y };
+    })()
+    : null;
   // the link drawn on the map, dot by dot, from her island to the next one
   const linkDots = view.link ? curveDots(view.link.a, view.link.b) : null;
   const TOP = 52, BOTTOM = 92, GAP = 14;
@@ -409,7 +522,7 @@ export const AppTour = () => {
       <div className="fixed left-4 right-4 mx-auto max-w-[380px]" style={place}>
       <div ref={cardRef} data-tour-card className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", moving && "is-moving")}>
         <p className="text-[22px] font-bold leading-tight tracking-tight">{title}</p>
-        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(`tour.${stop.id}.line`)}</p>
+        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : `tour.${stop.id}.line`)}</p>
         {visual}
         {/* where she is in the tour, then Skip and Next on their own line (Russian words are long) */}
         <div className="mt-3.5 flex justify-center gap-1.5" aria-hidden="true">

@@ -39,6 +39,8 @@ export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], note
     const days = countedDays(trackers, entries).length;
     out.push({ left: Math.max(1, LINKS_AT - days), text: t("notifications.firstLinks", { count: Math.max(1, LINKS_AT - days) }) });
   }
+  // links found: how many, never what (her note, Nov 6 2026: reminders can be beautiful too)
+  else out.push({ left: 2, text: t("notifications.links", { count: routes.length }) });
   // the nearest treasure that comes with evenings
   const f = worldFacts(trackers, entries, islands, routes, notes);
   const next = DAILY.filter((id) => !owned(id, f))

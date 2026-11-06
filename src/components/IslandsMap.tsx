@@ -19,8 +19,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { playBloop, playSparkle, preloadSounds } from "@/lib/feedback";
 import { bridgesOf, islandName, isNightMap, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
-import { linkArrow } from "@/lib/linkText";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { linkArrow, trackerLookup } from "@/lib/linkText";
 import { type GrowthKind, type ItemId } from "@/lib/growth";
 import { IslandPicture } from "@/components/IslandPicture";
 import { islandHsl } from "@/lib/islandColors";
@@ -189,10 +188,7 @@ export const IslandsMap = ({
 
   const last = pos[pos.length - 1];
   const height = Math.max(last ? last.y + BOX_H + 56 : 0, boat ? boat.y + 34 : 0, firstBridge && tip ? firstBridge.tipY + 36 : 0);
-  const title = (id: string) => {
-    const tr = trackers.find((x) => x.id === id);
-    return tr ? localizeTrackerTitle(tr.title) : "";
-  };
+  const of = trackerLookup(trackers);
 
   return (
     <div ref={mapRef} className="relative mx-auto" style={{ width, height }}>
@@ -305,7 +301,7 @@ export const IslandsMap = ({
             <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
               style={{ left: Math.max(8, Math.min(l.bridge.left + l.bridge.w / 2 - 140, width - 288)), top: l.bridge.top + l.bridge.h + 8, width: 280 }}>
               <p className="text-[17px] font-bold leading-snug">
-                {linkArrow(t, l.r, title)}{l.r.nextDay ? ` ${t("map.nextDay")}` : ""}
+                {linkArrow(t, l.r, of)}{l.r.nextDay ? ` ${t("map.nextDay")}` : ""}
               </p>
               <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t("map.timesOf", { k: l.r.k, count: l.r.n })}</p>
               <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>

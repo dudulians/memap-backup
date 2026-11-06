@@ -286,7 +286,7 @@ export const addOwnTracker = async (question: string): Promise<string> => {
   const existing = await getTrackers();
   const text = question.trim();
   const tracker: Tracker = {
-    id: `${Date.now()}-own`,
+    id: `${Date.now()}-own-${uuid().slice(0, 6)}`,
     title: text.replace(/[?？]+$/, "").slice(0, 60),
     category: "Curious",
     questionText: text,

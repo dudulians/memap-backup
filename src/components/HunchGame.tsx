@@ -6,6 +6,7 @@
 // already answers, ones that become new questions, or her own idea. MeMap
 // checks each as she answers and shows them together when there are enough
 // days. First, checked hunches, if any are ready. Counts only, never a cause.
+import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -59,7 +60,8 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
 
   const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
   const sName = (s: Suspect) => (s.kind === "tracked" ? localizeTrackerTitle(s.tracker.title) : ru ? s.template.titleRu : s.template.title);
-  const x = target ? localizeTrackerTitle(target.title) : "";
+  const x = target ? answerPhrase(t, target, true) : "";
+  const tr = (id: string) => trackers.find((y) => y.id === id);
   const avatar = avatarUrl(getAvatar());
   const ownText = own.trim();
   const count = chosen.size + (ownText ? 1 : 0);
@@ -140,14 +142,14 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                 <div key={hunch.id} className="surface rounded-[22px] px-5 py-4">
                   <div className="flex items-center gap-2">
                     <p className="min-w-0 flex-1 text-[19px] font-bold leading-snug">
-                      {name(hunch.suspect)}{result.nextDay ? ` ${t("map.nextDay")}` : ""}
+                      {cap(answerPhrase(t, tr(hunch.suspect), true))}{result.nextDay ? ` ${t("map.nextDay")}` : ""}
                     </p>
                     <span className={cn("shrink-0 rounded-full px-3 py-1 text-[13px] font-bold",
                       result.onto ? "bg-foreground/[0.06] text-[hsl(var(--coin-teal))]" : "bg-foreground/[0.06] text-muted-foreground")}>
                       {t(result.onto ? "hunch.ontoShort" : "hunch.notShort")}
                     </span>
                   </div>
-                  <p className="mt-2 text-[16px] font-semibold leading-snug">{t("hunch.withIt", { b: name(hunch.target), k: result.k, count: result.n })}</p>
+                  <p className="mt-2 text-[16px] font-semibold leading-snug">{t("hunch.withIt", { b: answerPhrase(t, tr(hunch.target), tr(hunch.target)?.problemWhen === "yes"), k: result.k, count: result.n })}</p>
                   <p className="text-[15px] font-medium leading-snug text-muted-foreground">{t("hunch.withoutIt", { k: result.k0, count: result.n0 })}</p>
                 </div>
               ))}

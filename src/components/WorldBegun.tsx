@@ -3,7 +3,7 @@
 // stage, with the ladder and the evenings to the next one; then a reminder as a sheet.
 // "Tonight" (daytime onboarding): "Your world is waiting" + the reminder. All "Not sure":
 // nothing saved, no reward. Events: memap-world-begun {date}, memap-world-waiting.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,8 @@ export const WorldBegun = () => {
   const { t } = useTranslation();
   const [shown, setShown] = useState<Shown | null>(null);
   const [sheet, setSheet] = useState(false);
+  /** the reminder was offered; and the tour waits for it ("Show me around" tapped first) */
+  const asked = useRef(false), tourAfter = useRef(false);
 
   useEffect(() => {
     const begun = async (e: Event) => {
@@ -72,7 +74,8 @@ export const WorldBegun = () => {
       setShown({ kind: "begun", island, days, date });
       track("world_begun", { saved: saved.length, island });
       // the reminder comes after the joy, not instead of it
-      if (!getNotificationSettings().enabled) window.setTimeout(() => setSheet(true), 1600);
+      asked.current = false; tourAfter.current = false;
+      if (!getNotificationSettings().enabled) window.setTimeout(() => { if (!asked.current) { asked.current = true; setSheet(true); } }, 1600);
     };
     const waiting = () => { setShown({ kind: "waiting" }); track("world_waiting"); };
     window.addEventListener("memap-world-begun", begun);
@@ -82,6 +85,13 @@ export const WorldBegun = () => {
 
   if (!shown) return null;
   const close = () => { setSheet(false); setShown(null); };
+  // her note, Nov 6 2026: after onboarding nothing showed Today and its steps. Every
+  // ending goes on to Today and the tour of it, then the World ("Look around").
+  const closeAndTour = () => {
+    close();
+    window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-start-tour")), 450);
+  };
   const left = shown.kind === "begun" ? toNextStage(shown.days) : null;
 
   return (
@@ -104,8 +114,13 @@ export const WorldBegun = () => {
             <div className="mt-5"><GrowthLadder island={shown.island} days={shown.days} /></div>
             {left !== null && <p className="text-center text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.begunNext", { count: left })}</p>}
             <div className="min-h-6 flex-1" />
-            <button type="button" onClick={() => { haptics.tap(); close(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } })); }}
-              className="raised-btn mb-5 w-full justify-center">{t("onb7.seeWorld")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button>
+            <button type="button" onClick={() => {
+              haptics.tap();
+              // the reminder is asked once, before the tour, even when the button comes first
+              if (!asked.current && !getNotificationSettings().enabled) { asked.current = true; tourAfter.current = true; setSheet(true); return; }
+              closeAndTour();
+            }}
+              className="raised-btn mb-5 w-full justify-center">{t("onb7.showAround")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button>
           </>
         )}
         {shown.kind === "waiting" && (
@@ -113,8 +128,8 @@ export const WorldBegun = () => {
             <h1 className="mt-6 text-center text-[29px] font-bold leading-tight tracking-tight">{t("onb7.waitTitle")}</h1>
             <p className="mt-2 text-center text-[17px] font-semibold leading-snug text-muted-foreground">{t("onb7.waitLine")}</p>
             {getNotificationSettings().enabled
-              ? <><div className="min-h-6 flex-1" /><button type="button" onClick={() => { haptics.tap(); close(); }} className="raised-btn mb-5 w-full justify-center">{t("onb7.goToday")}</button></>
-              : <Reminder inline onDone={close} />}
+              ? <><div className="min-h-6 flex-1" /><button type="button" onClick={() => { haptics.tap(); closeAndTour(); }} className="raised-btn mb-5 w-full justify-center">{t("onb7.showAround")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button></>
+              : <Reminder inline onDone={closeAndTour} />}
           </>
         )}
         {shown.kind === "nothing" && (
@@ -124,7 +139,7 @@ export const WorldBegun = () => {
             <div className="min-h-6 flex-1" />
             <button type="button" onClick={() => { haptics.tap(); const d = shown; close(); window.dispatchEvent(new CustomEvent("memap-first-checkin", { detail: { date: d.date, ids: d.ids } })); }}
               className="mb-1 h-11 w-full text-[16px] font-bold text-muted-foreground">{t("onb7.answerAgain")}</button>
-            <button type="button" onClick={() => { haptics.tap(); close(); }} className="raised-btn mb-5 w-full justify-center">{t("onb7.goToday")}</button>
+            <button type="button" onClick={() => { haptics.tap(); closeAndTour(); }} className="raised-btn mb-5 w-full justify-center">{t("onb7.showAround")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button>
           </>
         )}
       </div>
@@ -133,7 +148,7 @@ export const WorldBegun = () => {
         <div className="fixed inset-0 z-[95] flex items-end bg-[rgba(14,24,60,.32)] animate-fade-in" onClick={() => setSheet(false)}>
           <div className="w-full rounded-t-[28px] bg-white px-5 pb-safe pt-3 dark:bg-[hsl(var(--surface))]" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-foreground/15" />
-            <Reminder onDone={() => setSheet(false)} />
+            <Reminder onDone={() => { if (tourAfter.current) closeAndTour(); else setSheet(false); }} />
           </div>
         </div>
       )}

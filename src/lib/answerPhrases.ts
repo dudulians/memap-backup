@@ -1,0 +1,268 @@
+// What an answer means, in plain words (her note, Nov 6 2026: «В дни без «Спал(а) 7+
+// часов» было «Приступ мигрени»» — "выглядит жутко… сделать базу ответов, а не давать
+// эту дичь"). Every library question has a short phrase for its "yes" and its "no",
+// in English and Russian, written to stand on its own in "A → B" and at the start of a
+// sentence, with no case endings to agree. A question she wrote herself has no phrase:
+// it is shown as it is, with its answer ("“Walked the dog”: no").
+import type { TFunction } from "i18next";
+import { getLanguage } from "@/lib/i18n";
+import { LIFE_STREAMS } from "@/lib/lifeStreams";
+import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import type { Tracker } from "@/types/tracker";
+import { S } from "@/lib/answerSentences";
+
+/** [EN yes, EN no, RU yes, RU no], lowercase (capitalised where a line starts). */
+const P: Record<string, [string, string, string, string]> = {
+  // partner & loved ones
+  "argued-with-partner": ["fight with partner", "no fight with partner", "ссора с партнёром", "без ссоры с партнёром"],
+  "felt-close-to-partner": ["closeness with partner", "no closeness with partner", "близость с партнёром", "без близости с партнёром"],
+  "felt-lonely-with-partner": ["feeling alone next to partner", "no distance from partner", "одиночество рядом с партнёром", "без дистанции с партнёром"],
+  "partner-irritated-me": ["irritation at partner", "no irritation at partner", "раздражение на партнёра", "без раздражения на партнёра"],
+  "good-time-together": ["good time together", "no good time together", "хорошее время вдвоём", "без хорошего времени вдвоём"],
+  "partner-brought-flowers": ["flowers from partner", "no flowers", "цветы от партнёра", "без цветов"],
+  "partner-complimented-me": ["compliment from partner", "no compliment from partner", "комплимент от партнёра", "без комплимента от партнёра"],
+  "partner-raised-voice": ["partner raised their voice", "no raised voice", "партнёр повысил голос", "без повышенного голоса"],
+  "partner-said-hurtful": ["hurtful words from partner", "no hurtful words", "обидные слова партнёра", "без обидных слов"],
+  "called-parent": ["call with mom or dad", "no call with parents", "звонок маме или папе", "без звонка родителям"],
+  "thought-about-leaving": ["thought of leaving", "no thought of leaving", "мысль расстаться", "без мысли расстаться"],
+  "had-sex": ["intimacy with partner", "no intimacy", "физическая близость", "без физической близости"],
+  "saw-friends": ["time with friends", "no friends", "общение с друзьями", "без друзей"],
+  "apologized-first": ["apologizing first", "no first apology", "первый шаг с извинением", "без первого шага"],
+  "didnt-like-friend-post": ["a skipped like", "no skipped likes", "пропущенный лайк", "без пропущенных лайков"],
+  "complimented-stranger": ["kind words to a stranger", "no kind words to strangers", "комплимент незнакомцу", "без комплиментов незнакомцам"],
+  "flirted": ["flirting", "no flirting", "флирт", "без флирта"],
+  "thought-about-someone-else": ["thoughts of someone else", "no thoughts of someone else", "мысли о другом человеке", "без мыслей о другом человеке"],
+  "missed-ex": ["missing an ex", "not missing an ex", "тоска по бывшим", "без тоски по бывшим"],
+  // parenting
+  "yelled-at-kid": ["yelling at the kid", "no yelling at the kid", "крик на ребёнка", "без крика на ребёнка"],
+  "felt-bad-parent": ["feeling like a bad parent", "no “bad parent” feeling", "чувство «я плохой родитель»", "без чувства «я плохой родитель»"],
+  "quality-time-kid": ["real time with the kid", "no real time with the kid", "настоящее время с ребёнком", "без настоящего времени с ребёнком"],
+  "ran-out-of-patience": ["out of patience", "patience held", "терпение кончилось", "терпения хватило"],
+  "felt-overwhelmed-parenting": ["parenting felt too much", "parenting felt manageable", "родительство через край", "родительство по силам"],
+  // health
+  "headache": ["headache", "no headache", "головная боль", "без головной боли"],
+  "migraine": ["migraine", "no migraine", "мигрень", "без мигрени"],
+  "back-or-neck-pain": ["back or neck pain", "no back or neck pain", "боль в спине или шее", "без боли в спине и шее"],
+  "stomach-issues": ["stomach trouble", "calm stomach", "проблемы с животом", "спокойный живот"],
+  "felt-nauseous": ["nausea", "no nausea", "тошнота", "без тошноты"],
+  "joint-pain": ["joint pain", "no joint pain", "боль в суставах", "без боли в суставах"],
+  "slept-enough": ["7+ hours of sleep", "short night", "7+ часов сна", "короткая ночь"],
+  "woke-at-night": ["waking at night", "sleeping through", "ночные пробуждения", "сон без пробуждений"],
+  "felt-fatigued": ["feeling drained", "not drained", "сильная усталость", "без сильной усталости"],
+  "period-symptoms": ["strong cycle symptoms", "mild cycle day", "сильные симптомы цикла", "без сильных симптомов цикла"],
+  "exercised": ["workout", "no workout", "тренировка", "без тренировки"],
+  "trained-hard": ["hard training", "no hard training", "серьёзная тренировка", "без серьёзной тренировки"],
+  "stretched": ["stretching", "no stretching", "растяжка", "без растяжки"],
+  "morning-libido": ["morning libido", "no morning libido", "утреннее влечение", "без утреннего влечения"],
+  "felt-recovered": ["rested morning", "wrecked morning", "бодрое утро", "разбитое утро"],
+  "outside-30min": ["30 min outside", "no time outside", "30 минут на улице", "без улицы"],
+  "saw-daylight": ["daylight", "no daylight", "дневной свет", "без дневного света"],
+  "drank-water": ["enough water", "too little water", "достаточно воды", "мало воды"],
+  "ate-by-2pm": ["a meal before 2 pm", "no meal before 2 pm", "еда до 14:00", "без еды до 14:00"],
+  "bed-before-midnight": ["bed before midnight", "bed after midnight", "отбой до полуночи", "отбой после полуночи"],
+  "skin-allergy": ["skin reaction", "no skin reaction", "реакция кожи", "без реакции кожи"],
+  "heart-palpitations": ["palpitations or BP swings", "no palpitations", "сердцебиение или скачки давления", "без сердцебиения и скачков"],
+  "eye-strain": ["tired eyes", "rested eyes", "уставшие глаза", "без усталости глаз"],
+  "took-meds": ["meds taken", "meds missed", "лекарства приняты", "лекарства пропущены"],
+  "napped": ["daytime nap", "no nap", "дневной сон", "без дневного сна"],
+  // body & habits
+  "drank-alcohol": ["alcohol", "no alcohol", "алкоголь", "без алкоголя"],
+  "smoked": ["smoking", "no smoking", "курение", "без курения"],
+  "smoked-hookah": ["hookah", "no hookah", "кальян", "без кальяна"],
+  "coffee-late": ["coffee after 2 pm", "no coffee after 2 pm", "кофе после 14:00", "без кофе после 14:00"],
+  "ate-late": ["late dinner", "no late dinner", "поздний ужин", "без позднего ужина"],
+  "ate-sweets": ["sweets", "no sweets", "сладкое", "без сладкого"],
+  "screen-time-long": ["4+ hours on screens", "less screen time", "4+ часа в экране", "меньше экрана"],
+  "ate-fast-food": ["fast food", "no fast food", "фастфуд", "без фастфуда"],
+  "phone-free-morning": ["phone-free morning", "phone first thing", "утро без телефона", "телефон с утра"],
+  "doomscrolled-news": ["too much news", "little news", "много новостей", "мало новостей"],
+  "gaming-streams-2h": ["2+ hours of games or streams", "less gaming", "2+ часа игр или стримов", "меньше игр и стримов"],
+  "impulse-spending": ["an impulse buy", "no impulse buys", "импульсивная покупка", "без импульсивных покупок"],
+  "stayed-on-budget": ["on budget", "over budget", "в рамках бюджета", "сверх бюджета"],
+  "stalked-ex": ["checking an ex's profile", "not checking an ex", "просмотр страницы бывших", "без просмотра страницы бывших"],
+  "deleted-message": ["a deleted message", "no deleted messages", "стёртое сообщение", "без стёртых сообщений"],
+  "compared-on-social": ["comparing online", "no comparing", "сравнение себя в соцсетях", "без сравнений"],
+  "deleted-own-post": ["a deleted own post", "no deleted posts", "удалённый свой пост", "без удалённых постов"],
+  "rewatched-stories": ["rewatching someone's stories", "no rewatching", "пересмотр чужих сторис", "без пересмотра сторис"],
+  "screenshotted-chat": ["a chat screenshot", "no screenshots", "скриншот переписки", "без скриншотов"],
+  "ordered-delivery": ["delivery instead of cooking", "no lazy delivery", "доставка из лени", "без доставки из лени"],
+  "wore-same-shirt": ["same shirt again", "fresh clothes", "та же одежда второй день", "свежая одежда"],
+  "looped-one-song": ["one song on repeat", "no song on repeat", "одна песня по кругу", "без песни по кругу"],
+  "ate-by-fridge": ["eating by the fridge", "no eating by the fridge", "еда у холодильника", "без еды у холодильника"],
+  "skipped-cleaning": ["cleaning put off", "cleaning done", "уборка отложена", "уборка сделана"],
+  "bought-on-sale": ["buying on sale", "no sale buys", "покупка на распродаже", "без покупок на распродаже"],
+  "paid-to-skip-effort": ["paying to skip effort", "doing it all yourself", "оплата вместо своих усилий", "всё своими силами"],
+  "cooked-myself": ["home cooking", "no home cooking", "своя готовка", "без своей готовки"],
+  "screens-before-bed": ["screens before bed", "no screens before bed", "экран перед сном", "без экрана перед сном"],
+  "walked-a-lot": ["7,000+ steps", "under 7,000 steps", "7000+ шагов", "меньше 7000 шагов"],
+  "ate-vegetables": ["vegetables or fruit", "no vegetables or fruit", "овощи или фрукты", "без овощей и фруктов"],
+  // me & my state
+  "felt-happy": ["happy day", "day without joy", "счастливый день", "день без радости"],
+  "felt-anxious": ["anxiety", "no anxiety", "тревога", "без тревоги"],
+  "felt-depressed": ["low mood", "no low mood", "подавленность", "без подавленности"],
+  "felt-angry": ["anger", "no anger", "злость", "без злости"],
+  "felt-lonely": ["loneliness", "no loneliness", "одиночество", "без одиночества"],
+  "had-energy": ["energy", "low energy", "энергия", "мало энергии"],
+  "cried-today": ["tears", "no tears", "слёзы", "без слёз"],
+  "burned-out-after-work": ["burnout after work", "no burnout after work", "выгорание после работы", "без выгорания после работы"],
+  "didnt-want-to-work": ["not wanting to work", "work felt okay", "нежелание идти на работу", "работа без нежелания"],
+  "worked-overtime": ["long workday", "normal workday", "переработка", "без переработки"],
+  "felt-fulfilled-at-work": ["meaningful work", "flat work day", "работа дала энергию", "работа без энергии"],
+  "main-thing-done": ["main thing done", "main thing not done", "главное сделано", "главное не сделано"],
+  "focus-hour": ["a focus hour", "no focus hour", "час без отвлечений", "без часа фокуса"],
+  "kept-morning-promise": ["morning promise kept", "morning promise not kept", "обещание себе выполнено", "обещание себе не выполнено"],
+  "procrastinated": ["procrastination", "no procrastination", "прокрастинация", "без прокрастинации"],
+  "no-snooze": ["up on the first alarm", "snoozing", "подъём с первого будильника", "будильник отложен"],
+  "felt-proud-today": ["pride in the day", "no pride in the day", "гордость за день", "без гордости за день"],
+  "felt-useless": ["feeling useless", "feeling useful", "чувство бесполезности", "без чувства бесполезности"],
+  "snapped-at-loved-ones": ["snapping at someone close", "no snapping", "срыв на близких", "без срывов на близких"],
+  "calm-day": ["day without irritation", "irritated day", "день без раздражения", "день с раздражением"],
+  "felt-calm": ["calm", "no calm", "спокойствие", "без спокойствия"],
+  "time-for-myself": ["me-time", "no me-time", "время для себя", "без времени для себя"],
+  "isolated-at-home": ["whole day home without people", "time with people", "весь день дома без людей", "живое общение"],
+  "said-yes-when-meant-no": ["a forced yes", "no forced yes", "согласие через силу", "без согласия через силу"],
+  "cried-from-something-small": ["tears over small things", "no tears over small things", "слёзы от мелочей", "без слёз от мелочей"],
+  "laughed-uncontrollably": ["laughing to tears", "no big laugh", "смех до слёз", "без смеха до слёз"],
+  "envied-on-social": ["envy online", "no envy online", "зависть в соцсетях", "без зависти в соцсетях"],
+  "felt-not-like-others": ["feeling “not like others”", "no “not like others” feeling", "чувство «не как все»", "без чувства «не как все»"],
+  "danced-or-sang-alone": ["dancing or singing alone", "no dancing or singing", "танцы или пение", "без танцев и пения"],
+  "petted-an-animal": ["petting a cat or dog", "no cat or dog", "котик или собака на руках", "без котиков и собак"],
+  "liked-my-selfie": ["a selfie you liked", "no liked selfie", "удачное селфи", "без удачного селфи"],
+  "talked-to-pet": ["talking to a pet or plant", "no talking to pets", "разговор с питомцем или растением", "без разговоров с питомцем"],
+  "in-flow": ["flow", "no flow", "поток", "без потока"],
+  "boss-was-difficult": ["difficult boss", "easy day with the boss", "трудный босс", "спокойно с боссом"],
+  "conflict-with-colleague": ["conflict with a colleague", "no conflict at work", "конфликт с коллегой", "без конфликта с коллегой"],
+  "drained-by-someone": ["someone draining", "no one draining", "кто-то выматывал", "никто не выматывал"],
+  "got-recognition": ["praise or recognition", "no praise", "похвала или признание", "без похвалы"],
+  "heard-bad-news": ["bad news", "no bad news", "плохие новости", "без плохих новостей"],
+  "home-was-tidy": ["tidy home", "messy home", "порядок дома", "беспорядок дома"],
+  "felt-stressed": ["stress", "no stress", "стресс", "без стресса"],
+  "meditated": ["meditation", "no meditation", "медитация", "без медитации"],
+  "felt-grateful": ["something good noticed", "nothing good noticed", "замеченное хорошее", "хорошее не замечено"],
+  // big decisions (no right answer)
+  "wanted-child": ["wanting a child", "no wish for a child", "желание ребёнка", "без желания ребёнка"],
+  "thought-about-emigrating": ["thought of moving abroad", "no thought of moving", "мысль уехать", "без мысли уехать"],
+  "wanted-leave-job": ["wanting to quit", "no wish to quit", "хочется уволиться", "без желания уволиться"],
+  "thought-divorce": ["thought of ending it", "no thought of ending it", "мысль расстаться", "без мысли расстаться"],
+  "wanted-life-change": ["wanting a big change", "no urge for change", "желание всё поменять", "без желания всё поменять"],
+  "wanted-pet": ["wanting a pet", "no wish for a pet", "хочется питомца", "без желания завести питомца"],
+  "wanted-learn-new": ["wanting to learn something new", "no wish to learn", "желание учиться", "без желания учиться"],
+  "thought-career-change": ["thought of a career change", "no thought of a career change", "мысль сменить профессию", "без мысли сменить профессию"],
+  // hobbies & growth
+  "studied-language": ["language practice", "no language practice", "занятие языком", "без занятий языком"],
+  "watched-course-lecture": ["a course lecture", "no lecture", "лекция курса", "без лекции"],
+  "did-creative-work": ["something creative", "nothing creative", "творчество", "без творчества"],
+  "learned-something-new": ["something new learned", "nothing new learned", "новое знание", "без нового"],
+  "practiced-skill": ["skill practice", "no practice", "практика навыка", "без практики"],
+  "listened-podcast": ["podcast or audiobook", "no podcast", "подкаст или аудиокнига", "без подкаста"],
+  "read-book": ["reading", "no reading", "чтение", "без чтения"],
+  "hobby-time": ["hobby time", "no hobby", "хобби", "без хобби"],
+  // what happens around
+  "noisy-neighbors": ["noisy neighbors", "quiet neighbors", "шумные соседи", "тихие соседи"],
+  "construction-nearby": ["construction noise", "no construction noise", "стройка рядом", "без стройки"],
+  "long-commute": ["long commute", "easy commute", "долгая дорога", "быстрая дорога"],
+  "transport-issue": ["transport trouble", "transport on time", "сбой транспорта", "транспорт без сбоев"],
+  "internet-down": ["connection trouble", "connection fine", "проблемы со связью", "связь без проблем"],
+  "criticized-by-close": ["criticism from someone close", "no criticism", "критика от близких", "без критики"],
+  "parent-pressured": ["pressure from a parent", "no pressure from parents", "давление родителя", "без давления родителей"],
+  "toxic-friend": ["a draining friend", "no draining friends", "токсичное общение с другом", "без токсичного общения"],
+  "kids-reached-out": ["kids called or wrote", "no word from the kids", "звонок или сообщение от детей", "дети не писали"],
+  "financial-issue": ["unexpected bills", "no unexpected bills", "неожиданные траты", "без неожиданных трат"],
+  // life abroad
+  "spoke-local-language": ["speaking the local language", "no local language", "местный язык", "без местного языка"],
+  "studied-local-language": ["local language study", "no language study", "занятие местным языком", "без занятий местным языком"],
+  "didnt-understand-locals": ["not understanding locals", "following locals", "непонимание местных", "понимание местных"],
+  "couldnt-express-self": ["language barrier", "no language barrier", "языковой барьер", "без языкового барьера"],
+  "language-progress": ["language progress", "no progress felt", "прогресс в языке", "без прогресса в языке"],
+  "missed-home-country": ["missing home", "not missing home", "тоска по дому", "без тоски по дому"],
+  "called-someone-back-home": ["a call home", "no call home", "связь с домом", "без связи с домом"],
+  "missed-familiar-food": ["missing home food", "not missing home food", "тоска по своей еде", "без тоски по своей еде"],
+  "missed-familiar-weather": ["missing home weather", "not missing home weather", "тоска по своей погоде", "без тоски по погоде"],
+  "felt-foreigner": ["feeling foreign", "feeling at home", "чувство чужбины", "чувство дома"],
+  "felt-settled-in": ["feeling settled", "not settled yet", "чувство «я тут дома»", "без чувства дома"],
+  "locals-were-warm": ["warm locals", "no warm contact", "тёплые местные", "без тёплого контакта"],
+  "talked-to-fellow-expats": ["time with fellow expats", "no fellow expats", "общение с земляками", "без земляков"],
+  "dealt-with-paperwork": ["paperwork or visa", "no paperwork", "документы или виза", "без бюрократии"],
+  "local-institution-contact": ["bank, doctor or office", "no offices", "банк, врач или госконтора", "без госконтор"],
+  "climate-drained-me": ["draining weather", "easy weather", "климат выматывал", "климат не мешал"],
+  "tried-local-food": ["local food", "no local food", "местная еда", "без местной еды"],
+  "thought-about-going-back": ["thought of going back", "no thought of going back", "мысль вернуться", "без мысли вернуться"],
+  "thought-third-country": ["thought of another country", "no thought of another country", "мысль о другой стране", "без мысли о другой стране"],
+  "happy-with-the-move": ["glad about the move", "doubts about the move", "радость от переезда", "сомнения в переезде"],
+  // pet
+  "pet-limped": ["pet limping", "pet walking fine", "питомец хромал", "питомец не хромал"],
+  "pet-skipped-food": ["pet skipped food", "pet ate well", "питомец не ел", "питомец хорошо ел"],
+  "pet-low-energy": ["sluggish pet", "active pet", "вялый питомец", "бодрый питомец"],
+  "pet-restless-night": ["restless night for the pet", "calm night for the pet", "беспокойная ночь питомца", "спокойная ночь питомца"],
+  "pet-stomach-upset": ["pet's upset stomach", "pet's stomach fine", "расстройство ЖКТ у питомца", "ЖКТ питомца в порядке"],
+  "pet-anxious": ["anxious pet", "calm pet", "тревожный питомец", "спокойный питомец"],
+  "pet-playful": ["playful pet", "quiet pet", "игривый питомец", "питомец без игр"],
+  // elderly parent
+  "parent-confused": ["parent confused", "parent clear", "родитель путался", "родитель не путался"],
+  "parent-skipped-meal": ["parent skipped a meal", "parent ate", "родитель пропустил еду", "родитель поел"],
+  "parent-slept-poorly": ["parent slept poorly", "parent slept well", "родитель плохо спал", "родитель хорошо спал"],
+  "parent-stumbled": ["parent stumbled or fell", "parent steady", "родитель споткнулся или упал", "без падений"],
+  "parent-took-meds": ["parent's meds taken", "parent's meds missed", "лекарства родителя приняты", "лекарства родителя пропущены"],
+  "parent-pain": ["parent in pain", "parent without pain", "родитель жаловался на боль", "родитель без боли"],
+  "parent-good-mood": ["parent in a good mood", "parent's mood low", "хорошее настроение родителя", "плохое настроение родителя"],
+  // child
+  "child-meltdown": ["child's meltdown", "no meltdown", "истерика у ребёнка", "без истерики"],
+  "child-slept-poorly": ["child slept poorly", "child slept well", "ребёнок плохо спал", "ребёнок хорошо спал"],
+  "child-refused-food": ["child refused food", "child ate well", "ребёнок не ел", "ребёнок хорошо ел"],
+  "child-too-much-screen": ["lots of screens for the child", "little screen for the child", "много экрана у ребёнка", "мало экрана у ребёнка"],
+  "child-physical-activity": ["child moved a lot", "child moved little", "ребёнок много двигался", "ребёнок мало двигался"],
+  "child-bright-moment": ["bright moment with the child", "no bright moment", "светлый момент с ребёнком", "без светлого момента"],
+  "child-sick-symptoms": ["child's sick symptoms", "child healthy", "симптомы болезни у ребёнка", "ребёнок здоров"],
+};
+
+// a tracker made from the library: "1793…-migraine-0" (ensureTemplates), or by its title
+const byTitle = (() => {
+  let m: Map<string, string> | null = null;
+  return () => {
+    if (!m) {
+      m = new Map();
+      for (const s of LIFE_STREAMS) for (const tpl of s.templates) for (const x of [tpl.title, tpl.titleRu]) m.set(x.trim().toLowerCase(), tpl.id);
+    }
+    return m;
+  };
+})();
+export const templateIdOf = (tr: Tracker): string | null => {
+  const fromId = /^\d+-(.+)-\d+$/.exec(tr.id)?.[1];
+  if (fromId && P[fromId]) return fromId;
+  const id = byTitle().get((tr.title ?? "").trim().toLowerCase());
+  return id && P[id] ? id : null;
+};
+
+export const cap = (s: string) => (s ? s[0].toLocaleUpperCase() + s.slice(1) : s);
+
+/** "short night", "migraine", "no anxiety"; her own question: "“Walked the dog”: no". */
+export const answerPhrase = (t: TFunction, tr: Tracker | undefined, yes: boolean): string => {
+  if (!tr) return "";
+  const id = templateIdOf(tr);
+  if (id) { const p = P[id]; return getLanguage() === "ru" ? (yes ? p[2] : p[3]) : yes ? p[0] : p[1]; }
+  return t("link.own", { q: localizeTrackerTitle(tr.title), a: t(yes ? "link.yes" : "link.no") });
+};
+
+/** For a test that every library question has its phrases. */
+export const phraseIds = () => Object.keys(P);
+export const sentenceIds = () => Object.keys(S);
+
+/** How often, from k of n (her "On days you slept under 7 hours, you OFTEN had a
+ *  migraine"): almost always · usually · often · more often (a link is only shown
+ *  when it came more often than on other days, so "more often" is always true). */
+export const oftenWord = (t: TFunction, k: number, n: number): string => {
+  const r = n ? k / n : 0;
+  return t(`link.adv${r >= 0.9 ? 0 : r >= 0.7 ? 1 : r >= 0.5 ? 2 : 3}`);
+};
+
+/** An answer as a clause: the cause ("you sleep under 7 hours") or the result, with
+ *  how often ("you usually get a migraine"). Her own question: "you answer “no” to …". */
+export const answerClause = (t: TFunction, tr: Tracker | undefined, yes: boolean, role: "cause" | "result", often = ""): string => {
+  if (!tr) return "";
+  const id = templateIdOf(tr);
+  const s = id && S[id]
+    ? (getLanguage() === "ru" ? (yes ? S[id][2] : S[id][3]) : yes ? S[id][0] : S[id][1])
+    : t("link.ownClause", { q: localizeTrackerTitle(tr.title).replace(/[?？]+$/, ""), a: t(yes ? "link.yes" : "link.no") });
+  const [cause, result] = s.includes("|") ? s.split("|") : [s, s];
+  return (role === "cause" ? cause.replace("~", "") : result.replace("~", often ? `${often} ` : "")).replace(/\s+/g, " ").trim();
+};

@@ -14,7 +14,7 @@ import i18n from "@/lib/i18n";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, linkOf, linkWorthShowing, mapPicFor, type IslandId } from "@/lib/islands";
-import { linkOther, linkSentence } from "@/lib/linkText";
+import { linkOther, linkSentence, linkShort } from "@/lib/linkText";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { isoLocal } from "@/lib/doors";
@@ -125,11 +125,11 @@ const collect = (r: ReportInput): Data => {
   const pairs = computeCorrelations(qs, inPeriod, 6).filter(linkWorthShowing).slice(0, 4);
   return { days, first, last, qs, main: qs.find((q) => q.id === r.mainId) ?? qs[0], vals, answeredDays, pairs };
 };
-const linkLine = (c: CorrelationResult) => {
+const linkLine = (c: CorrelationResult, style: ReportStyle = "me") => {
   const l = linkOf(c);
   const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
-  const title = (id: string) => localizeTrackerTitle((id === l.first.id ? l.first : l.second).title);
-  return { a: l.first, b: l.second, text: `${linkSentence(i18n.t, route, title)} ${linkOther(i18n.t, route)}` };
+  const of = (id: string) => (id === l.first.id ? l.first : l.second);
+  return { a: l.first, b: l.second, text: `${(style === "pro" ? linkShort : linkSentence)(i18n.t, route, of)} ${linkOther(i18n.t, route)}` };
 };
 
 // --- a month calendar ------------------------------------------------------------
@@ -349,7 +349,7 @@ const drawPro = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]>
   if (data.pairs.length === 0) { p.room(60); p.text(t("report.togetherNone"), 24, 600, SOFT); p.y += 20; }
   for (const c of data.pairs) {
     g().font = `600 24px ${FONT}`;
-    const lines = wrap(g(), linkLine(c).text, SPAN - 40);
+    const lines = wrap(g(), linkLine(c, "pro").text, SPAN - 40);
     p.room(lines.length * 34 + 20);
     g().fillStyle = TEAL; g().beginPath(); g().arc(M + 9, p.y - 9, 7, 0, Math.PI * 2); g().fill();
     lines.forEach((l, i) => { p.text(l, 24, 600, INK, M + 32); if (i < lines.length - 1) p.y += 33; });

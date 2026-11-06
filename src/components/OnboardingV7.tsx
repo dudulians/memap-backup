@@ -22,7 +22,10 @@ import { asQuestion, templateQuestion } from "@/lib/cardText";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import type { Tracker } from "@/types/tracker";
 
-export type V7Pick = { kind: "door"; id: DoorId } | { kind: "simple" } | { kind: "own"; text: string };
+/** Several topics (her note, Nov 6 2026: "нет множественного выбора… это неправильно");
+ *  the first one picked leads (its island is lit, its calendar is "Your … days"). */
+export type V7Pick = { kind: "door"; ids: DoorId[]; own?: string } | { kind: "simple" } | { kind: "own"; text: string };
+export const MAX_TOPICS = 3;
 /** What the setup made: the questions for the first check-in. */
 export interface V7Setup { ids: string[]; mainId: string; doorId: DoorId | null }
 
@@ -132,18 +135,28 @@ const MORE: { sec: string; ids: DoorId[] }[] = [
   { sec: "onb7.secHabits", ids: ["drinking", "mood"] },
   { sec: "onb7.secThought", ids: ["quit", "move"] },
 ];
-export const TopicV7 = ({ onBack, onPick, onOwn, initial }: { onBack: () => void; onPick: (id: DoorId) => void; onOwn: () => void; initial?: DoorId | null }) => {
+export const TopicV7 = ({ onBack, onPick, onOwn, onClearOwn, initial, own }: {
+  onBack: () => void; onPick: (ids: DoorId[]) => void; onOwn: (ids: DoorId[]) => void; onClearOwn: () => void; initial?: DoorId[]; own?: string | null;
+}) => {
   const { t } = useTranslation();
-  const [sel, setSel] = useState<DoorId | null>(initial ?? null);
-  const [more, setMore] = useState(!!initial && !FIRST.includes(initial));
+  const [sel, setSel] = useState<DoorId[]>(initial ?? []);
+  const [more, setMore] = useState(!!initial?.some((id) => !FIRST.includes(id)));
+  const [full, setFull] = useState(false);
   const name = (id: DoorId) => t(id === "energy" ? "onb7.lowEnergy" : `doors.${id}.name`);
+  const room = MAX_TOPICS - (own ? 1 : 0);
+  const toggle = (id: DoorId) => {
+    if (sel.includes(id)) { setSel((s) => s.filter((x) => x !== id)); setFull(false); return; }
+    if (sel.length >= room) { setFull(true); haptics.warning?.(); return; }
+    setSel((s) => [...s, id]);
+  };
+  const on = (id: DoorId) => sel.includes(id);
   return (
     <Page>
       <Top onBack={onBack} step={0} />
       <H1 className="mt-5">{t("onb7.topicTitle")}</H1>
-      <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.topicSub")}</p>
+      <p className={cn("mt-1.5 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
       <div className="mt-4 flex flex-col gap-2">
-        {FIRST.map((id) => { const d = getDoor(id)!; return <Row key={id} on={sel === id} onClick={() => setSel(id)} icon={<Dot door={d} />}>{name(id)}</Row>; })}
+        {FIRST.map((id) => { const d = getDoor(id)!; return <Row key={id} on={on(id)} onClick={() => toggle(id)} icon={<Dot door={d} />}>{name(id)}</Row>; })}
         <button type="button" onClick={() => { haptics.tap(); setMore((v) => !v); }} aria-expanded={more} data-onb-interactive
           className="surface flex min-h-[52px] w-full items-center gap-3 rounded-[18px] px-4 text-left text-[17px] font-bold">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06]"><LayoutGrid className="h-5 w-5 text-muted-foreground" strokeWidth={2.2} /></span>
@@ -156,29 +169,32 @@ export const TopicV7 = ({ onBack, onPick, onOwn, initial }: { onBack: () => void
               <div key={g.sec}>
                 <p className="pt-3 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t(g.sec)}</p>
                 {g.ids.map((id) => (
-                  <button key={id} type="button" onClick={() => { haptics.tap(); setSel(id); }} aria-pressed={sel === id} data-onb-interactive
+                  <button key={id} type="button" onClick={() => { haptics.tap(); toggle(id); }} aria-pressed={on(id)} data-onb-interactive
                     className="flex min-h-[44px] w-full items-center justify-between border-b border-foreground/[0.06] text-left text-[16px] font-bold last:border-0">
                     {t(`doors.${id}.name`)}
-                    {sel === id && <span className="tick is-on" aria-hidden="true"><Check className="h-4 w-4" strokeWidth={3} /></span>}
+                    {on(id) && <span className="tick is-on" aria-hidden="true"><Check className="h-4 w-4" strokeWidth={3} /></span>}
                   </button>
                 ))}
               </div>
             ))}
           </div>
         )}
-        <Row on={false} onClick={onOwn} icon={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)]"><Pencil className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} /></span>}>{t("onb7.writeOwn")}</Row>
+        {/* her own question sits among the topics, ticked; a tap takes it off */}
+        {own
+          ? <Row on onClick={() => { onClearOwn(); setFull(false); }} icon={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)]"><Pencil className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} /></span>}>{own}</Row>
+          : <Row on={false} onClick={() => { if (sel.length >= MAX_TOPICS) { setFull(true); return; } onOwn(sel); }} icon={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)]"><Pencil className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} /></span>}>{t("onb7.writeOwn")}</Row>}
       </div>
       <div className="min-h-6 flex-1" />
-      <Main disabled={!sel} onClick={() => { if (sel) { track("door_selected", { door: sel }); onPick(sel); } }}>{t("doors.continue")}</Main>
+      <Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0) }); onPick(sel); }}>{t("doors.continue")}</Main>
     </Page>
   );
 };
 
 // --- 2b. your own question -----------------------------------------------------------
 const IDEAS = ["onb7.idea1", "onb7.idea2", "onb7.idea3", "onb7.idea4"];
-export const OwnV7 = ({ onBack, onDone }: { onBack: () => void; onDone: (text: string) => void }) => {
+export const OwnV7 = ({ onBack, onDone, initial = "" }: { onBack: () => void; onDone: (text: string) => void; initial?: string }) => {
   const { t } = useTranslation();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initial);
   const ok = text.trim().length >= 4;
   return (
     <Page>
@@ -210,24 +226,43 @@ const OWN_AROUND = ["slept-enough", "felt-stressed", "outside-30min"];
 const islandOfTpl = (id: string): IslandId => { const f = findTemplate(id); return f ? islandOf({ id: "x", title: f.template.title, category: f.template.category, cluster: f.clusterId } as Tracker) : "other"; };
 const qOf = (id: string) => { const f = findTemplate(id); return f ? templateQuestion(f.template) : id; };
 
+type MainQ = { key: string; tpl: string | null; base: string; door: Door | null };
+
 export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: () => void; onDone: (s: V7Setup) => void }) => {
   const { t } = useTranslation();
-  const door = pick.kind === "door" ? getDoor(pick.id) ?? null : null;
-  const mainTpl = pick.kind === "door" ? door!.mainTemplateId : pick.kind === "simple" ? SIMPLE.main : null;
+  const doors = useMemo(() => (pick.kind === "door" ? pick.ids.map((id) => getDoor(id)).filter((d): d is Door => !!d) : []), [pick]);
+  // one main question per topic (two topics asking the same thing share it), then her own
+  const mains = useMemo<MainQ[]>(() => {
+    const out: MainQ[] = [];
+    if (pick.kind === "simple") out.push({ key: SIMPLE.main, tpl: SIMPLE.main, base: qOf(SIMPLE.main), door: null });
+    for (const d of doors) if (!out.some((m) => m.tpl === d.mainTemplateId)) out.push({ key: d.id, tpl: d.mainTemplateId, base: qOf(d.mainTemplateId), door: d });
+    const own = pick.kind === "own" ? pick.text : pick.kind === "door" ? pick.own : undefined;
+    if (own) out.push({ key: "own", tpl: null, base: own, door: null });
+    return out;
+  }, [pick, doors]);
+  const mainTpls = useMemo(() => mains.flatMap((m) => (m.tpl ? [m.tpl] : [])), [mains]);
+  // the ones around them: every topic's own, in the order picked, no repeats
+  // taken in turns (each topic's first, then each one's second…), so every topic has its own
+  const turns = useMemo(() => {
+    const out: string[] = [];
+    for (let k = 0; k < 3; k++) for (const d of doors) { const id = d.contextTemplateIds[k]; if (!out.includes(id) && !mainTpls.includes(id)) out.push(id); }
+    return out;
+  }, [doors, mainTpls]);
   const aroundTpls = useMemo(() => {
-    if (pick.kind === "door" && door) { const x = EXTRA[door.id]; return [...door.contextTemplateIds, ...(x && !door.contextTemplateIds.includes(x) ? [x] : [])]; }
+    if (pick.kind === "door") {
+      const extra = doors.flatMap((d) => (EXTRA[d.id] ? [EXTRA[d.id]!] : []));
+      return [...new Set([...turns, ...extra])].filter((id) => !mainTpls.includes(id)).slice(0, 8);
+    }
     return pick.kind === "simple" ? SIMPLE.around : OWN_AROUND;
-  }, [pick, door]);
-  const baseMain = mainTpl ? qOf(mainTpl) : pick.kind === "own" ? pick.text : "";
-  const [mainText, setMainText] = useState(baseMain);
-  const [editing, setEditing] = useState(false);
-  const [on, setOn] = useState<Set<string>>(() => new Set(pick.kind === "door" && door ? door.contextTemplateIds : aroundTpls));
+  }, [pick, doors, mainTpls, turns]);
+  const [texts, setTexts] = useState<string[]>(() => mains.map((m) => m.base));
+  const [editing, setEditing] = useState<number | null>(null);
+  // ticked to start: a topic's three (one topic), one more with each topic added
+  const [on, setOn] = useState<Set<string>>(() => new Set(pick.kind === "door" ? turns.slice(0, 2 + doors.length) : aroundTpls));
   const [own, setOwn] = useState<string[]>([]);
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const neutral = door?.branch === "thought";
   const isl = (id: string) => islandName(t, islandOfTpl(id));
-  const mainIsle = mainTpl ? isl(mainTpl) : islandName(t, "mine" as IslandId);
   const toggle = (id: string) => setOn((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const none = on.size === 0 && own.length === 0;
 
@@ -235,19 +270,25 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
     if (busy) return;
     setBusy(true);
     try {
-      const mainId = mainTpl ? (await ensureTemplates([mainTpl]))[0] : await addOwnTracker(mainText);
+      const mainIds: string[] = [];
+      for (let i = 0; i < mains.length; i++) {
+        const m = mains[i];
+        mainIds.push(m.tpl ? (await ensureTemplates([m.tpl]))[0] : await addOwnTracker(texts[i].trim() || m.base));
+      }
+      // her own words for a main question (cardQuestion shows hers)
+      const edited = new Map(mains.flatMap((m, i) => (m.tpl && texts[i].trim() && texts[i].trim() !== m.base ? [[mainIds[i], asQuestion(texts[i])] as const] : [])));
+      if (edited.size) {
+        const all = await getTrackers();
+        await saveTrackers(all.map((x) => (edited.has(x.id) ? { ...x, questionText: edited.get(x.id)! } : x)));
+      }
       const aroundIds = await ensureTemplates(aroundTpls.filter((id) => on.has(id)));
       const ownIds: string[] = [];
       for (const q of own) ownIds.push(await addOwnTracker(q));
-      // her own words for the main question (cardQuestion shows hers)
-      if (mainTpl && mainText.trim() && mainText.trim() !== baseMain) {
-        const all = await getTrackers();
-        await saveTrackers(all.map((x) => (x.id === mainId ? { ...x, questionText: asQuestion(mainText) } : x)));
-      }
-      const doorId: DoorId | null = pick.kind === "door" ? pick.id : pick.kind === "simple" ? "energy" : null;
-      if (doorId) saveDoorState({ id: doorId, trackerId: mainId, contextTrackerIds: [...aroundIds, ...ownIds], startedAt: isoLocal(new Date()), extra: [] });
-      track("onboarding_questions", { topic: doorId ?? "own", around: aroundIds.length + ownIds.length, edited: mainText.trim() !== baseMain });
-      onDone({ ids: [mainId, ...aroundIds, ...ownIds], mainId, doorId });
+      const byDoor = mains.flatMap((m, i) => (m.door ? [{ id: m.door.id, trackerId: mainIds[i] }] : []));
+      const lead = pick.kind === "simple" ? { id: "energy" as DoorId, trackerId: mainIds[0] } : byDoor[0] ?? null;
+      if (lead) saveDoorState({ id: lead.id, trackerId: lead.trackerId, contextTrackerIds: [...aroundIds, ...ownIds], startedAt: isoLocal(new Date()), extra: byDoor.slice(1) });
+      track("onboarding_questions", { topic: doors.map((d) => d.id).join(",") || (pick.kind === "simple" ? "energy" : "own"), topics: mains.length, around: aroundIds.length + ownIds.length, edited: edited.size > 0 });
+      onDone({ ids: [...mainIds, ...aroundIds, ...ownIds], mainId: lead?.trackerId ?? mainIds[0], doorId: lead?.id ?? null });
     } finally { setBusy(false); }
   };
 
@@ -256,24 +297,32 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
       <Top onBack={onBack} step={1} />
       <H1 className="mt-5">{t("onb7.qTitle")}</H1>
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.qSub")}</p>
-      {/* the main question */}
-      <div className="surface pick-on mt-4 rounded-[20px] px-4 py-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-            <i className={cn("block h-2.5 w-2.5 rounded-full", neutral ? "bg-[hsl(var(--data-a))]" : "bg-[hsl(var(--coin-teal))]")} />{mainIsle} · {t("onb7.qMain")}
-          </span>
-          {!editing && <button type="button" onClick={() => { haptics.tap(); setEditing(true); }} data-onb-interactive className="flex items-center gap-1 text-[14px] font-bold text-[hsl(var(--coin-teal))]"><Pencil className="h-3.5 w-3.5" strokeWidth={2.6} />{t("onb7.qEdit")}</button>}
-        </div>
-        {editing ? (
-          <div className="mt-2 flex gap-2">
-            <input autoFocus value={mainText} onChange={(e) => setMainText(e.target.value.slice(0, 80))} aria-label={t("onb7.qMain")} data-onb-interactive
-              className="h-11 min-w-0 flex-1 rounded-[12px] bg-foreground/[0.05] px-3 text-[17px] font-bold outline-none" />
-            <button type="button" onClick={() => { haptics.tap(); setEditing(false); if (!mainText.trim()) setMainText(baseMain); }} data-onb-interactive className="h-11 rounded-[12px] px-3 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.qDone")}</button>
-          </div>
-        ) : <p className="mt-1.5 text-[20px] font-bold leading-snug">{mainText}</p>}
-        <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{neutral ? t("onb7.qNeutral") : t("onb7.qMainLine")}</p>
+      {/* the main question of each topic */}
+      <div className="mt-4 flex flex-col gap-2.5">
+        {mains.map((m, i) => {
+          const neutral = m.door?.branch === "thought";
+          return (
+            <div key={m.key} className="surface pick-on rounded-[20px] px-4 py-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                  <i className={cn("block h-2.5 w-2.5 shrink-0 rounded-full", neutral ? "bg-[hsl(var(--data-a))]" : "bg-[hsl(var(--coin-teal))]")} />
+                  <span className="truncate">{m.tpl ? isl(m.tpl) : islandName(t, "mine" as IslandId)} · {t("onb7.qMain")}</span>
+                </span>
+                {editing !== i && <button type="button" onClick={() => { haptics.tap(); setEditing(i); }} data-onb-interactive className="flex shrink-0 items-center gap-1 text-[14px] font-bold text-[hsl(var(--coin-teal))]"><Pencil className="h-3.5 w-3.5" strokeWidth={2.6} />{t("onb7.qEdit")}</button>}
+              </div>
+              {editing === i ? (
+                <div className="mt-2 flex gap-2">
+                  <input autoFocus value={texts[i]} onChange={(e) => { const v = e.target.value.slice(0, 80); setTexts((xs) => xs.map((x, k) => (k === i ? v : x))); }} aria-label={t("onb7.qMain")} data-onb-interactive
+                    className="h-11 min-w-0 flex-1 rounded-[12px] bg-foreground/[0.05] px-3 text-[17px] font-bold outline-none" />
+                  <button type="button" onClick={() => { haptics.tap(); setEditing(null); if (!texts[i].trim()) setTexts((xs) => xs.map((x, k) => (k === i ? m.base : x))); }} data-onb-interactive className="h-11 rounded-[12px] px-3 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.qDone")}</button>
+                </div>
+              ) : <p className="mt-1.5 text-[20px] font-bold leading-snug">{texts[i]}</p>}
+              {(neutral || mains.length === 1) && <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{neutral ? t("onb7.qNeutral") : t("onb7.qMainLine")}</p>}
+            </div>
+          );
+        })}
       </div>
-      {/* the ones around it */}
+      {/* the ones around them */}
       <p className="mt-5 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("onb7.qAlso")}</p>
       <div className="mt-2 flex flex-col gap-2">
         {aroundTpls.map((id) => (
@@ -300,7 +349,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
       </div>
       <p className="mt-2 text-center text-[14px] font-semibold text-muted-foreground">{none ? t("onb7.qNone") : t(pick.kind === "own" ? "onb7.qNoteOwn" : pick.kind === "simple" ? "onb7.qNoteSimple" : "onb7.qNote")}</p>
       <div className="min-h-6 flex-1" />
-      <Main disabled={busy || editing} onClick={() => void save()}>{t("doors.continue")}</Main>
+      <Main disabled={busy || editing !== null} onClick={() => void save()}>{t("doors.continue")}</Main>
     </Page>
   );
 };

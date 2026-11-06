@@ -18,7 +18,7 @@ import {
   scheduleNotification,
 } from "@/lib/notifications";
 import { persistDefaultTheme } from "@/lib/theme";
-import { getDoor, Door } from "@/lib/doors";
+import { getDoor, Door, type DoorId } from "@/lib/doors";
 import { markOnboarded } from "@/lib/pathSteps";
 import type { Finish } from "./DoorOnboarding";
 import { OwnV7, QuestionsV7, TopicV7, ValueV7, WelcomeV7, type V7Pick, type V7Setup } from "./OnboardingV7";
@@ -46,12 +46,18 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   useEffect(() => { track("onboarding_screen", { screen: String(step) }); }, [step]);
   const [pick, setPick] = useState<V7Pick | null>(null);
   const [setup, setSetup] = useState<V7Setup | null>(null);
+  // the topics ticked and her own question, kept while she goes back and forth
+  const [topics, setTopics] = useState<DoorId[]>([]);
+  const [own, setOwn] = useState<string | null>(null);
+  const pickOf = (ids: DoorId[], text: string | null): V7Pick => (ids.length ? { kind: "door", ids, ...(text ? { own: text } : {}) } : { kind: "own", text: text ?? "" });
 
   useEffect(() => {
     if (open) {
       setStep("welcome");
       setPick(null);
       setSetup(null);
+      setTopics([]);
+      setOwn(null);
       document.body.style.overflow = "hidden";
     }
     return () => {
@@ -113,9 +119,11 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto">
         {step === "welcome" && <WelcomeV7 onStart={() => setStep("topic")} onSimple={() => { setPick({ kind: "simple" }); setStep("questions"); }} />}
-        {step === "topic" && <TopicV7 initial={pick?.kind === "door" ? pick.id : null} onBack={() => setStep("welcome")} onOwn={() => setStep("own")} onPick={(id) => { setPick({ kind: "door", id }); setStep("questions"); }} />}
-        {step === "own" && <OwnV7 onBack={() => setStep("topic")} onDone={(text) => { setPick({ kind: "own", text }); setStep("questions"); }} />}
-        {step === "questions" && pick && <QuestionsV7 key={JSON.stringify(pick)} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "welcome" : pick.kind === "own" ? "own" : "topic")} onDone={(s) => { setSetup(s); setStep("value"); }} />}
+        {step === "topic" && <TopicV7 initial={topics} own={own} onBack={() => setStep("welcome")} onClearOwn={() => setOwn(null)}
+          onOwn={(ids) => { setTopics(ids); setStep("own"); }} onPick={(ids) => { setTopics(ids); setPick(pickOf(ids, own)); setStep("questions"); }} />}
+        {/* her own question goes back to the topics, ticked there beside them */}
+        {step === "own" && <OwnV7 initial={own ?? ""} onBack={() => setStep("topic")} onDone={(text) => { setOwn(text); setStep("topic"); }} />}
+        {step === "questions" && pick && <QuestionsV7 key={JSON.stringify(pick)} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "welcome" : "topic")} onDone={(s) => { setSetup(s); setStep("value"); }} />}
         {step === "value" && setup && pick && <ValueV7 setup={setup} pickKind={pick.kind} onBack={() => setStep("questions")} onStart={start} />}
       </div>
     </div>

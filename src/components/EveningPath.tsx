@@ -158,9 +158,9 @@ export const EveningPath = ({
   // "Look around" finished or skipped (src/components/AppTour.tsx): the path moves on
   useEffect(() => {
     const done = () => setTick((k) => k + 1);
-    window.addEventListener("memap-tour-done", done);
-    window.addEventListener("memap-first-link-seen", done);
-    return () => { window.removeEventListener("memap-tour-done", done); window.removeEventListener("memap-first-link-seen", done); };
+    const evs = ["memap-tour-done", "memap-path-refresh", "memap-first-link-seen"];
+    evs.forEach((e) => window.addEventListener(e, done));
+    return () => evs.forEach((e) => window.removeEventListener(e, done));
   }, []);
   // the calendar opens on her main question, so it's named for it ("Your migraine days")
   const daysLabel = (() => { const door = getDoorState(); return t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any"); })();
@@ -858,10 +858,10 @@ export const EveningPath = ({
       {/* The week starts with its name, plain (her note: the card that
           rolled with the path was "уродская плашка"). */}
       <div className="mt-2">
-        <div data-wheel>
+        <div data-wheel data-tour="week" className="mx-auto w-fit max-w-[92%]">
           <p className="path-week-label">{t("path.weekN", { n: m.week + 1 })} · {title}</p>
           <button type="button" disabled={!weekNext.open} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: weekNext.open === "world" ? { tab: "patterns" } : { tab: "patterns", open: "all", section: weekNext.open, back: true } })); }}
-            className="surface mx-auto mt-2 flex h-9 max-w-[92%] items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold">
+            className="surface mx-auto mt-2 flex h-9 max-w-full items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold">
             <span className="truncate">{weekNext.text}</span>
           </button>
         </div>

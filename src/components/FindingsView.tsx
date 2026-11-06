@@ -7,7 +7,9 @@ import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { linkOf, linkWorthShowing, type Route } from "@/lib/islands";
+import { linkOther, linkSentence, trackerLookup } from "@/lib/linkText";
+import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { markCorrelationSeen } from "@/lib/appRating";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -17,20 +19,10 @@ import { factLine } from "@/lib/echo";
 const STRIP_DAYS = 14;
 const FIRST_FINDINGS_AT = 14;
 
-// "Holds up · K of N": for a "more often" pair, K = days B followed A out
-// of the N days with A; for a "less often" pair, K = days B did NOT come.
-const holdCount = (c: CorrelationResult) => {
-  const n = c.counts.bothYes + c.counts.aYesBNo;
-  const k = c.phi > 0 ? c.counts.bothYes : c.counts.aYesBNo;
-  return { k, n };
-};
-
-const sentenceKey = (c: CorrelationResult): string => {
-  const more = c.phi > 0;
-  if (c.lag === 1) return more ? "patterns.findAfter" : "patterns.findAfterLess";
-  if (c.lag === -1) return more ? "patterns.findBefore" : "patterns.findBeforeLess";
-  return more ? "patterns.findSameDay" : "patterns.findSameDayLess";
-};
+// A finding is a link told in its real answers (linkOf; her note, Nov 6 2026: the old
+// «В дни с «Приступ мигрени» реже было «Спал(а) достаточно (7+ часов)»» "выглядит
+// жутко"): "Short night → migraine the same day — 4 of 5 times", the other days beside it.
+const routeOf = (c: CorrelationResult): Route => { const l = linkOf(c); return { ...l, a: "other", b: "other", first: l.first.id, second: l.second.id }; };
 
 const Strip = ({ label, days, tone }: { label: string; days: (boolean | undefined)[]; tone: "a" | "b" }) => (
   <div>
@@ -67,8 +59,8 @@ export const FindingsView = ({
   // pairs that include it lead; otherwise the engine's own order stands.
   const findings = useMemo(() => {
     const all = focusIds
-      ? computeCorrelations(trackers, entries, 15).filter((c) => focusIds.includes(c.trackerA.id) || focusIds.includes(c.trackerB.id)).slice(0, 5)
-      : computeCorrelations(trackers, entries, 5);
+      ? computeCorrelations(trackers, entries, 15).filter(linkWorthShowing).filter((c) => focusIds.includes(c.trackerA.id) || focusIds.includes(c.trackerB.id)).slice(0, 5)
+      : computeCorrelations(trackers, entries, 12).filter(linkWorthShowing).slice(0, 5);
     const doorId = getDoorState()?.trackerId;
     if (!doorId) return all;
     const hasDoor = (c: CorrelationResult) => c.trackerA.id === doorId || c.trackerB.id === doorId;
@@ -84,11 +76,8 @@ export const FindingsView = ({
     }
   }, [findings.length]);
 
-  const sentence = (c: CorrelationResult) =>
-    t(sentenceKey(c), {
-      a: localizeTrackerTitle(c.trackerA.title),
-      b: localizeTrackerTitle(c.trackerB.title),
-    });
+  const of = trackerLookup(trackers);
+  const sentence = (c: CorrelationResult) => linkSentence(t, routeOf(c), of);
 
   if (findings.length === 0) {
     const daysWithAnswers = new Set(entries.map((e) => e.date)).size;
@@ -125,11 +114,13 @@ export const FindingsView = ({
   }
 
   const [top, ...rest] = findings;
-  const { k, n } = holdCount(top);
+  const r = routeOf(top);
+  const { k, n } = r;
   const solid = top.stage === "emerging" || top.stage === "stable";
-  const yesOn = (trackerId: string) => {
+  /** the days with that answer (a short night: the "no" days of "Slept 7+ hours") */
+  const daysWith = (trackerId: string, yes: boolean) => {
     const byDate = new Map(entries.filter((e) => e.trackerId === trackerId).map((e) => [e.date, e.value]));
-    return Array.from({ length: STRIP_DAYS }, (_, i) => byDate.get(daysAgoIso(STRIP_DAYS - 1 - i)));
+    return Array.from({ length: STRIP_DAYS }, (_, i) => { const v = byDate.get(daysAgoIso(STRIP_DAYS - 1 - i)); return typeof v === "boolean" ? v === yes : undefined; });
   };
 
   return (
@@ -137,9 +128,10 @@ export const FindingsView = ({
       <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] p-[18px]">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">{t("patterns.findStrongest")}</p>
         <p className="mt-2.5 text-[22px] font-bold leading-[1.2] tracking-tight">{sentence(top)}</p>
+        <p className="mt-1 text-[15px] font-semibold text-muted-foreground">{linkOther(t, r)}</p>
         <div className="mt-3.5 space-y-2.5">
-          <Strip label={localizeTrackerTitle(top.trackerA.title)} days={yesOn(top.trackerA.id)} tone="a" />
-          <Strip label={localizeTrackerTitle(top.trackerB.title)} days={yesOn(top.trackerB.id)} tone="b" />
+          <Strip label={cap(answerPhrase(t, of(r.first), r.firstYes))} days={daysWith(r.first, r.firstYes)} tone="a" />
+          <Strip label={cap(answerPhrase(t, of(r.second), r.secondYes))} days={daysWith(r.second, r.secondYes)} tone="b" />
         </div>
         <div className="mt-3.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <span
@@ -161,17 +153,11 @@ export const FindingsView = ({
         <>
           <p className="pt-2 text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{t("patterns.findAlso")}</p>
           <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] divide-y divide-foreground/[0.08]">
-            {rest.map((c, i) => {
-              const h = holdCount(c);
-              return (
-                <div key={i} className="flex gap-3 items-start px-4 py-3.5">
-                  <span className="text-primary font-bold" aria-hidden="true">→</span>
-                  <p className="text-[15px] leading-snug">
-                    {sentence(c)} <span className="text-muted-foreground whitespace-nowrap">{t("patterns.findKofN", { k: h.k, n: h.n })}</span>
-                  </p>
-                </div>
-              );
-            })}
+            {rest.map((c, i) => (
+              <div key={i} className="px-4 py-3.5">
+                <p className="text-[15px] leading-snug">{sentence(c)}</p>
+              </div>
+            ))}
           </div>
         </>
       )}

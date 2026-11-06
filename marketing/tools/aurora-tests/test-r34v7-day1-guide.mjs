@@ -36,7 +36,9 @@ for (let i = 0; i < 8; i++) {
 }
 await p.waitForTimeout(3200);
 await click(RU ? /Не сейчас/ : /Not now/).catch(() => {}); await p.waitForTimeout(600);
-await click(RU ? /Посмотреть мой мир/ : /See your world/).catch(() => {}); await p.waitForTimeout(2000);
+await click(RU ? /Покажи, что где/ : /Show me around/).catch(() => {}); await p.waitForTimeout(700);
+await click(RU ? /Не сейчас/ : /Not now/).catch(() => {}); await p.waitForTimeout(2200);
+await click(RU ? /Пропустить/ : /^Skip/).catch(() => {}); await p.waitForTimeout(1500);
 await p.locator("nav button").nth(0).click(); await p.waitForTimeout(1500);
 
 // --- what the path holds ----------------------------------------------------------

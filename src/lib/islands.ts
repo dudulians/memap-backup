@@ -6,7 +6,7 @@
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import type { TFunction } from "i18next";
 import { computeCorrelations, correlationFrame, isHighlySignificant, trackerPolarity, type CorrelationResult } from "@/lib/correlations";
-import { isoLocal } from "@/lib/doors";
+import { getDoorState, isoLocal } from "@/lib/doors";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { getOwnIslands, LOOKS } from "@/lib/ownIslands";
@@ -160,7 +160,10 @@ export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: 
  *  a walk → tired", "anxious → not slept enough". k of n counts those days; other
  *  counts the same second answer on the rest. */
 export const linkOf = (c: CorrelationResult) => {
-  const flip = c.lag === -1;
+  // same day: her topic's question goes second, as the thing explained ("Short night →
+  // migraine", not "Migraine → short night"; Nov 6 2026)
+  const door = getDoorState(), lead = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((x) => x.trackerId)] : []);
+  const flip = c.lag === -1 || (c.lag === 0 && lead.has(c.trackerA.id) && !lead.has(c.trackerB.id));
   const second0 = flip ? c.trackerA : c.trackerB;
   const secondYes = c.phi >= 0 || trackerPolarity(second0) !== "good";
   const firstYes = c.phi >= 0 || !secondYes;

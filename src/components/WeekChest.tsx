@@ -9,6 +9,7 @@
 // numbers — then what grew in her world since the
 // last chest (a house, a bridge, a special item…), next week's mission and
 // a new title.
+import { linkSentence, trackerLookup } from "@/lib/linkText";
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -123,7 +124,7 @@ export const WeekChest = ({
     ];
     const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
     const insight = c.insight
-      ? t(c.insight.nextDay ? "game.afterA" : "game.withA", { a: name(c.insight.a), b: name(c.insight.b), k: c.insight.k, count: c.insight.n })
+      ? linkSentence(t, { first: c.insight.a, second: c.insight.b, firstYes: true, secondYes: true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n }, trackerLookup(trackers))
       : undefined;
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),
