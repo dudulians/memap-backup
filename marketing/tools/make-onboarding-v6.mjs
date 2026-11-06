@@ -354,7 +354,7 @@ const monthScreen = ({ title, sub, weeks }) => P3(`<div class="screen">${navTop(
 const NEU = "hsl(232 62% 62%)", NEUL = "hsl(232 62% 62% / .22)";
 const lrow = (ic, h, t, on = false) => `<div class="card row${on ? " on" : ""}" style="height:50px;margin-top:8px">${tile(ic, h)}${t}${on ? `<span class="tick">${icon("check", { size: 15, sw: 3, color: "#fff" })}</span>` : ""}</div>`;
 const sec = (t) => `<div class="wk" style="text-align:left;margin-top:14px">${t}</div>`;
-const doorCard = (ic, h, t, l, sel) => `<div class="card" style="margin-top:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;${sel ? `box-shadow:0 0 0 2px hsl(${TEAL}), 0 10px 24px -18px rgba(30,50,110,.6)` : ""}">${tile(ic, h)}<div><div style="font-size:19px;font-weight:800">${t}</div><div style="font-size:14px;font-weight:600;color:#6B7184">${l}</div></div>${sel ? `<span class="tick">${icon("check", { size: 15, sw: 3, color: "#fff" })}</span>` : ""}</div>`;
+const doorCard = (ic, h, t, l, sel) => `<div class="card" style="margin-top:12px;padding:12px 16px;min-height:96px;display:flex;align-items:center;gap:12px;${sel ? `box-shadow:0 0 0 2px hsl(${TEAL}), 0 10px 24px -18px rgba(30,50,110,.6)` : ""}">${tile(ic, h)}<div><div style="font-size:19px;font-weight:800">${t}</div><div style="font-size:14px;font-weight:600;color:#6B7184">${l}</div></div>${sel ? `<span class="tick">${icon("check", { size: 15, sw: 3, color: "#fff" })}</span>` : ""}</div>`;
 const door = (sel) => P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
   ${isle(110, 230, 150, "19_grassy_terraces")}${isle(290, 190, 130, "09_waterfall")}
   <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([160, 200], [206, 128], [236, 168], 14).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
@@ -436,7 +436,7 @@ const door6 = (sel, headline = "Make sense of your days", size = 31) => P3(`<div
     <h1 style="font-size:${size}px">${headline}</h1>
     <div class="sub" style="margin-top:6px;font-size:16px">A few yes/no questions each evening. See what happens together — and what changes when you try something.</div>
     ${trust}
-    ${doorCard("search", HUE.love, "Something I want to understand", "Headaches, bad nights, low energy…", sel === "understand")}
+    ${doorCard("search", HUE.love, "Something I want to understand", "Headaches, bad nights…", sel === "understand")}
     ${doorCard("sun", HUE.amber, "More good days", "Energy, sleep, calm", sel === "good")}
     <div class="grow"></div><div class="link" style="${sel === "simple" ? `color:${TEALD};text-decoration:underline` : ""}">Not sure yet? Start simple</div><div class="btn">Continue</div></div>`);
 const TOPICS = [["activity", HUE.health, "Headaches & migraines"], ["moon", HUE.sleep, "Bad nights"], ["battery-low", HUE.amber, "Low energy"], ["droplet", HUE.love, "Period & cycle"], ["wind", HUE.lilac, "Stress"]];
