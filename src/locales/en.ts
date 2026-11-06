@@ -117,6 +117,7 @@ const en = {
     lineNextDay: "{{first}} → {{second}} the next day — {{k}} of {{count}} times.",
     own: "“{{q}}”: {{a}}",
     ownClause: "you ~answer “{{a}}” to “{{q}}”",
+    wordsClause: "you ~mark “{{w}}”",
     saySameDay: "On days when {{cause}}, {{result}} — {{k}} of {{count}} times.",
     sayNextDay: "When {{cause}}, the next day {{result}} — {{k}} of {{count}} times.",
     adv0: "almost always",
@@ -486,6 +487,15 @@ const en = {
     },
     yours: "MeMap shows when the thought comes. The decision is yours.",
   },
+  // her own question in words (Nov 7 2026)
+  answerWords: {
+    title: "Your answers in words",
+    yes: "Yes",
+    no: "No",
+    phYes: "e.g. walk with the dog",
+    phNo: "e.g. no walk",
+    example: "In your links: “{{w}} → migraine”",
+  },
   // the 4 parts over the map (board 76 A, Nov 6 2026)
   world4: {
     myDays: "My days",
@@ -556,6 +566,8 @@ const en = {
     hint: "Roll it with a finger, pinch to zoom",
     ofN: "{{k}} of {{n}}",
     backToMe: "Back to me",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
     all: "All",
     unexploredLabel: "Not explored yet",
     unexplored: "Add a question from a new area to open this island.",

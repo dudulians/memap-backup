@@ -227,58 +227,29 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const onlyTitle = (o: Only) => t(o === "findings" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");
 
   return (
-    <div ref={boxRef} className={`map-sea relative h-full overscroll-contain ${view === "globe" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
-      style={view === "globe" ? { background: "transparent" } : { paddingBottom: "calc(7rem + env(safe-area-inset-bottom, 0px))" }}>
+    <div ref={boxRef} className="map-sea relative flex h-full flex-col overflow-hidden overscroll-contain" style={{ background: "transparent" }}>
       {/* The header stays at the top (her note): the name, this week's
           summary, and a small Map | Globe switch. */}
-      <div className="map-head sticky top-0 z-[6] px-4 pb-2.5 pt-3" style={view === "globe" ? { background: "transparent" } : undefined}>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="min-w-0 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
-          {loaded && islands.length > 0 && (
-            <div className="seg shrink-0" role="tablist" aria-label={t("map.viewAria")}>
-              {(["map", "globe"] as const).map((v) => (
-                <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); track("map_view_changed", { view: v }); try { localStorage.setItem("memap_map_view", v); } catch { /* ignore */ } window.dispatchEvent(new CustomEvent("memap-map-view", { detail: v })); }}
-                  className={`chip ${view === v ? "is-on" : ""}`}>
-                  {v === "map" ? t("map.flat") : t("map.globe")}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Globe only (her note, Nov 7 2026, v81 try; the flat map, PlanetMap.tsx, stays in
+          the code to go back to): the header, the World's 4 parts on top, and her globe in
+          the room under them with everything the map had — her topic's island lit, the
+          links inside one island, a new island at hand, zoom by hand. */}
+      <div className="map-head relative z-[6] px-4 pb-2.5 pt-3" style={{ background: "transparent" }}>
+        <h2 className="min-w-0 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
       </div>
-
-      {view === "globe" ? (
-        // The globe (her painted planet, Nov 4 2026) fills the whole tab: her sky
-        // runs behind the header, the ball under the tab bar.
-        loaded && (
+      {loaded && islands.length > 0 && (
+        <div className="relative z-[6] mt-1">
+          <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
+        </div>
+      )}
+      {loaded && islands.length > 0 && (
+        <div className="relative min-h-0 flex-1" data-tour="world">
           <div className="absolute inset-0">
-            <PlanetGlobe sky={false} islands={islands} routes={routes} avatar={avatarPic} lit={lit} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
-              onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-              paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={() => setNewOpen(true)} />
+            <PlanetGlobe sky={false} below islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} inner={innerLinks} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
+              onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)} onInner={setLink}
+              paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} />
           </div>
-        )
-      ) : (
-        <>
-          {/* Calendar, chart, lighthouses: on view, each opens straight to itself. */}
-          {loaded && islands.length > 0 && (
-            <div className="mt-3">
-              <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
-            </div>
-          )}
-          {loaded && islands.length > 0 && (
-            <div className="mt-3" data-tour="world">
-              <PlanetMap islands={islands} routes={routes} inner={innerLinks} width={width} lit={lit} main={mainIsland} days={dayCount} avatar={avatarPic} treasures={treasures} garden={garden} onOpen={setOpen} onLink={setLink}
-                onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
-            </div>
-          )}
-          {/* the ring has its own place for a new island; this one is for a full map */}
-          {loaded && islands.length >= 9 && (
-            <button type="button" onClick={() => { haptics.tap(); setNewOpen(true); }}
-              className="surface mx-auto mt-2 flex h-12 items-center gap-2 rounded-full px-5 text-[16px] font-bold">
-              <Plus className="h-5 w-5" strokeWidth={2.4} /> {t("islands.new")}
-            </button>
-          )}
-        </>
+        </div>
       )}
 
       {/* No island yet, in the new look (her note, Nov 4 2026): her cloud island

@@ -11,7 +11,7 @@
 // - calm motion: drag 1:1, a short glide, no spinning on its own.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CloudLightning, CloudSun, Link2, Plus, Sun } from "lucide-react";
+import { CloudLightning, CloudSun, Link2, Minus, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { standAt } from "@/lib/islandSpots";
@@ -120,8 +120,15 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, onOpen, onNewIsland, onLink }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, onOpen, onNewIsland, onLink, onInner }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
+  /** her topic's island: lit, a teal dot by its name (board 76 A) */
+  main?: IslandId | null;
+  /** a link inside one island: its sign k/n over the island (board 75) */
+  inner?: Map<IslandId, Route>;
+  onInner?: (r: Route) => void;
+  /** the World's 4 parts stand over it: the ball sits in the room below them */
+  below?: boolean;
   /** draw her sky here (false: the screen draws it behind its header) */
   sky?: boolean;
   /** islands whose rule (lighthouse) is lit */
@@ -180,8 +187,16 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   onOpenRef.current = onOpen;
   const onLinkRef = useRef(onLink);
   onLinkRef.current = onLink;
+  const onInnerRef = useRef(onInner);
+  onInnerRef.current = onInner;
+  const innerRef = useRef(inner);
+  innerRef.current = inner;
+  const belowRef = useRef(below);
+  belowRef.current = below;
+  const zoomRef = useRef<(f: number) => void>(() => undefined);
   // each link's sign on the ball, moved every frame like the labels
   const chipEls = useRef(new Map<string, HTMLDivElement | null>());
+  const innerEls = useRef(new Map<IslandId, HTMLDivElement | null>());
   useEffect(() => { if (!paused) { setOn(null); kickRef.current(); } }, [paused]);
 
   // The ball's WebGL lives as long as the globe is on screen and is freed the
@@ -247,7 +262,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     const resize = () => {
       const r = box.getBoundingClientRect(); W = r.width; H = r.height; DPR = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-      R0 = Math.min(W * 0.74, H * 0.37); CX0 = W / 2; CY0 = H * 0.585; place();
+      if (belowRef.current) { R0 = Math.min(W * 0.72, H * 0.43); CX0 = W / 2; CY0 = H * 0.51; }
+      else { R0 = Math.min(W * 0.74, H * 0.37); CX0 = W / 2; CY0 = H * 0.585; }
+      place();
       gl.viewport(0, 0, canvas.width, canvas.height); dirty = true; kick();
     };
     let atLimit = false;
@@ -274,6 +291,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       const base = R * 0.35;
+      innerHits.length = 0;
       for (const th of things) {
         const e = els.current.get(th.key); if (!e?.el) continue;
         const p = rot(th.v), vis = Math.max(0, Math.min(1, (p[2] - 0.04) / 0.24));
@@ -290,6 +308,13 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         e.el.style.transform = `translate(${(x - full / 2).toFixed(1)}px, ${(y - full * th.ar * an).toFixed(1)}px) rotate(${(lean * 57.3).toFixed(2)}deg) scale(${(s / th.size).toFixed(3)})`;
         e.el.style.opacity = String(th.kind === "sky" ? vis * 0.92 : vis);
         e.el.style.zIndex = String(Math.round(100 + p[2] * 100 + (th.kind === "sky" ? 120 : 0)));
+        const ic = th.island ? innerEls.current.get(th.island.id) : null;
+        if (ic) {
+          const top = y - w * th.ar * an;
+          ic.style.transform = `translate(${(x - 30).toFixed(1)}px, ${(top - 18).toFixed(1)}px)`;
+          ic.style.opacity = String(vis); ic.style.zIndex = String(Math.round(160 + p[2] * 100));
+          if (vis > 0.5) innerHits.push({ id: th.island!.id, x, y: top - 4 });
+        }
         if (e.lab) {
           const off = w * th.ar * (1 - an) + 8;
           e.lab.style.transform = `translate(${(x - Math.sin(lean) * off).toFixed(1)}px, ${(y + Math.cos(lean) * off).toFixed(1)}px) scale(${Math.max(0.82, s).toFixed(3)})`;
@@ -330,6 +355,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     let wasFar = false;
     // where the routes and their signs are on screen, for taps
     const linkHits: { a: IslandId; b: IslandId; x: number; y: number; chip?: boolean }[] = [];
+    const innerHits: { id: IslandId; x: number; y: number }[] = [];
     const linkAt = (x: number, y: number) => {
       let best: (typeof linkHits)[number] | null = null, bd = Infinity;
       for (const l of linkHits) {
@@ -367,6 +393,21 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       anim = { t0: performance.now(), dur: 620, y0: yaw, y1, p0: pitch, p1, z0: zoom, z1, ox0: ox, oy0: oy, done }; kick();
     };
     homeRef.current = () => { haptics.tap(); turnTo([C0[0] + 20, C0[1]], undefined, 1); };
+    zoomRef.current = (f: number) => {
+      haptics.tap(); setHint(false);
+      const z1 = Math.max(ZMIN, Math.min(ZMAX, zoom * f));
+      if (reduce) { zoomAt(z1, CX, CY); return; }
+      anim = { t0: performance.now(), dur: 320, y0: yaw, y1: yaw, p0: pitch, p1: pitch, z0: zoom, z1, ox0: ox, oy0: oy }; kick();
+    };
+    // "memap-globe-focus" {ids}: turn so these islands face her, back at zoom 1
+    const focus = (e: Event) => {
+      const ids = ((e as CustomEvent).detail?.ids ?? []) as string[];
+      const vs = things.filter((x) => x.kind === "area" && ids.includes(x.key)).map((x) => x.v);
+      if (!vs.length) return;
+      const m = vs.reduce((a, v) => [a[0] + v[0], a[1] + v[1], a[2] + v[2]] as V3, [0, 0, 0] as V3), L = Math.hypot(...m) || 1;
+      turnTo([Math.asin(m[1] / L) / D2R + 12, Math.atan2(m[0], m[2]) / D2R], undefined, 1);
+    };
+    window.addEventListener("memap-globe-focus", focus);
 
     // touch: drag 1:1, a short glide, tap; two fingers pinch to zoom
     let dragging = false, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, moved = 0, pid: number | null = null;
@@ -407,6 +448,10 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     };
     const tap = (cx: number, cy: number) => {
       const r = box.getBoundingClientRect(), x = cx - r.left, y = cy - r.top;
+      // a link inside one island: its sign over the island
+      const ih = innerHits.find((h) => Math.abs(h.x - x) < 34 && Math.abs(h.y - y) < 20);
+      const ir = ih && innerRef.current?.get(ih.id);
+      if (ir && onInnerRef.current) { haptics.tap(); onInnerRef.current(ir); return; }
       let hit: Thing | null = null, hz = -1;
       for (const th of things) {
         if (th.kind === "sky") continue;
@@ -476,6 +521,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       box.removeEventListener("pointerdown", onDown); box.removeEventListener("pointermove", onMove);
       box.removeEventListener("pointerup", onUp); box.removeEventListener("pointercancel", onCancel);
       box.removeEventListener("wheel", onWheel);
+      window.removeEventListener("memap-globe-focus", focus);
       kickRef.current = () => undefined;
       // what this run put on the GPU goes with it
       gl.deleteTexture(tex); gl.deleteBuffer(buf); gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs);
@@ -498,12 +544,14 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           const W = th.island?.weather ? WEATHER_ICON[th.island.weather] : null;
           return (
             <div key={th.key}>
-              <div ref={(el) => { elOf(th.key).el = el; }} className={`planet-isle ${th.kind === "boat" ? "planet-boat" : ""} ${th.kind === "sky" ? "planet-cloud" : ""} ${on === th.key ? "on" : ""}`} style={{ opacity: 0 }}>
+              <div ref={(el) => { elOf(th.key).el = el; }} data-isle={th.kind === "area" ? th.key : undefined}
+                className={`planet-isle ${th.kind === "boat" ? "planet-boat" : ""} ${th.kind === "sky" ? "planet-cloud" : ""} ${on === th.key ? "on" : ""} ${th.kind === "area" && th.key === main ? "is-main" : ""}`} style={{ opacity: 0 }}>
+                {th.kind === "area" && th.key === main && <span className="main-glow" aria-hidden="true" />}
                 {th.kind === "area" && <div className="ring" />}
                 {th.kind === "boat" ? (
                   <div className="bob"><img src={mapPic("sailboat")} alt="" />{avatar && <img className="otter" src={avatar} alt="" />}</div>
                 ) : (
-                  <img src={art(th.name, night)} alt="" />
+                  <img className="island-art" src={art(th.name, night)} alt="" />
                 )}
                 {th.island && garden?.get(th.island.id)?.map((pic, gi) => (
                   <span key={`g${gi}`} className="stand tree" style={standAt(th.name, gi === 0 ? "g1" : "g2")}><img src={mapPic(pic)} alt="" /></span>
@@ -516,19 +564,38 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
               </div>
               {th.island && (
                 <div ref={(el) => { elOf(th.key).lab = el; }} className="planet-label" style={{ opacity: 0 }}>
-                  <span>{W && <W className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[th.island.weather!] }} />}{islandName(t, th.island.id)}</span>
+                  <span>{th.island.id === main && <i className="main-dot" aria-hidden="true" />}{W && <W className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[th.island.weather!] }} />}{islandName(t, th.island.id)}</span>
                 </div>
               )}
             </div>
           );
         })}
+        {onInner && inner && [...inner.entries()].map(([id, r]) => (
+          <div key={`in-${id}`} ref={(el) => { innerEls.current.set(id, el); }} aria-hidden="true" className="inner-chip planet-inner-chip" style={{ opacity: 0 }}>
+            <Link2 className="h-3.5 w-3.5" strokeWidth={2.6} />{r.k}/{r.n}
+          </div>
+        ))}
         {onLink && wakes.map(([a, b]) => (
           <div key={`${a}|${b}`} ref={(el) => { chipEls.current.set(`${a}|${b}`, el); }} aria-hidden="true" className="link-chip planet-link-chip" style={{ opacity: 0 }}>
             <Link2 className="h-4 w-4" strokeWidth={2.6} />
           </div>
         ))}
       </div>
-      {hint && <div className="planet-hint">{t("map.hint")}</div>}
+      {hint && <div className="planet-hint" style={below ? { bottom: "calc(12.6rem + env(safe-area-inset-bottom, 0px))" } : undefined}>{t("map.hint")}</div>}
+      {/* zoom in and out by hand too (pinch and the wheel still work) */}
+      <div className="absolute right-4 z-[5] flex flex-col overflow-hidden rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]" style={{ bottom: "calc(11.5rem + env(safe-area-inset-bottom, 0px))" }}>
+        <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-11 w-11 items-center justify-center text-foreground"><Plus className="h-5 w-5" strokeWidth={2.6} /></button>
+        <span className="mx-2.5 h-px bg-foreground/10" />
+        <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-11 w-11 items-center justify-center text-foreground"><Minus className="h-5 w-5" strokeWidth={2.6} /></button>
+      </div>
+      {/* a new island, always at hand (on the flat map it was a tile) */}
+      {onNewIsland && (
+        <button type="button" onClick={() => { haptics.tap(); onNewIsland(); }}
+          className="absolute left-4 z-[5] flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]"
+          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          <Plus className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("islands.new")}
+        </button>
+      )}
       <button type="button" onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
         className={`absolute right-4 z-[5] flex h-12 items-center gap-2 rounded-full bg-white pl-2 pr-4 text-[15px] font-extrabold text-primary shadow-lg transition-all duration-200 dark:bg-[hsl(var(--surface))] ${away ? "opacity-100" : "pointer-events-none translate-y-2 opacity-0"}`}
         style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>

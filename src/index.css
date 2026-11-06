@@ -2396,6 +2396,11 @@ html[data-ui="new"][data-theme="aurora"] .trust-chip { background: rgba(255, 255
 .planet-map-isle.is-main > .stand, .planet-map-isle.is-main > .treasure { z-index: 1; }
 .planet-map-isle.is-main > .planet-label { z-index: 2; }
 html[data-ui="new"][data-theme="aurora"] .planet-map-isle .main-glow { background: radial-gradient(ellipse at 50% 58%, rgba(255, 214, 120, .55), rgba(255, 214, 120, .2) 40%, rgba(255, 214, 120, 0) 68%); }
+/* the globe (v81): her topic's island lit, a link inside one island over it */
+.planet-isle .main-glow { position: absolute; left: -32%; right: -32%; top: -14%; bottom: -24%; border-radius: 50%; background: radial-gradient(ellipse at 50% 58%, rgba(255, 228, 150, .95), rgba(255, 236, 170, .45) 40%, rgba(255, 236, 170, 0) 68%); z-index: 0; pointer-events: none; }
+html[data-ui="new"][data-theme="aurora"] .planet-isle .main-glow { background: radial-gradient(ellipse at 50% 58%, rgba(255, 214, 120, .55), rgba(255, 214, 120, .2) 40%, rgba(255, 214, 120, 0) 68%); }
+.planet-isle.is-main > img.island-art { position: relative; z-index: 1; }
+.planet-inner-chip { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: none; }
 .planet-label .main-dot { display: block; width: 8px; height: 8px; border-radius: 4px; background: hsl(var(--coin-teal)); flex-shrink: 0; }
 .planet-map-isle .new-tool { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: 46px; height: 46px; border-radius: 14px; background: #fff; color: hsl(var(--coin-teal));
   display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px -10px rgba(20, 40, 90, .55); }

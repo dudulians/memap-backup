@@ -12,7 +12,7 @@ import { haptics } from "@/lib/haptics";
 import { ASPECT, LADDER_WIDTH, STAGE_AT, STAGE_SCALE, art, artOf, toNextStage, islandEvenings, type Stage } from "@/lib/globeArt";
 import { islandName, isNightMap, mapPicFor, type IslandId } from "@/lib/islands";
 import { getEntries, getTrackers } from "@/lib/storage";
-import { MAP_VIEW, findTarget, frames, isleRects, union, wait } from "@/lib/spotlight";
+import { findTarget, focusGlobe, frames, isleRects, union, wait } from "@/lib/spotlight";
 import { markGrowSeen } from "@/lib/growMoment";
 import { track } from "@/lib/analytics";
 
@@ -37,10 +37,10 @@ export const GrowMoment = () => {
       busy.current = true;
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
       const days = islandEvenings(trackers, entries).get(d.island) ?? 0;
-      try { viewBefore.current = localStorage.getItem(MAP_VIEW); localStorage.setItem(MAP_VIEW, "map"); } catch { viewBefore.current = null; }
-      window.dispatchEvent(new CustomEvent("memap-set-map-view", { detail: "map" }));
       window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }));
       await frames(2);
+      await findTarget(`[data-isle="${d.island}"]`);
+      await focusGlobe([d.island]);
       const el = await findTarget(`[data-isle="${d.island}"]`);
       if (!el) { busy.current = false; return; }
       let r = union(isleRects([el]));
@@ -70,10 +70,6 @@ export const GrowMoment = () => {
     setLit(false); setCardOn(false); setShown(null); busy.current = false;
     window.dispatchEvent(new Event("memap-grow-seen"));
     if (open) window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island } }));
-    else if (viewBefore.current === "globe") {
-      try { localStorage.setItem(MAP_VIEW, "globe"); } catch { /* stays flat */ }
-      window.dispatchEvent(new CustomEvent("memap-set-map-view", { detail: "globe" }));
-    }
   };
 
   // the old picture, the size it stood at, fading off the new one

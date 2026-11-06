@@ -43,6 +43,9 @@ export interface Tracker {
   // when keyword fallback can't resolve it to a specific template id.
   // Optional — older trackers may not have it.
   cluster?: string;
+  // Her own question in words (Nov 7 2026): how MeMap says her yes and no in links
+  // ("No walk → migraine"). Library questions have theirs in answerPhrases.ts.
+  words?: { yes?: string; no?: string };
 }
 
 export interface TrackerEntry {

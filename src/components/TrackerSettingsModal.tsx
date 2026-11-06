@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { AnswerWordsFields, cleanWords, type AnswerWords } from "./AnswerWordsFields";
+import { templateIdOf } from "@/lib/answerPhrases";
 import { Tracker } from "@/types/tracker";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -83,6 +85,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
     cluster: undefined as string | undefined,
     adviceAboveThreshold: "",
   });
+  const [words, setWords] = useState<AnswerWords>({});
   const [thresholdRaw, setThresholdRaw] = useState<string>("10");
   const [periodDaysRaw, setPeriodDaysRaw] = useState<string>("30");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -111,6 +114,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
         cluster: tracker.cluster ?? inferClusterFromCategory(tracker.category),
         adviceAboveThreshold: localizeTrackerAdvice(tracker.adviceAboveThreshold),
       });
+      setWords(tracker.words ?? {});
       setPeriodDaysRaw(String(tracker.periodDays));
       setThresholdRaw(String(tracker.threshold));
       setErrors({});
@@ -139,6 +143,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       const updatedTracker: Tracker = {
         ...tracker,
         ...validated,
+        words: templateIdOf(tracker) ? tracker.words : cleanWords(words),
       };
 
       await onSave(updatedTracker);
@@ -203,6 +208,9 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
             <p className="text-sm text-destructive">{errors.questionText}</p>
           )}
         </div>
+
+        {/* her own question: her answers in words, for links (library ones have theirs) */}
+        {tracker && !templateIdOf(tracker) && <AnswerWordsFields value={words} onChange={setWords} />}
 
         {/* "Yes" is… Good / Bad. Good → the signal is a No day. */}
         <div>

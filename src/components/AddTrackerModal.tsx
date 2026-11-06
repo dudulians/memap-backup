@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { AnswerWordsFields, cleanWords, type AnswerWords } from "./AnswerWordsFields";
 import { createPortal } from "react-dom";
 import { Tracker, ProblemWhen } from "@/types/tracker";
 import { track } from "@/lib/analytics";
@@ -204,6 +205,8 @@ export const AddTrackerModal = ({
     problemWhen: "yes" as "yes" | "no",
     adviceAboveThreshold: "",
   });
+  // her answers in words, for links (optional; Nov 7 2026)
+  const [words, setWords] = useState<AnswerWords>({});
   // Per-cluster "show all" state. When false → only featured (3 picks)
   // are shown inside the expanded cluster; user taps "Показать все N →"
   // to reveal the rest. Reset every time the modal opens so the user
@@ -523,7 +526,7 @@ export const AddTrackerModal = ({
     if (!question) return;
     // The name defaults to the question without "?" (More settings can change it).
     const title = formData.title.trim() || question.replace(/[?？]+$/, "").slice(0, 60);
-    const data = { ...formData, title, questionText: question };
+    const data = { ...formData, title, questionText: question, words: cleanWords(words) };
 
     // Check for duplicates
     const dup = await checkForDuplicate(data.title, data.category);
@@ -567,6 +570,7 @@ export const AddTrackerModal = ({
       problemWhen: "yes",
       adviceAboveThreshold: "",
     });
+    setWords({});
     setMoreOpen(false);
     onTrackerAdded();
     // Custom-tracker creation is an explicit form submission, so close
@@ -892,6 +896,9 @@ export const AddTrackerModal = ({
                   />
                 )}
             </div>
+
+            {/* her answers in words, for links (optional) */}
+            <AnswerWordsFields value={words} onChange={setWords} />
 
             {/* "Yes" is… Good / Bad. Good → the signal is a No day
                 (problemWhen "no"); Bad → the signal is a Yes day. */}

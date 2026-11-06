@@ -89,7 +89,8 @@ const Index = () => {
     window.addEventListener("memap-map-view", sync);
     return () => window.removeEventListener("memap-map-view", sync);
   }, []);
-  const onGlobe = activeTab === "patterns" && mapView === "globe";
+  // globe only (v81 try): her sky is always behind the World tab
+  const onGlobe = activeTab === "patterns" && (mapView === "globe" || true);
   // the other theme's backgrounds load ahead, so a switch has them at once
   useEffect(() => {
     const id = window.setTimeout(() => {

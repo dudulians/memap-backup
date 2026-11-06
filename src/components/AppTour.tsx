@@ -15,7 +15,7 @@ import { getEntries, getTrackers } from "@/lib/storage";
 import { art, artOf, STAGE_AT, LADDER_WIDTH } from "@/lib/globeArt";
 import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { countedDays, markDiscovered, pathModel } from "@/lib/pathSteps";
-import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
+import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
 import { track } from "@/lib/analytics";
 
@@ -321,7 +321,6 @@ export const AppTour = () => {
   useEffect(() => {
     const start = async () => {
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
-      try { viewBefore.current = localStorage.getItem(MAP_VIEW); } catch { viewBefore.current = null; }
       const door = getDoorState(), main = door ? trackers.find((x) => x.id === door.trackerId) : undefined;
       mainIsle.current = main ? islandOf(main) : null;
       const counted = countedDays(trackers, entries);
@@ -356,10 +355,6 @@ export const AppTour = () => {
       // "Look around" done as it starts), so measure once it has settled
       else await wait(650);
       if (!alive) return;
-      if (stop.tab === "patterns") {
-        try { localStorage.setItem(MAP_VIEW, "map"); } catch { /* the globe has no cards; the event below still asks */ }
-        window.dispatchEvent(new CustomEvent("memap-set-map-view", { detail: "map" }));
-      }
       window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: stop.tab } }));
       let r: DOMRect | null = null, link: { a: Pt; b: Pt } | undefined, isle: IslandId | undefined;
       target.current = null; placed.current = [];
@@ -368,6 +363,8 @@ export const AppTour = () => {
       if (stop.isle) {
         // her island on the map (and, for a link, the nearest one to it)
         await findTarget("[data-isle]");
+        // the globe turns her island to face her first
+        if (mainIsle.current) await focusGlobe([mainIsle.current]);
         const all = [...document.querySelectorAll<HTMLElement>("[data-isle]")];
         const mine = all.find((e) => e.dataset.isle === mainIsle.current) ?? all[0];
         if (mine) {
@@ -439,11 +436,6 @@ export const AppTour = () => {
     track("tour_finished", { completed: view?.at === STOPS.length - 1, at: view ? STOPS[view.at].id : "start" });
     markDiscovered("tour");
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
-    // her own Map | Globe choice back
-    if (viewBefore.current === "globe") {
-      try { localStorage.setItem(MAP_VIEW, "globe"); } catch { /* stays on the map */ }
-      window.dispatchEvent(new CustomEvent("memap-set-map-view", { detail: "globe" }));
-    }
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
     window.dispatchEvent(new CustomEvent("memap-tour-done"));
   };

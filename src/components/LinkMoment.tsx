@@ -15,7 +15,7 @@ import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, mapPicFor, type Route } from "@/lib/islands";
 import { linkArrow, linkSentence } from "@/lib/linkText";
 import { firstLinkState, markFirstLinkSeen } from "@/lib/firstLink";
-import { MAP_VIEW, centre, curveDots, findTarget, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
+import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import { track } from "@/lib/analytics";
 
 const delay = (s: number): React.CSSProperties => ({ animationDelay: `${s}s` });
@@ -51,10 +51,10 @@ export const LinkMoment = () => {
       const { route } = firstLinkState(routes, entries.length > 0);
       if (!route) { busy.current = false; return; }
       // her map, flat (the globe turns): the link is drawn on it
-      try { viewBefore.current = localStorage.getItem(MAP_VIEW); localStorage.setItem(MAP_VIEW, "map"); } catch { viewBefore.current = null; }
-      window.dispatchEvent(new CustomEvent("memap-set-map-view", { detail: "map" }));
       window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }));
       await frames(2);
+      await findTarget(`[data-isle="${route.a}"]`);
+      await focusGlobe([route.a, route.b]);
       const ea = await findTarget(`[data-isle="${route.a}"]`);
       const eb = document.querySelector<HTMLElement>(`[data-isle="${route.b}"]`);
       if (!ea || !eb) { busy.current = false; return; }
@@ -103,8 +103,6 @@ export const LinkMoment = () => {
     if (open) {
       window.dispatchEvent(new CustomEvent("memap-open-link", { detail: { a: route.a, b: route.b } }));
     } else if (viewBefore.current === "globe") {
-      try { localStorage.setItem(MAP_VIEW, "globe"); } catch { /* stays flat */ }
-      window.dispatchEvent(new CustomEvent("memap-set-map-view", { detail: "globe" }));
     }
   };
 

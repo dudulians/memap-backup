@@ -238,6 +238,8 @@ export const cap = (s: string) => (s ? s[0].toLocaleUpperCase() + s.slice(1) : s
 /** "short night", "migraine", "no anxiety"; her own question: "“Walked the dog”: no". */
 export const answerPhrase = (t: TFunction, tr: Tracker | undefined, yes: boolean): string => {
   if (!tr) return "";
+  const own = yes ? tr.words?.yes : tr.words?.no;
+  if (own) return own;
   const id = templateIdOf(tr);
   if (id) { const p = P[id]; return getLanguage() === "ru" ? (yes ? p[2] : p[3]) : yes ? p[0] : p[1]; }
   return t("link.own", { q: localizeTrackerTitle(tr.title), a: t(yes ? "link.yes" : "link.no") });
@@ -260,7 +262,9 @@ export const oftenWord = (t: TFunction, k: number, n: number): string => {
 export const answerClause = (t: TFunction, tr: Tracker | undefined, yes: boolean, role: "cause" | "result", often = ""): string => {
   if (!tr) return "";
   const id = templateIdOf(tr);
-  const s = id && S[id]
+  const own = yes ? tr.words?.yes : tr.words?.no;
+  const s = own && !(id && S[id]) ? t("link.wordsClause", { w: own })
+    : id && S[id]
     ? (getLanguage() === "ru" ? (yes ? S[id][2] : S[id][3]) : yes ? S[id][0] : S[id][1])
     : t("link.ownClause", { q: localizeTrackerTitle(tr.title).replace(/[?？]+$/, ""), a: t(yes ? "link.yes" : "link.no") });
   const [cause, result] = s.includes("|") ? s.split("|") : [s, s];

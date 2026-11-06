@@ -7,6 +7,8 @@ export type Pt = { x: number; y: number };
 export const MAP_VIEW = "memap_map_view";
 
 export const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+/** Turns the globe so these islands face her (PlanetGlobe), then waits for it to settle. */
+export const focusGlobe = async (ids: string[]) => { window.dispatchEvent(new CustomEvent("memap-globe-focus", { detail: { ids } })); await wait(720); };
 export const frames = (n: number) => new Promise<void>((r) => { const go = (k: number) => (k <= 0 ? r() : requestAnimationFrame(() => go(k - 1))); go(n); });
 export const findTarget = async (sel: string): Promise<HTMLElement | null> => {
   for (let i = 0; i < 60; i++) {
@@ -19,7 +21,8 @@ export const findTarget = async (sel: string): Promise<HTMLElement | null> => {
 export const centre = (el: HTMLElement): Pt => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height * 0.55 }; };
 /** an island on the map with its name under it */
 export const isleRects = (els: HTMLElement[]): DOMRect[] => els.flatMap((e) => {
-  const lab = e.querySelector<HTMLElement>(".planet-label");
+  // on the flat map the name is inside the island; on the globe it is next to it
+  const lab = e.querySelector<HTMLElement>(".planet-label") ?? e.parentElement?.querySelector<HTMLElement>(":scope > .planet-label") ?? null;
   return lab ? [e.getBoundingClientRect(), lab.getBoundingClientRect()] : [e.getBoundingClientRect()];
 });
 export const union = (rs: DOMRect[]): DOMRect => {
