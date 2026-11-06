@@ -68,7 +68,7 @@ const Index = () => {
   const [tourOpen, setTourOpen] = useState(false);
   // Report buttons ask the Map to open a sheet straight away (Findings for
   // all questions) instead of landing on the bare globe.
-  const [mapOpen, setMapOpen] = useState<"all" | "overview" | "trends" | "signals" | null>(null);
+  const [mapOpen, setMapOpen] = useState<"all" | "overview" | "trends" | "signals" | "findings" | null>(null);
   // A side trip (her note, Nov 3 2026: "приложение не всегда возвращает туда,
   // откуда пришла"): a step on Today opens the calendar on the Map, or an
   // island's "Answer now" opens its questions on Today. When that sheet or
@@ -121,13 +121,13 @@ const Index = () => {
         if (tab === "patterns" && (e as CustomEvent).detail?.open === "all") {
           const section = (e as CustomEvent).detail?.section ?? "findings";
           // her week and treasures live in You: it opens right here
-          if (section !== "overview" && section !== "trends" && section !== "signals") {
+          if (section !== "overview" && section !== "trends" && section !== "signals" && section !== "findings") {
             youTrip.current = false;
             setYouOpen(true);
             return;
           }
           try { localStorage.setItem("memap_patterns_section", section); } catch { /* ignore */ }
-          setMapOpen(section === "overview" || section === "trends" || section === "signals" ? section : "all");
+          setMapOpen(section === "overview" || section === "trends" || section === "signals" || section === "findings" ? section : "all");
         }
         const from = tabRef.current;
         setTrip((e as CustomEvent).detail?.back && from !== tab ? { back: from, to: tab } : null);
@@ -436,7 +436,8 @@ const Index = () => {
 
       <YouSheet open={youOpen} onClose={() => closeYou(true)}
         onQuestions={() => { closeYou(false); window.dispatchEvent(new Event("memap-open-questions")); }}
-        onSettings={() => { closeYou(false); window.setTimeout(() => setSettingsModalOpen(true), 250); }} />
+        onSettings={() => { closeYou(false); window.setTimeout(() => setSettingsModalOpen(true), 250); }}
+        onAddQuestion={() => { closeYou(false); window.setTimeout(() => setAddModalOpen(true), 250); }} />
 
       {/* Settings Modal */}
       <SettingsModal

@@ -14,7 +14,7 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { firstLinkState } from "@/lib/firstLink";
 import { growSeen } from "@/lib/growMoment";
 import { grewToday } from "@/lib/globeArt";
-import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, mapPic, type Route } from "@/lib/islands";
+import { buildInnerLinks, buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, mapPic, type Route } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { currentExperiment, experimentOver, type Experiment } from "@/lib/experiments";
 import { getDoorState } from "@/lib/doors";
@@ -36,6 +36,7 @@ import { PatternsTab } from "./PatternsTab";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
 import { DaysOverview } from "./DaysOverview";
+import { SteadyCard } from "./SteadyCard";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { track } from "@/lib/analytics";
@@ -213,6 +214,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     const tr = id ? trackers.find((x) => x.id === id && !x.archived) : undefined;
     return tr ? islandOf(tr) : null;
   }, [trackers]);
+  const innerLinks = useMemo(() => buildInnerLinks(trackers, entries, islands), [trackers, entries, islands]);
   // every link worth showing, not only the ones drawn between islands
   const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length, [trackers, entries]);
   const onHelps = () => {
@@ -265,7 +267,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {loaded && islands.length > 0 && (
             <div className="mt-3" data-tour="world">
-              <PlanetMap islands={islands} routes={routes} width={width} lit={lit} main={mainIsland} days={dayCount} avatar={avatarPic} treasures={treasures} garden={garden} onOpen={setOpen} onLink={setLink}
+              <PlanetMap islands={islands} routes={routes} inner={innerLinks} width={width} lit={lit} main={mainIsland} days={dayCount} avatar={avatarPic} treasures={treasures} garden={garden} onOpen={setOpen} onLink={setLink}
                 onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} onYou={() => window.dispatchEvent(new CustomEvent("memap-open-you"))} />
             </div>
           )}
@@ -365,6 +367,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               );
             })}
           </div>
+          {/* a thought she tracks: steady, or depends on the day? (board 64) */}
+          {only === "findings" && !onlyIsland && <SteadyCard trackers={trackers} entries={entries} />}
           {only && (
             <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only}
               focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)}

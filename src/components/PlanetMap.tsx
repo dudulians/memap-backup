@@ -21,8 +21,10 @@ const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as
 // picture pixels 28 degrees are: the crop puts the ring on her open sea.
 const PIC_W = 1774, MID_X = 779, MID_Y = 335, RING_PX = 128;
 
-export const PlanetMap = ({ islands, routes, width, lit, main = null, days = {}, avatar = null, treasures, garden, onOpen, onNewIsland, onYou, onLink }: {
+export const PlanetMap = ({ islands, routes, inner, width, lit, main = null, days = {}, avatar = null, treasures, garden, onOpen, onNewIsland, onYou, onLink }: {
   islands: Island[]; routes: Route[];
+  /** a link inside one island (buildInnerLinks): a loop and its chip on that island */
+  inner?: Map<IslandId, Route>;
   /** her topic's island: a soft light under it and a dot in its name */
   main?: IslandId | null;
   /** the column's width; the map adds 16 px on both sides (its parent has no padding) */
@@ -150,9 +152,26 @@ export const PlanetMap = ({ islands, routes, width, lit, main = null, days = {},
             {treasures?.get(isl.id)?.map((tr) => (
               <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(name, tr.slot) : undefined}><img className="art-day" src={mapPicFor(tr.pic, false)} alt="" /><img className="art-night" src={mapPicFor(tr.pic, true)} alt="" /></span>
             ))}
+            {inner?.get(isl.id) && (
+              <svg className="inner-loop" aria-hidden="true" viewBox="0 0 100 40" preserveAspectRatio="none">
+                {Array.from({ length: 11 }, (_, k) => { const u = 0.15 + (k / 10) * 0.7, xx = 10 + u * 80, yy = 34 - Math.sin(u * Math.PI) * 30; return <circle key={k} cx={xx} cy={yy} r={2.4} className="planet-route" />; })}
+              </svg>
+            )}
             <span className="planet-label" style={{ position: "absolute", left: "50%", top: "100%", marginTop: 4, ...label(x) }}>
               <span>{isl.id === main && <i className="main-dot" aria-hidden="true" />}{Icon && <Icon className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[isl.weather!] }} />}{islandName(t, isl.id)}</span>
             </span>
+          </button>
+        );
+      })}
+
+      {onLink && inner && spots.list.map(({ isl, x, y, size, name }) => {
+        const r = inner.get(isl.id);
+        if (!r) return null;
+        const h = size * (ASPECT[name] ?? 0.55);
+        return (
+          <button key={`in-${isl.id}`} type="button" aria-label={`${t("map.linked")} · ${t("map.linkAria")}`} onClick={() => { haptics.tap(); onLink(r); }}
+            className="inner-chip absolute z-[3]" style={{ left: x - 30, top: y - h * 0.7 - 14 }}>
+            <Link2 className="h-3.5 w-3.5" strokeWidth={2.6} />{r.k}/{r.n}
           </button>
         );
       })}

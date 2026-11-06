@@ -4,6 +4,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
+import { currentExperiment, EXPERIMENT_DAYS } from "@/lib/experiments";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { progressLines } from "@/lib/reminderLines";
@@ -30,6 +31,8 @@ const LEGACY_DAILY_NOTIFICATION_ID = 1;
 // 60 days is a generous safety net; iOS caps at 64 scheduled
 // notifications per app so we stay well under that.
 const DAYS_AHEAD = 60;
+/** a try's daily reminder (board 65): the same date id, shifted */
+const TRY_ID_OFFSET = 1_000_000_000;
 
 // Encode a date as a 32-bit-safe integer id: YYYYMMDD.
 const dateToNotificationId = (date: Date): number =>
@@ -152,6 +155,7 @@ export const cancelNotification = async (): Promise<void> => {
       const d = new Date(today);
       d.setDate(today.getDate() + offset);
       ids.push({ id: dateToNotificationId(d) });
+      ids.push({ id: dateToNotificationId(d) + TRY_ID_OFFSET });
     }
     await LocalNotifications.cancel({ notifications: ids });
   } catch (error) {
@@ -291,7 +295,9 @@ export const scheduleNotification = async (
   // Kill old schedule no matter what — keeps state consistent.
   await cancelNotification();
 
-  if (!settings.enabled) return;
+  // a try with its own reminder counts even when the evening one is off
+  const tries = tryPlan();
+  if (!settings.enabled && tries.length === 0) return;
 
   const granted = await requestNotificationPermission();
   if (!granted) return;
@@ -302,11 +308,26 @@ export const scheduleNotification = async (
     return;
   }
 
-  const notifications = await reminderPlan(settings);
+  const notifications = [...(settings.enabled ? await reminderPlan(settings) : []), ...tries];
 
   if (notifications.length > 0) {
     await LocalNotifications.schedule({ notifications });
   }
+};
+
+/** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */
+export const tryPlan = (): { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] => {
+  const x = currentExperiment();
+  if (!x?.remind) return [];
+  const [h, m] = x.remind.split(":").map(Number);
+  const start = new Date(x.start + "T00:00:00");
+  const out: { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] = [];
+  for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
+    const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
+    if (at.getTime() <= Date.now()) continue;
+    out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET, title: x.change, body: i18n.t(k === EXPERIMENT_DAYS ? "notifications.tryLast" : "notifications.tryBody", { k, count: EXPERIMENT_DAYS }), schedule: { at, allowWhileIdle: true } });
+  }
+  return out;
 };
 
 const getNotifiedCycles = (): Record<string, string> => {

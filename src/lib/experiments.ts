@@ -10,7 +10,8 @@ import { isoLocal } from "@/lib/doors";
 import { isHardAnswer, isTestQuestion, islandOf } from "@/lib/islands";
 import { track } from "@/lib/analytics";
 
-export const EXPERIMENT_DAYS = 7;
+/** Two weeks (Nov 6 2026, board 68: week 4 "what helps" compares before and during). */
+export const EXPERIMENT_DAYS = 14;
 const KEY = "memap_experiments";
 
 export interface Experiment {
@@ -29,7 +30,20 @@ export interface Experiment {
   kept?: boolean;
   /** the action point it came from ("I'll try", Nov 5 2026): that question's id */
   from?: string;
+  /** "HH:MM": a daily reminder until the try ends (board 65, Nov 6 2026) */
+  remind?: string;
 }
+
+/** A time that fits the change (board 65): bedtime ones in the evening, morning ones early. */
+export const smartRemindTime = (idea: string | null): string => {
+  const at: Record<string, string> = { bed23: "22:00", phoneAway: "21:30", noNewsEvening: "20:30", noMailEvening: "19:00", stop19: "18:30", noSweetsEvening: "19:30",
+    noCoffee14: "13:30", water: "12:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00" };
+  return (idea && at[idea]) || "09:00";
+};
+/** Turn the try's daily reminder on (a time) or off (null). */
+export const setExperimentRemind = (id: string, time: string | null) => {
+  save(getExperiments().map((x) => (x.id === id ? (time ? { ...x, remind: time } : (({ remind: _r, ...rest }) => rest)(x)) : x)));
+};
 
 /** Ready ideas per island (keys into experiment.idea.*): everyday changes,
  *  hers to choose; MeMap only counts what happens. */

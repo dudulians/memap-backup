@@ -6,7 +6,8 @@
 // from the header, the boat on the map and the animal beside her step.
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, CircleUser, ListChecks, Settings, Share2, Stethoscope, type LucideProps } from "lucide-react";
+import { ChevronRight, CircleUser, Compass, ListChecks, Settings, Share2, Stethoscope, type LucideProps } from "lucide-react";
+import { HowItWorksSheet } from "@/components/HowItWorksSheet";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { AvatarPicker } from "@/components/AvatarPicker";
 import { WorldStats } from "@/components/IslandStats";
@@ -29,12 +30,14 @@ const Row = ({ icon: Icon, label, onClick }: { icon: ComponentType<LucideProps>;
   </button>
 );
 
-export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
+export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion }: {
   open: boolean;
   onClose: () => void;
   /** her questions list (the sheet closes first) */
   onQuestions: () => void;
   onSettings: () => void;
+  /** "Add a question — any time" from How MeMap works (both sheets close first) */
+  onAddQuestion: () => void;
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ trackers: Tracker[]; entries: TrackerEntry[]; notes: number } | null>(null);
@@ -67,6 +70,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
     return () => window.removeEventListener("memap-avatar-changed", sync);
   }, []);
   const [picking, setPicking] = useState(false);
+  const [how, setHow] = useState(false);
 
   return (
     <>
@@ -92,6 +96,8 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
             <Row icon={Stethoscope} label={t("report.title")} onClick={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />
             <div className="ml-[66px] h-px bg-foreground/[0.07]" />
             <Row icon={Share2} label={t("share.button")} onClick={() => window.dispatchEvent(new CustomEvent("memap-share-world", { detail: { from: "you" } }))} />
+            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
+            <Row icon={Compass} label={t("how.title")} onClick={() => setHow(true)} />
           </div>
           <div className="mt-5 shrink-0">
             {data && <WorldStats key={visit} islands={islands} routes={routes} trackers={data.trackers} entries={data.entries} facts={facts} />}
@@ -99,6 +105,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings }: {
         </div>
       </BottomSheet>
       <AvatarPicker open={picking} onClose={() => setPicking(false)} />
+      <HowItWorksSheet open={how} onClose={() => setHow(false)} onAddQuestion={() => { setHow(false); onAddQuestion(); }} />
     </>
   );
 };

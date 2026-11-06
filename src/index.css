@@ -2374,6 +2374,11 @@ html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --mu
 html[data-ui="new"][data-theme="aurora-light"] { --strong: 348 70% 69%; --strong-foreground: 0 0% 100%; --balanced: 146 45% 60%; --balanced-foreground: 150 50% 18%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
 html[data-ui="new"][data-theme="aurora"] { --strong: 348 78% 73%; --strong-foreground: 348 60% 14%; --balanced: 146 48% 58%; --balanced-foreground: 150 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
 /* a link's sign on its route: opens the link card (LinkSheet) */
+/* a link inside one island (board 75) */
+.planet-map-isle .inner-loop { position: absolute; left: 14%; right: 14%; top: -6%; height: 34%; width: 72%; pointer-events: none; z-index: 1; overflow: visible; }
+.inner-chip { height: 28px; width: 60px; border-radius: 14px; background: #fff; color: hsl(var(--data-a)); display: flex; align-items: center; justify-content: center; gap: 3px; font-size: 13px; font-weight: 800;
+  box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .55); }
+html[data-ui="new"][data-theme="aurora"] .inner-chip { background: hsl(var(--surface)); }
 /* the trust line on the first screen (onboarding v7) */
 .trust-chip { background: rgba(255, 255, 255, .78); color: hsl(var(--foreground)); }
 html[data-ui="new"][data-theme="aurora"] .trust-chip { background: rgba(255, 255, 255, .12); color: #EEF1FF; }

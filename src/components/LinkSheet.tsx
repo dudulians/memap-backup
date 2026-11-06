@@ -44,6 +44,14 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
       {r && (
         <div className="px-5 pb-8 pt-1">
           {/* the two islands and the dotted route between them */}
+          {r.a === r.b ? (
+            <div className="flex flex-col items-center">
+              <svg aria-hidden="true" width="96" height="28" className="-mb-1">
+                {Array.from({ length: 9 }, (_, i) => { const u = 0.1 + (i / 8) * 0.8, x = 6 + u * 84, y = 26 - Math.sin(u * Math.PI) * 22; return <circle key={i} className="planet-route" cx={x} cy={y} r={2.6} />; })}
+              </svg>
+              {pic(r.a)}<span className="mt-1 text-[14px] font-bold">{islandName(t, r.a)} · {t("link.onIsland")}</span>
+            </div>
+          ) : (
           <div className="flex items-end justify-center gap-1">
             <div className="flex flex-col items-center">{pic(r.a)}<span className="mt-1 text-[14px] font-bold">{islandName(t, r.a)}</span></div>
             <svg aria-hidden="true" width="74" height="40" className="mb-8 shrink-0">
@@ -54,6 +62,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
             </svg>
             <div className="flex flex-col items-center">{pic(r.b)}<span className="mt-1 text-[14px] font-bold">{islandName(t, r.b)}</span></div>
           </div>
+          )}
 
           <p className="mt-5 text-[22px] font-bold leading-snug tracking-tight">
             {linkArrow(t, r, title)}

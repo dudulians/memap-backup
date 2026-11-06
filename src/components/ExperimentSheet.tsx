@@ -10,10 +10,13 @@ import { useTranslation } from "react-i18next";
 import { Check, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
-import { EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, startExperiment, type Experiment } from "@/lib/experiments";
+import { EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, setExperimentRemind, smartRemindTime, startExperiment, type Experiment } from "@/lib/experiments";
+import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
+import { Bell } from "lucide-react";
 import { countFromToday } from "@/lib/actionPoints";
 import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { Pressable } from "@/components/ui/pressable";
@@ -46,6 +49,17 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const [idea, setIdea] = useState<string | null>(plan ? PLAN : null);
   const [own, setOwn] = useState("");
   const [started, setStarted] = useState<Experiment | null>(null);
+  // "Remind me?" (board 65): on, at a time that fits the change
+  const [remindOn, setRemindOn] = useState(true);
+  const [remindAt, setRemindAt] = useState("09:00");
+  const finishStart = async () => {
+    if (started && remindOn) {
+      setExperimentRemind(started.id, remindAt);
+      try { const r = await requestNotificationPermissionDetailed(); if (r.granted) await scheduleNotification(getNotificationSettings()); } catch { /* never blocks */ }
+    }
+    track("experiment_remind", { on: remindOn, time: remindOn ? remindAt : null });
+    onClose();
+  };
 
   const change = idea === PLAN ? plan!.trim() : idea ? t(`experiment.idea.${idea}.change`) : own.trim();
   const question = idea === PLAN ? asQuestion(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? asQuestion(own) : "";
@@ -54,6 +68,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     haptics.rise();
     const x = await startExperiment(island, change, question, from?.trackerId);
     if (from) await countFromToday(from.trackerId, from.k);
+    setRemindAt(smartRemindTime(idea === PLAN ? null : idea));
     setStarted(x);
   };
   const choices = [...(plan ? [PLAN] : []), ...(island ? ideasFor(island) : [])];
@@ -131,7 +146,18 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
             </span>
             <p className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{t("experiment.started")}</p>
             <p className="mt-2 text-[17px] font-medium text-muted-foreground">{t("experiment.startedLine", { island: islandName(t, started.island as IslandId), count: EXPERIMENT_DAYS })}</p>
-            <Pressable tone="teal" haptic="none" onClick={onClose} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+            {/* Remind me? (board 65): a time that fits the change; one kind line a day */}
+            <div className="surface mt-6 flex w-full max-w-sm items-center gap-3 rounded-[18px] px-4 py-3 text-left">
+              <Bell className="h-5 w-5 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
+              <span className="min-w-0 flex-1 text-[16px] font-bold">{t("experiment.remindMe")}</span>
+              <input type="time" value={remindAt} disabled={!remindOn} onChange={(e) => setRemindAt(e.target.value || "09:00")} aria-label={t("experiment.remindMe")}
+                className="h-10 w-[124px] rounded-[12px] bg-foreground/[0.05] px-2 text-center text-[15px] font-bold tabular-nums outline-none disabled:opacity-40" />
+              <button type="button" role="switch" aria-checked={remindOn} aria-label={t("experiment.remindMe")} onClick={() => { haptics.tap(); setRemindOn((v) => !v); }}
+                className={`relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors ${remindOn ? "bg-[hsl(var(--coin-teal))]" : "bg-foreground/20"}`}>
+                <span className={`absolute top-[3px] h-6 w-6 rounded-full bg-white transition-all ${remindOn ? "left-[23px]" : "left-[3px]"}`} />
+              </button>
+            </div>
+            <Pressable tone="teal" haptic="none" onClick={() => void finishStart()} className="mt-6 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
               {t("path.continue")}
             </Pressable>
           </div>

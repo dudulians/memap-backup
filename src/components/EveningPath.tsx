@@ -27,7 +27,10 @@ import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
-import { currentExperiment } from "@/lib/experiments";
+import { currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
+import { computeCorrelations } from "@/lib/correlations";
+import { linkWorthShowing } from "@/lib/islands";
+import { litTrackers } from "@/lib/lighthouses";
 import { isHardAnswer, isNeutralQuestion, islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
 import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
@@ -74,8 +77,9 @@ type PNode =
 type Open = number | null;
 
 /** Day 1, she chose to start tonight (onboarding v7): no "fill in yesterday" that day. */
+/** the onboarding day: no past-day pill yet */
 const firstDayTonight = () => {
-  try { const d = getDoorState(); return localStorage.getItem("memap_first_day_pick") === "tonight" && (!d || d.startedAt === isoLocal(new Date())); } catch { return false; }
+  try { return localStorage.getItem("memap_first_day_at") === isoLocal(new Date()); } catch { return false; }
 };
 
 export const EveningPath = ({
@@ -507,6 +511,20 @@ export const EveningPath = ({
   const daysDone = m.pastInWeek.length + (m.todayCounted ? 1 : 0);
   const toGo = DAYS_PER_WEEK - daysDone;
   const openThisChest = () => setChestOpen({ week: m.week, dates: [...m.pastInWeek, isoDay(new Date())] });
+  // what this week's part gives now, and where it lives (board 68)
+  const part = m.week % WEEK_TITLES;
+  const weekNext = (() => {
+    const evenings = m.week * DAYS_PER_WEEK + daysDone;
+    // week 1's chip opens My days (a chip that looks tappable is tappable)
+    if (part === 0) return { text: t(m.week === 0 ? "path.next4.report" : "path.next4.reportN", { count: toGo }), open: "overview" as null | "overview" | "findings" | "signals" | "world" };
+    if (part === 1) {
+      const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length;
+      return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: t("path.next4.linksSoon", { count: Math.max(1, 10 - evenings) }), open: null };
+    }
+    if (part === 2) { const lit = litTrackers(trackers, entries).size; return { text: lit > 0 ? t("path.next4.lit", { count: lit }) : t("path.next4.rule"), open: "signals" as const }; }
+    const x = currentExperiment();
+    return { text: x ? t("path.next4.trying", { change: x.change, k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : t("path.next4.try"), open: "world" as const };
+  })();
 
   const openActionPoints = () =>
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
@@ -842,6 +860,10 @@ export const EveningPath = ({
       <div className="mt-2">
         <div data-wheel>
           <p className="path-week-label">{t("path.weekN", { n: m.week + 1 })} · {title}</p>
+          <button type="button" disabled={!weekNext.open} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: weekNext.open === "world" ? { tab: "patterns" } : { tab: "patterns", open: "all", section: weekNext.open, back: true } })); }}
+            className="surface mx-auto mt-2 flex h-9 max-w-[92%] items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold">
+            <span className="truncate">{weekNext.text}</span>
+          </button>
         </div>
       </div>
 

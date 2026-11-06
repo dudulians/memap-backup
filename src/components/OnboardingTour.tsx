@@ -98,7 +98,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   // the first real check-in happens on Today's own cards, right after onboarding closes
   const start = (day: "today" | "yesterday" | "tonight") => {
     if (!setup) return;
-    try { localStorage.setItem("memap_first_day_pick", day); } catch { /* ignore */ }
+    try { localStorage.setItem("memap_first_day_pick", day); localStorage.setItem("memap_first_day_at", isoLocal(new Date())); } catch { /* ignore */ }
     finish({ path: pick?.kind === "own" ? "own" : pick?.kind === "simple" ? "curious" : "door", reminders: false });
     window.setTimeout(() => {
       if (day === "tonight") { window.dispatchEvent(new Event("memap-world-waiting")); return; }

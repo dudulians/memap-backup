@@ -7,7 +7,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Link2 } from "lucide-react";
+import { ArrowRight, Link2, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { getDoorState } from "@/lib/doors";
@@ -21,7 +21,7 @@ import { track } from "@/lib/analytics";
 
 type Tab = "cards" | "patterns" | "notes";
 interface Stop {
-  id: "world" | "links" | "calendar" | "chart" | "actions" | "notes" | "you" | "end";
+  id: "world" | "links" | "calendar" | "chart" | "actions" | "helps" | "notes" | "you" | "end";
   tab: Tab;
   /** what lights up (none: the card stands in the middle) */
   target?: string;
@@ -32,9 +32,11 @@ interface Stop {
 }
 const STOPS: Stop[] = [
   { id: "world", tab: "patterns", isle: "main" },
-  { id: "links", tab: "patterns", isle: "pair" },
+  // the 4 parts in their order (Nov 6 2026)
   { id: "calendar", tab: "patterns", target: '[data-tour="calendar"]' },
+  { id: "links", tab: "patterns", isle: "pair" },
   { id: "actions", tab: "patterns", target: '[data-tour="actions"]' },
+  { id: "helps", tab: "patterns", target: '[data-tour="helps"]' },
   { id: "notes", tab: "notes", target: '[data-tour="tab-notes"]' },
   { id: "you", tab: "cards", target: '[data-coachmark="settings-button"]' },
   { id: "end", tab: "cards" },
@@ -166,6 +168,29 @@ const Rule = () => {
               ? <span key={i} className="tour-pop h-3 w-3 rounded-full" style={{ background: "hsl(var(--strong))", ...delay(0.4 + i * 0.22) }} />
               : <span key={i} className="h-3 w-3 rounded-full" style={{ background: "hsl(var(--foreground) / 0.12)" }} />)}
           </div>
+        </div>
+      </div>
+    </Box>
+  );
+};
+
+/** One small change, two weeks: the days fill in. */
+const Try = () => {
+  const { t } = useTranslation();
+  return (
+    <Box example>
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[hsl(var(--coin-teal)/0.14)]">
+          <Sprout className="h-7 w-7 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-bold leading-snug">{t("tour.helps.sample")}</p>
+          <div className="mt-1.5 flex items-center gap-[3px]" aria-hidden="true">
+            {Array.from({ length: 14 }, (_, i) => i < 5
+              ? <span key={i} className="tour-pop h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--coin-teal))", ...delay(0.4 + i * 0.18) }} />
+              : <span key={i} className="h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--foreground) / 0.12)" }} />)}
+          </div>
+          <p className="mt-1 text-[13px] font-bold text-muted-foreground">{t("tour.helps.day")}</p>
         </div>
       </div>
     </Box>
@@ -330,7 +355,9 @@ export const AppTour = () => {
 
   const title = stop.id === "calendar"
     ? t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any")
-    : stop.id === "actions" ? t("overviewCards.lighthouses")
+    : stop.id === "links" ? t("world4.links")
+    : stop.id === "actions" ? t("world4.whenToAct")
+    : stop.id === "helps" ? t("world4.whatHelps")
     : stop.id === "notes" ? t("common.notes")
     : stop.id === "you" ? t("map.you")
     : t(`tour.${stop.id}.title`);
@@ -339,6 +366,7 @@ export const AppTour = () => {
     : stop.id === "calendar" ? <Month />
     : stop.id === "chart" ? <Weeks days={data.days} />
     : stop.id === "actions" ? <Rule />
+    : stop.id === "helps" ? <Try />
     : stop.id === "notes" ? <NoteExample />
     : stop.id === "you" ? <Treasures />
     : null;

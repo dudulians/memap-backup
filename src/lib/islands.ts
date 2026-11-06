@@ -274,6 +274,22 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
   return out.slice(0, 4);
 };
 
+/** The strongest link with both questions on the same island, one per island
+ *  (board 75, Nov 6 2026): drawn as a dotted loop on that island. */
+export const buildInnerLinks = (trackers: Tracker[], entries: TrackerEntry[], islands: Island[]): Map<IslandId, Route> => {
+  const where = new Map<string, IslandId>();
+  for (const isl of islands) for (const id of isl.trackerIds) where.set(id, isl.id);
+  const out = new Map<IslandId, Route>();
+  for (const c of computeCorrelations(trackers, entries, 24)) {
+    if (!linkWorthShowing(c)) continue;
+    const a = where.get(c.trackerA.id), b = where.get(c.trackerB.id);
+    if (!a || a !== b || out.has(a)) continue;
+    const l = linkOf(c);
+    out.set(a, { a, b: a, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other });
+  }
+  return out;
+};
+
 /** The links drawn as bridges (her note, Nov 3 2026: when is it a bridge,
  *  when a line?): strongest first, at most one per island (an island can
  *  sit beside one neighbour), at most `max`. Every other link lives in the

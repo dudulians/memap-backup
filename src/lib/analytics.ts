@@ -160,4 +160,5 @@ export type AnalyticsEvent =
   | "onboarding_questions"
   | "onboarding_reminder"
   | "world_begun"
-  | "world_waiting";
+  | "world_waiting"
+  | "experiment_remind";
