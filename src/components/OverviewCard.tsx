@@ -15,6 +15,7 @@ import { getLanguage } from "@/lib/i18n";
 import { ru as ruLocale } from "date-fns/locale";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
+import { isNeutralQuestion } from "@/lib/islands";
 import { getDoorState } from "@/lib/doors";
 
 interface OverviewCardProps {
@@ -78,6 +79,8 @@ export const OverviewCard = ({
   // on its calendar — otherwise a partner-conflict note bleeds into the
   // migraine calendar and confuses the per-tracker view.
   const activeTracker = trackers[activeTrackerIndex] ?? trackers[0];
+  // a wish or decision: yes / no in neutral indigo, not hard / calm
+  const neutral = !!activeTracker && isNeutralQuestion(activeTracker);
   const activeTrackerId = activeTracker?.id;
   const notesForActiveTracker = useMemo(
     () => notes.filter(n => n.linkedPatternId === activeTrackerId),
@@ -374,8 +377,8 @@ export const OverviewCard = ({
                       className={cn(
                         "block aspect-square rounded-full",
                         !d.show && "bg-transparent",
-                        d.show && d.status === "significant" && "bg-strong",
-                        d.show && d.status === "balanced" && "bg-balanced/60",
+                        d.show && d.status === "significant" && (neutral ? "bg-[hsl(var(--data-a))]" : "bg-strong"),
+                        d.show && d.status === "balanced" && (neutral ? "bg-[hsl(var(--data-a)/0.22)]" : "bg-balanced/60"),
                         d.show && d.status === "untracked" && "bg-foreground/[0.08]",
                       )}
                     />
@@ -385,8 +388,8 @@ export const OverviewCard = ({
             ))}
           </div>
           <div className="mt-4 flex items-center justify-center gap-5 text-[15px] text-muted-foreground">
-            <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-strong" />{t("overview.significant")}</span>
-            <span className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-balanced/60" />{t("overview.balanced")}</span>
+            <span className="flex items-center gap-2"><span className={cn("h-3 w-3 rounded-full", neutral ? "bg-[hsl(var(--data-a))]" : "bg-strong")} />{neutral ? t("common.yes") : t("overview.significant")}</span>
+            <span className="flex items-center gap-2"><span className={cn("h-3 w-3 rounded-full", neutral ? "bg-[hsl(var(--data-a)/0.22)]" : "bg-balanced/60")} />{neutral ? t("common.no") : t("overview.balanced")}</span>
           </div>
         </div>
       )}
@@ -438,8 +441,8 @@ export const OverviewCard = ({
                   className={cn(
                     "relative h-[38px] w-[38px] rounded-full flex items-center justify-center text-sm font-semibold tabular-nums box-border transition-all",
                     day.isFutureDate && "text-muted-foreground/40",
-                    !day.isFutureDate && day.status === "significant" && "bg-strong text-strong-foreground",
-                    !day.isFutureDate && day.status === "balanced" && "bg-balanced/35",
+                    !day.isFutureDate && day.status === "significant" && (neutral ? "bg-[hsl(var(--data-a))] text-white" : "bg-strong text-strong-foreground"),
+                    !day.isFutureDate && day.status === "balanced" && (neutral ? "bg-[hsl(var(--data-a)/0.22)]" : "bg-balanced/35"),
                     !day.isFutureDate && day.status === "untracked" && !day.isToday && "text-muted-foreground",
                     day.isToday && day.status === "untracked" && "border-2 border-dashed border-foreground/35",
                     !multi && day.isSelected && !day.isToday && "ring-2 ring-foreground/70",

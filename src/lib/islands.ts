@@ -190,7 +190,10 @@ export const linkWorthShowing = (c: CorrelationResult): boolean => {
 
 /** A hard day's answer, the same rule as the lighthouses (WORLD-BIBLE, Nov 5
  *  2026): YES to a hard question, NO to a good one ("Slept 7+ hours?" — no). */
-export const isHardAnswer = (t: Tracker, value: unknown): boolean => !isTestQuestion(t) && typeof value === "boolean" && value === (t.problemWhen === "yes");
+export const isHardAnswer = (t: Tracker, value: unknown): boolean => !isTestQuestion(t) && !isNeutralQuestion(t) && typeof value === "boolean" && value === (t.problemWhen === "yes");
+/** A wish or a decision ("Wanted to quit", "Wanted a child"): no good or bad
+ *  answer, so never a hard day; drawn in neutral indigo (Nov 6 2026). */
+export const isNeutralQuestion = (t: Tracker): boolean => trackerPolarity(t) === "neutral";
 /** A week's test asks "Did you…?" (src/lib/experiments.ts): a "no" there means
  *  she didn't try it that day, not that the day was hard. */
 export const isTestQuestion = (t: Tracker) => t.id.endsWith("-test");

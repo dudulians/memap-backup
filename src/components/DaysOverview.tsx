@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, isoLocal } from "@/lib/doors";
-import { isHardAnswer, mapPic } from "@/lib/islands";
+import { isHardAnswer, isNeutralQuestion, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
@@ -49,7 +49,8 @@ export const DaysOverview = ({ trackers, entries, onOpen }: {
   // made nearly every day red with many questions): her main question decides
   // when it was answered; otherwise most of the day's answers do.
   const dayLook = useMemo(() => {
-    const byId = new Map(live.map((tr) => [tr.id, tr]));
+    // wishes and decisions have no good or bad answer: they don't colour a day
+    const byId = new Map(live.filter((tr) => !isNeutralQuestion(tr)).map((tr) => [tr.id, tr]));
     const main = getDoorState()?.trackerId;
     const byDay = new Map<string, TrackerEntry[]>();
     for (const e of entries) if (byId.has(e.trackerId)) byDay.set(e.date, [...(byDay.get(e.date) ?? []), e]);

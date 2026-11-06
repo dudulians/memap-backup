@@ -28,7 +28,7 @@ import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growt
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment } from "@/lib/experiments";
-import { isHardAnswer, islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
+import { isHardAnswer, isNeutralQuestion, islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
 import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
@@ -555,7 +555,7 @@ export const EveningPath = ({
       <div className="mt-2.5 flex flex-wrap gap-1.5" aria-hidden="true">
         {ids.slice(0, 40).map((id) => {
           const v = byTracker.get(id), tr = byId.get(id);
-          const look = v === undefined || !tr ? "hsl(var(--foreground) / 0.12)" : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced) / 0.75)";
+          const look = v === undefined || !tr ? "hsl(var(--foreground) / 0.12)" : isNeutralQuestion(tr) ? (v === true ? "hsl(var(--data-a))" : "hsl(var(--data-a) / 0.25)") : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced) / 0.75)";
           return <span key={id} className="h-3 w-3 rounded-full" style={{ background: look }} />;
         })}
       </div>
