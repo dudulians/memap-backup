@@ -2374,6 +2374,8 @@ html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --mu
 html[data-ui="new"][data-theme="aurora-light"] { --strong: 348 70% 69%; --strong-foreground: 0 0% 100%; --balanced: 146 45% 60%; --balanced-foreground: 150 50% 18%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
 html[data-ui="new"][data-theme="aurora"] { --strong: 348 78% 73%; --strong-foreground: 348 60% 14%; --balanced: 146 48% 58%; --balanced-foreground: 150 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
 /* a link's sign on its route: opens the link card (LinkSheet) */
+/* the language button on the first screen: a soft teal ring so it's noticed (Nov 6 2026) */
+.lang-btn { box-shadow: 0 0 0 2px hsl(var(--coin-teal) / 0.35), 0 8px 18px -12px rgba(20, 40, 90, .45); }
 .link-chip { width: 34px; height: 34px; border-radius: 17px; background: #fff; color: hsl(var(--data-a)); display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .55); transition: transform .12s ease-out; }
 button.link-chip:active { transform: scale(.92); }

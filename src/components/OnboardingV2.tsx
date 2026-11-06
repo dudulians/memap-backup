@@ -5,10 +5,10 @@
 //   that day's questions → first light → who sails with you → Today
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, ArrowRight, Check, Link2, MoonStar, Repeat, Sun, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Globe, Link2, MoonStar, Repeat, Sun, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { getLanguage, setLanguage } from "@/lib/i18n";
+import { getLanguage, setLanguage, SUPPORTED_LANGUAGES } from "@/lib/i18n";
 import { AVATARS, DEFAULT_AVATAR, avatarUrl, getAvatar, setAvatar } from "@/lib/avatar";
 import { art, artOf } from "@/lib/globeArt";
 import { islandName, islandOf, mapPicFor, type IslandId } from "@/lib/islands";
@@ -36,16 +36,31 @@ const mapPics = (name: string): [string, string] => [mapPicFor(name, false), map
 export const WelcomeScreen = ({ onStart }: { onStart: () => void }) => {
   const { t } = useTranslation();
   const [lang, setLang] = useState(getLanguage() === "ru" ? "ru" : "en");
-  const pick = (l: "en" | "ru") => { haptics.tap(); setLang(l); setLanguage(l); };
+  const [langOpen, setLangOpen] = useState(false);
+  const pick = (l: "en" | "ru") => { haptics.tap(); setLang(l); setLanguage(l); setLangOpen(false); };
   const who = avatarUrl(getAvatar() ?? DEFAULT_AVATAR);
   return (
     <Page>
-      <div className="flex justify-end pt-4">
-        <div className="seg" role="group" aria-label="Language">
-          {(["en", "ru"] as const).map((l) => (
-            <button key={l} type="button" onClick={() => pick(l)} aria-pressed={lang === l} className={cn("chip", lang === l && "is-on")}>{l.toUpperCase()}</button>
-          ))}
-        </div>
+      {/* the language: one globe button, lit softly so it's noticed; the list only on tap
+          (her note, Nov 6 2026: "не показывать, что есть ещё русский — только по кнопке") */}
+      <div className="relative flex justify-end pt-4">
+        <button type="button" onClick={() => { haptics.tap(); setLangOpen((v) => !v); }} aria-haspopup="listbox" aria-expanded={langOpen} aria-label={t("settings.language")}
+          className="lang-btn surface flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[15px] font-bold">
+          <Globe className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
+          {lang.toUpperCase()}
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", langOpen && "rotate-180")} strokeWidth={2.6} />
+        </button>
+        {langOpen && (
+          <div role="listbox" aria-label={t("settings.language")} className="absolute right-0 top-[60px] z-20 w-[200px] bg-white dark:bg-[hsl(var(--surface))] overflow-hidden rounded-[18px] py-1 shadow-[0_14px_34px_-14px_rgba(20,40,90,.5)] animate-fade-in">
+            {SUPPORTED_LANGUAGES.map((l) => (
+              <button key={l.code} type="button" role="option" aria-selected={lang === l.code} onClick={() => pick(l.code)}
+                className="flex h-12 w-full items-center justify-between px-4 text-left text-[16px] font-bold">
+                {l.native}
+                {lang === l.code && <Check className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={3} />}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <div className="relative mx-auto mt-6 h-[300px] w-full max-w-[360px]" aria-hidden="true">
         <Pic src={isle("11_sakura")} className="onb-float absolute left-[2%] top-[6%] w-[40%]" />

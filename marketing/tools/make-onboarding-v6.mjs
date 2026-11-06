@@ -429,7 +429,7 @@ const today = (morning) => P3(`${head("Week 1 · 0/7", "")}
 // see over time (honest) → the first real check-in (swipe cards) → reminder → Today 1/7.
 const trust = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${[["clock", "1 min a day"], ["user-x", "No account"], ["lock", "Answers stay on your phone"]].map(([ic, t]) => `<span style="display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 11px;border-radius:15px;background:rgba(255,255,255,.75);font-size:13px;font-weight:800">${icon(ic, { size: 14, sw: 2.4, color: TEALD })}${t}</span>`).join("")}</div>`;
 // her pick (Nov 6 2026, board 72): "Make sense of your days" / «Разберись в своих днях»
-const door6 = (sel, headline = "Make sense of your days", size = 31) => P3(`<div class="seg"><span class="on">EN</span><span>RU</span></div>
+const door6 = (sel, headline = "Make sense of your days", size = 31) => P3(`<div style="position:absolute;right:18px;top:56px;height:40px;padding:0 14px;border-radius:20px;background:#fff;display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800;box-shadow:0 0 0 2px hsl(${TEAL} / .35), 0 8px 18px -12px rgba(20,40,90,.45)">${icon("globe", { size: 18, sw: 2.4, color: TEALD })}EN${icon("chevron-down", { size: 15, sw: 2.6, color: "#6B7184" })}</div>
   ${isle(110, 200, 130, "19_grassy_terraces")}${isle(285, 166, 116, "09_waterfall")}
   <svg style="position:absolute;left:0;top:0" width="390" height="844">${dotsAlong([152, 172], [200, 104], [232, 146], 14).map(([x, y, r, o]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${o}" stroke="rgba(70,100,170,.3)"/>`).join("")}</svg>
   <div class="screen" style="padding-top:244px">

@@ -23,6 +23,50 @@ export const SUPPORTED_LANGUAGES: { code: SupportedLanguage; name: string; nativ
 ];
 
 const detector = new LanguageDetector();
+
+// Russia's time zones (IANA), to tell a phone in Russia from a Russian-language
+// phone elsewhere.
+const RU_ZONES = new Set([
+  "Europe/Moscow", "Europe/Kaliningrad", "Europe/Samara", "Europe/Volgograd", "Europe/Kirov", "Europe/Astrakhan",
+  "Europe/Saratov", "Europe/Ulyanovsk", "Asia/Yekaterinburg", "Asia/Omsk", "Asia/Novosibirsk", "Asia/Barnaul",
+  "Asia/Tomsk", "Asia/Novokuznetsk", "Asia/Krasnoyarsk", "Asia/Irkutsk", "Asia/Chita", "Asia/Yakutsk", "Asia/Khandyga",
+  "Asia/Vladivostok", "Asia/Ust-Nera", "Asia/Magadan", "Asia/Sakhalin", "Asia/Srednekolymsk", "Asia/Kamchatka", "Asia/Anadyr",
+]);
+/** The phone looks like it is in Russia: a region RU in its locales, or a Russian time zone. */
+export const phoneInRussia = (): boolean => {
+  try {
+    const locales = [...(navigator.languages ?? []), navigator.language, Intl.DateTimeFormat().resolvedOptions().locale].filter(Boolean);
+    if (locales.some((l) => /[-_]RU\b/i.test(l))) return true;
+    return RU_ZONES.has(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  } catch {
+    return false;
+  }
+};
+/** Someone who already used the app keeps the old rule (the phone's language), so
+ *  nobody's language flips after an update. */
+const hasHistory = (): boolean => {
+  try {
+    const t = localStorage.getItem("memap_trackers");
+    return !!t && t !== "[]";
+  } catch {
+    return false;
+  }
+};
+// First language for a new install (her note, Nov 6 2026): English everywhere, except
+// a Russian-language phone in Russia. Other languages are behind the globe button.
+detector.addDetector({
+  name: "memapRegion",
+  lookup() {
+    try {
+      const ru = (navigator.language || "").toLowerCase().startsWith("ru");
+      if (hasHistory()) return ru ? "ru" : "en";
+      return ru && phoneInRussia() ? "ru" : "en";
+    } catch {
+      return "en";
+    }
+  },
+  cacheUserLanguage() {},
+});
 detector.addDetector({
   name: "memapStorage",
   lookup() {
@@ -77,7 +121,7 @@ void i18n
     // languages and for strings without bracket patterns.
     postProcess: ["polishRu"],
     detection: {
-      order: ["memapStorage", "navigator"],
+      order: ["memapStorage", "memapRegion"],
       // No auto-cache on detection. We only want LANGUAGE_KEY + EXPLICIT_LANGUAGE_KEY
       // written when the user explicitly picks via setLanguage().
       caches: [],
