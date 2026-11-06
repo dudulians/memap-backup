@@ -320,6 +320,15 @@ const slide = (i, art, title, line, btn = "Next") => P3(`<span class="skip3">Ski
 const dotrow = (on, col, off, n = 10, s = 16) => `<div style="display:flex;gap:6px">${Array.from({ length: n }, (_, i) => `<i style="display:block;width:${s}px;height:${s}px;border-radius:50%;background:${on.includes(i) ? col : off}"></i>`).join("")}</div>`;
 const bars = (vals, col, w = 16, h = 70, gap = 7) => `<div style="display:flex;align-items:flex-end;gap:${gap}px;height:${h}px">${vals.map((v) => `<i style="display:block;width:${w}px;height:${Math.max(4, v)}px;border-radius:${w / 2}px;background:${col}"></i>`).join("")}</div>`;
 
+// a week as plain dots (a picture, not a calendar: no dates, her note Nov 6 2026)
+const weekdots = (on, col, off) => `<div style="display:flex;gap:6px">${Array.from({ length: 7 }, (_, i) => `<i style="display:block;width:18px;height:18px;border-radius:50%;background:${on.includes(i) ? col : off}"></i>`).join("")}</div>`;
+const valueScreen = ({ title, rows }) => P3(`<div class="screen">${navTop(2, 7)}
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-top:4px"><h1 style="font-size:25px">${title}</h1><span class="ex" style="margin-top:6px">Example</span></div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">${rows.map(([ic, t, line, ex], i) => `<div class="card" style="padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+    <span class="tile" style="background:hsl(${TEAL} / .14);color:${TEALD};flex-shrink:0">${ic === "lighthouse" ? `<img src="${MAP("lighthouse")}" style="height:28px">` : icon(ic, { size: 21, sw: 2.3 })}</span>
+    <div style="min-width:0"><div style="font-size:16.5px;font-weight:800;line-height:1.2">${i + 1} · ${t}</div><div style="font-size:14.5px;font-weight:600;color:#6B7184;line-height:1.28;margin-top:2px">${line}</div><div style="margin-top:6px">${ex}</div></div></div>`).join("")}</div>
+  <div class="grow"></div><div class="btn">Let's start ${icon("arrow-right", { size: 20, sw: 2.6 })}</div></div>`);
+
 const s3 = {
   // slide 1 · My days: the evening card, and the days it makes
   "a1-days": slide(0, `
@@ -385,6 +394,20 @@ const s3 = {
       ${[["sun", HUE.amber, "More good days", "Energy, sleep, calm", false], ["repeat", HUE.love, "Something keeps happening", "Headaches, bad nights, fights", true]].map(([ic, h, t, l, sel]) =>
         `<div class="card" style="margin-top:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;${sel ? `box-shadow:0 0 0 2px hsl(${TEAL}), 0 10px 24px -18px rgba(30,50,110,.6)` : ""}">${tile(ic, h)}<div><div style="font-size:19px;font-weight:800">${t}</div><div style="font-size:14px;font-weight:600;color:#6B7184">${l}</div></div>${sel ? `<span class="tick">${icon("check", { size: 15, sw: 3, color: "#fff" })}</span>` : ""}</div>`).join("")}
       <div class="grow"></div><div class="link">Just looking around</div><div class="btn">Continue</div></div>`),
+
+  // ---- v4: the whole value on one screen, on the chosen topic ----
+  "e3-value-migraine": valueScreen({ title: "How MeMap helps with migraines", rows: [
+    ["check-check", "Track it — 1 minute a night", "Migraine: yes or no. And a few things around it: sleep, coffee, stress.", `${weekdots([0, 3, 4], HARDC, GOODL)}`],
+    ["spline", "See what comes before migraines", "MeMap finds what goes together — the same day or the next.", exline("Short night → migraine", "6 of 7")],
+    ["lighthouse", "Know when to see a doctor", "Set your rule. MeMap tells you when it's time — with a report for the visit.", `<div style="font-size:14px;font-weight:800">8+ migraine days a month → neurologist</div>`],
+    ["sprout", "Try what helps", "One change for 2 weeks. MeMap checks if migraines drop — and reminds you kindly.", `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">${icon("moon", { size: 14, sw: 2.4 })} In bed by 11 · migraine days <span class="pill" style="height:22px;font-size:12px;padding:0 8px">9 → 3</span></div>`],
+  ] }),
+  "e4-value-energy": valueScreen({ title: "How MeMap helps you get more energy", rows: [
+    ["check-check", "Track it — 1 minute a night", "Energy: yes or no. And a few things around it: sleep, walks, coffee.", `${weekdots([0, 2, 3, 6], GOODC, HARDL)}`],
+    ["spline", "See what gives you energy", "MeMap finds what goes together — the same day or the next.", exline("Morning walk → energy", "9 of 11")],
+    ["lighthouse", "Know when to act", "Set your rule. MeMap reminds you of your plan when it's time.", `<div style="font-size:14px;font-weight:800">4 low-energy days a week → early night</div>`],
+    ["sprout", "Try what helps", "One change for 2 weeks. MeMap checks if energy days grow — and cheers you on.", `<div style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800">${icon("footprints", { size: 14, sw: 2.4 })} Morning walk · energy days <span class="pill" style="height:22px;font-size:12px;padding:0 8px">3 → 5</span></div>`],
+  ] }),
 
   // ---- World with the 4 parts ----
   // A · four cards on top, 2 × 2
@@ -526,5 +549,13 @@ shots["r-good"] = pathToFileURL(path.join(OUT, "60-storyline-v2", "v4-good.png")
   await p.waitForTimeout(800);
   await p.screenshot({ path: path.join(OUT, "66-onboarding-order.png"), fullPage: true });
 }
+await board(["w0-welcome", "r-list", "e3-value-migraine", "e4-value-energy", "r-v6-around", "r-v7-calendars", "r-v8-support", "c4-helps"],
+  ["<b>Дверь сразу.</b> Первая строка — что делает MeMap обычными словами, и выбор: «больше хороших дней» или «что-то повторяется».",
+   "<b>Тема</b> — как сейчас.",
+   "<b>Вся ценность на одном экране, без листания</b> — на выбранной теме (мигрень): отмечаешь → что бывает перед мигренью → когда идти к врачу (и отчёт) → что помогает (и добрые напоминания). Нормальные предложения, не обрывки.",
+   "<b>Тот же экран для «энергии»</b> — показывает, что текст меняется по теме.",
+   "<i>Как в v2.</i> Главный вопрос и то, что вокруг (примеры, можно свои).", "<i>Как в v2.</i> Что увидишь и когда.", "<i>Как в v2.</i> Напоминания.",
+   "<b>4-я часть «Что помогает»</b> — что пробуешь сейчас, что уже сработало, идеи из твоих связей, добрые напоминания (доска 65)."],
+  "Онбординг v4: дверь → вся ценность на одном экране → свои вопросы", "Её заметка: «мало слов не нравится; ценность сразу на первом экране, а не листать; можно с дверью в начале»", "67-onboarding-v4.png");
 console.log("ok", Object.keys(s3).length);
 await b.close();
