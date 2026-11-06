@@ -15,6 +15,7 @@
 // All math is done locally over the user's stored entries — no
 // external service, no analytics, no data leaves the device.
 
+import { MARKER_TEMPLATE_IDS } from "./researchTemplates";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { RELATED_QUESTIONS, matchTemplateIdByTitle } from "./relatedQuestions";
 import { LIFE_STREAMS } from "./lifeStreams";
@@ -95,6 +96,8 @@ const userOptedIntoSensitive = (): boolean => {
 // polarity can't be confidently assigned we fall back to the safe
 // generic "Possible connection" headline.
 const NEUTRAL_TEMPLATE_IDS = new Set<string>([
+  // markers from the research (Nov 7 2026): a period day, travel, heat, a weather change…
+  ...MARKER_TEMPLATE_IDS,
   "wanted-child",
   "thought-about-emigrating",
   "wanted-leave-job",

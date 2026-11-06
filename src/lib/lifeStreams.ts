@@ -1,4 +1,5 @@
 import { Tracker, ProblemWhen, AnswerType } from "@/types/tracker";
+import { RESEARCH_TEMPLATES } from "./researchTemplates";
 import { getLanguage } from "@/lib/i18n";
 
 export interface LifeStreamTemplate {
@@ -3164,6 +3165,9 @@ export const LIFE_STREAMS: LifeStream[] = [
     ],
   },
 ];
+
+// 33 questions from the research (Nov 7 2026): marketing/research/proposed-library-additions.md
+for (const { stream, ...tpl } of RESEARCH_TEMPLATES) LIFE_STREAMS.find((s) => s.id === stream)?.templates.push(tpl);
 
 export interface LocalizedTemplate {
   id: string;

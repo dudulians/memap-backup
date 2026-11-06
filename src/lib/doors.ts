@@ -54,7 +54,8 @@ export const DOORS: Door[] = [
     branch: "pain",
     kind: "event",
     mainTemplateId: "argued-with-partner",
-    contextTemplateIds: ["slept-enough", "drank-alcohol", "felt-fatigued"],
+    // research: stress spilling over is the best day-to-day predictor of a fight
+    contextTemplateIds: ["slept-enough", "drank-alcohol", "felt-stressed"],
     reasons: ["money", "chores", "kids", "tiredness", "family", "people", "jealousy", "phones", "other", "dontRemember"],
     icon: Heart,
     iconClass: "text-strong",
@@ -76,7 +77,8 @@ export const DOORS: Door[] = [
     branch: "pain",
     kind: "event",
     mainTemplateId: "migraine",
-    contextTemplateIds: ["slept-enough", "felt-anxious", "ate-by-2pm"],
+    // research (Nov 7 2026): stress is the studied factor, skipped meals beat "ate before 2 pm"
+    contextTemplateIds: ["slept-enough", "felt-stressed", "skipped-meal"],
     reasons: ["shortSleep", "stress", "skippedMeal", "alcohol", "period", "brightLight", "fight", "other", "dontKnow"],
     icon: Activity,
     iconClass: "text-primary",
@@ -86,7 +88,8 @@ export const DOORS: Door[] = [
     branch: "pain",
     kind: "event",
     mainTemplateId: "drank-alcohol",
-    contextTemplateIds: ["slept-enough", "felt-anxious", "felt-lonely"],
+    // research: people drink on social and good-mood days more than on bad ones
+    contextTemplateIds: ["saw-friends", "felt-stressed", "slept-enough"],
     reasons: ["stress", "boredom", "company", "celebration", "loneliness", "habit", "tiredness", "other"],
     icon: Wine,
     iconClass: "text-emerging",
@@ -96,7 +99,8 @@ export const DOORS: Door[] = [
     branch: "pain",
     kind: "event",
     mainTemplateId: "yelled-at-kid",
-    contextTemplateIds: ["slept-enough", "felt-fatigued", "felt-anxious"],
+    // research: the child's sleep and help with the kids
+    contextTemplateIds: ["slept-enough", "child-slept-poorly", "got-help-with-kids"],
     reasons: ["tiredness", "rushing", "bedtime", "homework", "siblings", "screens", "notListening", "other", "dontKnow"],
     icon: Smile,
     iconClass: "text-note",
@@ -107,14 +111,15 @@ export const DOORS: Door[] = [
     kind: "event",
     mainTemplateId: "slept-enough",
     mainValue: false,
-    contextTemplateIds: ["coffee-late", "screen-time-long", "ate-late"],
+    // research: bedtime worry and evening alcohol have the strongest real-life support
+    contextTemplateIds: ["racing-thoughts-in-bed", "drank-alcohol", "coffee-late"],
     reasons: ["caffeine", "screens", "thoughts", "lateFood", "noise", "kids", "pain", "dontKnow"],
     icon: Moon,
     iconClass: "text-[hsl(232_62%_62%)]",
   },
   // onboarding v7 (Nov 6 2026): cycle and stress among the first five; a thought
   // that keeps coming back (her original idea: "правда ли я этого хочу?") — no right answer
-  { id: "period", branch: "pain", kind: "event", mainTemplateId: "period-symptoms", contextTemplateIds: ["slept-enough", "felt-stressed", "felt-fatigued"], reasons: ["dontKnow"], icon: Droplet, iconClass: "text-[hsl(340_62%_60%)]" },
+  { id: "period", branch: "pain", kind: "event", mainTemplateId: "period-symptoms", contextTemplateIds: ["period-day", "felt-stressed", "slept-enough"], reasons: ["dontKnow"], icon: Droplet, iconClass: "text-[hsl(340_62%_60%)]" },
   { id: "stress", branch: "pain", kind: "event", mainTemplateId: "felt-stressed", contextTemplateIds: ["slept-enough", "worked-overtime", "exercised"], reasons: ["dontKnow"], icon: Wind, iconClass: "text-[hsl(262_48%_62%)]" },
   { id: "quit", branch: "thought", kind: "event", mainTemplateId: "wanted-leave-job", contextTemplateIds: ["slept-enough", "burned-out-after-work", "argued-with-partner"], reasons: ["dontKnow"], icon: Briefcase, iconClass: "text-[hsl(212_60%_56%)]" },
   { id: "move", branch: "thought", kind: "event", mainTemplateId: "thought-about-emigrating", contextTemplateIds: ["slept-enough", "felt-lonely", "burned-out-after-work"], reasons: ["dontKnow"], icon: Plane, iconClass: "text-[hsl(36_86%_52%)]" },
@@ -122,7 +127,7 @@ export const DOORS: Door[] = [
   ...([
     ["energy", "had-energy", ["slept-enough", "outside-30min", "exercised"], Zap, "text-[hsl(36_86%_52%)]"],
     ["calm", "felt-calm", ["slept-enough", "phone-free-morning", "time-for-myself"], Leaf, "text-[hsl(152_36%_44%)]"],
-    ["goodSleep", "slept-enough", ["coffee-late", "screen-time-long", "felt-anxious"], BedDouble, "text-[hsl(232_62%_62%)]"],
+    ["goodSleep", "slept-enough", ["racing-thoughts-in-bed", "drank-alcohol", "coffee-late"], BedDouble, "text-[hsl(232_62%_62%)]"],
     ["closeness", "felt-close-to-partner", ["slept-enough", "felt-fatigued", "saw-friends"], HeartHandshake, "text-[hsl(340_62%_60%)]"],
     ["focus", "main-thing-done", ["slept-enough", "focus-hour", "phone-free-morning"], Target, "text-[hsl(212_60%_56%)]"],
     ["movement", "exercised", ["slept-enough", "outside-30min", "had-energy"], Footprints, "text-[hsl(16_72%_58%)]"],
