@@ -1122,6 +1122,8 @@ const en = {
       action: "What's next?",
       left_one: "{{count}} step to go",
       left_other: "{{count}} steps to go",
+      notYet_one: "After your {{count}} step today. Today's questions can wait until tonight.",
+      notYet_other: "After your {{count}} steps today. Today's questions can wait until tonight.",
     },
     answers_one: "{{count}} answer",
     answers_other: "{{count}} answers",

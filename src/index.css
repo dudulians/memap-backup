@@ -2550,3 +2550,9 @@ svg .tour-pop { transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: reduce) { .tour-veil, .tour-ring::after, .tour-pop, .tour-glow, .tour-caret { animation: none; } .tour-draw { animation: none; stroke-dashoffset: 0; } .tour-cut, .tour-ring, .tour-card { transition: none; } }
 .planet-label.is-static { position: static; width: auto; margin-left: 0; }
 .planet-label .is-new { color: hsl(var(--muted-foreground)); }
+
+/* onboarding: the list fades out under the pinned question and button (Nov 7 2026) */
+.onb-scroll {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}

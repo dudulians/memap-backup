@@ -117,7 +117,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
 
   return (
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
-      <div className="relative z-10 h-full w-full overflow-y-auto">
+      <div className="relative z-10 h-full w-full overflow-y-auto overscroll-none">
         {step === "welcome" && <WelcomeV7 onStart={() => setStep("topic")} onSimple={() => { setPick({ kind: "simple" }); setStep("questions"); }} />}
         {step === "topic" && <TopicV7 initial={topics} own={own} onBack={() => setStep("welcome")} onClearOwn={() => setOwn(null)}
           onOwn={(ids) => { setTopics(ids); setStep("own"); }} onPick={(ids) => { setTopics(ids); setPick(pickOf(ids, own)); setStep("questions"); }} />}

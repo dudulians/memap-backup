@@ -41,9 +41,9 @@ const slerp = (a: V3, b: V3, t: number): V3 => {
 
 /** The open sea of her planet where the ring of islands lives. */
 const C0: [number, number] = [22, -10];
-const UNEXPLORED: { ll: [number, number]; name: string }[] = [
-  { ll: [16, -88], name: "cloud_island_03" }, { ll: [-12, 96], name: "cloud_island_01" }, { ll: [30, 152], name: "cloud_island_05" },
-];
+// The "unexplored" cloud islands are off (her phone test, Nov 7 2026: a blue cloud looked stuck on
+// the land when the ball turned); a new island comes from the New island button.
+const UNEXPLORED: { ll: [number, number]; name: string }[] = [];
 // Soft clouds that sit on the planet off the ring and turn with it.
 const SKY: { ll: [number, number]; name: string }[] = [
   [4, 48, "cloud_04_large"], [46, 40, "cloud_01_large"], [-20, -60, "cloud_06_large"], [56, -66, "cloud_02_large"],
@@ -267,7 +267,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     const resize = () => {
       const r = box.getBoundingClientRect(); W = r.width; H = r.height; DPR = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-      if (decorRef.current) { R0 = Math.min(W * 0.44, H * 0.42); CX0 = W / 2; CY0 = H * 0.5; }
+      if (decorRef.current) { R0 = Math.min(W * 0.43, H * 0.44); CX0 = W / 2; CY0 = H * 0.5; } // bigger on the first screen (her phone test, Nov 7 2026)
       else if (belowRef.current) { R0 = Math.min(W * 0.72, H * 0.335); CX0 = W / 2; CY0 = H * 0.615; }
       else { R0 = Math.min(W * 0.74, H * 0.37); CX0 = W / 2; CY0 = H * 0.585; }
       place();

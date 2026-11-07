@@ -471,7 +471,9 @@ export const EveningPath = ({
       const fw = focusRef.current?.closest<HTMLElement>("[data-cy]");
       const fd = fw ? yOf(fw) - midY : NaN;
       const lim = mid.current - 120;
-      const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd > lim ? "down" : null;
+      // "down" only once the Start bubble over her step (about 90px above it) has gone behind the
+      // tabs: the button covered a bubble still in sight (her phone test, Nov 7 2026)
+      const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd - 90 > mid.current - 110 ? "down" : null;
       if (nowAway !== awayRef.current) { awayRef.current = nowAway; setAway(nowAway); }
     };
     frameRef.current = frame;
@@ -702,7 +704,8 @@ export const EveningPath = ({
     }
     // "Done for today": what's left, all optional (the week's report first when it's ready)
     if (n.kind === "end") {
-      if (!eveningDone) return head(t("path.end.title"), t("path.end.left", { count: openLeft }));
+      // before today is answered: say plainly it comes later, and take her to her step (phone test, Nov 7 2026)
+      if (!eveningDone) return (<>{head(t("path.end.title"), t("path.end.notYet", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
       const go = (f: () => void, action = "") => () => { setOpen(null); if (action) track("end_card_action", { action }); f(); };
       const ic = "h-5 w-5";
       // Links and the calendar only once there's something on them (her note, Nov 5

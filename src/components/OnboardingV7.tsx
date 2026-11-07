@@ -34,6 +34,15 @@ export interface V7Setup { ids: string[]; mainId: string; doorId: DoorId | null 
 const Page = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <div className={cn("mx-auto flex min-h-full w-full max-w-md flex-col px-5 pb-safe pt-safe animate-fade-in", className)}>{children}</div>
 );
+/** A screen with a long list: the question stays on top and the button at the bottom; only the
+ *  list between them scrolls (her phone test, Nov 7 2026). */
+const Screen = ({ head, foot, children }: { head: React.ReactNode; foot: React.ReactNode; children: React.ReactNode }) => (
+  <div className="mx-auto flex h-full w-full max-w-md flex-col px-5 pt-safe animate-fade-in">
+    <div className="shrink-0">{head}</div>
+    <div className="onb-scroll -mx-5 min-h-0 flex-1 overflow-y-auto overscroll-none px-5 pb-3">{children}</div>
+    <div className="shrink-0 pb-safe pt-2">{foot}</div>
+  </div>
+);
 const Main = ({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) => (
   <button type="button" onClick={() => { haptics.tap(); onClick(); }} disabled={disabled} data-onb-interactive className="raised-btn mb-5 w-full justify-center disabled:opacity-50">{children}</button>
 );
@@ -107,8 +116,8 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
         )}
       </div>
       {/* her world as it will be: the same globe as on World, three islands, a link, the boat */}
-      <div className="relative mx-auto mt-1 h-[310px] w-full max-w-[380px]" aria-hidden="true">
-        <PlanetGlobe decor sky={false} islands={DEMO_ISLANDS} routes={DEMO_ROUTES} avatar={who} days={DEMO_DAYS} labels={["health", "me", "love"]} onOpen={() => undefined} />
+      <div className="relative -mx-5 mt-1 h-[370px]" aria-hidden="true">
+        <PlanetGlobe decor sky={false} islands={DEMO_ISLANDS} routes={DEMO_ROUTES} avatar={who} days={DEMO_DAYS} labels={["health", "me", "love", "work", "body"]} onOpen={() => undefined} />
       </div>
       <div className="min-h-4 flex-1" />
       <H1 className="text-[32px]">{t("onb7.welcomeTitle")}</H1>
@@ -152,11 +161,14 @@ export const TopicV7 = ({ onBack, onPick, onOwn, onClearOwn, initial, own }: {
   };
   const on = (id: DoorId) => sel.includes(id);
   return (
-    <Page>
-      <Top onBack={onBack} step={0} />
-      <H1 className="mt-5">{t("onb7.topicTitle")}</H1>
-      <p className={cn("mt-1.5 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
-      <div className="mt-4 flex flex-col gap-2">
+    <Screen
+      head={<>
+        <Top onBack={onBack} step={0} />
+        <H1 className="mt-5">{t("onb7.topicTitle")}</H1>
+        <p className={cn("mt-1.5 pb-3 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
+      </>}
+      foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0) }); onPick(sel); }}>{t("doors.continue")}</Main>}>
+      <div className="mt-1 flex flex-col gap-2">
         {FIRST.map((id) => { const d = getDoor(id)!; return <Row key={id} on={on(id)} onClick={() => toggle(id)} icon={<Dot door={d} />}>{name(id)}</Row>; })}
         <button type="button" onClick={() => { haptics.tap(); setMore((v) => !v); }} aria-expanded={more} data-onb-interactive
           className="surface flex min-h-[52px] w-full items-center gap-3 rounded-[18px] px-4 text-left text-[17px] font-bold">
@@ -185,9 +197,7 @@ export const TopicV7 = ({ onBack, onPick, onOwn, onClearOwn, initial, own }: {
           ? <Row on onClick={() => { onClearOwn(); setFull(false); }} icon={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)]"><Pencil className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} /></span>}>{own}</Row>
           : <Row on={false} onClick={() => { if (sel.length >= MAX_TOPICS) { setFull(true); return; } onOwn(sel); }} icon={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)]"><Pencil className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} /></span>}>{t("onb7.writeOwn")}</Row>}
       </div>
-      <div className="min-h-6 flex-1" />
-      <Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0) }); onPick(sel); }}>{t("doors.continue")}</Main>
-    </Page>
+    </Screen>
   );
 };
 
@@ -294,12 +304,15 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
   };
 
   return (
-    <Page>
-      <Top onBack={onBack} step={1} />
-      <H1 className="mt-5">{t("onb7.qTitle")}</H1>
-      <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.qSub")}</p>
+    <Screen
+      head={<>
+        <Top onBack={onBack} step={1} />
+        <H1 className="mt-5">{t("onb7.qTitle")}</H1>
+        <p className="mt-1.5 pb-3 text-[16px] font-semibold text-muted-foreground">{t("onb7.qSub")}</p>
+      </>}
+      foot={<Main disabled={busy || editing !== null} onClick={() => void save()}>{t("doors.continue")}</Main>}>
       {/* the main question of each topic */}
-      <div className="mt-4 flex flex-col gap-2.5">
+      <div className="mt-1 flex flex-col gap-2.5">
         {mains.map((m, i) => {
           const neutral = m.door?.branch === "thought";
           return (
@@ -349,9 +362,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
         )}
       </div>
       <p className="mt-2 text-center text-[14px] font-semibold text-muted-foreground">{none ? t("onb7.qNone") : t(pick.kind === "own" ? "onb7.qNoteOwn" : pick.kind === "simple" ? "onb7.qNoteSimple" : "onb7.qNote")}</p>
-      <div className="min-h-6 flex-1" />
-      <Main disabled={busy || editing !== null} onClick={() => void save()}>{t("doors.continue")}</Main>
-    </Page>
+    </Screen>
   );
 };
 
