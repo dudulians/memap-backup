@@ -502,7 +502,6 @@ const en = {
       "Fainting with chest pain or a racing heart",
       "Dizziness with a drooping face, a weak arm, slurred speech or sudden loss of vision",
       "The worst headache of your life, coming on suddenly",
-      "An erection lasting more than 4 hours",
     ],
     todayTitle: "See a doctor today",
     todayTitleN: "See a doctor today, or call {{n}}",

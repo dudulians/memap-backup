@@ -13,7 +13,8 @@ const q = (id: string, sub: string, title: string, titleRu: string, questionText
   answerType: "boolean", periodDays, threshold, problemWhen, adviceAboveThreshold: advice, adviceAboveThresholdRu: adviceRu,
   ...(flags.sensitive ? { sensitive: true } : {}), ...(flags.private ? { private: true } : {}),
 });
-const P = { private: true }, S = { sensitive: true };
+// no sexual or genital questions (her note, Nov 7 2026: "ооочень щепетильно, не нужно")
+const P = { private: true };
 
 export const BODY_TEMPLATES: T[] = [
   q("pooped-today", "Digestion", "Pooped today", "Был стул", "Did you poop today?", "Сегодня получилось сходить в туалет по-большому?", "no", 7, 5, "Eat 2 kiwis a day for 4 weeks", "4 недели съедать по 2 киви в день", P),
@@ -28,10 +29,7 @@ export const BODY_TEMPLATES: T[] = [
   q("night-sweats", "Menopause", "Woke up sweating", "Ночная потливость", "Did you wake up sweaty or soaked last night?", "Этой ночью приходилось просыпаться в поту?", "yes", 14, 4, "Tell a doctor about the night sweats", "Рассказать врачу про ночную потливость"),
   q("breakout", "Skin", "New breakout", "Новые прыщи", "Did you get new spots or a breakout today?", "Сегодня появились новые прыщи?", "yes", 30, 10, "Use one acne treatment for 12 weeks before judging it", "12 недель пользоваться одним средством от прыщей и только потом оценивать"),
   q("dizzy", "Circulation", "Dizzy or light-headed", "Головокружение", "Did you feel dizzy or light-headed today?", "Сегодня кружилась голова или темнело в глазах?", "yes", 30, 5, "Show my dizzy days to a doctor", "Показать врачу дни с головокружением"),
-  q("erection-trouble", "Sexual", "Erection trouble", "Трудности с эрекцией", "If you had sex or tried today, was it hard to get or keep an erection?", "Если сегодня была близость или попытка — были трудности с эрекцией?", "yes", 60, 4, "Ask a doctor to check heart, blood pressure and sugar", "Попросить врача проверить сердце, давление и сахар", S),
-  q("pain-during-sex", "Sexual", "Pain during sex", "Боль при близости", "If you had sex today, did it hurt?", "Если сегодня была близость — было больно?", "yes", 60, 3, "Book a gynaecologist or GP about the pain", "Записаться к гинекологу или терапевту из-за боли", S),
   q("medicine-change", "Treatment", "Started or changed a medicine", "Новое лекарство или смена дозы", "Did you start, stop or change a medicine or supplement today?", "Сегодня появилось новое лекарство или добавка, что-то отменилось или поменялась доза?", "yes", 30, 0, "", "", { category: "Health" }),
-  q("vaginal-dryness", "Sexual", "Vaginal dryness or soreness", "Сухость и дискомфорт во влагалище", "Did vaginal dryness, itching or soreness bother you today?", "Сегодня беспокоили сухость, зуд или жжение во влагалище?", "yes", 30, 8, "Ask a doctor about vaginal moisturisers or local oestrogen", "Спросить врача про увлажняющие средства или местные эстрогены", S),
   q("jaw-sore-morning", "Pain", "Sore jaw on waking", "Утром болит челюсть", "Did your jaw feel sore or tight when you woke up?", "Утром болела или была зажата челюсть?", "yes", 14, 5, "Ask a dentist about a night guard", "Спросить стоматолога про ночную капу"),
   q("pelvic-floor-exercises", "Bladder", "Pelvic floor exercises", "Упражнения для тазового дна", "Did you do your pelvic floor squeezes today?", "Сегодня были упражнения для мышц тазового дна?", "no", 14, 7, "Do them right after brushing your teeth", "Делать их сразу после чистки зубов", P),
   q("pee-burning", "Bladder", "Burning when peeing", "Жжение при мочеиспускании", "Did it burn or sting when you peed today?", "Сегодня было жжение или резь при мочеиспускании?", "yes", 7, 2, "Ask a pharmacist or doctor about a urine infection", "Спросить фармацевта или врача, нет ли цистита", P),
@@ -44,7 +42,7 @@ export const BODY_TEMPLATES: T[] = [
 ];
 
 /** Asked only when the answer they follow was "yes" that day; other days they stay blank. */
-export const FOLLOW_UPS: Record<string, string> = { "heavy-flow-day": "period-day", "erection-trouble": "had-sex", "pain-during-sex": "had-sex" };
+export const FOLLOW_UPS: Record<string, string> = { "heavy-flow-day": "period-day" };
 /** One day without it is normal: a "no" isn't drawn as a hard day (only the rule counts). */
 export const QUIET_NO = new Set(["pooped-today"]);
 /** Questions whose card offers "Something worrying?" (the red-flag list). */
