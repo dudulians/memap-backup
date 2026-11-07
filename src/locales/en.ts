@@ -1914,7 +1914,7 @@ const en = {
     getStarted: "Get started",
     startSimple: "Not sure yet? Start simple",
     topicTitle: "What would you like to understand?",
-    topicSub: "Pick one or more. Add more anytime.",
+    topicSub: "Start with up to 3. Add more anytime.",
     topicMax: "Up to 3 to start — add more anytime.",
     lowEnergy: "Low energy",
     moreTopics: "More topics",

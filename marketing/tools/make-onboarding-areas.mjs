@@ -116,7 +116,7 @@ S["A1-why"] = page(`<div class="screen">${top(0)}
 // A2 — something bothers me → islands, the trouble topics
 S["A2-bother"] = page(`<div class="screen">${top(1)}
   <h1 style="margin-top:14px">What keeps happening?</h1>
-  <p class="sub">Pick up to 3.</p>
+  <p class="sub">Start with up to 3. Add more anytime.</p>
   <div style="margin-top:16px">
     ${islandRow("health", ["Bad nights", "Headaches", "Low energy", "Period & cycle"], ["Bad nights"])}
     ${islandRow("mind", ["Stress", "Low mood", "Worry"], ["Stress"])}
