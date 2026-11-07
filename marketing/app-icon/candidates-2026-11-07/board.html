@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>App icon, brighter options</title>
+<style>
+  :root { --ink: #1c2b3a; --muted: #5f6f82; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: "DM Sans", -apple-system, "Segoe UI", sans-serif; background: #f3f5fa; color: var(--ink); padding: 28px; width: 1260px; }
+  h1 { font-size: 30px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 16px; margin-top: 6px; }
+  .row { display: grid; grid-template-columns: 190px 1fr 1fr 150px; gap: 16px; margin-top: 18px; align-items: center; }
+  .label { font-size: 17px; font-weight: 700; }
+  .label span { display: block; font-weight: 500; color: var(--muted); margin-top: 4px; font-size: 13px; }
+  .screen { border-radius: 24px; padding: 16px 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 8px; justify-items: center; }
+  .light { background: linear-gradient(160deg, #cfe0ff 0%, #f6d9ec 55%, #fde9d6 100%); }
+  .dark { background: linear-gradient(160deg, #0d1330 0%, #1d2a6b 60%, #2b1d55 100%); }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 72px; }
+  .app i { display: block; width: 60px; height: 60px; border-radius: 22.4%; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .app i img { width: 100%; height: 100%; display: block; }
+  .app b { font-size: 11px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  .light .app b { color: #1c2b3a; text-shadow: none; }
+  .n1 { background: #ffffff; } .n2 { background: linear-gradient(#5ac8fa, #007aff); } .n3 { background: linear-gradient(#ffd60a, #ff9f0a); }
+  .n4 { background: linear-gradient(#34c759, #248a3d); } .n5 { background: linear-gradient(#ff6482, #ff2d55); } .n6 { background: #1c1c1e; } .n7 { background: linear-gradient(#bf5af2, #8944ab); }
+  .big { width: 132px; height: 132px; border-radius: 22.4%; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+  .big img { width: 100%; height: 100%; display: block; }
+</style></head><body>
+<h1>MeMap icon: brighter options</h1>
+<p class="sub">Home screen size (60 pt) on light and dark wallpaper, next to ordinary app icons. Right: App Store size.</p>
+<div id="rows"></div>
+<script>
+const V = [
+  ["A-now", "A · now", "your pick, in the build"],
+  ["B-pastel-brighter", "B · same, brighter", "colours pushed up"],
+  ["C-bright-clouds", "C · bright, clouds", "your #3"],
+  ["D-bright-clouds-richer", "D · bright, richer", "#3, a bit stronger"],
+  ["E-night", "E · night", "your #4"],
+];
+const scr = (cls, f) => `<div class="screen ${cls}">${["n1","n2","n3","n4","n5","me","n6","n7"].map((n) => n === "me" ? `<div class="app"><i><img src="${f}.png"></i><b>MeMap</b></div>` : `<div class="app"><i class="${n}"></i><b>App</b></div>`).join("")}</div>`;
+document.getElementById("rows").innerHTML = V.map(([f, t, s]) => `<div class="row"><div class="label">${t}<span>${s}</span></div>${scr("light", f)}${scr("dark", f)}<div class="big"><img src="${f}.png"></div></div>`).join("");
+</script></body></html>
