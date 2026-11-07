@@ -78,7 +78,6 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           {/* the other days, so a coincidence looks like one */}
           <p className="mt-1 text-[16px] font-bold leading-snug">{linkOther(t, r)}</p>
 
-          <p className="surface mt-4 rounded-[18px] px-4 py-3 text-[15px] font-semibold leading-snug text-foreground/80">{t("link.honest")}</p>
 
           <button type="button" onClick={() => { haptics.tap(); onChart([r.first, r.second]); }}
             className="raised-btn mt-6 w-full justify-center">

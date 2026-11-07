@@ -4,10 +4,11 @@
 // example picture, instead of telling her in a pop-up ("надо показать, где
 // конкретно это лежит… красивой инфографикой"). Started by the path's "Look
 // around" step (memap-start-tour); done or skipped = that step is done.
+import { TOUR_DONE_KEY } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, Check, Link2, Spline, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Link2, Spline, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { getDoorState, isoLocal } from "@/lib/doors";
@@ -432,12 +433,17 @@ export const AppTour = () => {
   const island: IslandId = view?.isle ?? (main ? islandOf(main) : "me");
 
   if (at === null || !data) return null;
-  const finish = () => {
+  const finish = (toStep = false) => {
     track("tour_finished", { completed: view?.at === STOPS.length - 1, at: view ? STOPS[view.at].id : "start" });
     markDiscovered("tour");
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
     window.dispatchEvent(new CustomEvent("memap-tour-done"));
+    // "and what now?" (her note, Nov 7 2026): Today opens her next step's card
+    if (toStep) {
+      try { localStorage.setItem(TOUR_DONE_KEY, "1"); } catch { /* the blocks explain themselves once */ }
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-path-focus")), 450);
+    }
   };
   // the dim alone until the first place is ready
   if (!view) {
@@ -445,7 +451,8 @@ export const AppTour = () => {
   }
   const stop = STOPS[view.at];
   const last = view.at === STOPS.length - 1;
-  const next = () => { if (moving) return; haptics.tap(); if (last) finish(); else setAt(view.at + 1); };
+  const next = () => { if (moving) return; haptics.tap(); if (last) finish(true); else setAt(view.at + 1); };
+  const back = () => { if (moving || view.at === 0) return; haptics.tap(); setAt(view.at - 1); };
 
   const part = data.week % 4;
   const title = stop.id === "week" ? `${t("path.weekN", { n: data.week + 1 })} · ${t(`path.title${part}`)}`
@@ -522,9 +529,17 @@ export const AppTour = () => {
         </div>
         <div className="mt-2.5 flex items-center justify-between gap-3">
           {!last ? <button type="button" onClick={() => { if (moving) return; haptics.tap(); finish(); }} className="h-11 px-1 text-[15px] font-semibold text-muted-foreground">{t("tour.skip")}</button> : <span />}
-          <button type="button" onClick={next} className="raised-btn is-small shrink-0 gap-1 px-6">
-            {last ? t("tour.gotIt") : t("tour.next")} {!last && <ArrowRight className="h-4 w-4" strokeWidth={2.6} />}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* back a stop, if something was missed (her note, Nov 7 2026) */}
+            {view.at > 0 && (
+              <button type="button" onClick={back} aria-label={t("common.back")} className="flex h-11 w-11 items-center justify-center rounded-full bg-foreground/[0.07]">
+                <ArrowLeft className="h-5 w-5" strokeWidth={2.4} />
+              </button>
+            )}
+            <button type="button" onClick={next} className="raised-btn is-small shrink-0 gap-1 px-6">
+              {last ? t("tour.toStep") : t("tour.next")} <ArrowRight className="h-4 w-4" strokeWidth={2.6} />
+            </button>
+          </div>
         </div>
       </div>
       </div>

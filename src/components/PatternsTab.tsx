@@ -22,7 +22,7 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 // go through the full lists, so nothing outside the island is touched.
 // only (Map cards, Nov 2 2026, her note: "при нажатии на календарь хочу чтоб
 // сразу был виден календарь"): show one section, with no tabs to wander off.
-export const PatternsTab = ({ focusIds, only, onTry }: { focusIds?: string[]; only?: "findings" | "overview" | "trends" | "signals"; onTry?: (x: TryAction) => void } = {}) => {
+export const PatternsTab = ({ focusIds, only, onTry, pair = false }: { focusIds?: string[]; only?: "findings" | "overview" | "trends" | "signals"; onTry?: (x: TryAction) => void; pair?: boolean } = {}) => {
   const { t } = useTranslation();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
@@ -369,7 +369,7 @@ export const PatternsTab = ({ focusIds, only, onTry }: { focusIds?: string[]; on
         {section === "trends" && (
           <div className="animate-fade-in">
             {/* One chart per link or per question, not a web of lines (her note). */}
-            <ChartViews trackers={trackers} entries={entries} focusIds={focusIds} />
+            <ChartViews trackers={trackers} entries={entries} focusIds={focusIds} pair={pair} />
           </div>
         )}
 

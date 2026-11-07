@@ -607,6 +607,16 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     steps.splice(at >= 0 ? at + 1 : steps.length, 0, { id: `grew:${g.island}`, kind: "grew", island: g.island, stage: g.stage, trackerIds: [], answered: 0, done: true });
   }
 
+  // The path only goes forward (her note, Nov 7 2026: "то вперёд, то назад… пусть лучше
+  // добавляются новые кнопки"): a step done out of turn (the tour before the questions,
+  // a game before the last island) moves behind the boat, so nothing done ever stands
+  // after the step to do now.
+  const cur = steps.findIndex((s) => !s.done);
+  if (cur >= 0) {
+    const ahead = steps.slice(cur);
+    if (ahead.some((s) => s.done)) steps.splice(cur, ahead.length, ...ahead.filter((s) => s.done), ...ahead.filter((s) => !s.done));
+  }
+
   return {
     prior,
     pastWeeks,

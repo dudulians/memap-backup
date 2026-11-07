@@ -3,6 +3,7 @@
 // optional question as big buttons. Tap a note to edit or delete it.
 // The labelled form, the subtitle and the tiny edit / trash icons of
 // 1.7.9 are gone (design rule: people who hate reading).
+import { TipCard, tourCompleted } from "./Tips";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +94,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   return (
     <>
       <div className="space-y-5 pb-20">
+        {!tourCompleted() && <TipCard id="block:notes" title={t("common.notes")} line={t("tour.notes.line")} />}
         {onBack && (
           <button
             onClick={onBack}

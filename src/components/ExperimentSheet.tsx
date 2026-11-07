@@ -172,7 +172,6 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.withIt", { k: result.withChange[0], count: result.withChange[1] })}</p>
               <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
               {(result.withChange[1] < 3 || result.without[1] < 2) && <p className="mt-2 text-[14px] font-medium text-muted-foreground">{t("experiment.few")}</p>}
-              <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
             </div>
             <div className="mt-5 flex items-center gap-4">
               <img src={mapPic("orange_tree")} alt="" width={64} height={56} className="object-contain" />

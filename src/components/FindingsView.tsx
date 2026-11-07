@@ -162,7 +162,6 @@ export const FindingsView = ({
         </>
       )}
 
-      <p className="px-1 pt-1 text-xs leading-snug text-muted-foreground">{t("patterns.findDisclaimer")}</p>
     </div>
   );
 };

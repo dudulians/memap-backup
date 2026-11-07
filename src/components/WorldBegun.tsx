@@ -88,9 +88,9 @@ export const WorldBegun = () => {
   // her note, Nov 6 2026: after onboarding nothing showed Today and its steps. Every
   // ending goes on to Today and the tour of it, then the World ("Look around").
   const closeAndTour = () => {
-    close();
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
-    window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-start-tour")), 450);
+    window.dispatchEvent(new CustomEvent("memap-start-tour"));
+    window.setTimeout(close, 320);
   };
   const left = shown.kind === "begun" ? toNextStage(shown.days) : null;
 

@@ -16,7 +16,8 @@ import { track } from "@/lib/analytics";
 import { getLanguage, setLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/i18n";
 import { avatarUrl, DEFAULT_AVATAR, getAvatar } from "@/lib/avatar";
 import { art } from "@/lib/globeArt";
-import { islandName, islandOf, mapPicFor, type IslandId } from "@/lib/islands";
+import { ISLAND_DEFS, islandName, islandOf, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
+import { PlanetGlobe } from "./PlanetGlobe";
 import { addOwnTracker, ensureTemplates, findTemplate, getDoor, isoLocal, saveDoorState, type Door, type DoorId } from "@/lib/doors";
 import { asQuestion, templateQuestion } from "@/lib/cardText";
 import { getTrackers, saveTrackers } from "@/lib/storage";
@@ -71,6 +72,9 @@ const Dot = ({ door }: { door: Door }) => {
 };
 
 // --- 1. welcome --------------------------------------------------------------------
+const demoIsland = (id: "health" | "me" | "love") => ({ id, def: ISLAND_DEFS[id], trackerIds: [id], weather: "sun", hardDays: 0, answeredDays: 0, usual: null, top: null, hardBy: [] }) as unknown as Island;
+const DEMO_ISLANDS: Island[] = [demoIsland("health"), demoIsland("me"), demoIsland("love")];
+const DEMO_ROUTES = [{ a: "health", b: "me", k: 4, n: 5, first: "x", second: "y", nextDay: false, firstYes: true, secondYes: true, other: { k: 1, n: 9 }, secondHard: true }] as unknown as Route[];
 export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple: () => void }) => {
   const { t } = useTranslation();
   const [lang, setLang] = useState<SupportedLanguage>(getLanguage() === "ru" ? "ru" : "en");
@@ -96,18 +100,9 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
           </div>
         )}
       </div>
-      {/* the world as the picture: islands, a dotted line, the boat */}
-      <div className="relative mx-auto mt-2 h-[270px] w-full max-w-[360px]" aria-hidden="true">
-        <Pic name="11_sakura" className="onb-float absolute left-0 top-[4%] w-[40%]" />
-        <Pic name="09_waterfall" className="onb-float absolute right-[2%] top-0 w-[38%]" style={{ animationDelay: "-1.4s" }} />
-        <Pic name="17_lavender_garden" className="onb-float absolute bottom-[8%] right-[6%] w-[30%]" style={{ animationDelay: "-2.6s" }} />
-        <svg className="absolute inset-0 h-full w-full" viewBox="0 0 360 270">
-          {Array.from({ length: 12 }, (_, i) => { const u = (i + 0.5) / 12, x = 140 + u * 80, y = 60 - Math.sin(u * Math.PI) * 44 + u * 6; const e = Math.min(1, Math.min(u, 1 - u) / 0.2); return <circle key={i} cx={x} cy={y} r={2 + 1.6 * e} className="planet-route" opacity={0.4 + 0.6 * e} />; })}
-        </svg>
-        <span className="onb-bob absolute bottom-0 left-[24%] block w-[30%]">
-          <Pic name="sailboat" map />
-          {who && <img src={who} alt="" className="absolute left-[46%] top-[38%] w-[42%]" />}
-        </span>
+      {/* her world as it will be: the same globe as on World, three islands, a link, the boat */}
+      <div className="relative mx-auto mt-1 h-[310px] w-full max-w-[380px]" aria-hidden="true">
+        <PlanetGlobe decor sky={false} islands={DEMO_ISLANDS} routes={DEMO_ROUTES} avatar={who} days={{ health: 8, me: 22, love: 3 }} onOpen={() => undefined} />
       </div>
       <div className="min-h-4 flex-1" />
       <H1 className="text-[32px]">{t("onb7.welcomeTitle")}</H1>
@@ -380,7 +375,6 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart }: { setup: V7Setup; 
         {row(<Pic name="lighthouse" map className="w-[30px]" />, t("onb7.v3t"), t("onb7.v3l"))}
         {row(<Pic name="green_tree" map className="w-[40px]" />, t("onb7.v4t"), t("onb7.v4l"))}
       </div>
-      <p className="mt-3 text-center text-[14px] font-bold text-muted-foreground">{t("onb7.vNote")}</p>
       <div className="min-h-6 flex-1" />
       <Main onClick={() => (daytime ? setAsk(true) : onStart("today"))}>{t("onb7.vStart")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
       {/* daytime: tonight, or yesterday (all answers for one day) */}

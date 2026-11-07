@@ -57,6 +57,8 @@ export const HowItWorksSheet = ({ open, onClose, onAddQuestion }: { open: boolea
           <Line pic={<span className="h-3 w-3 rounded-full bg-[hsl(var(--coin-teal))]" />} title={t("how.main")} line={t("how.mainLine")} />
         </div>
 
+        <p className="mt-6 text-[15px] font-semibold leading-snug text-muted-foreground">{t("link.honest")}</p>
+
         <button type="button" onClick={() => { haptics.tap(); onAddQuestion(); }}
           className="surface mt-6 flex h-[60px] shrink-0 items-center gap-3.5 rounded-[20px] px-4 text-left active:scale-[0.98] transition-transform">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white"><Plus className="h-5 w-5" strokeWidth={2.8} /></span>

@@ -8,6 +8,8 @@
 // were too thin): one style everywhere — smooth thick lines with a soft fill,
 // in the app's colours — and the full chart is the same chart, bigger, with
 // dates, 8 weeks or 6 months, and a finger to read any week.
+import { linkOf, linkWorthShowing } from "@/lib/islands";
+import { linkArrow, trackerLookup } from "@/lib/linkText";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
@@ -185,7 +187,7 @@ const Legend = ({ series }: { series: Series[] }) => (
   </p>
 );
 
-export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[]; entries: TrackerEntry[]; focusIds?: string[] }) => {
+export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trackers: Tracker[]; entries: TrackerEntry[]; focusIds?: string[]; pair?: boolean }) => {
   const { t } = useTranslation();
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   const mine = useMemo(() => (focusIds ? live.filter((tr) => focusIds.includes(tr.id)) : live), [live, focusIds]);
@@ -194,18 +196,17 @@ export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[
   // Links found (on this island, if it's one island's charts), read like the map's.
   const links = useMemo(() => {
     const ids = new Set(mine.map((x) => x.id));
-    return computeCorrelations(live, entries, 8)
-      .filter((c) => !focusIds || ids.has(c.trackerA.id) || ids.has(c.trackerB.id))
+    const of = trackerLookup(live);
+    return computeCorrelations(live, entries, 12)
+      .filter(linkWorthShowing)
+      .filter((c) => !focusIds || (pair ? ids.has(c.trackerA.id) && ids.has(c.trackerB.id) : ids.has(c.trackerA.id) || ids.has(c.trackerB.id)))
       .map((c) => {
-        const flip = c.lag === -1;
-        const a = flip ? c.trackerB : c.trackerA;
-        const b = flip ? c.trackerA : c.trackerB;
-        const { bothYes, aYesBNo, aNoBYes } = c.counts;
-        return { a, b, nextDay: c.lag !== 0, k: bothYes, n: flip ? bothYes + aNoBYes : bothYes + aYesBNo };
+        const l = linkOf(c);
+        const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
+        return { a: l.first, b: l.second, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkArrow(t, route, of) };
       })
-      .filter((l) => l.k >= 3 && l.k / Math.max(1, l.n) >= 0.3)
       .slice(0, 5);
-  }, [live, mine, entries, focusIds]);
+  }, [live, mine, entries, focusIds, pair, t]);
 
   // Each question, busiest first; only ones with answers.
   const singles = useMemo(() => mine
@@ -215,7 +216,11 @@ export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[
 
   const [view, setView] = useState<"links" | "each">(links.length > 0 ? "links" : "each");
   // The full chart: which questions, and how far back.
-  const [detail, setDetail] = useState<{ ids: string[]; title: string; sub?: string } | null>(null);
+  const [detail, setDetail] = useState<{ ids: string[]; title: string; sub?: string } | null>(() => {
+    if (!pair || focusIds?.length !== 2) return null;
+    const l = links[0];
+    return l ? { ids: [l.a.id, l.b.id], title: `${l.arrow}${l.nextDay ? ` ${t("map.nextDay")}` : ""}`, sub: t("map.timesOf", { k: l.k, count: l.n }) } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
+  });
   const [long, setLong] = useState(false);
 
   const colorOf = (tr: Tracker, k: number, pair: boolean) => (pair ? (k === 0 ? PAIR_A : PAIR_B) : islandHsl(islandOf(tr)));
@@ -268,7 +273,7 @@ export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[
         <div className="mt-3 space-y-3">
           {links.length === 0 && <p className="surface rounded-[22px] px-4 py-4 text-[16px] font-semibold">{t("charts.noLinks")}</p>}
           {links.map((l, i) => {
-            const title = `${name(l.a.id)} → ${name(l.b.id)}${l.nextDay ? ` ${t("map.nextDay")}` : ""}`;
+            const title = `${l.arrow}${l.nextDay ? ` ${t("map.nextDay")}` : ""}`;
             const sub = t("map.timesOf", { k: l.k, count: l.n });
             const series = [
               { color: PAIR_A, values: weekly(l.a, entries), label: name(l.a.id) },
@@ -283,7 +288,6 @@ export const ChartViews = ({ trackers, entries, focusIds }: { trackers: Tracker[
               </button>
             );
           })}
-          {links.length > 0 && <p className="text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>}
         </div>
       )}
 

@@ -310,7 +310,6 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
         <>
           <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.links")}</p>
           {routes.slice(0, 3).map((r, i) => <LinkLine key={i} r={r} of={trackerLookup(trackers)} />)}
-          <p className="text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
         </>
       )}
     </div>

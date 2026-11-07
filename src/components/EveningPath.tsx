@@ -14,6 +14,7 @@
 // to do starts it at once; only a done step or day asks first (change
 // answers). The note step opens the note sheet right here.
 // Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top notes).
+import { TipCard } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -159,8 +160,11 @@ export const EveningPath = ({
   useEffect(() => {
     const done = () => setTick((k) => k + 1);
     const evs = ["memap-tour-done", "memap-path-refresh", "memap-first-link-seen"];
+    // after the tour: her next step comes to the middle with its card open
+    const focusStep = () => window.setTimeout(() => focusRef.current?.click(), 350);
+    window.addEventListener("memap-path-focus", focusStep);
     evs.forEach((e) => window.addEventListener(e, done));
-    return () => evs.forEach((e) => window.removeEventListener(e, done));
+    return () => { evs.forEach((e) => window.removeEventListener(e, done)); window.removeEventListener("memap-path-focus", focusStep); };
   }, []);
   // the calendar opens on her main question, so it's named for it ("Your migraine days")
   const daysLabel = (() => { const door = getDoorState(); return t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any"); })();
@@ -387,6 +391,13 @@ export const EveningPath = ({
   // the middle of the screen gives a light tap; her step far off shows the way
   // back; Today opens with her step in the middle.
   const focusRef = useRef<HTMLButtonElement>(null);
+  // Malu's tip over the boat: which one (counts up across visits)
+  const [maluTip, setMaluTip] = useState<number | null>(null);
+  const nextMaluTip = () => setMaluTip((cur) => {
+    if (cur !== null) return cur + 1;
+    let k = 0; try { k = Number(localStorage.getItem("memap_malu_tip") || "0"); localStorage.setItem("memap_malu_tip", String(k + 1)); } catch { /* starts at the first */ }
+    return k;
+  });
   const openRef = useRef<Open>(null);
   openRef.current = open;
   // who is scrolling: her hand (taps; an open card closes) or the app (quiet)
@@ -810,6 +821,16 @@ export const EveningPath = ({
   const comingAfter = (m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length) + 1;
   const pastFrom = Math.max(0, m.pastWeeks.length - pastShown);
 
+  // Malu's tip (her note, Nov 7 2026: "нажимаешь на барашка — подсказка"): a tap on the
+  // boat shows one tip from Malu, the next tap the next one; "You" opens You as before.
+  const maluTips = [
+    { id: "avatar", line: t("tips.maluAvatar", { you: t("map.you") }), go: t("tips.maluAvatarGo"), act: () => { window.dispatchEvent(new CustomEvent("memap-pick-avatar")); } },
+    { id: "question", line: t("tips.maluQuestion"), go: t("tips.maluQuestionGo"), act: () => window.dispatchEvent(new CustomEvent("memap-add-question")) },
+    { id: "how", line: t("tips.maluHow"), go: t("tips.maluHowGo"), act: () => window.dispatchEvent(new CustomEvent("memap-open-how")) },
+    ...(m.totalDays >= 5 ? [{ id: "report", line: t("tips.maluReport"), go: t("tips.maluReportGo"), act: () => window.dispatchEvent(new CustomEvent("memap-doctor-report")) }] : []),
+  ];
+  const tipNow = maluTip === null ? null : maluTips[maluTip % maluTips.length];
+
   // A fragment, so the week card's sticky range is all of Today.
   return (
     <>
@@ -865,6 +886,13 @@ export const EveningPath = ({
             <span className="truncate">{weekNext.text}</span>
           </button>
         </div>
+        {/* after a few evenings: there is a report for a doctor */}
+        {m.totalDays >= 5 && (
+          <div className="mx-auto mt-3 w-[92%] max-w-[420px]">
+            <TipCard id="report" title={t("tips.reportTitle")} line={t("tips.reportLine")} action={t("tips.reportGo")}
+              onAction={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />
+          </div>
+        )}
       </div>
 
 
@@ -885,7 +913,7 @@ export const EveningPath = ({
               <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
                 {/* her animal stands beside her step, rolls with it, and opens You */}
                 {i === focus && avatar && (
-                  <button type="button" aria-label={t("map.you")} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-you")); }}
+                  <button type="button" aria-label={t("map.you")} onClick={() => { haptics.tap(); nextMaluTip(); }}
                     className="path-boat absolute z-[4] transition-transform duration-150 active:scale-95" style={{ left: avatar.x, top: avatar.y, width: avatar.w, height: avatar.h }}>
                     <span className="bob">
                       <img className="art-day" src={mapPicFor("sailboat", false)} alt="" />
@@ -893,6 +921,17 @@ export const EveningPath = ({
                       {avatarPic && <img className="who" src={avatarPic} alt="" />}
                     </span>
                   </button>
+                )}
+                {i === focus && avatar && tipNow && (
+                  <div className="malu-tip surface absolute z-[8] w-[248px] rounded-[18px] px-3.5 py-3 animate-fade-in" role="dialog"
+                    style={{ left: Math.max(8, Math.min(avatar.x + avatar.w / 2 - 124, width - 256)), top: avatar.y - 12, transform: "translateY(-100%)" }}>
+                    <p className="text-[15px] font-semibold leading-snug">{tipNow.line}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button type="button" onClick={() => { haptics.tap(); setMaluTip(null); tipNow.act(); }} className="raised-btn is-small px-4">{tipNow.go}</button>
+                      <button type="button" onClick={() => { haptics.tap(); setMaluTip(null); window.dispatchEvent(new CustomEvent("memap-open-you")); }} className="h-10 px-2 text-[15px] font-bold text-muted-foreground">{t("map.you")}</button>
+                      <button type="button" onClick={() => { haptics.tap(); setMaluTip(null); }} aria-label={t("common.close")} className="ml-auto h-10 px-2 text-[15px] font-bold text-muted-foreground">×</button>
+                    </div>
+                  </div>
                 )}
                 {/* no names on the lights (her: "как у дуолинго и попроще"); over her
                     step one short word that starts it, pointing at its light */}

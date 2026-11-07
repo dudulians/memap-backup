@@ -204,7 +204,6 @@ export const WeekChest = ({
         </p>
         {r.insight && r.insightOther && <p className="mt-1 text-[16px] font-medium leading-snug text-muted-foreground">{r.insightOther}</p>}
         {(r.insight ? r.insightEarly : !!r.fact) && early}
-        {r.insight && <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>}
       </div>,
     );
     // 2. The week in numbers.

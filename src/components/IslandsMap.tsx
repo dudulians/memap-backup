@@ -304,7 +304,6 @@ export const IslandsMap = ({
                 {linkArrow(t, l.r, of)}{l.r.nextDay ? ` ${t("map.nextDay")}` : ""}
               </p>
               <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t("map.timesOf", { k: l.r.k, count: l.r.n })}</p>
-              <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
             </div>
           )}
         </div>

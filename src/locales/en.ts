@@ -487,6 +487,20 @@ const en = {
     },
     yours: "MeMap shows when the thought comes. The decision is yours.",
   },
+  // tips over time, from Malu (Nov 7 2026)
+  tips: {
+    reportTitle: "A report for your doctor",
+    reportLine: "Your days, links and notes on one page — ready to show.",
+    reportGo: "Make it",
+    maluAvatar: "Want someone else in the boat? Pick them in {{you}}.",
+    maluAvatarGo: "Change",
+    maluQuestion: "Add a question any time. It lands on its island.",
+    maluQuestionGo: "Add",
+    maluHow: "How MeMap works: the 4 parts and the signs on the map.",
+    maluHowGo: "Open",
+    maluReport: "A report for your doctor: your days on one page.",
+    maluReportGo: "Make it",
+  },
   // her own question in words (Nov 7 2026)
   answerWords: {
     title: "Your answers in words",
@@ -1810,6 +1824,7 @@ const en = {
     notes: { line: "Anything about a day, in your own words.", sampleDay: "Tuesday", sample: "Slept badly, big meeting tomorrow" },
     you: { line: "Your treasures, questions and settings — and “How MeMap works”." },
     end: { title: "That's your world", line: "Come back tomorrow evening. Your path goes on.", lineTonight: "Tonight your questions wait on Today." },
+    toStep: "My next step",
   },
   // onboarding v7 (Nov 6 2026, boards 70–75)
   onb7: {
@@ -1862,7 +1877,7 @@ const en = {
     v2t: "What happens together",
     v2l: "Often after a week or two — {{example}}.",
     v3t: "When you've reached your limit",
-    v3l: "Set your own rule — the lighthouse lights up.",
+    v3l: "Your own rule, e.g. 3 short nights in a week → phone away by 10 pm.",
     v4t: "What changed after a change",
     v4l: "Try one thing for two weeks and compare.",
     vNote: "Patterns, not causes.",

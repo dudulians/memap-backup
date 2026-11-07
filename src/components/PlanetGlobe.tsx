@@ -120,7 +120,7 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, onOpen, onNewIsland, onLink, onInner }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, onOpen, onNewIsland, onLink, onInner }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** her topic's island: lit, a teal dot by its name (board 76 A) */
   main?: IslandId | null;
@@ -129,6 +129,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   onInner?: (r: Route) => void;
   /** the World's 4 parts stand over it: the ball sits in the room below them */
   below?: boolean;
+  /** a picture of her world (the first screen): no buttons, no hint, it doesn't move */
+  decor?: boolean;
   /** draw her sky here (false: the screen draws it behind its header) */
   sky?: boolean;
   /** islands whose rule (lighthouse) is lit */
@@ -168,7 +170,6 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       return { key: isl.id, kind: "area", ll, v: vec(ll), name, size: size * STAGE_SCALE[stage], ar: ASPECT[name] ?? 0.55, island: isl, lit: lit?.has(isl.id), flag: stage === 4 };
     });
     for (const u of UNEXPLORED) list.push({ key: u.name, kind: "cloud", ll: u.ll, v: vec(u.ll), name: u.name, size: 0.85, ar: ASPECT[u.name] });
-    for (const s of SKY) list.push({ key: `sky-${s.ll.join()}`, kind: "sky", ll: s.ll, v: vec(s.ll), name: s.name, size: 1.05, ar: ASPECT[s.name] });
     const boatLL: [number, number] = [C0[0] - 1, C0[1]];
     list.push({ key: "boat", kind: "boat", ll: boatLL, v: vec(boatLL), name: "sailboat", size: 0.72, ar: 1 });
     return { things: list, wakes: links };
@@ -193,6 +194,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   innerRef.current = inner;
   const belowRef = useRef(below);
   belowRef.current = below;
+  const decorRef = useRef(decor);
+  decorRef.current = decor;
   const zoomRef = useRef<(f: number) => void>(() => undefined);
   // each link's sign on the ball, moved every frame like the labels
   const chipEls = useRef(new Map<string, HTMLDivElement | null>());
@@ -262,7 +265,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     const resize = () => {
       const r = box.getBoundingClientRect(); W = r.width; H = r.height; DPR = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-      if (belowRef.current) { R0 = Math.min(W * 0.72, H * 0.43); CX0 = W / 2; CY0 = H * 0.51; }
+      if (decorRef.current) { R0 = Math.min(W * 0.44, H * 0.42); CX0 = W / 2; CY0 = H * 0.5; }
+      else if (belowRef.current) { R0 = Math.min(W * 0.72, H * 0.335); CX0 = W / 2; CY0 = H * 0.615; }
       else { R0 = Math.min(W * 0.74, H * 0.37); CX0 = W / 2; CY0 = H * 0.585; }
       place();
       gl.viewport(0, 0, canvas.width, canvas.height); dirty = true; kick();
@@ -418,7 +422,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     const spread = () => { const [a, b] = [...fingers.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
     const onDown = (ev: PointerEvent) => {
       // the buttons over the globe answer by themselves
-      if (pausedRef.current || (ev.target as HTMLElement).closest("button")) return;
+      if (decorRef.current || pausedRef.current || (ev.target as HTMLElement).closest("button")) return;
       fingers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       try { box.setPointerCapture(ev.pointerId); } catch { /* synthetic events */ }
       if (fingers.size === 2) {
@@ -581,15 +585,15 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           </div>
         ))}
       </div>
-      {hint && <div className="planet-hint" style={below ? { bottom: "calc(12.6rem + env(safe-area-inset-bottom, 0px))" } : undefined}>{t("map.hint")}</div>}
+      {hint && !decor && <div className="planet-hint" style={below ? { bottom: "auto", top: "12.4rem" } : undefined}>{t("map.hint")}</div>}
       {/* zoom in and out by hand too (pinch and the wheel still work) */}
-      <div className="absolute right-4 z-[5] flex flex-col overflow-hidden rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]" style={{ bottom: "calc(11.5rem + env(safe-area-inset-bottom, 0px))" }}>
+      <div className={`absolute right-4 z-[5] flex flex-col overflow-hidden rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]${decor ? " hidden" : ""}`} style={{ bottom: "calc(11.5rem + env(safe-area-inset-bottom, 0px))" }}>
         <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-11 w-11 items-center justify-center text-foreground"><Plus className="h-5 w-5" strokeWidth={2.6} /></button>
         <span className="mx-2.5 h-px bg-foreground/10" />
         <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-11 w-11 items-center justify-center text-foreground"><Minus className="h-5 w-5" strokeWidth={2.6} /></button>
       </div>
       {/* a new island, always at hand (on the flat map it was a tile) */}
-      {onNewIsland && (
+      {onNewIsland && !decor && (
         <button type="button" onClick={() => { haptics.tap(); onNewIsland(); }}
           className="absolute left-4 z-[5] flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]"
           style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>

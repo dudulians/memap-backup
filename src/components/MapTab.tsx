@@ -5,6 +5,7 @@
 // Charts / Limits (the old Patterns, just for that island). "World" shows
 // the same for everything. One view only: the rolling globe is gone (her
 // note, Nov 2: two ways into the map were confusing).
+import { TipCard, tourCompleted } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus } from "lucide-react";
@@ -242,13 +243,13 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
         </div>
       )}
+      {/* the k/n signs of links inside one island are off on the globe: they sat on the
+          islands (her note, Nov 7 2026); those links are in Links */}
       {loaded && islands.length > 0 && (
-        <div className="relative min-h-0 flex-1" data-tour="world">
-          <div className="absolute inset-0">
-            <PlanetGlobe sky={false} below islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} inner={innerLinks} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
-              onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)} onInner={setLink}
-              paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} />
-          </div>
+        <div className="absolute inset-0 z-0" data-tour="world">
+          <PlanetGlobe sky={false} below islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
+            onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} />
         </div>
       )}
 
@@ -314,6 +315,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         ariaTitle={only ? onlyTitle(only) : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
+          {only && !tourCompleted() && (
+            <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={onlyTitle(only)}
+              line={t(only === "findings" ? "tour.links.line" : only === "signals" ? "tour.actions.line" : "tour.calendar.line")} />
+          )}
           {/* My days holds both the calendar and the chart (her note, Nov 6 2026) */}
           {(only === "overview" || only === "trends") && (
             <div className="seg mb-3 w-full" role="tablist" aria-label={t("world4.myDays")}>
@@ -341,7 +346,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {/* a thought she tracks: steady, or depends on the day? (board 64) */}
           {only === "findings" && !onlyIsland && <SteadyCard trackers={trackers} entries={entries} />}
           {only && (
-            <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only}
+            <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only} pair={!!onlyIds}
               focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)}
               onTry={(x) => { setOnly(null); window.setTimeout(() => setTrying(x), 250); }} />
           )}

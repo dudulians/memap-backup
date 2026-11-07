@@ -56,7 +56,9 @@ const Index = () => {
   useEffect(() => {
     const open = (e: Event) => { youTrip.current = !!(e as CustomEvent).detail?.trip; setYouOpen(true); };
     window.addEventListener("memap-open-you", open);
-    return () => window.removeEventListener("memap-open-you", open);
+    const add = () => setAddModalOpen(true);
+    window.addEventListener("memap-add-question", add);
+    return () => { window.removeEventListener("memap-open-you", open); window.removeEventListener("memap-add-question", add); };
   }, []);
   const closeYou = (back: boolean) => {
     setYouOpen(false);

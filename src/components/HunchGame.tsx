@@ -154,7 +154,6 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[13px] font-medium text-muted-foreground">{t("map.notCause")}</p>
             <div className="mt-6 flex items-center gap-3">
               {avatar && <img src={avatar} alt="" width={56} height={56} className="object-contain" />}
               <p className="text-[20px] font-bold leading-snug">{anyOnto ? t("hunch.onto") : t("hunch.notYet")}</p>

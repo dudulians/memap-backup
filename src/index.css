@@ -2459,6 +2459,7 @@ html[data-ui="new"][data-theme="aurora"] .planet-label span { background: none; 
 html[data-ui="new"][data-theme="aurora-light"] .map-sea { background: linear-gradient(180deg, #E6E9FC 0%, #D3DBFC 32%, #BCCFFB 100%); }
 html[data-ui="new"][data-theme="aurora-light"] .map-head { background: linear-gradient(180deg, #E6E9FC 0%, #E6E9FC 78%, rgba(230, 233, 252, 0) 100%); }
 html[data-ui="new"][data-theme="aurora-light"] .app-head-map { background: #E6E9FC; }
+html[data-ui="new"][data-theme="aurora-light"] .app-head-map.app-head-clear { background: transparent; }
 html[data-ui="new"][data-theme="aurora"] .map-sea { background: linear-gradient(180deg, #141c39 0%, #182a72 40%, #1D3592 100%); }
 html[data-ui="new"] .map-sea { scrollbar-width: none; }
 html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }

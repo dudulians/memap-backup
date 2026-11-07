@@ -4,6 +4,7 @@
 // "куда идут?"). One sheet behind her animal: the animal with Change, her
 // questions, Settings, then her week, her treasures and her links. It opens
 // from the header, the boat on the map and the animal beside her step.
+import { TipCard, tourCompleted } from "./Tips";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, CircleUser, Compass, ListChecks, Settings, Share2, Stethoscope, type LucideProps } from "lucide-react";
@@ -71,6 +72,13 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
   }, []);
   const [picking, setPicking] = useState(false);
   const [how, setHow] = useState(false);
+  // Malu's tips open these straight away
+  useEffect(() => {
+    const pick = () => setPicking(true), openHow = () => setHow(true);
+    window.addEventListener("memap-pick-avatar", pick);
+    window.addEventListener("memap-open-how", openHow);
+    return () => { window.removeEventListener("memap-pick-avatar", pick); window.removeEventListener("memap-open-how", openHow); };
+  }, []);
 
   return (
     <>
@@ -87,6 +95,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
               {t("you.change")}
             </button>
           </div>
+          {!tourCompleted() && <TipCard id="block:you" className="mb-4" title={t("map.you")} line={t("tour.you.line")} />}
           {/* shrink-0: in the scrolling column an overflow-hidden box would squash to nothing */}
           <div className="surface shrink-0 overflow-hidden rounded-[20px]">
             <Row icon={ListChecks} label={data ? `${t("today.myQuestions")} · ${questions}` : t("today.myQuestions")} onClick={onQuestions} />
