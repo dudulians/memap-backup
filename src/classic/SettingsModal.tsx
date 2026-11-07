@@ -27,6 +27,7 @@ import {
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Bell, Trash2, Flame, Download, ListChecks, Eye, EyeOff, Volume2, Vibrate, HelpCircle, FileSpreadsheet, Upload, Lock, Palette, Sparkles, BookOpen, Sun, ChevronLeft, ChevronRight, Database, FlaskConical, Droplets, Leaf, Zap, Wind, Mail, FileText, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { switchToNew } from "@/components/UpgradeInvite";
 import { TimePickerField } from "@/components/TimePickerField";
 import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
@@ -789,6 +790,15 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     { key: "data", icon: Database, label: t("settings.dataPrivacyTitle") },
                   ];
                   return (
+                    <>
+                    {/* The way to the new look, first in Settings (her ask, Nov 7 2026: whoever went
+                        back to the old look must be able to come back to the new one any time). */}
+                    <button type="button" onClick={switchToNew}
+                      className="mb-3 w-full flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-left active:bg-primary/20 transition-colors">
+                      <Sparkles className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={2} />
+                      <span className="flex-1 text-sm font-semibold text-primary">{t("upgrade.tryRow")}</span>
+                      <ChevronRight className="h-4 w-4 text-primary/60 flex-shrink-0" />
+                    </button>
                     <div className="rounded-2xl border border-border/40 overflow-hidden divide-y divide-border/40">
                       {rows.map((row) => {
                         const Icon = row.icon;
@@ -811,6 +821,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         );
                       })}
                     </div>
+                    </>
                   );
                 })()}
               </>

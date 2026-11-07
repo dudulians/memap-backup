@@ -146,6 +146,7 @@ const en = {
     open: "Open my map",
     back: "The old look is one tap away in Settings.",
     oldLook: "Back to the old look",
+    tryRow: "Try the new MeMap",
   },
   // "Guess", the daily mini-game (Nov 2 2026)
   // "Time to act" on the path (Nov 2 2026)
