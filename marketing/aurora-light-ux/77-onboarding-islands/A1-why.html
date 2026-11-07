@@ -1,0 +1,57 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face { font-family: DM; src: url(file:///C:/Users/ulian/OneDrive/Desktop/MeMap/memap-self-aware-main/src/assets/fonts/manrope-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 390px; height: 844px; overflow: hidden; position: relative; font-family: DM, sans-serif; color: #3A3F4E; -webkit-font-smoothing: antialiased; }
+.sea { position: absolute; inset: 0; background: #B4CDF8 url(file:///C:/Users/ulian/OneDrive/Desktop/MeMap/memap-self-aware-main/src/assets/globe/planet-day.webp) no-repeat; background-size: 2767px auto; background-position: -1014px -31px; }
+.status { position: absolute; top: 0; left: 0; right: 0; height: 47px; display: flex; align-items: center; justify-content: space-between; padding: 0 28px 0 34px; font-weight: 700; font-size: 16px; }
+.screen { position: absolute; inset: 0; padding: 63px 20px 34px; display: flex; flex-direction: column; }
+h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+.sub { margin-top: 6px; font-size: 17px; font-weight: 600; color: #6B7184; line-height: 1.35; }
+.grow { flex: 1; }
+.screen > * { flex-shrink: 0; }
+.screen > .grow { flex-shrink: 1; }
+.card { background: rgba(255,255,255,.96); border-radius: 22px; box-shadow: 0 10px 24px -18px rgba(30,50,110,.6); }
+.btn { height: 56px; border-radius: 999px; background: hsl(174 44% 42%); color: #fff; font-weight: 800; font-size: 17px; box-shadow: 0 5px 0 hsl(172 70% 30%); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.link { height: 48px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #6B7184; }
+.dots { display: flex; gap: 6px; justify-content: center; height: 44px; align-items: center; position: relative; }
+.dots i { width: 8px; height: 8px; border-radius: 4px; background: rgba(30,47,58,.22); }
+.dots i.on { width: 22px; background: hsl(174 44% 42%); }
+.back { position: absolute; left: 0; top: 0; width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,.7); display: flex; align-items: center; justify-content: center; }
+.tick { margin-left: auto; width: 26px; height: 26px; border-radius: 13px; background: hsl(174 44% 42%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fork { display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 118px; font-size: 22px; font-weight: 800; line-height: 1.2; }
+.fork + .fork { margin-top: 12px; }
+.fork .ft { width: 58px; height: 58px; border-radius: 29px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fork.on { box-shadow: 0 0 0 2px hsl(174 44% 42%), 0 10px 24px -18px rgba(30,50,110,.6); }
+.isl { padding: 0 14px; }
+.isl + .isl { margin-top: 6px; }
+.isl .h { display: flex; align-items: center; gap: 12px; height: 52px; font-size: 18px; font-weight: 800; }
+.isl .h img { width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; }
+.isl .h .n { font-size: 14px; font-weight: 700; color: hsl(174 44% 42%); margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.isl .h .chev { margin-left: auto; color: #9AA0B0; display: flex; }
+.isl.open { padding-bottom: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { height: 38px; padding: 0 14px; border-radius: 999px; background: rgba(30,47,58,.05); font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+.chip.on { background: #fff; box-shadow: 0 0 0 2px hsl(174 44% 42%); font-weight: 800; }
+.seg { margin-top: 14px; height: 48px; border-radius: 24px; background: rgba(255,255,255,.6); display: grid; grid-template-columns: 1fr 1fr; padding: 4px; font-size: 15px; font-weight: 800; }
+.seg span { display: flex; align-items: center; justify-content: center; border-radius: 20px; color: #6B7184; }
+.seg span.on { background: #fff; color: #3A3F4E; box-shadow: 0 2px 8px rgba(20,40,80,.15); }
+.q { padding: 12px 14px; }
+.q + .q { margin-top: 8px; }
+.q .lab { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 4px; border-radius: 13px; background: rgba(30,47,58,.05); font-size: 13px; font-weight: 800; color: #5B6275; }
+.q .lab img { width: 20px; height: 20px; object-fit: contain; }
+.q .t { margin-top: 6px; font-size: 18px; font-weight: 700; line-height: 1.3; display: flex; gap: 10px; align-items: flex-start; }
+.q.main { box-shadow: 0 0 0 2px hsl(174 44% 42%), 0 10px 24px -18px rgba(30,50,110,.6); }
+.kick { font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #8A90A2; margin: 14px 4px 6px; }
+.lbl { position: absolute; transform: translateX(-50%); white-space: nowrap; height: 30px; padding: 0 12px; border-radius: 15px; background: rgba(255,255,255,.96); font-size: 15px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 6px 14px -8px rgba(20,50,90,.5); }
+.isle { position: absolute; transform: translate(-50%, -70%); }
+.isle img { width: 100%; display: block; filter: drop-shadow(0 6px 8px rgba(20,60,100,.25)); }
+</style></head><body><div class="sea"></div><div class="status"><span>9:41</span><span style="display:flex;gap:6px;align-items:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 4v16"/></svg><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="10" x="2" y="7" rx="2" ry="2"/><line x1="22" x2="22" y1="11" y2="13"/><line x1="6" x2="6" y1="11" y2="13"/><line x1="10" x2="10" y1="11" y2="13"/><line x1="14" x2="14" y1="11" y2="13"/></svg></span></div><div class="screen"><div class="dots"><span class="back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></span><i class="on"></i><i class=""></i><i class=""></i><i class=""></i></div>
+  <h1 style="margin-top:18px">What brings you here?</h1>
+  <p class="sub">There's no wrong answer.</p>
+  <div style="margin-top:26px">
+    <div class="fork card"><span class="ft" style="background:hsl(230 60% 60% / .14);color:hsl(230 50% 55%)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M8 19v1"/><path d="M8 14v1"/><path d="M16 19v1"/><path d="M16 14v1"/><path d="M12 21v1"/><path d="M12 16v1"/></svg></span>Something keeps bothering me</div>
+    <div class="fork card on"><span class="ft" style="background:hsl(40 90% 55% / .18);color:hsl(36 85% 48%)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></span>I want more good days</div>
+  </div>
+  <div class="grow"></div>
+  <div class="link">Just looking around</div>
+  <div class="btn">Continue <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div></div></body></html>
