@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>D and E, small</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f3f5fa; color: #1c2b3a; padding: 20px; width: 760px; }
+  h1 { font-size: 22px; }
+  .row { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 12px; margin-top: 14px; align-items: center; }
+  .label { font-size: 16px; font-weight: 700; }
+  .screen { border-radius: 22px; padding: 14px 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; justify-items: center; }
+  .light { background: linear-gradient(160deg, #cfe0ff 0%, #f6d9ec 55%, #fde9d6 100%); }
+  .dark { background: linear-gradient(160deg, #0d1330 0%, #1d2a6b 60%, #2b1d55 100%); }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; }
+  .app i { display: block; width: 60px; height: 60px; border-radius: 22.4%; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .app i img { width: 100%; height: 100%; display: block; }
+  .app b { font-size: 11px; font-weight: 500; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.35); }
+  .light .app b { color: #1c2b3a; text-shadow: none; }
+  .n1 { background: #fff; } .n2 { background: linear-gradient(#5ac8fa, #007aff); } .n3 { background: linear-gradient(#ffd60a, #ff9f0a); }
+  .n4 { background: linear-gradient(#34c759, #248a3d); } .n5 { background: linear-gradient(#ff6482, #ff2d55); } .n6 { background: #1c1c1e; } .n7 { background: linear-gradient(#bf5af2, #8944ab); }
+  .sizes { display: flex; gap: 26px; align-items: flex-end; background: #fff; border-radius: 22px; padding: 16px 20px; }
+  .sizes div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: #5f6f82; }
+  .sizes span { display: block; border-radius: 22.4%; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+  .sizes img { width: 100%; height: 100%; display: block; }
+</style></head><body>
+<h1>D and E at real size</h1>
+<div id="rows"></div>
+<script>
+const V = [["D-bright-clouds-richer", "D · bright"], ["E-night", "E · night"]];
+const scr = (cls, f) => `<div class="screen ${cls}">${["n1","n2","n3","n4","n5","me","n6","n7"].map((n) => n === "me" ? `<div class="app"><i><img src="${f}.png"></i><b>MeMap</b></div>` : `<div class="app"><i class="${n}"></i><b>App</b></div>`).join("")}</div>`;
+const sizes = (f) => `<div class="sizes">${[[60, "Home screen"], [40, "Search"], [29, "Settings"]].map(([s, t]) => `<div><span style="width:${s}px;height:${s}px"><img src="${f}.png"></span>${t}</div>`).join("")}</div>`;
+document.getElementById("rows").innerHTML = V.map(([f, t]) => `<div class="row"><div class="label">${t}</div>${scr("light", f)}${scr("dark", f)}</div><div class="row"><div></div>${sizes(f)}<div></div></div>`).join("");
+</script></body></html>

@@ -1,6 +1,6 @@
-// The app icon from her pick (Nov 5 2026: "Yes, icon 1"): her pastel globe,
-// cropped ×1.3 so the globe fills the square (it read best at 60 pt on the
-// real-size board). Writes every file the iOS and Android projects use, in
+// The app icon. Nov 5 2026 she picked the pastel globe; Nov 7 2026, after TestFlight ("иконка
+// слишком бледная" → "я за тёмную"), the night globe (her #4), cropped ×1.22 a touch up so the
+// globe fills the square: it reads at every size, on light and dark wallpapers (board-small-DE.png). Writes every file the iOS and Android projects use, in
 // the sizes they already have, plus the store copies.
 //   node marketing/tools/make-app-icon.cjs
 const sharp = require("sharp");
@@ -8,11 +8,13 @@ const fs = require("fs");
 const path = require("path");
 
 const root = path.resolve(__dirname, "../..");
-const SRC = path.join(root, "marketing/app-icon/candidates-2026-11-05/1-globe-pastel.webp");
+const SRC = path.join(root, "marketing/app-icon/candidates-2026-11-05/4-globe-night.webp");
 const OUT = path.join(root, "marketing/app-icon");
-const ZOOM = 1.3;
+const ZOOM = 1.22;
+// the globe sits a little high in the picture: move the square up by this share of its height
+const DY = -0.02;
 // Android often masks the icon with a circle: a little less zoom there, so the pin stays inside it
-const ZOOM_ROUND = 1.15;
+const ZOOM_ROUND = 1.1;
 const res = (d, n) => path.join(root, `android/app/src/main/res/mipmap-${d}/${n}.png`);
 const DENS = { ldpi: 36, mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
 
@@ -20,7 +22,7 @@ const DENS = { ldpi: 36, mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 19
   const meta = await sharp(SRC).metadata();
   const side = Math.min(meta.width, meta.height);
   const crop = Math.round(side / ZOOM);
-  const left = Math.round((meta.width - crop) / 2), top = Math.round((meta.height - crop) / 2);
+  const left = Math.round((meta.width - crop) / 2), top = Math.round((meta.height - crop) / 2 + DY * meta.height);
 
   // the background colour: the picture's own corners
   const corner = await sharp(SRC).extract({ left: 0, top: 0, width: 40, height: 40 }).stats();
@@ -30,7 +32,7 @@ const DENS = { ldpi: 36, mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 19
   const master = await sharp(SRC).extract({ left, top, width: crop, height: crop }).resize(1024, 1024, { kernel: "lanczos3" })
     .flatten({ background: bg }).removeAlpha().png().toBuffer();
   const cropR = Math.round(side / ZOOM_ROUND);
-  const roundMaster = await sharp(SRC).extract({ left: Math.round((meta.width - cropR) / 2), top: Math.round((meta.height - cropR) / 2), width: cropR, height: cropR })
+  const roundMaster = await sharp(SRC).extract({ left: Math.round((meta.width - cropR) / 2), top: Math.round((meta.height - cropR) / 2 + DY * meta.height), width: cropR, height: cropR })
     .resize(1024, 1024, { kernel: "lanczos3" }).flatten({ background: bg }).removeAlpha().png().toBuffer();
   const write = async (file, buf) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, buf); };
   await write(path.join(OUT, "memap-icon-1024.png"), master);
