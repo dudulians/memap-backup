@@ -3,6 +3,8 @@ import { RED_FLAG_IDS } from "@/lib/bodyTemplates";
 import { templateIdOf } from "@/lib/answerPhrases";
 import { followUpNotNeeded } from "@/lib/pathSteps";
 import { RedFlagsSheet } from "./RedFlagsSheet";
+import { SupportSheet } from "./SupportSheet";
+import { MOOD_SUPPORT_IDS } from "@/lib/supportLines";
 import { createPortal } from "react-dom";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
@@ -524,6 +526,7 @@ export const DailySession = ({
     return -1;
   };
   const [flags, setFlags] = useState(false);
+  const [support, setSupport] = useState(false);
 
   const handleAnswer = (value: boolean) => {
     if (isAnimatingRef.current || !currentQuestion) return;
@@ -1485,8 +1488,15 @@ export const DailySession = ({
               {t("redFlags.chip")}
             </button>
           )}
+          {/* mood questions: a free line to talk to someone (safety round, Nov 7 2026) */}
+          {MOOD_SUPPORT_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
+            <button type="button" onClick={() => setSupport(true)} className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground">
+              {t("support.chip")}
+            </button>
+          )}
         </div>
         <RedFlagsSheet open={flags} onClose={() => setFlags(false)} />
+        <SupportSheet open={support} onClose={() => setSupport(false)} />
       </div>
       </div>
     </BottomSheet>

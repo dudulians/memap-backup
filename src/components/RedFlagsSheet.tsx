@@ -4,18 +4,10 @@
 import { useTranslation } from "react-i18next";
 import { Phone } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { supportLines } from "@/lib/supportLines";
 
-/** The emergency number where she is, by the phone's time zone (no location asked). */
-const numbers = (): { emergency: string; urgent?: string } => {
-  let tz = "";
-  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { /* default below */ }
-  if (/^Asia\/(Dubai|Muscat)/.test(tz)) return { emergency: "998 / 999" };
-  if (/^Europe\/(Moscow|Kaliningrad|Samara|Volgograd|Kirov|Astrakhan|Saratov|Ulyanovsk)|^Asia\/(Yekaterinburg|Omsk|Novosibirsk|Barnaul|Tomsk|Novokuznetsk|Krasnoyarsk|Irkutsk|Chita|Yakutsk|Khandyga|Vladivostok|Ust-Nera|Magadan|Sakhalin|Srednekolymsk|Kamchatka|Anadyr)/.test(tz)) return { emergency: "112 / 103" };
-  if (/^Europe\/London/.test(tz)) return { emergency: "999", urgent: "111" };
-  if (/^America\//.test(tz)) return { emergency: "911" };
-  if (/^Australia\//.test(tz)) return { emergency: "000" };
-  return { emergency: "112" };
-};
+/** The emergency number where the phone is, by its time zone (no location asked). */
+const numbers = (): { emergency: string; urgent?: string } => { const s = supportLines(); return { emergency: s.emergency, urgent: s.urgent }; };
 
 const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "now" | "today" | "soon" }) => (
   <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">

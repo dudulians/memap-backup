@@ -15,6 +15,9 @@
 // answers). The note step opens the note sheet right here.
 // Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top notes).
 import { TipCard } from "./Tips";
+import { SupportSheet } from "./SupportSheet";
+import { HEAVY_MOOD_IDS } from "@/lib/supportLines";
+import { templateIdOf as moodTemplateOf } from "@/lib/answerPhrases";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -144,6 +147,14 @@ export const EveningPath = ({
   }, [trackers, entries, noteDays, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
+  // low mood or no interest on 12 of the last 14 days: a doctor or therapist (when-to-act.md)
+  const heavyMood = useMemo(() => {
+    const now = new Date();
+    const start = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13)), end = isoLocal(now);
+    return active.some((tr) => HEAVY_MOOD_IDS.has(moodTemplateOf(tr) ?? "")
+      && new Set(entries.filter((e) => e.trackerId === tr.id && e.date >= start && e.date <= end && e.value === (tr.problemWhen === "yes")).map((e) => e.date)).size >= 12);
+  }, [active, entries]);
+  const [support, setSupport] = useState(false);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
   const world = useMemo(() => { const islands = buildIslands(trackers, entries); return { islands, routes: buildRoutes(trackers, entries, islands) }; }, [trackers, entries]);
   const hasLinks = world.routes.length > 0;
@@ -886,8 +897,16 @@ export const EveningPath = ({
             <span className="truncate">{weekNext.text}</span>
           </button>
         </div>
+        {/* two weeks of hard mood: talk to someone (comes back weekly while it lasts) */}
+        {heavyMood && (
+          <div className="mx-auto mt-3 w-[92%] max-w-[420px]">
+            <TipCard id={`mood14-${Math.floor(Date.now() / 6048e5)}`} title={t("tips.moodTitle")} line={t("tips.moodLine")} action={t("tips.moodGo")}
+              onAction={() => setSupport(true)} />
+          </div>
+        )}
+        <SupportSheet open={support} onClose={() => setSupport(false)} />
         {/* after a few evenings: there is a report for a doctor */}
-        {m.totalDays >= 5 && (
+        {m.totalDays >= 5 && !heavyMood && (
           <div className="mx-auto mt-3 w-[92%] max-w-[420px]">
             <TipCard id="report" title={t("tips.reportTitle")} line={t("tips.reportLine")} action={t("tips.reportGo")}
               onAction={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />
