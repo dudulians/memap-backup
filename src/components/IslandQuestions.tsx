@@ -6,6 +6,8 @@
 // Nov 3 2026 (her notes): each question has a "⋯" with "Move to another
 // island" and "Remove" (archived, answers kept); writing one asks when it's
 // time to act in three plain choices + her plan; ideas fold away.
+import { isCovered } from "@/lib/bodyTemplates";
+import { templateIdOf } from "@/lib/answerPhrases";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, MoreHorizontal, Plus, Trash2 } from "lucide-react";
@@ -56,7 +58,8 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
     setSaved(true);
   };
 
-  const ideas = topicTemplates(island.id).filter((tpl) => !hasTemplate(trackers, tpl)).slice(0, 4);
+  const haveIds = trackers.map((tr) => templateIdOf(tr)).filter((x): x is string => !!x);
+  const ideas = topicTemplates(island.id).filter((tpl) => !hasTemplate(trackers, tpl) && !isCovered(tpl.id, haveIds)).slice(0, 4);
 
   return (
     <div className="space-y-2.5 pb-2">

@@ -14,7 +14,8 @@
 // to do starts it at once; only a done step or day asks first (change
 // answers). The note step opens the note sheet right here.
 // Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top notes).
-import { TipCard } from "./Tips";
+import { TipCard, tipSeen } from "./Tips";
+import { switchToOld } from "./UpgradeInvite";
 import { SupportSheet } from "./SupportSheet";
 import { HEAVY_MOOD_IDS } from "@/lib/supportLines";
 import { templateIdOf as moodTemplateOf } from "@/lib/answerPhrases";
@@ -155,6 +156,17 @@ export const EveningPath = ({
       && new Set(entries.filter((e) => e.trackerId === tr.id && e.date >= start && e.date <= end && e.value === (tr.problemWhen === "yes")).map((e) => e.date)).size >= 12);
   }, [active, entries]);
   const [support, setSupport] = useState(false);
+  // came from the old look: the first week, a card says how to go back (her ask, Nov 7 2026)
+  const fromOld = useMemo(() => {
+    try {
+      if (localStorage.getItem("memap_upgrade_invite") !== "accepted" || tipSeen("old-look")) return false;
+      const at = localStorage.getItem("memap_path_start");
+      return !!at && (Date.now() - new Date(at + "T00:00:00").getTime()) / 864e5 < 7;
+    } catch { return false; }
+  }, []);
+  // after the first moments of the screen (a "grew" toast uses the same spot)
+  const [oldLookShown, setOldLookShown] = useState(false);
+  useEffect(() => { if (!fromOld) return; const id = window.setTimeout(() => setOldLookShown(true), 3200); return () => window.clearTimeout(id); }, [fromOld]);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
   const world = useMemo(() => { const islands = buildIslands(trackers, entries); return { islands, routes: buildRoutes(trackers, entries, islands) }; }, [trackers, entries]);
   const hasLinks = world.routes.length > 0;
@@ -905,6 +917,14 @@ export const EveningPath = ({
           </div>
         )}
         <SupportSheet open={support} onClose={() => setSupport(false)} />
+        {/* came from the old look: the way back stays in sight above the tabs (the path
+            scrolls to today, so a card in the path would be out of view); at the top, solid,
+            away from the "grew" toasts at the bottom */}
+        {fromOld && oldLookShown && (
+          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+            <TipCard id="old-look" title={t("tips.oldLookTitle")} line={t("tips.oldLookLine")} action={t("upgrade.oldLook")} onAction={switchToOld} className="!bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" />
+          </div>
+        )}
         {/* after a few evenings: there is a report for a doctor */}
         {m.totalDays >= 5 && !heavyMood && (
           <div className="mx-auto mt-3 w-[92%] max-w-[420px]">

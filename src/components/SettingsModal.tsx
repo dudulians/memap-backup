@@ -46,7 +46,7 @@ import { isSensitiveTrackerTitle } from "@/lib/correlations";
 import { SOUNDS_PAUSED } from "@/lib/feedback";
 
 // Shown under Data & privacy and in support emails. Bump with each release.
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "2.0";
 
 interface SettingsModalProps {
   open: boolean;

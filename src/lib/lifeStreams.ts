@@ -544,10 +544,11 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "stomach-issues",
-        title: "Stomach pain or digestion trouble",
-        titleRu: "Боль в животе или пищеварение",
-        questionText: "Did your stomach hurt or did digestion bother you today?",
-        questionTextRu: "Сегодня болел живот или беспокоило пищеварение?",
+        // plain words (Nov 7 2026): digestion has its own questions now (poop, bloating, heartburn)
+        title: "Stomach ache",
+        titleRu: "Болел живот",
+        questionText: "Did your stomach hurt today?",
+        questionTextRu: "Сегодня болел живот?",
         category: "Body",
         subcategory: "Digestion",
         answerType: "boolean",
@@ -820,10 +821,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "skin-allergy",
-        title: "Skin allergy / reaction",
-        titleRu: "Аллергия / реакция кожи",
-        questionText: "Were there any rashes, itching, or skin reactions today?",
-        questionTextRu: "Сегодня были высыпания / зуд / реакция на коже?",
+        title: "Itch or rash",
+        titleRu: "Зуд или сыпь",
+        questionText: "Did you have an itch or a rash today?",
+        questionTextRu: "Сегодня был зуд или сыпь?",
         category: "Body",
         subcategory: "Skin",
         answerType: "boolean",
@@ -832,6 +833,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Log foods and skincare to find the trigger",
         adviceAboveThresholdRu: "Записывать еду и косметику чтобы найти триггер",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Skin allergy / reaction", titleRu: "Аллергия / реакция кожи", questionText: "Were there any rashes, itching, or skin reactions today?", questionTextRu: "Сегодня были высыпания / зуд / реакция на коже?" },
       },
       {
         id: "heart-palpitations",
@@ -3252,7 +3255,7 @@ export const getRandomIdeas = (count: number = 4): (LocalizedTemplate & { stream
     .filter((stream) => !stream.gatedBy) // exclude expat cluster from random ideas
     .flatMap(stream =>
       stream.templates
-        .filter((t) => !t.sensitive)
+        .filter((t) => !t.sensitive && !t.private)
         .map(t => ({
           ...localizeTemplate(t),
           streamIcon: stream.icon,

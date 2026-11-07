@@ -120,7 +120,7 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, onOpen, onNewIsland, onLink, onInner }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, labels, onOpen, onNewIsland, onLink, onInner }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** her topic's island: lit, a teal dot by its name (board 76 A) */
   main?: IslandId | null;
@@ -131,6 +131,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   below?: boolean;
   /** a picture of her world (the first screen): no buttons, no hint, it doesn't move */
   decor?: boolean;
+  /** only these islands carry a name (the first screen: many islands, three names, no overlap) */
+  labels?: IslandId[];
   /** draw her sky here (false: the screen draws it behind its header) */
   sky?: boolean;
   /** islands whose rule (lighthouse) is lit */
@@ -566,7 +568,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
                   <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(th.name, tr.slot) : undefined}><img src={mapPic(tr.pic)} alt="" /></span>
                 ))}
               </div>
-              {th.island && (
+              {th.island && (!labels || labels.includes(th.island.id)) && (
                 <div ref={(el) => { elOf(th.key).lab = el; }} className="planet-label" style={{ opacity: 0 }}>
                   <span>{th.island.id === main && <i className="main-dot" aria-hidden="true" />}{W && <W className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[th.island.weather!] }} />}{islandName(t, th.island.id)}</span>
                 </div>

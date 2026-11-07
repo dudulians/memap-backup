@@ -217,7 +217,7 @@ export const DailySession = ({
         }
         return stream.templates.filter((tpl) => {
           // Sensitive (intimacy / libido / ex) — opt-in via Settings.
-          if (tpl.sensitive && !interviewAnswers.showSensitive) return false;
+          if (tpl.sensitive || tpl.private) return false; // never offered since Nov 7 2026; private ones aren't ideas
           const hay = haystack(tpl);
           if (interviewAnswers.hasKids === false && matchesAny(hay, KIDS_HAY))
             return false;

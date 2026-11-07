@@ -15,7 +15,7 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { firstLinkState } from "@/lib/firstLink";
 import { growSeen } from "@/lib/growMoment";
 import { grewToday } from "@/lib/globeArt";
-import { buildInnerLinks, buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, mapPic, type Route } from "@/lib/islands";
+import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, mapPic, type Route } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { currentExperiment, experimentOver, type Experiment } from "@/lib/experiments";
 import { getDoorState } from "@/lib/doors";
@@ -215,7 +215,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     const tr = id ? trackers.find((x) => x.id === id && !x.archived) : undefined;
     return tr ? islandOf(tr) : null;
   }, [trackers]);
-  const innerLinks = useMemo(() => buildInnerLinks(trackers, entries, islands), [trackers, entries, islands]);
   // every link worth showing, not only the ones drawn between islands
   const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length, [trackers, entries]);
   const onHelps = () => {
@@ -249,7 +248,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="absolute inset-0 z-0" data-tour="world">
           <PlanetGlobe sky={false} below islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={islands.length < 9 ? () => setNewOpen(true) : undefined} />
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={() => setNewOpen(true)} />
         </div>
       )}
 

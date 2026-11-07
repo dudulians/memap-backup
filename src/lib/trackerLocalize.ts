@@ -496,15 +496,30 @@ export const localizeTrackerTitle = (title: string): string =>
 export const localizeTrackerQuestion = (q: string, titleHint?: string): string => {
   const direct = lookup(getMap().questions, q);
   if (direct !== q || !titleHint) return direct;
+  // The fallback is only for a question stored in the OTHER language (Nov 7 2026). Her own
+  // edits, an old wording kept on purpose (template.legacy) and her two-week tests stay as
+  // they are: a fuzzy title match once turned "No coffee after 14:00" into "Did you have
+  // caffeine after 2pm?", the opposite question, so answers were saved the wrong way round.
+  const lang = getLanguage();
+  const storedRu = /[А-Яа-яЁё]/.test(q);
+  if (storedRu === (lang === "ru")) return direct;
 
   const tplId = matchTemplateIdByTitle(titleHint);
   if (!tplId) return direct;
+  const norm = (x?: string) => (x ?? "").trim().toLowerCase();
+  const hints = [norm(titleHint), norm(lookup(getMap().titles, titleHint))];
 
   for (const stream of LIFE_STREAMS) {
     for (const tpl of stream.templates) {
       if (tpl.id !== tplId) continue;
-      const lang = getLanguage();
-      const canonical = lang === "ru" ? tpl.questionTextRu : tpl.questionText;
+      // only when the title IS this library question, not just looks like it
+      const current = [tpl.title, tpl.titleRu].map(norm).filter(Boolean);
+      const old = [tpl.legacy?.title, tpl.legacy?.titleRu].map(norm).filter(Boolean);
+      const isOld = hints.some((h) => old.includes(h));
+      if (!isOld && !hints.some((h) => current.includes(h))) return direct;
+      const canonical = isOld
+        ? (lang === "ru" ? tpl.legacy?.questionTextRu : tpl.legacy?.questionText) ?? (lang === "ru" ? tpl.questionTextRu : tpl.questionText)
+        : (lang === "ru" ? tpl.questionTextRu : tpl.questionText);
       if (!canonical) return direct;
       return lang === "ru" ? polishRu(canonical, getPol()) : canonical;
     }

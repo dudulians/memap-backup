@@ -8,7 +8,7 @@ export type AnswerWords = { yes?: string; no?: string };
 
 /** Stored in lowercase: a phrase stands in the middle of a line as often as at its start. */
 export const cleanWords = (w: AnswerWords): AnswerWords | undefined => {
-  const one = (s?: string) => { const x = (s ?? "").trim().replace(/\s+/g, " ").slice(0, 40); return x ? x[0].toLocaleLowerCase() + x.slice(1) : undefined; };
+  const one = (s?: string) => { const x = (s ?? "").trim().replace(/\s+/g, " ").slice(0, 40); return x ? (/^\p{Lu}\p{Lu}/u.test(x) ? x : x[0].toLocaleLowerCase() + x.slice(1)) : undefined; };
   const yes = one(w.yes), no = one(w.no);
   return yes || no ? { ...(yes ? { yes } : {}), ...(no ? { no } : {}) } : undefined;
 };

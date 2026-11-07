@@ -144,7 +144,7 @@ const en = {
     lighthouses_one: "{{count}} limit → a lighthouse",
     lighthouses_other: "{{count}} limits → lighthouses",
     open: "Open my map",
-    back: "The old look is in Settings → More.",
+    back: "The old look is one tap away in Settings.",
     oldLook: "Back to the old look",
   },
   // "Guess", the daily mini-game (Nov 2 2026)
@@ -546,6 +546,8 @@ const en = {
   },
   // tips over time, from Malu (Nov 7 2026)
   tips: {
+    oldLookTitle: "Miss the old look?",
+    oldLookLine: "Same answers in both. Switch back any time.",
     moodTitle: "Most days were hard for two weeks",
     moodLine: "A good moment to talk to a doctor or therapist.",
     moodGo: "Talk to someone",

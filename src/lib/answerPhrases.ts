@@ -43,7 +43,7 @@ const P: Record<string, [string, string, string, string]> = {
   "headache": ["headache", "no headache", "головная боль", "без головной боли"],
   "migraine": ["migraine", "no migraine", "мигрень", "без мигрени"],
   "back-or-neck-pain": ["back pain", "no back pain", "боль в спине", "без боли в спине"],
-  "stomach-issues": ["stomach trouble", "calm stomach", "проблемы с животом", "спокойный живот"],
+  "stomach-issues": ["stomach ache", "no stomach ache", "боль в животе", "без боли в животе"],
   "felt-nauseous": ["nausea", "no nausea", "тошнота", "без тошноты"],
   "joint-pain": ["joint pain", "no joint pain", "боль в суставах", "без боли в суставах"],
   "slept-enough": ["7+ hours of sleep", "short night", "7+ часов сна", "короткая ночь"],
@@ -60,7 +60,7 @@ const P: Record<string, [string, string, string, string]> = {
   "drank-water": ["enough water", "too little water", "достаточно воды", "мало воды"],
   "ate-by-2pm": ["a meal before 2 pm", "no meal before 2 pm", "еда до 14:00", "без еды до 14:00"],
   "bed-before-midnight": ["bed before midnight", "bed after midnight", "отбой до полуночи", "отбой после полуночи"],
-  "skin-allergy": ["skin reaction", "no skin reaction", "реакция кожи", "без реакции кожи"],
+  "skin-allergy": ["itch or rash", "no itch or rash", "зуд или сыпь", "без зуда и сыпи"],
   "heart-palpitations": ["heart racing", "calm heartbeat", "сердце колотится", "спокойное сердце"],
   "eye-strain": ["tired eyes", "rested eyes", "уставшие глаза", "без усталости глаз"],
   "took-meds": ["meds taken", "meds missed", "лекарства приняты", "лекарства пропущены"],
@@ -299,6 +299,8 @@ const P_OLD: Record<string, [string, string, string, string]> = {
   "saw-daylight": ["daylight", "no daylight", "дневной свет", "без дневного света"],
   "saw-friends": ["time with friends", "no friends", "общение с друзьями", "без друзей"],
   "thought-divorce": ["thought of ending it", "no thought of ending it", "мысль расстаться", "без мысли расстаться"],
+  "stomach-issues": ["stomach trouble", "calm stomach", "проблемы с животом", "спокойный живот"],
+  "skin-allergy": ["skin reaction", "no skin reaction", "реакция кожи", "без реакции кожи"],
 };
 const S_OLD: Record<string, [string, string, string, string]> = {
   "period-symptoms": ["cycle symptoms ~are strong", "cycle symptoms ~are mild", "симптомы цикла ~сильные", "симптомы цикла ~мягкие"],
@@ -307,6 +309,8 @@ const S_OLD: Record<string, [string, string, string, string]> = {
   "saw-daylight": ["you ~get daylight", "you ~get no daylight", "ты ~видишь дневной свет", "дневного света ~нет"],
   "saw-friends": ["you ~see or message friends", "you ~don't see friends", "ты ~общаешься с друзьями", "ты ~не видишься с друзьями"],
   "thought-divorce": ["you ~think about ending the relationship", "you ~don't think about ending it", "ты ~думаешь расстаться", "мысли расстаться ~нет"],
+  "stomach-issues": ["your stomach ~bothers you", "your stomach ~is fine", "~беспокоит живот", "живот ~не беспокоит"],
+  "skin-allergy": ["your skin ~reacts", "your skin ~stays calm", "кожа ~реагирует", "кожа ~спокойна"],
 };
 const isOld = (tr: Tracker, id: string) => {
   const tpl = LIFE_STREAMS.flatMap((s) => s.templates).find((x) => x.id === id);

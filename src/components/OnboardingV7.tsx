@@ -72,9 +72,15 @@ const Dot = ({ door }: { door: Door }) => {
 };
 
 // --- 1. welcome --------------------------------------------------------------------
-const demoIsland = (id: "health" | "me" | "love") => ({ id, def: ISLAND_DEFS[id], trackerIds: [id], weather: "sun", hardDays: 0, answeredDays: 0, usual: null, top: null, hardBy: [] }) as unknown as Island;
-const DEMO_ISLANDS: Island[] = [demoIsland("health"), demoIsland("me"), demoIsland("love")];
-const DEMO_ROUTES = [{ a: "health", b: "me", k: 4, n: 5, first: "x", second: "y", nextDay: false, firstYes: true, secondYes: true, other: { k: 1, n: 9 }, secondHard: true }] as unknown as Route[];
+// A whole world on the first screen (her note, Nov 7 2026: "показать много островов на глобусе,
+// у тебя как-то выборочно"): seven islands in fixed places and stages, never random.
+type DemoId = "health" | "me" | "love" | "kids" | "work" | "body" | "pet";
+const demoIsland = (id: DemoId) => ({ id, def: ISLAND_DEFS[id], trackerIds: [id], weather: "sun", hardDays: 0, answeredDays: 0, usual: null, top: null, hardBy: [] }) as unknown as Island;
+const DEMO_IDS: DemoId[] = ["health", "me", "love", "kids", "work", "body", "pet"];
+const DEMO_ISLANDS: Island[] = DEMO_IDS.map(demoIsland);
+const DEMO_DAYS: Record<DemoId, number> = { health: 22, me: 16, love: 9, kids: 6, work: 12, body: 4, pet: 2 };
+const route = (a: DemoId, b: DemoId) => ({ a, b, k: 4, n: 5, first: "x", second: "y", nextDay: false, firstYes: true, secondYes: true, other: { k: 1, n: 9 }, secondHard: true });
+const DEMO_ROUTES = [route("health", "me"), route("love", "me"), route("work", "health")] as unknown as Route[];
 export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple: () => void }) => {
   const { t } = useTranslation();
   const [lang, setLang] = useState<SupportedLanguage>(getLanguage() === "ru" ? "ru" : "en");
@@ -102,7 +108,7 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
       </div>
       {/* her world as it will be: the same globe as on World, three islands, a link, the boat */}
       <div className="relative mx-auto mt-1 h-[310px] w-full max-w-[380px]" aria-hidden="true">
-        <PlanetGlobe decor sky={false} islands={DEMO_ISLANDS} routes={DEMO_ROUTES} avatar={who} days={{ health: 8, me: 22, love: 3 }} onOpen={() => undefined} />
+        <PlanetGlobe decor sky={false} islands={DEMO_ISLANDS} routes={DEMO_ROUTES} avatar={who} days={DEMO_DAYS} labels={["health", "me", "love"]} onOpen={() => undefined} />
       </div>
       <div className="min-h-4 flex-1" />
       <H1 className="text-[32px]">{t("onb7.welcomeTitle")}</H1>

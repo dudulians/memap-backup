@@ -247,7 +247,7 @@ export const DailySession = ({
         }
         return stream.templates.filter((tpl) => {
           // Intimacy questions are never offered (Nov 7 2026).
-          if (tpl.sensitive) return false;
+          if (tpl.sensitive || tpl.private) return false;
           const hay = haystack(tpl);
           if (interviewAnswers.hasKids === false && matchesAny(hay, KIDS_HAY))
             return false;
@@ -485,7 +485,7 @@ export const DailySession = ({
   // saved we ask the parent to delete the entry — that way "go back"
   // really erases the action instead of just navigating to the card
   // (which would leave the saved Yes/No silently in storage).
-  const answeredHistory = useRef<Array<{ trackerId: string; saved: boolean }>>([]);
+  const answeredHistory = useRef<Array<{ trackerId: string; saved: boolean; index: number }>>([]);
 
   // Record the date the moment a suggestion card is first shown
   useEffect(() => {
@@ -542,6 +542,7 @@ export const DailySession = ({
     answeredHistory.current.push({
       trackerId: currentQuestion.tracker.id,
       saved: true,
+      index: currentIndex,
     });
 
     // Play sound and haptic
@@ -624,6 +625,7 @@ export const DailySession = ({
     answeredHistory.current.push({
       trackerId: currentQuestion.tracker.id,
       saved: false,
+      index: currentIndex,
     });
 
     // Play sound and haptic
@@ -1251,7 +1253,10 @@ export const DailySession = ({
                     });
                     setAnsweredCount((c) => Math.max(0, c - 1));
                   }
-                  setCurrentIndex((prev) => Math.max(0, prev - 1));
+                  // back to the card that was answered, not just one step: a follow-up that was
+                  // passed by sits in between (audit, Nov 7 2026)
+                  if (last) sessionVals.current.delete(last.trackerId);
+                  setCurrentIndex((prev) => (last ? last.index : Math.max(0, prev - 1)));
                   setSwipeDirection(null);
                   setIsAnimating(false);
                   isAnimatingRef.current = false;

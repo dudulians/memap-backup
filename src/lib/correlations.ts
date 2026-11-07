@@ -19,6 +19,7 @@ import { MARKER_TEMPLATE_IDS } from "./researchTemplates";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { RELATED_QUESTIONS, matchTemplateIdByTitle } from "./relatedQuestions";
 import { LIFE_STREAMS } from "./lifeStreams";
+import { isNaturalPair } from "./bodyTemplates";
 
 // Look up a tracker title against the curated library and return its
 // shortLabel (RU + EN forms) if the matched template has metadata.
@@ -498,6 +499,8 @@ export const computeCorrelations = (
       ) {
         continue;
       }
+      // True by nature (a follow-up and its question, two sides of one thing): not a link.
+      if (isNaturalPair(matchTemplateIdByTitle(a.title), matchTemplateIdByTitle(b.title))) continue;
 
       // Try all three lags. Pick the strongest *significant* one for
       // this pair — we only show one direction per pair to keep the UI

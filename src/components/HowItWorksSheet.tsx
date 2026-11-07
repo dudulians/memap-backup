@@ -3,7 +3,7 @@
 // Big short labels, one short line each (her rule: people don't read).
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link2, Plus, Spline, Sprout } from "lucide-react";
+import { Plus, Spline, Sprout } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
@@ -52,7 +52,6 @@ export const HowItWorksSheet = ({ open, onClose, onAddQuestion }: { open: boolea
               {[3, 10, 17, 24, 31].map((x) => <circle key={x} cx={x} cy={7} r={2.6} fill="hsl(var(--data-a))" />)}
             </svg>
           } title={t("how.route")} line={t("how.routeLine")} />
-          <Line pic={<span className="flex items-center gap-0.5 text-[12px] font-extrabold text-[hsl(var(--data-a))]"><Link2 className="h-3.5 w-3.5" strokeWidth={2.6} />3/4</span>} title={t("how.inner")} line={t("how.innerLine")} />
           <Line pic={<img src={mapPic("lighthouse")} alt="" width={20} height={26} className="drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" />} title={t("how.lit")} line={t("how.litLine")} />
           <Line pic={<span className="h-3 w-3 rounded-full bg-[hsl(var(--coin-teal))]" />} title={t("how.main")} line={t("how.mainLine")} />
         </div>

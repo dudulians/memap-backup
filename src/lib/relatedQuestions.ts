@@ -15,6 +15,7 @@
 // directions at lookup time so e.g. "headache → sleep" and "sleep → ?"
 // can independently grow without making this map symmetric.
 
+import { isCovered } from "./bodyTemplates";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
 
 /**
@@ -1315,5 +1316,5 @@ export const getRelatedQuestions = (
   if (userIds.length === 0) return [];
 
   const relatedIds = getRelatedTemplateIds(userIds);
-  return getTemplatesByIds(relatedIds).filter((tpl) => !tpl.sensitive);
+  return getTemplatesByIds(relatedIds).filter((tpl) => !tpl.sensitive && !isCovered(tpl.id, userIds));
 };

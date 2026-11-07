@@ -45,6 +45,18 @@ export const BODY_TEMPLATES: T[] = [
 export const FOLLOW_UPS: Record<string, string> = { "heavy-flow-day": "period-day" };
 /** One day without it is normal: a "no" isn't drawn as a hard day (only the rule counts). */
 export const QUIET_NO = new Set(["pooped-today"]);
+/** Pairs that go together by nature (a follow-up and its question, two sides of one thing):
+ *  never shown as a link, "period ↔ heavy period" says nothing new (Nov 7 2026). */
+const NATURAL_PAIRS: [string, string][] = [
+  ["period-day", "heavy-flow-day"], ["period-day", "period-symptoms"], ["period-day", "pms-signs"], ["period-day", "breast-tender"],
+  ["pms-signs", "breast-tender"], ["pms-signs", "period-symptoms"], ["hot-flushes", "night-sweats"], ["bladder-urgency", "bladder-leak"],
+  ["pooped-today", "hard-to-poop"], ["pooped-today", "loose-stool"], ["headache", "migraine"], ["felt-depressed", "lost-interest"], ["felt-anxious", "panic-attack"],
+];
+const NATURAL = new Set(NATURAL_PAIRS.flatMap(([x, y]) => [`${x}|${y}`, `${y}|${x}`]));
+export const isNaturalPair = (a: string | null, b: string | null) => !!a && !!b && NATURAL.has(`${a}|${b}`);
+/** A question already asked inside another one is not suggested next to it ("PMS signs" asks about sore breasts). */
+export const COVERED_BY: Record<string, string[]> = { "breast-tender": ["pms-signs"] };
+export const isCovered = (tplId: string, have: Iterable<string>) => { const by = COVERED_BY[tplId]; if (!by) return false; const h = new Set(have); return by.some((x) => h.has(x)); };
 /** Questions whose card offers "Something worrying?" (the red-flag list). */
 export const RED_FLAG_IDS = new Set([
   ...BODY_TEMPLATES.map((x) => x.id),
