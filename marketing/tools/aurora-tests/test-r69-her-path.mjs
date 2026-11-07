@@ -2,6 +2,11 @@
 // then Today. What does Today offer when today isn't answered, and do the labels float?
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
+// variant A (Nov 7 2026): "What brings you here?", then the islands open to show their topics
+const whyStep = async (p, good = false) => {
+  await p.getByRole("button", { name: good ? /more good days|хороших дней/i : /bothering me|повторяется и мешает/i }).first().click(); await p.waitForTimeout(500);
+  await p.evaluate(() => document.querySelectorAll(".onb [aria-expanded=false]").forEach((b) => b.click())); await p.waitForTimeout(400);
+};
 const D = `./aurora-tests/work/r69`; mkdirSync(D, { recursive: true });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const errs = [], log = [];
@@ -15,7 +20,7 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); });
 await p.reload(); await p.waitForTimeout(2200);
 await shot("welcome");
-await click(/^Get started/);
+await click(/^Get started/); await whyStep(p);
 await click(/Migraine/); await click(/^Stress/); await click(/Low energy/);
 await shot("topics");
 // the list scrolls, the question stays

@@ -663,7 +663,7 @@ const en = {
     unexplored: "Add a question from a new area to open this island.",
     emptyTitle: "Your world is waiting",
     emptyBody: "Add your first question on Today, and its island appears here.",
-    island: { work: "Work", mine: "My own", me: "Me", love: "Love life", kids: "Kids", health: "Health", body: "Body & habits", pet: "Pet", parents: "Parents", world: "World around", other: "Other" },
+    island: { work: "Work", mine: "My own", me: "Mind & mood", love: "Love life", kids: "Kids", health: "Health", body: "Body & habits", pet: "Pet", parents: "Parents", world: "World around", other: "Other" },
     weather: { storm: "Stormy week", clouds: "Some clouds", sun: "Calm week", none: "No answers this week" },
   },
 
@@ -1906,6 +1906,12 @@ const en = {
   },
   // onboarding v7 (Nov 6 2026, boards 70–75)
   onb7: {
+    whyTitle: "What brings you here?",
+    whySub: "There's no wrong answer.",
+    whyBother: "Something keeps bothering me",
+    whyGood: "I want more good days",
+    picked_one: "{{count}} picked",
+    picked_other: "{{count}} picked",
     welcomeTitle: "Make sense of your days",
     welcomeLine: "A few yes/no questions each evening. Your world grows — and shows what happens together.",
     trustMin: "1 min a day",

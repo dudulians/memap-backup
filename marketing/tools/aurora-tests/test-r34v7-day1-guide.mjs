@@ -7,6 +7,11 @@
 // A picture after every move; the path's steps as the model sees them; errors.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
+// variant A (Nov 7 2026): "What brings you here?", then the islands open to show their topics
+const whyStep = async (p, good = false) => {
+  await p.getByRole("button", { name: good ? /more good days|хороших дней/i : /bothering me|повторяется и мешает/i }).first().click(); await p.waitForTimeout(500);
+  await p.evaluate(() => document.querySelectorAll(".onb [aria-expanded=false]").forEach((b) => b.click())); await p.waitForTimeout(400);
+};
 const D = `./aurora-tests/work/r34v7`; mkdirSync(D, { recursive: true });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const errs = [], log = [];
@@ -25,7 +30,7 @@ await p.clock.install({ time: at19() });
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", theme); }, { lang, theme: process.argv[3] || "aurora-light" });
 await p.reload(); await p.waitForTimeout(2200);
-await click(RU ? /^Начать/ : /^Get started/); await p.waitForTimeout(500);
+await click(RU ? /^Начать/ : /^Get started/); await p.waitForTimeout(500); await whyStep(p);
 await click(RU ? /Мигрен/ : /Migraine/); await click(RU ? /^Дальше|^Продолжить/ : /^Continue/); await p.waitForTimeout(600);
 await click(RU ? /^Дальше|^Продолжить/ : /^Continue/); await p.waitForTimeout(600);
 await click(RU ? /Ответить на вопросы за сегодня/ : /Answer today's questions/); await p.waitForTimeout(1800);

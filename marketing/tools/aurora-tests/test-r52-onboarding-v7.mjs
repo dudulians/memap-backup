@@ -7,6 +7,11 @@
 //   F  More topics → Thinking of quitting, evening    → neutral main question
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
+// variant A (Nov 7 2026): "What brings you here?", then the islands open to show their topics
+const whyStep = async (p, good = false) => {
+  await p.getByRole("button", { name: good ? /more good days|хороших дней/i : /bothering me|повторяется и мешает/i }).first().click(); await p.waitForTimeout(500);
+  await p.evaluate(() => document.querySelectorAll(".onb [aria-expanded=false]").forEach((b) => b.click())); await p.waitForTimeout(400);
+};
 const D = `./aurora-tests/work/r52`; mkdirSync(D, { recursive: true });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const errs = [], out = {};
@@ -31,8 +36,8 @@ const run = async (tag, { lang = "en", theme = "aurora-light", hour = 19, path }
   await shot("welcome");
   if (path.simple) { await btn(T.simple).click(); }
   else {
-    await btn(T.start).click(); await shot("topic");
-    if (path.more) { await btn(T.more).click(); await p.waitForTimeout(400); await btn(path.more).click(); await shot("topic-more"); await btn(T.cont).click(); }
+    await btn(T.start).click(); await whyStep(p); await shot("topic");
+    if (path.more) { await btn(path.more).click(); await shot("topic-more"); await btn(T.cont).click(); }
     else if (path.own) { await btn(T.own).click(); await shot("own"); await p.locator("input").first().fill(path.own); await shot("own-typed"); await btn(T.cont).click(); await shot("topic-own"); await btn(T.cont).click(); }
     else { await btn(path.topic).click(); await btn(T.cont).click(); }
   }

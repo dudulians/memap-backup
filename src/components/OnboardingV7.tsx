@@ -9,14 +9,14 @@
 // and the reward, the promise is practical (my review of the world-first brief).
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronUp, Clock, Globe, LayoutGrid, Lock, Moon, Pencil, Plus, Spline, UserX } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudDrizzle, Globe, Lock, Moon, Pencil, Plus, Spline, Sun, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { track } from "@/lib/analytics";
 import { getLanguage, setLanguage, SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/lib/i18n";
 import { avatarUrl, DEFAULT_AVATAR, getAvatar } from "@/lib/avatar";
 import { art } from "@/lib/globeArt";
-import { ISLAND_DEFS, islandName, islandOf, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
+import { ISLAND_DEFS, islandName, islandOf, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
 import { PlanetGlobe } from "./PlanetGlobe";
 import { addOwnTracker, ensureTemplates, findTemplate, getDoor, isoLocal, saveDoorState, type Door, type DoorId } from "@/lib/doors";
 import { asQuestion, templateQuestion } from "@/lib/cardText";
@@ -136,23 +136,64 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
   );
 };
 
-// --- 2. one topic ------------------------------------------------------------------
-const FIRST: DoorId[] = ["migraine", "sleep", "energy", "period", "stress"];
-const MORE: { sec: string; ids: DoorId[] }[] = [
-  { sec: "onb7.secGood", ids: ["goodSleep", "calm", "focus", "closeness", "movement", "joy"] },
-  { sec: "onb7.secRelations", ids: ["fights"] },
-  { sec: "onb7.secKids", ids: ["kid"] },
-  { sec: "onb7.secHabits", ids: ["drinking", "mood"] },
-  { sec: "onb7.secThought", ids: ["quit", "move"] },
-];
-export const TopicV7 = ({ onBack, onPick, onOwn, onClearOwn, initial, own }: {
-  onBack: () => void; onPick: (ids: DoorId[]) => void; onOwn: (ids: DoorId[]) => void; onClearOwn: () => void; initial?: DoorId[]; own?: string | null;
+// --- 2. what brings you here --------------------------------------------------------
+/** The tone of the topics: something to fix, or more good days (variant A, boards 77). */
+export type Tone = "bother" | "good";
+export const WhyV7 = ({ onBack, onPick, current }: { onBack: () => void; onPick: (tone: Tone) => void; current?: Tone | null }) => {
+  const { t } = useTranslation();
+  const opt = (tone: Tone, Icon: typeof Sun, hue: string, label: string) => (
+    <button type="button" onClick={() => { haptics.tap(); onPick(tone); }} data-onb-interactive aria-pressed={current === tone}
+      className={cn("surface flex min-h-[112px] w-full items-center gap-4 rounded-[22px] px-5 text-left text-[22px] font-extrabold leading-tight", current === tone && "pick-on")}>
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full" style={{ background: `hsl(${hue} / .16)`, color: `hsl(${hue})` }}>
+        <Icon className="h-7 w-7" strokeWidth={2.2} />
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+  return (
+    <Page>
+      <Top onBack={onBack} step={0} steps={5} />
+      <H1 className="mt-5">{t("onb7.whyTitle")}</H1>
+      <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.whySub")}</p>
+      <div className="mt-6 flex flex-col gap-3">
+        {opt("bother", CloudDrizzle, "230 50% 58%", t("onb7.whyBother"))}
+        {opt("good", Sun, "36 85% 50%", t("onb7.whyGood"))}
+      </div>
+      <div className="min-h-6 flex-1" />
+    </Page>
+  );
+};
+
+// --- 3. the islands and their topics -------------------------------------------------
+/** The globe's islands, in this order; the topics inside each, by tone. */
+const ISLAND_TOPICS: Record<Tone, { island: IslandId; ids: DoorId[] }[]> = {
+  // each topic under the island its main question lives on (energy and moving are Mind & mood)
+  bother: [
+    { island: "health", ids: ["sleep", "migraine", "period"] },
+    { island: "me", ids: ["stress", "mood", "energy", "move"] },
+    { island: "love", ids: ["fights"] },
+    { island: "kids", ids: ["kid"] },
+    { island: "work", ids: ["quit"] },
+    { island: "body", ids: ["drinking"] },
+  ],
+  good: [
+    { island: "health", ids: ["goodSleep"] },
+    { island: "me", ids: ["calm", "joy", "energy"] },
+    { island: "love", ids: ["closeness"] },
+    { island: "work", ids: ["focus"] },
+    { island: "body", ids: ["movement"] },
+  ],
+};
+export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own }: {
+  tone: Tone; onBack: () => void; onPick: (ids: DoorId[]) => void; onOwn: (ids: DoorId[]) => void; onClearOwn: () => void; initial?: DoorId[]; own?: string | null;
 }) => {
   const { t } = useTranslation();
+  const groups = ISLAND_TOPICS[tone];
   const [sel, setSel] = useState<DoorId[]>(initial ?? []);
-  const [more, setMore] = useState(!!initial?.some((id) => !FIRST.includes(id)));
+  // closed at first; an island with a pick stays open (her note: "все списки будут раскрываться?")
+  const [opened, setOpened] = useState<IslandId[]>(() => groups.filter((g) => g.ids.some((id) => (initial ?? []).includes(id))).map((g) => g.island));
   const [full, setFull] = useState(false);
-  const name = (id: DoorId) => t(id === "energy" ? "onb7.lowEnergy" : `doors.${id}.name`);
+  const name = (id: DoorId) => t(id === "energy" && tone === "bother" ? "onb7.lowEnergy" : `doors.${id}.name`);
   const room = MAX_TOPICS - (own ? 1 : 0);
   const toggle = (id: DoorId) => {
     if (sel.includes(id)) { setSel((s) => s.filter((x) => x !== id)); setFull(false); return; }
@@ -160,38 +201,47 @@ export const TopicV7 = ({ onBack, onPick, onOwn, onClearOwn, initial, own }: {
     setSel((s) => [...s, id]);
   };
   const on = (id: DoorId) => sel.includes(id);
+  const openClose = (g: { island: IslandId; ids: DoorId[] }) => {
+    haptics.tap();
+    const isOpen = opened.includes(g.island);
+    if (isOpen && g.ids.some(on)) return; // a picked island stays open
+    setOpened((o) => (isOpen ? o.filter((x) => x !== g.island) : [...o, g.island]));
+  };
   return (
     <Screen
       head={<>
-        <Top onBack={onBack} step={0} />
-        <H1 className="mt-5">{t("onb7.topicTitle")}</H1>
+        <Top onBack={onBack} step={1} steps={5} />
+        <H1 className="mt-5">{t(tone === "good" ? "doors.goodTitle" : "doors.pickTitle")}</H1>
         <p className={cn("mt-1.5 pb-3 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
       </>}
-      foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0) }); onPick(sel); }}>{t("doors.continue")}</Main>}>
+      foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0), tone }); onPick(sel); }}>{t("doors.continue")}</Main>}>
       <div className="mt-1 flex flex-col gap-2">
-        {FIRST.map((id) => { const d = getDoor(id)!; return <Row key={id} on={on(id)} onClick={() => toggle(id)} icon={<Dot door={d} />}>{name(id)}</Row>; })}
-        <button type="button" onClick={() => { haptics.tap(); setMore((v) => !v); }} aria-expanded={more} data-onb-interactive
-          className="surface flex min-h-[52px] w-full items-center gap-3 rounded-[18px] px-4 text-left text-[17px] font-bold">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground/[0.06]"><LayoutGrid className="h-5 w-5 text-muted-foreground" strokeWidth={2.2} /></span>
-          <span className="flex-1">{t("onb7.moreTopics")}</span>
-          {more ? <ChevronUp className="h-5 w-5 text-muted-foreground" strokeWidth={2.4} /> : <ChevronDown className="h-5 w-5 text-muted-foreground" strokeWidth={2.4} />}
-        </button>
-        {more && (
-          <div className="surface rounded-[18px] px-4 pb-2 pt-1 animate-fade-in">
-            {MORE.map((g) => (
-              <div key={g.sec}>
-                <p className="pt-3 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t(g.sec)}</p>
-                {g.ids.map((id) => (
-                  <button key={id} type="button" onClick={() => { haptics.tap(); toggle(id); }} aria-pressed={on(id)} data-onb-interactive
-                    className="flex min-h-[44px] w-full items-center justify-between border-b border-foreground/[0.06] text-left text-[16px] font-bold last:border-0">
-                    {t(`doors.${id}.name`)}
-                    {on(id) && <span className="tick is-on" aria-hidden="true"><Check className="h-4 w-4" strokeWidth={3} /></span>}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+        {groups.map((g) => {
+          const isOpen = opened.includes(g.island);
+          const picked = g.ids.filter(on).length;
+          return (
+            <div key={g.island} className="surface rounded-[20px] px-3.5">
+              <button type="button" onClick={() => openClose(g)} aria-expanded={isOpen} data-onb-interactive
+                className="flex h-[54px] w-full items-center gap-3 text-left text-[18px] font-extrabold">
+                <img src={mapPic("icon_" + ISLAND_DEFS[g.island as keyof typeof ISLAND_DEFS].icon)} alt="" className="h-9 w-9 shrink-0 object-contain" />
+                <span className="min-w-0 flex-1 truncate">{islandName(t, g.island)}</span>
+                {picked > 0
+                  ? <span className="shrink-0 text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.picked", { count: picked })}</span>
+                  : isOpen ? <ChevronUp className="h-5 w-5 text-muted-foreground" strokeWidth={2.4} /> : <ChevronDown className="h-5 w-5 text-muted-foreground" strokeWidth={2.4} />}
+              </button>
+              {isOpen && (
+                <div className="flex flex-wrap gap-2 pb-3.5 animate-fade-in">
+                  {g.ids.map((id) => (
+                    <button key={id} type="button" onClick={() => { haptics.tap(); toggle(id); }} aria-pressed={on(id)} data-onb-interactive
+                      className={cn("inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[16px] font-bold", on(id) ? "pick-on bg-card" : "bg-foreground/[0.05]")}>
+                      {on(id) && <Check className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={3} />}{name(id)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
         {/* her own question sits among the topics, ticked; a tap takes it off */}
         {own
           ? <Row on onClick={() => { onClearOwn(); setFull(false); }} icon={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal)/0.12)]"><Pencil className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} /></span>}>{own}</Row>
@@ -209,7 +259,7 @@ export const OwnV7 = ({ onBack, onDone, initial = "" }: { onBack: () => void; on
   const ok = text.trim().length >= 4;
   return (
     <Page>
-      <Top onBack={onBack} step={0} />
+      <Top onBack={onBack} step={1} steps={5} />
       <H1 className="mt-5">{t("onb7.ownTitle")}</H1>
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.ownSub")}</p>
       <input value={text} onChange={(e) => setText(e.target.value.slice(0, 80))} placeholder={t("onb7.ownPlaceholder")} aria-label={t("onb7.ownTitle")} data-onb-interactive
@@ -306,7 +356,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
   return (
     <Screen
       head={<>
-        <Top onBack={onBack} step={1} />
+        <Top onBack={onBack} step={2} steps={5} />
         <H1 className="mt-5">{t("onb7.qTitle")}</H1>
         <p className="mt-1.5 pb-3 text-[16px] font-semibold text-muted-foreground">{t("onb7.qSub")}</p>
       </>}
@@ -383,7 +433,7 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart }: { setup: V7Setup; 
   );
   return (
     <Page>
-      <Top onBack={onBack} step={2} />
+      <Top onBack={onBack} step={3} steps={5} />
       <H1 className="mt-5 text-[27px]">{t("onb7.vTitle")}</H1>
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.vSub")}</p>
       <div className="mt-4 flex flex-col gap-2.5">

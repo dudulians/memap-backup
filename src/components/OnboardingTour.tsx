@@ -21,7 +21,7 @@ import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door, type DoorId } from "@/lib/doors";
 import { markOnboarded } from "@/lib/pathSteps";
 import type { Finish } from "./DoorOnboarding";
-import { OwnV7, QuestionsV7, TopicV7, ValueV7, WelcomeV7, type V7Pick, type V7Setup } from "./OnboardingV7";
+import { OwnV7, QuestionsV7, TopicV7, ValueV7, WelcomeV7, WhyV7, type Tone, type V7Pick, type V7Setup } from "./OnboardingV7";
 import { isoLocal } from "@/lib/doors";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
@@ -38,7 +38,7 @@ interface OnboardingTourProps {
 // day's questions (DoorOnboarding) → the first light → who sails with her → Today.
 // v7 (Nov 6 2026, boards 70–75): welcome → one topic (or your own, or start simple) →
 // your daily questions → what you'll discover → the first real check-in on Today.
-type Step = "welcome" | "topic" | "own" | "questions" | "value";
+type Step = "welcome" | "why" | "topic" | "own" | "questions" | "value";
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   const [step, setStep] = useState<Step>("welcome");
@@ -49,6 +49,8 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   // the topics ticked and her own question, kept while she goes back and forth
   const [topics, setTopics] = useState<DoorId[]>([]);
   const [own, setOwn] = useState<string | null>(null);
+  // something to fix, or more good days (variant A, Nov 7 2026)
+  const [tone, setTone] = useState<Tone | null>(null);
   const pickOf = (ids: DoorId[], text: string | null): V7Pick => (ids.length ? { kind: "door", ids, ...(text ? { own: text } : {}) } : { kind: "own", text: text ?? "" });
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
       setSetup(null);
       setTopics([]);
       setOwn(null);
+      setTone(null);
       document.body.style.overflow = "hidden";
     }
     return () => {
@@ -118,8 +121,9 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   return (
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto overscroll-none">
-        {step === "welcome" && <WelcomeV7 onStart={() => setStep("topic")} onSimple={() => { setPick({ kind: "simple" }); setStep("questions"); }} />}
-        {step === "topic" && <TopicV7 initial={topics} own={own} onBack={() => setStep("welcome")} onClearOwn={() => setOwn(null)}
+        {step === "welcome" && <WelcomeV7 onStart={() => setStep("why")} onSimple={() => { setPick({ kind: "simple" }); setStep("questions"); }} />}
+        {step === "why" && <WhyV7 current={tone} onBack={() => setStep("welcome")} onPick={(x) => { if (x !== tone) setTopics([]); setTone(x); setStep("topic"); }} />}
+        {step === "topic" && <TopicV7 key={tone ?? "bother"} tone={tone ?? "bother"} initial={topics} own={own} onBack={() => setStep("why")} onClearOwn={() => setOwn(null)}
           onOwn={(ids) => { setTopics(ids); setStep("own"); }} onPick={(ids) => { setTopics(ids); setPick(pickOf(ids, own)); setStep("questions"); }} />}
         {/* her own question goes back to the topics, ticked there beside them */}
         {step === "own" && <OwnV7 initial={own ?? ""} onBack={() => setStep("topic")} onDone={(text) => { setOwn(text); setStep("topic"); }} />}

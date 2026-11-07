@@ -5,6 +5,11 @@
 // daytime "tonight" with 2 topics + her own question → "Your world is waiting" → tour.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
+// variant A (Nov 7 2026): "What brings you here?", then the islands open to show their topics
+const whyStep = async (p, good = false) => {
+  await p.getByRole("button", { name: good ? /more good days|хороших дней/i : /bothering me|повторяется и мешает/i }).first().click(); await p.waitForTimeout(500);
+  await p.evaluate(() => document.querySelectorAll(".onb [aria-expanded=false]").forEach((b) => b.click())); await p.waitForTimeout(400);
+};
 const D = `./aurora-tests/work/r56`; mkdirSync(D, { recursive: true });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const errs = [], out = {};
@@ -24,7 +29,7 @@ for (const run of ["evening", "daytime"]) {
   await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
   await p.reload(); await p.waitForTimeout(2200);
   const log = [];
-  await click(W(/^Get started/, /^Начать/));
+  await click(W(/^Get started/, /^Начать/)); await whyStep(p);
   if (run === "evening") {
     await click(W(/Migraine/, /Мигрен/)); await click(W(/Bad nights|Sleep/, /Плохие ночи|Сон/)); await click(W(/^Stress/, /^Стресс/));
     await click(W(/^Period|cycle/i, /Месячн|цикл/i));
@@ -32,7 +37,6 @@ for (const run of ["evening", "daytime"]) {
     await shot("topics-3");
   } else {
     await click(W(/Low energy/, /Мало энергии/));
-    await click(W(/More topics/, /Ещё темы/));
     await click(W(/quitting/i, /уволит/i));
     await click(W(/Write your own question/, /Свой вопрос/));
     await p.locator("input").first().fill(W("Did I take a proper lunch break?", "Удалось нормально пообедать?"));
