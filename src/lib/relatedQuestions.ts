@@ -1315,5 +1315,5 @@ export const getRelatedQuestions = (
   if (userIds.length === 0) return [];
 
   const relatedIds = getRelatedTemplateIds(userIds);
-  return getTemplatesByIds(relatedIds);
+  return getTemplatesByIds(relatedIds).filter((tpl) => !tpl.sensitive);
 };

@@ -244,8 +244,8 @@ export const DailySession = ({
           return [];
         }
         return stream.templates.filter((tpl) => {
-          // Sensitive (intimacy / libido / ex) — opt-in via Settings.
-          if (tpl.sensitive && !interviewAnswers.showSensitive) return false;
+          // Intimacy questions are never offered (Nov 7 2026).
+          if (tpl.sensitive) return false;
           const hay = haystack(tpl);
           if (interviewAnswers.hasKids === false && matchesAny(hay, KIDS_HAY))
             return false;

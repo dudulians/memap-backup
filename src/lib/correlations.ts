@@ -54,7 +54,7 @@ export const lookupShortLabel = (
 // libido, ex). Used to hide correlations involving sensitive
 // templates unless the user has opted in via Settings → "Show
 // sensitive topics" (writes localStorage memap_show_sensitive=true).
-const isSensitiveTrackerTitle = (trackerTitle: string): boolean => {
+export const isSensitiveTrackerTitle = (trackerTitle: string): boolean => {
   const id = matchTemplateIdByTitle(trackerTitle);
   if (!id) return false;
   for (const stream of LIFE_STREAMS) {

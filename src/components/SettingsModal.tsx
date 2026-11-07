@@ -42,6 +42,7 @@ import { track } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 import { getDoorState } from "@/lib/doors";
+import { isSensitiveTrackerTitle } from "@/lib/correlations";
 import { SOUNDS_PAUSED } from "@/lib/feedback";
 
 // Shown under Data & privacy and in support emails. Bump with each release.
@@ -1021,14 +1022,16 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 ) : (
                   <p className="py-6 text-center text-[17px] text-muted-foreground">{t("settings.noTrackersYet")}</p>
                 )}
-                {/* Sensitive templates (intimacy, libido, exes) stay out of
-                    the library until this is on. */}
-                <div className={card}>
-                  <div className={row}>
-                    <span className="flex-1 text-[17px] font-medium">{t("settings.sensitiveShort")}</span>
-                    <Switch id="sensitive-toggle" checked={showSensitive} onCheckedChange={handleToggleSensitive} />
+                {/* Intimacy questions are no longer offered (Nov 7 2026). The switch stays
+                    only for people who already track one: it shows or hides their links. */}
+                {trackers.some((tr) => isSensitiveTrackerTitle(tr.title)) && (
+                  <div className={card}>
+                    <div className={row}>
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.sensitiveShort")}</span>
+                      <Switch id="sensitive-toggle" checked={showSensitive} onCheckedChange={handleToggleSensitive} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

@@ -17,8 +17,9 @@ export interface LifeStreamTemplate {
   problemWhen: ProblemWhen;
   adviceAboveThreshold: string;
   adviceAboveThresholdRu: string;
-  /** Sensitive content (intimacy, libido, ex partners). Hidden by
-   *  default; user opts in via Settings → "Show sensitive topics". */
+  /** Intimacy questions (had-sex, flirted, thought-about-someone-else, morning-libido).
+   *  Never offered since Nov 7 2026 (her note: "ооочень щепетильно, не нужно"); kept only
+   *  so people who already track them keep their words, phrases and links. */
   sensitive?: boolean;
   /** Featured / starter template for its cluster. Shown first when
    *  the user expands a cluster in AddTrackerModal — three per
