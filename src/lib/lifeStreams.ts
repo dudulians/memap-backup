@@ -1,4 +1,5 @@
 import { Tracker, ProblemWhen, AnswerType } from "@/types/tracker";
+import { BODY_TEMPLATES } from "./bodyTemplates";
 import { RESEARCH_TEMPLATES } from "./researchTemplates";
 import { getLanguage } from "@/lib/i18n";
 
@@ -37,6 +38,9 @@ export interface LifeStreamTemplate {
   /** The words it had before (Nov 7 2026 rewordings): new questions get the new ones, a
    *  question someone already has keeps its text and is still known by these. */
   legacy?: { title?: string; titleRu?: string; questionText?: string; questionTextRu?: string };
+  /** Bowel, bladder, piles, sweating: not hidden like the sexual ones, but never in ideas,
+   *  share cards or a recap (research round 2). */
+  private?: boolean;
 }
 
 export interface LifeStream {
@@ -849,8 +853,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         id: "eye-strain",
         title: "Eye strain",
         titleRu: "Усталость глаз",
-        questionText: "Did your eyes feel heavily tired or sore today?",
-        questionTextRu: "Сегодня сильно уставали глаза / двоилось / болели?",
+        questionText: "Did your eyes feel tired, dry or gritty today?",
+        questionTextRu: "Сегодня глаза уставали, были сухими или будто с песком?",
         category: "Body",
         subcategory: "Eyes",
         answerType: "boolean",
@@ -859,6 +863,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Book an eye doctor and check screen time",
         adviceAboveThresholdRu: "Записаться к окулисту и проверить экранное время",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { questionText: "Did your eyes feel heavily tired or sore today?", questionTextRu: "Сегодня сильно уставали глаза / двоилось / болели?" },
       },
       {
         id: "took-meds",
@@ -3193,6 +3199,8 @@ export const LIFE_STREAMS: LifeStream[] = [
 
 // 33 questions from the research (Nov 7 2026): marketing/research/proposed-library-additions.md
 for (const { stream, ...tpl } of RESEARCH_TEMPLATES) LIFE_STREAMS.find((s) => s.id === stream)?.templates.push(tpl);
+// the body questions people rarely say out loud (research round 2, Nov 7 2026)
+for (const { stream, ...tpl } of BODY_TEMPLATES) LIFE_STREAMS.find((s) => s.id === stream)?.templates.push(tpl);
 
 export interface LocalizedTemplate {
   id: string;

@@ -5,6 +5,8 @@
 // island (topic, at most 7 questions), the main topic first; on day 1 two
 // steps are already done; then one small task. Seven counted days make a
 // week. Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top note).
+import { FOLLOW_UPS } from "./bodyTemplates";
+import { templateIdOf } from "./answerPhrases";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, buildRoutes, islandOf, type IslandId } from "@/lib/islands";
 import { firstLinkState } from "@/lib/firstLink";
@@ -463,6 +465,16 @@ export const saveChest = (week: number, rec: ChestRecord) => {
 
 // --- The model ----------------------------------------------------------------
 
+/** A follow-up question whose question wasn't answered "yes" that day: not asked, not counted. */
+export const followUpNotNeeded = (tr: Tracker, trackers: Tracker[], valueOf: (trackerId: string) => unknown): boolean => {
+  const id = templateIdOf(tr), pid = id ? FOLLOW_UPS[id] : undefined;
+  if (!pid) return false;
+  const parent = trackers.find((x) => !x.archived && templateIdOf(x) === pid);
+  if (!parent) return false;
+  const v = valueOf(parent.id);
+  return v !== undefined && v !== true;
+};
+
 export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = new Date()): PathModel => {
   const today = isoLocal(now);
   const all = countedDays(trackers, entries, today);
@@ -477,6 +489,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   const pastWeeks = Array.from({ length: week }, (_, w) => before.slice(w * DAYS_PER_WEEK, (w + 1) * DAYS_PER_WEEK));
 
   const answeredToday = new Set(entries.filter((e) => e.date === today).map((e) => e.trackerId));
+  // a follow-up ("heavy period?", "did it hurt?") isn't needed when its question wasn't "yes" today
+  const todayVal = new Map(entries.filter((e) => e.date === today).map((e) => [e.trackerId, e.value]));
+  const notNeeded = (id: string) => { const tr = trackers.find((x) => x.id === id); return !!tr && followUpNotNeeded(tr, trackers, (pid) => todayVal.get(pid)); };
   const steps: Step[] = [];
 
   // Day 1 after onboarding: steps already green. They are never "to do":
@@ -525,9 +540,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   const addedSet = new Set(addedIds);
   let leftToday = addedIds.filter((id) => !answeredToday.has(id)).length;
   for (const g of questionGroups(trackers.filter((t) => !addedSet.has(t.id)), { together: week === 0 })) {
-    leftToday += g.ids.filter((id) => !answeredToday.has(id)).length;
+    leftToday += g.ids.filter((id) => !answeredToday.has(id) && !notNeeded(id)).length;
     const ids = g.ids;
-    const answered = ids.filter((id) => answeredToday.has(id)).length;
+    const answered = ids.filter((id) => answeredToday.has(id) || notNeeded(id)).length;
     steps.push({
       id: `q:${g.island ?? g.mixed}:${g.part[0]}`,
       kind: "questions",

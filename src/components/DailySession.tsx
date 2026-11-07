@@ -1,4 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { RED_FLAG_IDS } from "@/lib/bodyTemplates";
+import { templateIdOf } from "@/lib/answerPhrases";
+import { followUpNotNeeded } from "@/lib/pathSteps";
+import { RedFlagsSheet } from "./RedFlagsSheet";
 import { createPortal } from "react-dom";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
@@ -509,8 +513,21 @@ export const DailySession = ({
     }
   }, [totalQuestions]);
 
+  // the answers given in this sitting, so a follow-up knows whether to come
+  const sessionVals = useRef(new Map<string, boolean>());
+  /** the next card to show from i on: a follow-up whose question got a "no" is passed by */
+  const nextOpen = (from: number) => {
+    for (let i = from; i < deck.length; i++) {
+      const tr = deck[i].tracker;
+      if (!followUpNotNeeded(tr, trackers, (pid) => sessionVals.current.get(pid) ?? entries.find((e) => e.trackerId === pid && e.date === selectedDate)?.value)) return i;
+    }
+    return -1;
+  };
+  const [flags, setFlags] = useState(false);
+
   const handleAnswer = (value: boolean) => {
     if (isAnimatingRef.current || !currentQuestion) return;
+    sessionVals.current.set(currentQuestion.tracker.id, value);
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -575,8 +592,9 @@ export const DailySession = ({
 
     // Advance the UI on a fixed animation timer — independent of the save.
     setTimeout(() => {
-      if (currentIndex < totalQuestions - 1) {
-        setCurrentIndex(prev => prev + 1);
+      const next = nextOpen(currentIndex + 1);
+      if (next >= 0) {
+        setCurrentIndex(next);
       } else {
         setCompleted(true);
         if (!onlyIds) triggerConfetti();
@@ -610,8 +628,9 @@ export const DailySession = ({
     triggerHaptic("light");
     
     setTimeout(() => {
-      if (currentIndex < totalQuestions - 1) {
-        setCurrentIndex(prev => prev + 1);
+      const next = nextOpen(currentIndex + 1);
+      if (next >= 0) {
+        setCurrentIndex(next);
       } else {
         setCompleted(true);
         if (answeredCount > 0 && !onlyIds) {
@@ -1460,7 +1479,14 @@ export const DailySession = ({
           >
             {t("dailySession.notSure")}
           </button>
+          {/* body questions: signs that mean a doctor, never counted (research round 2) */}
+          {RED_FLAG_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
+            <button type="button" onClick={() => setFlags(true)} className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground">
+              {t("redFlags.chip")}
+            </button>
+          )}
         </div>
+        <RedFlagsSheet open={flags} onClose={() => setFlags(false)} />
       </div>
       </div>
     </BottomSheet>

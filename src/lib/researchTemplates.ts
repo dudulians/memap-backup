@@ -50,4 +50,4 @@ export const RESEARCH_TEMPLATES: T[] = [
 ];
 
 /** Markers: context for links, no hard answer (drawn neutral, never a hard day). */
-export const MARKER_TEMPLATE_IDS = ["period-day", "travel-or-night-away", "hot-day", "weather-change", "early-migraine-signs", "pill-free-day"];
+export const MARKER_TEMPLATE_IDS = ["period-day", "travel-or-night-away", "hot-day", "weather-change", "early-migraine-signs", "pill-free-day", "medicine-change"];
