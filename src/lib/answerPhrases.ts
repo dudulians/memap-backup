@@ -26,7 +26,7 @@ const P: Record<string, [string, string, string, string]> = {
   "called-parent": ["call with mom or dad", "no call with parents", "звонок маме или папе", "без звонка родителям"],
   "thought-about-leaving": ["thought of leaving", "no thought of leaving", "мысль расстаться", "без мысли расстаться"],
   "had-sex": ["intimacy with partner", "no intimacy", "физическая близость", "без физической близости"],
-  "saw-friends": ["time with friends", "no friends", "общение с друзьями", "без друзей"],
+  "saw-friends": ["friends in person", "no friends in person", "встреча с друзьями", "без встреч с друзьями"],
   "apologized-first": ["apologizing first", "no first apology", "первый шаг с извинением", "без первого шага"],
   "didnt-like-friend-post": ["a skipped like", "no skipped likes", "пропущенный лайк", "без пропущенных лайков"],
   "complimented-stranger": ["kind words to a stranger", "no kind words to strangers", "комплимент незнакомцу", "без комплиментов незнакомцам"],
@@ -42,26 +42,26 @@ const P: Record<string, [string, string, string, string]> = {
   // health
   "headache": ["headache", "no headache", "головная боль", "без головной боли"],
   "migraine": ["migraine", "no migraine", "мигрень", "без мигрени"],
-  "back-or-neck-pain": ["back or neck pain", "no back or neck pain", "боль в спине или шее", "без боли в спине и шее"],
+  "back-or-neck-pain": ["back pain", "no back pain", "боль в спине", "без боли в спине"],
   "stomach-issues": ["stomach trouble", "calm stomach", "проблемы с животом", "спокойный живот"],
   "felt-nauseous": ["nausea", "no nausea", "тошнота", "без тошноты"],
   "joint-pain": ["joint pain", "no joint pain", "боль в суставах", "без боли в суставах"],
   "slept-enough": ["7+ hours of sleep", "short night", "7+ часов сна", "короткая ночь"],
   "woke-at-night": ["waking at night", "sleeping through", "ночные пробуждения", "сон без пробуждений"],
   "felt-fatigued": ["feeling drained", "not drained", "сильная усталость", "без сильной усталости"],
-  "period-symptoms": ["strong cycle symptoms", "mild cycle day", "сильные симптомы цикла", "без сильных симптомов цикла"],
+  "period-symptoms": ["strong period pain", "no strong period pain", "сильная боль при месячных", "без сильной боли при месячных"],
   "exercised": ["workout", "no workout", "тренировка", "без тренировки"],
   "trained-hard": ["hard training", "no hard training", "серьёзная тренировка", "без серьёзной тренировки"],
   "stretched": ["stretching", "no stretching", "растяжка", "без растяжки"],
   "morning-libido": ["morning libido", "no morning libido", "утреннее влечение", "без утреннего влечения"],
   "felt-recovered": ["rested morning", "wrecked morning", "бодрое утро", "разбитое утро"],
   "outside-30min": ["30 min outside", "no time outside", "30 минут на улице", "без улицы"],
-  "saw-daylight": ["daylight", "no daylight", "дневной свет", "без дневного света"],
+  "saw-daylight": ["morning daylight", "no morning daylight", "свет до полудня", "без света до полудня"],
   "drank-water": ["enough water", "too little water", "достаточно воды", "мало воды"],
   "ate-by-2pm": ["a meal before 2 pm", "no meal before 2 pm", "еда до 14:00", "без еды до 14:00"],
   "bed-before-midnight": ["bed before midnight", "bed after midnight", "отбой до полуночи", "отбой после полуночи"],
   "skin-allergy": ["skin reaction", "no skin reaction", "реакция кожи", "без реакции кожи"],
-  "heart-palpitations": ["palpitations or BP swings", "no palpitations", "сердцебиение или скачки давления", "без сердцебиения и скачков"],
+  "heart-palpitations": ["heart racing", "calm heartbeat", "сердце колотится", "спокойное сердце"],
   "eye-strain": ["tired eyes", "rested eyes", "уставшие глаза", "без усталости глаз"],
   "took-meds": ["meds taken", "meds missed", "лекарства приняты", "лекарства пропущены"],
   "napped": ["daytime nap", "no nap", "дневной сон", "без дневного сна"],
@@ -143,7 +143,7 @@ const P: Record<string, [string, string, string, string]> = {
   "wanted-child": ["wanting a child", "no wish for a child", "желание ребёнка", "без желания ребёнка"],
   "thought-about-emigrating": ["thought of moving abroad", "no thought of moving", "мысль уехать", "без мысли уехать"],
   "wanted-leave-job": ["wanting to quit", "no wish to quit", "хочется уволиться", "без желания уволиться"],
-  "thought-divorce": ["thought of ending it", "no thought of ending it", "мысль расстаться", "без мысли расстаться"],
+  "thought-divorce": ["thought of divorce", "no thought of divorce", "мысль о разводе", "без мысли о разводе"],
   "wanted-life-change": ["wanting a big change", "no urge for change", "желание всё поменять", "без желания всё поменять"],
   "wanted-pet": ["wanting a pet", "no wish for a pet", "хочется питомца", "без желания завести питомца"],
   "wanted-learn-new": ["wanting to learn something new", "no wish to learn", "желание учиться", "без желания учиться"],
@@ -255,7 +255,7 @@ const byTitle = (() => {
   return () => {
     if (!m) {
       m = new Map();
-      for (const s of LIFE_STREAMS) for (const tpl of s.templates) for (const x of [tpl.title, tpl.titleRu]) m.set(x.trim().toLowerCase(), tpl.id);
+      for (const s of LIFE_STREAMS) for (const tpl of s.templates) for (const x of [tpl.title, tpl.titleRu, tpl.legacy?.title, tpl.legacy?.titleRu]) if (x) m.set(x.trim().toLowerCase(), tpl.id);
     }
     return m;
   };
@@ -267,6 +267,32 @@ export const templateIdOf = (tr: Tracker): string | null => {
   return id && P[id] ? id : null;
 };
 
+// A question someone had before the Nov 7 2026 rewordings keeps the words that fit it
+// ("back or neck pain", not "back pain").
+const P_OLD: Record<string, [string, string, string, string]> = {
+  "period-symptoms": ["strong cycle symptoms", "mild cycle day", "сильные симптомы цикла", "без сильных симптомов цикла"],
+  "back-or-neck-pain": ["back or neck pain", "no back or neck pain", "боль в спине или шее", "без боли в спине и шее"],
+  "heart-palpitations": ["palpitations or BP swings", "no palpitations", "сердцебиение или скачки давления", "без сердцебиения и скачков"],
+  "saw-daylight": ["daylight", "no daylight", "дневной свет", "без дневного света"],
+  "saw-friends": ["time with friends", "no friends", "общение с друзьями", "без друзей"],
+  "thought-divorce": ["thought of ending it", "no thought of ending it", "мысль расстаться", "без мысли расстаться"],
+};
+const S_OLD: Record<string, [string, string, string, string]> = {
+  "period-symptoms": ["cycle symptoms ~are strong", "cycle symptoms ~are mild", "симптомы цикла ~сильные", "симптомы цикла ~мягкие"],
+  "back-or-neck-pain": ["your back or neck ~hurts", "your back and neck ~don't hurt", "~болит спина или шея", "спина и шея ~не болят"],
+  "heart-palpitations": ["you ~have palpitations or BP swings", "you ~have no palpitations", "есть сердцебиение или скачки давления|~бывает сердцебиение или скачки давления", "сердцебиения и скачков ~нет"],
+  "saw-daylight": ["you ~get daylight", "you ~get no daylight", "ты ~видишь дневной свет", "дневного света ~нет"],
+  "saw-friends": ["you ~see or message friends", "you ~don't see friends", "ты ~общаешься с друзьями", "ты ~не видишься с друзьями"],
+  "thought-divorce": ["you ~think about ending the relationship", "you ~don't think about ending it", "ты ~думаешь расстаться", "мысли расстаться ~нет"],
+};
+const isOld = (tr: Tracker, id: string) => {
+  const tpl = LIFE_STREAMS.flatMap((s) => s.templates).find((x) => x.id === id);
+  const t = (tr.title ?? "").trim().toLowerCase();
+  return !!tpl?.legacy && [tpl.legacy.title, tpl.legacy.titleRu].some((x) => x && x.trim().toLowerCase() === t);
+};
+const rowP = (tr: Tracker, id: string) => (P_OLD[id] && isOld(tr, id) ? P_OLD[id] : P[id]);
+const rowS = (tr: Tracker, id: string) => (S_OLD[id] && isOld(tr, id) ? S_OLD[id] : S[id]);
+
 export const cap = (s: string) => (s ? s[0].toLocaleUpperCase() + s.slice(1) : s);
 
 /** "short night", "migraine", "no anxiety"; her own question: "“Walked the dog”: no". */
@@ -275,7 +301,7 @@ export const answerPhrase = (t: TFunction, tr: Tracker | undefined, yes: boolean
   const own = yes ? tr.words?.yes : tr.words?.no;
   if (own) return own;
   const id = templateIdOf(tr);
-  if (id) { const p = P[id]; return getLanguage() === "ru" ? (yes ? p[2] : p[3]) : yes ? p[0] : p[1]; }
+  if (id) { const p = rowP(tr, id); return getLanguage() === "ru" ? (yes ? p[2] : p[3]) : yes ? p[0] : p[1]; }
   return t("link.own", { q: localizeTrackerTitle(tr.title), a: t(yes ? "link.yes" : "link.no") });
 };
 
@@ -299,7 +325,7 @@ export const answerClause = (t: TFunction, tr: Tracker | undefined, yes: boolean
   const own = yes ? tr.words?.yes : tr.words?.no;
   const s = own && !(id && S[id]) ? t("link.wordsClause", { w: own })
     : id && S[id]
-    ? (getLanguage() === "ru" ? (yes ? S[id][2] : S[id][3]) : yes ? S[id][0] : S[id][1])
+    ? (() => { const r = rowS(tr, id); return getLanguage() === "ru" ? (yes ? r[2] : r[3]) : yes ? r[0] : r[1]; })()
     : t("link.ownClause", { q: localizeTrackerTitle(tr.title).replace(/[?？]+$/, ""), a: t(yes ? "link.yes" : "link.no") });
   const [cause, result] = s.includes("|") ? s.split("|") : [s, s];
   return (role === "cause" ? cause.replace("~", "") : result.replace("~", often ? `${often} ` : "")).replace(/\s+/g, " ").trim();

@@ -385,6 +385,9 @@ const buildMap = (): LookupMaps => {
       addPair(titles, t.title, t.titleRu);
       addPair(questions, t.questionText, t.questionTextRu);
       addPair(advices, t.adviceAboveThreshold, t.adviceAboveThresholdRu);
+      // the words it had before (a question someone already has keeps them)
+      if (t.legacy?.title && t.legacy.titleRu) addPair(titles, t.legacy.title, t.legacy.titleRu);
+      if (t.legacy?.questionText && t.legacy.questionTextRu) addPair(questions, t.legacy.questionText, t.legacy.questionTextRu);
     });
   });
 

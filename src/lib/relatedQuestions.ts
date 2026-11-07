@@ -1284,6 +1284,7 @@ export const matchTemplateIdByTitle = (title: string): string | null => {
     for (const tpl of stream.templates) {
       if (tpl.title.toLowerCase() === norm) return tpl.id;
       if (tpl.titleRu.toLowerCase() === norm) return tpl.id;
+      if (tpl.legacy?.title?.toLowerCase() === norm || tpl.legacy?.titleRu?.toLowerCase() === norm) return tpl.id;
     }
   }
 

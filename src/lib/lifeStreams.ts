@@ -34,6 +34,9 @@ export interface LifeStreamTemplate {
    *  чаще"). Two languages both required when set. */
   shortLabelRu?: string;
   shortLabel?: string; // EN
+  /** The words it had before (Nov 7 2026 rewordings): new questions get the new ones, a
+   *  question someone already has keeps its text and is still known by these. */
+  legacy?: { title?: string; titleRu?: string; questionText?: string; questionTextRu?: string };
 }
 
 export interface LifeStream {
@@ -266,10 +269,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "saw-friends",
-        title: "Saw or messaged friends",
-        titleRu: "Виделся(ась) или списывался(ась) с друзьями",
-        questionText: "Did you connect with friends today (not family)?",
-        questionTextRu: "Сегодня было общение с друзьями (не семья)?",
+        title: "Saw friends in person",
+        titleRu: "Встреча с друзьями вживую",
+        questionText: "Did you see friends in person today?",
+        questionTextRu: "Сегодня была встреча с друзьями вживую?",
         category: "Connections",
         subcategory: "Friends",
         answerType: "boolean",
@@ -279,6 +282,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         adviceAboveThreshold: "Text one friend today, no reason needed",
         adviceAboveThresholdRu: "Написать одному другу сегодня без повода",
         featured: true,
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Saw or messaged friends", titleRu: "Виделся(ась) или списывался(ась) с друзьями", questionText: "Did you connect with friends today (not family)?", questionTextRu: "Сегодня было общение с друзьями (не семья)?" },
       },
       {
         id: "apologized-first",
@@ -517,10 +522,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "back-or-neck-pain",
-        title: "Back or neck pain",
-        titleRu: "Болела спина или шея",
-        questionText: "Did your back or neck hurt today?",
-        questionTextRu: "Болела сегодня спина или шея?",
+        title: "Back pain",
+        titleRu: "Болела спина",
+        questionText: "Did your back hurt today?",
+        questionTextRu: "Сегодня болела спина?",
         category: "Body",
         subcategory: "Pain",
         answerType: "boolean",
@@ -529,13 +534,15 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "See an osteopath or physiotherapist with my data",
         adviceAboveThresholdRu: "Записаться к остеопату или физиотерапевту с данными",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Back or neck pain", titleRu: "Болела спина или шея", questionText: "Did your back or neck hurt today?", questionTextRu: "Болела сегодня спина или шея?" },
       },
       {
         id: "stomach-issues",
-        title: "Stomach / GI issues",
-        titleRu: "Беспокоил живот / ЖКТ",
-        questionText: "Did your stomach hurt, did you feel nauseous, or have any digestive issues today?",
-        questionTextRu: "Болел живот, тошнило, или были проблемы с пищеварением?",
+        title: "Stomach pain or digestion trouble",
+        titleRu: "Боль в животе или пищеварение",
+        questionText: "Did your stomach hurt or did digestion bother you today?",
+        questionTextRu: "Сегодня болел живот или беспокоило пищеварение?",
         category: "Body",
         subcategory: "Digestion",
         answerType: "boolean",
@@ -544,6 +551,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Log what I ate the day before to find the food trigger",
         adviceAboveThresholdRu: "Записывать что ела за сутки до — искать еду-триггер",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Stomach / GI issues", titleRu: "Беспокоил живот / ЖКТ", questionText: "Did your stomach hurt, did you feel nauseous, or have any digestive issues today?", questionTextRu: "Болел живот, тошнило, или были проблемы с пищеварением?" },
       },
       {
         id: "felt-nauseous",
@@ -579,34 +588,38 @@ export const LIFE_STREAMS: LifeStream[] = [
         id: "slept-enough",
         title: "Slept enough (7+ hours)",
         titleRu: "Спал(а) достаточно (7+ часов)",
-        questionText: "Did you sleep at least 7 hours and feel rested?",
-        questionTextRu: "Спал(а) ли минимум 7 часов и чувствовал(а) себя отдохнувшим(ей)?",
+        questionText: "Did you sleep at least 7 hours last night?",
+        questionTextRu: "Этой ночью сна было 7+ часов?",
         category: "Health",
         subcategory: "Sleep",
         answerType: "boolean",
-        periodDays: 30,
-        threshold: 18,
+        periodDays: 14,
+        threshold: 6,
         problemWhen: "no",
         adviceAboveThreshold: "Set a 'bedtime' alarm 8 hours before wake-up",
         adviceAboveThresholdRu: "Поставить будильник «спать» за 8 часов до подъёма",
         featured: true,
         shortLabel: "good sleep",
         shortLabelRu: "хороший сон",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { questionText: "Did you sleep at least 7 hours and feel rested?", questionTextRu: "Спал(а) ли минимум 7 часов и чувствовал(а) себя отдохнувшим(ей)?" },
       },
       {
         id: "woke-at-night",
         title: "Woke up at night",
         titleRu: "Просыпался(ась) ночью",
-        questionText: "Did you wake up at night and struggle to fall back asleep?",
-        questionTextRu: "Просыпался(ась) ночью и долго не мог(ла) уснуть?",
+        questionText: "Did you wake at night and lie awake for 30+ minutes?",
+        questionTextRu: "Этой ночью был подъём среди ночи и 30+ минут без сна?",
         category: "Health",
         subcategory: "Sleep",
         answerType: "boolean",
-        periodDays: 30,
-        threshold: 10,
+        periodDays: 7,
+        threshold: 3,
         problemWhen: "yes",
         adviceAboveThreshold: "One week: no screens before bed, no coffee after 2pm",
         adviceAboveThresholdRu: "Неделю без экранов перед сном и без кофе после 14:00",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { questionText: "Did you wake up at night and struggle to fall back asleep?", questionTextRu: "Просыпался(ась) ночью и долго не мог(ла) уснуть?" },
       },
       {
         id: "felt-fatigued",
@@ -627,10 +640,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "period-symptoms",
-        title: "Strong cycle symptoms",
-        titleRu: "Сильные симптомы цикла",
-        questionText: "Did you have strong period or PMS symptoms today?",
-        questionTextRu: "Были ли сегодня сильные симптомы цикла или ПМС?",
+        title: "Strong period pain",
+        titleRu: "Сильная боль при месячных",
+        questionText: "Did period pain or cramps make today hard?",
+        questionTextRu: "Боль или спазмы при месячных сегодня мешали?",
         category: "Body",
         subcategory: "Cycle",
         answerType: "boolean",
@@ -641,6 +654,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         adviceAboveThresholdRu: "Записаться к гинекологу про симптомы цикла",
         shortLabel: "cycle symptoms",
         shortLabelRu: "симптомы цикла",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Strong cycle symptoms", titleRu: "Сильные симптомы цикла", questionText: "Did you have strong period or PMS symptoms today?", questionTextRu: "Были ли сегодня сильные симптомы цикла или ПМС?" },
       },
       {
         id: "exercised",
@@ -738,10 +753,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "saw-daylight",
-        title: "Got daylight on skin",
-        titleRu: "Видел(а) дневной свет",
-        questionText: "Did you catch real daylight on your skin today?",
-        questionTextRu: "Застал(а) дневной свет / было солнце на коже?",
+        title: "Daylight before noon",
+        titleRu: "Дневной свет до полудня",
+        questionText: "Did you get outdoor daylight before noon?",
+        questionTextRu: "Был дневной свет на улице до полудня?",
         category: "Health",
         subcategory: "Outdoors",
         answerType: "boolean",
@@ -750,6 +765,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "no",
         adviceAboveThreshold: "Get 10 minutes of morning light without sunglasses",
         adviceAboveThresholdRu: "Получать 10 минут утреннего света без очков",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Got daylight on skin", titleRu: "Видел(а) дневной свет", questionText: "Did you catch real daylight on your skin today?", questionTextRu: "Застал(а) дневной свет / было солнце на коже?" },
       },
       {
         id: "drank-water",
@@ -813,10 +830,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "heart-palpitations",
-        title: "Heart palpitations / BP swings",
-        titleRu: "Сердцебиение / скачки давления",
-        questionText: "Did you feel rapid heartbeat or BP swings today?",
-        questionTextRu: "Чувствовал(а) учащённое сердцебиение или скачки давления?",
+        title: "Heart racing or skipping",
+        titleRu: "Сердце колотилось или сбивалось",
+        questionText: "Did you feel your heart racing, pounding or skipping today?",
+        questionTextRu: "Сегодня сердце колотилось, частило или сбивалось?",
         category: "Body",
         subcategory: "Cardio",
         answerType: "boolean",
@@ -825,6 +842,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Book a cardiologist for a Holter monitor",
         adviceAboveThresholdRu: "Записаться к кардиологу на суточный мониторинг (Холтер)",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Heart palpitations / BP swings", titleRu: "Сердцебиение / скачки давления", questionText: "Did you feel rapid heartbeat or BP swings today?", questionTextRu: "Чувствовал(а) учащённое сердцебиение или скачки давления?" },
       },
       {
         id: "eye-strain",
@@ -908,8 +927,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         id: "smoked",
         title: "Smoked / vaped",
         titleRu: "Курил(а)",
-        questionText: "Did you smoke a cigarette, vape, or hookah today?",
-        questionTextRu: "Курил(а) сегодня — сигарету, вейп, кальян?",
+        questionText: "Did you smoke a cigarette or vape today?",
+        questionTextRu: "Сегодня было курение — сигарета или вейп?",
         category: "Health",
         subcategory: "Smoking",
         answerType: "boolean",
@@ -918,6 +937,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Log the situations where I crave it",
         adviceAboveThresholdRu: "Записать в каких ситуациях тянет",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { questionText: "Did you smoke a cigarette, vape, or hookah today?", questionTextRu: "Курил(а) сегодня — сигарету, вейп, кальян?" },
       },
       {
         id: "smoked-hookah",
@@ -1384,19 +1405,21 @@ export const LIFE_STREAMS: LifeStream[] = [
         id: "felt-anxious",
         title: "Felt anxious",
         titleRu: "Чувствовал(а) тревогу",
-        questionText: "Did anxiety show up today?",
-        questionTextRu: "Приходила тревога сегодня?",
+        questionText: "Did you feel anxious or find it hard to stop worrying today?",
+        questionTextRu: "Сегодня была тревога или трудно было перестать волноваться?",
         category: "Emotions",
         subcategory: "Anxiety",
         answerType: "boolean",
-        periodDays: 30,
-        threshold: 12,
+        periodDays: 14,
+        threshold: 8,
         problemWhen: "yes",
         adviceAboveThreshold: "Schedule a therapy session with my data",
         adviceAboveThresholdRu: "Записаться к психотерапевту с данными",
         featured: true,
         shortLabel: "anxiety",
         shortLabelRu: "тревога",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { questionText: "Did anxiety show up today?", questionTextRu: "Приходила тревога сегодня?" },
       },
       {
         id: "felt-depressed",
@@ -1407,7 +1430,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         category: "Emotions",
         subcategory: "Mood",
         answerType: "boolean",
-        periodDays: 30,
+        periodDays: 14,
         threshold: 8,
         problemWhen: "yes",
         adviceAboveThreshold: "Talk to a doctor — please",
@@ -2067,10 +2090,10 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "thought-divorce",
-        title: "Thought about ending the relationship",
-        titleRu: "Думал(а) расстаться / развестись",
-        questionText: "Did the thought 'I want out of this relationship' come up today?",
-        questionTextRu: "Сегодня была мысль «я хочу уйти из этих отношений»?",
+        title: "Thought about divorce",
+        titleRu: "Мысль о разводе",
+        questionText: "Did you think about divorce or a formal split today?",
+        questionTextRu: "Сегодня была мысль о разводе или официальном расставании?",
         category: "Curious",
         subcategory: "Decisions",
         answerType: "boolean",
@@ -2079,6 +2102,8 @@ export const LIFE_STREAMS: LifeStream[] = [
         problemWhen: "yes",
         adviceAboveThreshold: "Book a couples therapist alone or together",
         adviceAboveThresholdRu: "Записаться к семейному психологу одной или вдвоём",
+        // the words before Nov 7 2026: questions people already have keep them
+        legacy: { title: "Thought about ending the relationship", titleRu: "Думал(а) расстаться / развестись", questionText: "Did the thought 'I want out of this relationship' come up today?", questionTextRu: "Сегодня была мысль «я хочу уйти из этих отношений»?" },
       },
       {
         id: "wanted-life-change",

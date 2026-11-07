@@ -242,7 +242,8 @@ export const ensureTemplates = async (templateIds: string[]): Promise<string[]> 
     if (!found) throw new Error(`door template missing: ${templateId}`);
     const { template, clusterId } = found;
     const title = localizeTrackerTitleRaw(template.title);
-    const match = next.find((tr) => tr.title.trim().toLowerCase() === title.trim().toLowerCase());
+    const names = [title, ...(template.legacy?.title ? [localizeTrackerTitleRaw(template.legacy.title)] : []), template.legacy?.titleRu ?? ""].filter(Boolean).map((x) => x.trim().toLowerCase());
+    const match = next.find((tr) => names.includes(tr.title.trim().toLowerCase()));
     if (match) {
       if (match.archived) {
         const idx = next.indexOf(match);
