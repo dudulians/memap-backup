@@ -10,7 +10,8 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(1200);
 const seed = await p.evaluate(async () => {
   const g = await import("/src/lib/demoDataGenerator.ts"); let T = [], E = [];
   for (const id of ["showcase", "relationship-reality", "body"]) { const r = g.generateDemoData(id); T = T.concat(r.newTrackers); E = E.concat(r.newEntries); }
-  const seen = new Set(); T = T.filter((t) => { if (seen.has(t.title)) return false; seen.add(t.title); return true; });
+  // "Cooked my own food" drew an odd link (flowers → cooking at home, 7 of 7): left out (Nov 7 2026)
+  const seen = new Set(); T = T.filter((t) => { if (seen.has(t.title) || t.title === "Cooked my own food") return false; seen.add(t.title); return true; });
   const ids = new Set(T.map((t) => t.id)); E = E.filter((e) => ids.has(e.trackerId));
   // A door user on day 1 ("Try as a new user"): the fights door's questions, no answers.
   localStorage.clear();
