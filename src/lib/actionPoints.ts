@@ -35,3 +35,8 @@ export const countFromToday = async (id: string, k: number, extra: Partial<Track
   });
   clearThresholdNotification(id);
 };
+
+/** Once (see a doctor, get checked, book…) or every day (a 2-week test). Hers once she picks;
+ *  until then a guess from the words (Nov 7 2026). */
+const ONCE_WORDS = /\b(doctor|gp|dentist|check|checked|book|appointment|talk to|see a|visit|counsell?or|therapist)\b|врач|терапевт|стоматолог|провер|поговор|записат|сходить|психолог|психотерапевт/i;
+export const planKindOf = (tr: Tracker): "once" | "daily" => tr.planKind ?? (ONCE_WORDS.test(tr.adviceAboveThreshold || "") ? "once" : "daily");

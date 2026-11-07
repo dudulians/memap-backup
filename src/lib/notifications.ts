@@ -4,7 +4,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
-import { currentExperiment, EXPERIMENT_DAYS } from "@/lib/experiments";
+import { runningExperiments, EXPERIMENT_DAYS } from "@/lib/experiments";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { progressLines } from "@/lib/reminderLines";
@@ -317,16 +317,18 @@ export const scheduleNotification = async (
 
 /** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */
 export const tryPlan = (): { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] => {
-  const x = currentExperiment();
-  if (!x?.remind) return [];
-  const [h, m] = x.remind.split(":").map(Number);
-  const start = new Date(x.start + "T00:00:00");
   const out: { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] = [];
-  for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
-    const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
-    if (at.getTime() <= Date.now()) continue;
-    out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET, title: x.change, body: i18n.t(k === EXPERIMENT_DAYS ? "notifications.tryLast" : "notifications.tryBody", { k, count: EXPERIMENT_DAYS }), schedule: { at, allowWhileIdle: true } });
-  }
+  // every running test (one per island); each its own id range
+  runningExperiments().slice(0, 4).forEach((x, i) => {
+    if (!x.remind) return;
+    const [h, m] = x.remind.split(":").map(Number);
+    const start = new Date(x.start + "T00:00:00");
+    for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
+      const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
+      if (at.getTime() <= Date.now()) continue;
+      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, title: x.change, body: i18n.t(k === EXPERIMENT_DAYS ? "notifications.tryLast" : "notifications.tryBody", { k, count: EXPERIMENT_DAYS }), schedule: { at, allowWhileIdle: true } });
+    }
+  });
   return out;
 };
 

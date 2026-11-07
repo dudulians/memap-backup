@@ -22,8 +22,8 @@ import { ruleKeyOf } from "@/lib/rules";
 import { islandOf, mapPic, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
-import { answeredEvenings, countFromToday, patchTracker, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { currentExperiment, experimentDay, EXPERIMENT_DAYS, ideasFor } from "@/lib/experiments";
+import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
+import { experimentDay, EXPERIMENT_DAYS, ideasFor, runningExperiments, testOnIsland, type Experiment } from "@/lib/experiments";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -44,6 +44,21 @@ const useName = () => {
   };
 };
 const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? localizeTrackerAdvice(tr.adviceAboveThreshold) : "");
+
+/** After "I did it": the window before it and the days since (from 7 days on). */
+const beforeAfter = (tr: Tracker, entries: TrackerEntry[]): { k1: number; n1: number; k2: number; n2: number } | null => {
+  const last = tr.cycles?.[tr.cycles.length - 1];
+  if (!last || !tr.cycleStartDate) return null;
+  const since = Math.round((new Date(isoLocal(new Date()) + "T12:00:00").getTime() - new Date(tr.cycleStartDate + "T12:00:00").getTime()) / 86_400_000) + 1;
+  if (since < 7) return null;
+  return { k1: last.significantDays, n1: last.periodDays, k2: ruleCount(tr, entries), n2: Math.min(since, tr.periodDays) };
+};
+/** A test on this question's island blocks a second one there; it says why. */
+const blockedLine = (t: (k: string, o?: Record<string, unknown>) => string, x: Experiment | null) => {
+  if (!x) return null;
+  const d = experimentDay(x);
+  return d > EXPERIMENT_DAYS ? t("rules.afterTestDone") : t("rules.afterTest", { count: EXPERIMENT_DAYS - d + 1 });
+};
 
 /** How far an action point is: one dot per day her rule needs, the days
  *  that came filled in the hard-day colour (her notes, Nov 5 2026: an orange
@@ -92,10 +107,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
   const why = (tr: Tracker, k: number) => t("rules.whyHard", { name: label(tr), k, count: tr.periodDays });
   const evenings = answeredEvenings(trackers, entries);
-  // The week's test running now (one at a time).
-  const test = currentExperiment();
-  const testDay = test ? experimentDay(test) : 0;
-  const testLine = testDay > EXPERIMENT_DAYS ? t("rules.testDone") : t("rules.testing", { k: testDay, count: EXPERIMENT_DAYS });
+  // The tests running now: one per island, side by side (Nov 7 2026).
+  const tests = runningExperiments();
+  const lineOf = (x: Experiment) => { const d = experimentDay(x); return d > EXPERIMENT_DAYS ? t("rules.testDone") : t("rules.testing", { k: d, count: EXPERIMENT_DAYS }); };
+  const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); };
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
   const tryIt = (tr: Tracker, k: number) => {
@@ -115,18 +130,18 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
   return (
     <div className="space-y-2.5 animate-fade-in">
-      {/* The test she is trying this week. */}
-      {test && (
-        <div className="surface flex items-center gap-3 rounded-[22px] px-4 py-3.5">
+      {/* The tests she is trying now. */}
+      {tests.map((test) => (
+        <div key={test.id} className="surface flex items-center gap-3 rounded-[22px] px-4 py-3.5">
           <span className="icon-dot h-11 w-11">
             <FlaskConical className="h-5 w-5" strokeWidth={2.4} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[17px] font-bold leading-snug">{test.change}</span>
-            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{testLine}</span>
+            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}</span>
           </span>
         </div>
-      )}
+      ))}
 
       {lit.length === 0 && (evenings < SHAPING_EVENINGS ? (
         // Too early to say anything is calm (GPT review, Nov 5 2026).
@@ -146,6 +161,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       {lit.length > 0 && <p className="px-1 pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.timeToAct")}</p>}
       {lit.map(({ tr, k }) => {
         const plan = planOf(tr);
+        const blocked = blockedLine(t, testOnIsland(islandOf(tr)));
+        const once = planKindOf(tr) === "once";
         return (
           <div key={tr.id} className="surface rounded-[22px] px-4 pb-4 pt-4">
             <div className="flex items-start gap-3">
@@ -158,14 +175,17 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             </div>
             {!plan ? (
               <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.noPlan")}</button>
-            ) : test ? (
-              // One test at a time: this one waits.
+            ) : once ? (
+              // a one-off plan: mark it done; then MeMap compares before and after
+              <button type="button" onClick={() => void didOnce(tr, k)} className="raised-btn is-small mt-4 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+            ) : blocked ? (
+              // one test per island: this one waits, and says why
               <p className="mt-3.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
                 <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />
-                {testDay > EXPERIMENT_DAYS ? t("rules.afterTestDone") : t("rules.afterTest", { count: EXPERIMENT_DAYS - testDay + 1 })}
+                {blocked}
               </p>
             ) : (
-              <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.try")}</button>
+              <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.tryDaily")}</button>
             )}
             <div className="mt-2.5 grid grid-cols-2 gap-2">
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
@@ -180,14 +200,17 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
           <p className="px-1 pt-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.watching")}</p>
           <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
             {watching.map(({ tr, k }) => {
-              const mine = test?.from === tr.id;
+              const mineTest = tests.find((x) => x.from === tr.id);
+              const mine = !!mineTest;
+              const ba = beforeAfter(tr, entries);
               return (
                 <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="block w-full px-4 py-3 text-left">
                   <span className="line-clamp-2 block text-[16px] font-semibold leading-snug">{planOf(tr) || name(tr)}</span>
                   <span className={cn("mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
                     {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
-                    {mine ? testLine : planOf(tr) ? label(tr) : ""}
+                    {mineTest ? lineOf(mineTest) : planOf(tr) ? label(tr) : ""}
                   </span>
+                  {ba && <span className="mt-1 block text-[13px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</span>}
                   <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} className="mt-2" />
                 </button>
               );
@@ -197,7 +220,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       )}
 
       {current && sheet?.mode === "show" && (
-        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={label(current.tr)} onClose={() => setSheet(null)} />
+        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={label(current.tr)} onClose={() => setSheet(null)}
+          onTry={() => tryIt(current.tr, current.k)} blocked={blockedLine(t, testOnIsland(islandOf(current.tr)))} />
       )}
       {current && sheet?.mode === "change" && (
         <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={label(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
@@ -211,9 +235,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 };
 
 /** "Show": the days behind an action point, then her plan and rule to change. */
-const ShowSheet = ({ tracker, k, entries, name, onClose }: { tracker: Tracker; k: number; entries: TrackerEntry[]; name: string; onClose: () => void }) => {
+const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tracker: Tracker; k: number; entries: TrackerEntry[]; name: string; onClose: () => void; onTry: () => void; blocked: string | null }) => {
   const { t } = useTranslation();
   const [plan, setPlan] = useState(planOf(tracker));
+  const [kind, setKind] = useState<"once" | "daily">(planKindOf(tracker));
+  const [limitOpen, setLimitOpen] = useState(false);
+  const ba = beforeAfter(tracker, entries);
   const [rule, setRule] = useState({ threshold: tracker.threshold, periodDays: tracker.periodDays });
   // The rule's own window (ruleCount): the last periodDays days and today.
   // Filled = a day that counts (the hard-day colour, as on the calendar).
@@ -228,8 +255,9 @@ const ShowSheet = ({ tracker, k, entries, name, onClose }: { tracker: Tracker; k
       return { iso, look: v === undefined ? "none" : before ? "before" : v === hit ? "hit" : "other" };
     });
   }, [tracker, entries]);
-  const changed = () => plan !== planOf(tracker) || rule.threshold !== tracker.threshold || rule.periodDays !== tracker.periodDays;
-  const keep = (x: Tracker): Tracker => ({ ...x, ...rule, adviceAboveThreshold: rule.threshold ? plan.trim() : x.adviceAboveThreshold });
+  const changed = () => plan !== planOf(tracker) || rule.threshold !== tracker.threshold || rule.periodDays !== tracker.periodDays || kind !== planKindOf(tracker);
+  const keep = (x: Tracker): Tracker => ({ ...x, ...rule, planKind: kind, adviceAboveThreshold: rule.threshold ? plan.trim() : x.adviceAboveThreshold });
+  const tryNow = async () => { if (changed()) await patchTracker(tracker.id, keep); onClose(); onTry(); };
   const close = async () => {
     if (changed()) await patchTracker(tracker.id, keep);
     onClose();
@@ -245,17 +273,17 @@ const ShowSheet = ({ tracker, k, entries, name, onClose }: { tracker: Tracker; k
     <BottomSheet open onOpenChange={(o) => { if (!o) close(); }} className="h-auto max-h-[88vh]" ariaTitle={t("rules.title")}>
       <div className="flex min-h-0 flex-1 flex-col space-y-5 overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
-          <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{name}</p>
-          <p className="mt-2 text-[30px] font-bold leading-tight tracking-tight tabular-nums">
+          {/* the question is the title (her note: "непонятно, к какому вопросу это действие") */}
+          <p className="text-[26px] font-bold leading-tight tracking-tight">{name}</p>
+          <p className="mt-1.5 text-[19px] font-bold tabular-nums">
             {k >= tracker.threshold
               ? t("rules.bigDone", { k, count: tracker.periodDays })
               : t("rules.bigOf", { k, count: tracker.threshold })}
           </p>
-          <RuleMeter k={k} n={tracker.threshold} period={tracker.periodDays} bare className="mt-3" />
-          <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.ruleLine", { n: tracker.threshold, count: tracker.periodDays })}</p>
-          <p className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
-            {t("rules.dotsHard", { count: tracker.periodDays })}
-          </p>
+          <p className="mt-1 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.ruleLine", { n: tracker.threshold, count: tracker.periodDays })}</p>
+          {ba && <p className="mt-2 text-[15px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</p>}
+          {/* one row of days, the colours in words */}
+          <p className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("rules.lastDays", { count: tracker.periodDays })}</p>
           <div className="mt-2 flex flex-wrap gap-1.5" aria-hidden="true">
             {days.map((d) => (
               <span key={d.iso} className="h-3 w-3 rounded-full" style={{
@@ -264,24 +292,43 @@ const ShowSheet = ({ tracker, k, entries, name, onClose }: { tracker: Tracker; k
               }} />
             ))}
           </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-semibold text-muted-foreground">
+            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--strong))" }} />{name}</span>
+            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--balanced) / 0.75)" }} />{t("rules.legendOther")}</span>
+            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full bg-foreground/[0.12]" />{t("rules.legendNone")}</span>
+          </div>
           {tracker.cycleStartDate && days.some((d) => d.look === "before") && (
             <p className="mt-2 text-[13px] font-medium text-muted-foreground">{t("rules.countedFrom")}</p>
           )}
         </div>
         <div className="space-y-2">
-          <p className="text-[16px] font-bold">{t("rules.plan")}</p>
+          <p className="text-[16px] font-bold">{t("rules.yourPlan")}</p>
           <textarea value={plan} onChange={(e) => setPlan(e.target.value)} rows={2} maxLength={120} placeholder={t("rules.planPh")}
             className="w-full resize-none rounded-2xl border border-foreground/[0.12] bg-foreground/[0.04] px-4 py-3 text-[18px] font-semibold leading-snug outline-none focus:ring-2 focus:ring-[hsl(var(--coin-teal))]" />
+          {/* once (then before and after) or every day (a 2-week test) */}
+          <div className="grid grid-cols-2 gap-2">
+            {(["once", "daily"] as const).map((kd) => (
+              <button key={kd} type="button" onClick={() => { haptics.tap(); setKind(kd); }} aria-pressed={kind === kd}
+                className={cn("h-11 rounded-full text-[15px] font-bold", kind === kd ? "surface pick-on" : "bg-foreground/[0.05] text-muted-foreground")}>
+                {t(kd === "once" ? "rules.kindOnce" : "rules.kindDaily")}
+              </button>
+            ))}
+          </div>
+          <p className="text-[13px] font-semibold leading-snug text-muted-foreground">{t(kind === "once" ? "rules.kindOnceLine" : "rules.kindDailyLine")}</p>
         </div>
-        <RuleChips hard={tracker.problemWhen !== "no"} value={ruleKeyOf(rule)} customLabel={t("rules.custom", { n: rule.threshold, count: rule.periodDays })}
-          onChange={(_, r) => setRule(r)} plan={plan} onPlan={setPlan} showPlan={false} />
-        {lit && (
-          <button type="button" onClick={did}
-            className="quiet-btn h-12 w-full text-[16px]">
-            <RotateCcw className="h-5 w-5" strokeWidth={2.4} /> {t("rules.didIt")}
-          </button>
+        {limitOpen ? (
+          <RuleChips hard={tracker.problemWhen !== "no"} value={ruleKeyOf(rule)} customLabel={t("rules.custom", { n: rule.threshold, count: rule.periodDays })}
+            onChange={(_, r) => setRule(r)} plan={plan} onPlan={setPlan} showPlan={false} />
+        ) : (
+          <button type="button" onClick={() => { haptics.tap(); setLimitOpen(true); }} className="quiet-btn h-11 w-full text-[15px]">{t("rules.changeLimit")}</button>
         )}
-        <button type="button" onClick={close} className="raised-btn w-full justify-center">{t("common.done")}</button>
+        {lit && kind === "once" && (
+          <button type="button" onClick={did} className="raised-btn w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+        )}
+        {lit && kind === "daily" && (blocked
+          ? <p className="flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground"><FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />{blocked}</p>
+          : <button type="button" onClick={() => void tryNow()} className="raised-btn w-full justify-center"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("rules.tryDaily")}</button>)}
+        <button type="button" onClick={close} className={lit ? "quiet-btn h-12 w-full text-[16px]" : "raised-btn w-full justify-center"}>{t("common.close")}</button>
       </div>
     </BottomSheet>
   );

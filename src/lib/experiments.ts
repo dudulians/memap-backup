@@ -81,8 +81,12 @@ const save = (list: Experiment[]) => {
 const daysFrom = (from: string, to: string) =>
   Math.round((new Date(to + "T12:00:00").getTime() - new Date(from + "T12:00:00").getTime()) / 86_400_000);
 
-/** The test running now (started, not yet looked at), if any. */
+/** The test running now (started, not yet looked at), if any: the first of them. */
 export const currentExperiment = (): Experiment | null => getExperiments().find((x) => !x.reviewed) ?? null;
+/** Every test running now: one per island (Nov 7 2026: two changes for the same island at once and
+ *  you couldn't tell which helped; different islands run side by side). */
+export const runningExperiments = (): Experiment[] => getExperiments().filter((x) => !x.reviewed);
+export const testOnIsland = (island: string): Experiment | null => runningExperiments().find((x) => x.island === island) ?? null;
 /** 1-based day of the test today (8+ = the week is over). */
 export const experimentDay = (x: Experiment, today = isoLocal(new Date())) => daysFrom(x.start, today) + 1;
 export const experimentOver = (x: Experiment, today = isoLocal(new Date())) => experimentDay(x, today) > EXPERIMENT_DAYS;
@@ -110,7 +114,7 @@ export const startExperiment = async (island: string, change: string, question: 
   };
   await saveTrackers([...existing, tracker]);
   const x: Experiment = { id: tracker.id, island, trackerId: tracker.id, change, start: isoLocal(new Date()), ...(from ? { from } : {}) };
-  save([...getExperiments().filter((e) => e.reviewed), x]);
+  save([...getExperiments().filter((e) => e.reviewed || e.island !== island), x]);
   window.dispatchEvent(new Event("memap-settings-changed"));
   return x;
 };

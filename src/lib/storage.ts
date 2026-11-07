@@ -38,6 +38,55 @@ const ENTRIES_KEY = "memap_entries";
 //
 // Idempotent: second run sees the freshly-set advice already in the
 // current map → isKnownAdvice returns true → no-op.
+/** Library advice that was retired (Nov 7 2026: no tests, drugs or therapies by name). Only these
+ *  are refreshed to the current text; a plan she wrote herself is never touched. */
+const RETIRED_ADVICE = new Set<string>([
+    "Book a neurologist with my data",
+    "Записаться к неврологу с данными",
+    "See an osteopath or physiotherapist with my data",
+    "Записаться к остеопату или физиотерапевту с данными",
+    "Get bloodwork — iron, ferritin, B12, thyroid",
+    "Сдать кровь — железо, ферритин, B12, щитовидка",
+    "Get hormone bloodwork — testosterone, cortisol",
+    "Сдать кровь на гормоны — тестостерон, кортизол",
+    "Book an eye doctor and check screen time",
+    "Записаться к окулисту и проверить экранное время",
+    "Ask a neurologist about migraine prevention",
+    "Спросить невролога про профилактику мигрени",
+    "Book a physiotherapist with my data",
+    "Записаться к физиотерапевту с данными",
+    "Book a therapist who treats panic with CBT",
+    "Записаться к психотерапевту, который лечит панику методом КПТ",
+    "Ask a doctor about CBT for insomnia",
+    "Спросить врача про КПТ бессонницы",
+    "Ask a doctor to check for sleep apnoea",
+    "Попросить врача проверить на апноэ сна",
+    "Eat 2 kiwis a day for 4 weeks",
+    "4 недели съедать по 2 киви в день",
+    "Take psyllium every day for 4 weeks, with water",
+    "4 недели каждый день принимать псиллиум, запивая водой",
+    "Ask a doctor or dietitian about a low-FODMAP trial",
+    "Спросить врача или диетолога про пробную диету low-FODMAP",
+    "Do pelvic floor squeezes 3 times a day for 3 months",
+    "3 месяца делать упражнения для тазового дна 3 раза в день",
+    "Ask a GP to check heavy periods and iron",
+    "Попросить врача проверить обильные месячные и уровень железа",
+    "Ask a doctor about HRT or CBT for hot flushes",
+    "Спросить врача про ЗГТ или КПТ от приливов",
+    "Use one acne treatment for 12 weeks before judging it",
+    "12 недель пользоваться одним средством от прыщей и только потом оценивать",
+    "Ask a dentist about a night guard",
+    "Спросить стоматолога про ночную капу",
+    "Ask a pharmacist or doctor about a urine infection",
+    "Спросить фармацевта или врача, нет ли цистита",
+    "Try bladder training for 6 weeks",
+    "6 недель тренировать мочевой пузырь",
+    "Put on a strong antiperspirant at bedtime for 2 weeks",
+    "Две недели наносить сильный антиперспирант на ночь",
+    "Ask a doctor about tinnitus support and CBT",
+    "Спросить врача про помощь при шуме в ушах и КПТ"
+  ]);
+
 const migrateLegacyAdvice = async (): Promise<void> => {
   const trackers = await getTrackers();
   if (trackers.length === 0) return;
@@ -46,6 +95,8 @@ const migrateLegacyAdvice = async (): Promise<void> => {
     if (!tr.adviceAboveThreshold) return tr;
     if (!isKnownLibraryTitle(tr.title)) return tr;
     if (isKnownAdvice(tr.adviceAboveThreshold)) return tr;
+    // her own plan stays: only retired library advice is refreshed (found Nov 7 2026)
+    if (!RETIRED_ADVICE.has(tr.adviceAboveThreshold.trim())) return tr;
     const tplId = matchTemplateIdByTitle(tr.title);
     if (!tplId) return tr;
     // Find canonical template

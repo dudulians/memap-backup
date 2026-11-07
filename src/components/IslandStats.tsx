@@ -23,7 +23,7 @@ import { GROWTH_AT, ITEMS, growthLand, homeWord, itemProgress, keptTreasures, ma
 import { playSparkle } from "@/lib/feedback";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, testOnIsland } from "@/lib/experiments";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
 
@@ -166,7 +166,8 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
     .filter((x) => x.both > 0)
     .sort((p, q) => q.both - p.both)
     .slice(0, 1);
-  const test = currentExperiment();
+  // this island's own test: tests on other islands run side by side (Nov 7 2026)
+  const test = testOnIsland(island.id);
   const view = (v: IslandView, icon: React.ReactNode, label: string) => (
     <button type="button" onClick={() => { haptics.tap(); onView(v); }}
       className="surface flex h-[68px] flex-col items-center justify-center gap-1 rounded-[18px] text-[14px] font-semibold active:scale-[0.98] transition-transform">

@@ -25,6 +25,8 @@ export interface Tracker {
   createdAt: string;
   archived?: boolean;
   sortIndex?: number;
+  /** an action point's plan: done once (then before/after) or a daily 2-week test (Nov 7 2026) */
+  planKind?: "once" | "daily";
   cycleStartDate?: string;    // YYYY-MM-DD — start of current observation window
   cycles?: ReflectionCycle[]; // history of completed cycles
   // Marker for "play round" cards — created by random-play mode and shown

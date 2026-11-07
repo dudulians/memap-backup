@@ -78,7 +78,7 @@ export type ItemId = "balloon" | "camera" | "signpost" | "books" | "sparkles" | 
   | "moon" | "chest" | "zen" | "lavender" | "house" | "tent" | "suitcase";
 export const ITEMS: { id: ItemId; pic: string }[] = [
   { id: "balloon", pic: "hot_air_balloon" }, // a first full week
-  { id: "camera", pic: "camera" }, // a first link found
+  { id: "camera", pic: "camera" }, // 3 evenings in a row (Nov 7 2026: never a gift for a link — "орали на ребёнка → камера")
   { id: "signpost", pic: "wooden_signpost" }, // a new island opened
   { id: "books", pic: "books" }, // 10 notes
   { id: "sparkles", pic: "sparkles" }, // a first hunch checked
@@ -120,7 +120,7 @@ export interface WorldFacts {
 export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
   switch (id) {
     case "balloon": return f.days >= 7;
-    case "camera": return f.links >= 1;
+    case "camera": return f.streak >= 3;
     case "signpost": return f.ownIslands >= 1;
     case "books": return f.notes >= 10;
     case "sparkles": return f.hunches >= 1;
@@ -179,7 +179,7 @@ export const markTreasuresSeen = (f: WorldFacts): void => {
 export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
   switch (id) {
     case "balloon": return [Math.min(f.days, 7), 7];
-    case "camera": return [Math.min(f.links, 1), 1];
+    case "camera": return [Math.min(f.streak, 3), 3];
     case "signpost": return [Math.min(f.ownIslands, 1), 1];
     case "books": return [Math.min(f.notes, 10), 10];
     case "sparkles": return [Math.min(f.hunches, 1), 1];
