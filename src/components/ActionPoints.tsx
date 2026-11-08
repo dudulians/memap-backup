@@ -26,7 +26,7 @@ import { islandOf, mapPic, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
 import i18nInstance from "@/lib/i18n";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
@@ -104,7 +104,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   /** opens the week's test outside this sheet (the Map); else it opens here */
   onTry?: (x: TryAction) => void;
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const name = useName();
   const [sheet, setSheet] = useState<{ id: string; mode: "show" | "change" } | null>(null);
   const [trying, setTrying] = useState<TryAction | null>(null);
@@ -184,7 +184,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         const plan = planOf(tr);
         // several tests may run at once (Nov 8 2026); only this plan's own running test replaces the button
         const ownTest = tests.find((x) => x.from === tr.id);
-        const blocked = ownTest && !experimentOver(ownTest) ? t("rules.testing", { k: experimentDay(ownTest), count: EXPERIMENT_DAYS }) : ownTest ? "done" : null;
+        // kept going after its two weeks: says so instead of "I'll try" (Nov 8 2026)
+        const keptOne = ownTest ? null : keptExperiments().find((x) => x.from === tr.id);
+        const blocked = ownTest && !experimentOver(ownTest) ? t("rules.testing", { k: experimentDay(ownTest), count: EXPERIMENT_DAYS }) : ownTest ? "done"
+          : keptOne?.reviewed ? t("experiment.keptSince", { date: new Date(keptOne.reviewed + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" }) }) : null;
         const once = planKindOf(tr) === "once";
         return (
           <div key={tr.id} className="surface rounded-[22px] px-4 pb-4 pt-4">
@@ -366,7 +369,7 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
 
 /** A running test (Nov 8 2026, her note: "как поменять время уведомлений на тесты — непонятно, они
  *  нигде не отжимаются"): its name, its day, the evening question, the week's goal, the reminder. */
-const TestSheet = ({ test, trackers, entries, line, onClose }: { test: Experiment; trackers: Tracker[]; entries: TrackerEntry[]; line: string; onClose: () => void }) => {
+const TestSheet = ({ test, trackers, entries, line, onClose, onStop }: { test: Experiment; trackers: Tracker[]; entries: TrackerEntry[]; line: string; onClose: () => void; onStop?: () => void }) => {
   const { t } = useTranslation();
   const tr = trackers.find((x) => x.id === test.trackerId);
   const [on, setOn] = useState(!!test.remind);
@@ -401,6 +404,8 @@ const TestSheet = ({ test, trackers, entries, line, onClose }: { test: Experimen
           </button>
         </div>
         <button type="button" onClick={onClose} className="raised-btn mt-6 w-full justify-center">{t("common.close")}</button>
+        {/* a kept one stops here: no more question and no more reminder */}
+        {onStop && <button type="button" onClick={() => { haptics.tap(); onStop(); }} className="mt-1 h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("experiment.stopKept")}</button>}
       </div>
     </BottomSheet>
   );
@@ -410,11 +415,18 @@ const TestSheet = ({ test, trackers, entries, line, onClose }: { test: Experimen
  *  the tests running now (each opens with its reminder), a finished one's result, the ones tried
  *  before with what they showed, and "Test one change". */
 export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: Tracker[]; entries: TrackerEntry[]; onResult: (x: Experiment) => void; onPick: () => void }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<Experiment | null>(null);
+  const [, setTick] = useState(0);
   const running = runningExperiments();
   const tried = [...finishedExperiments()].reverse();
-  const lineOf = (x: Experiment) => t("rules.testing", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS });
+  const since = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" });
+  const lineOf = (x: Experiment) => (x.reviewed && x.kept ? t("experiment.keptSince", { date: since(x.reviewed) }) : t("rules.testing", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }));
+  const stop = async (x: Experiment) => {
+    await stopKept(x.id);
+    try { await scheduleNotification(getNotificationSettings()); } catch { /* next start */ }
+    setOpen(null); setTick((k) => k + 1);
+  };
   return (
     <div className="space-y-2.5">
       {running.map((x) => experimentOver(x) ? (
@@ -446,15 +458,22 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
       <button type="button" onClick={() => { haptics.tap(); onPick(); }} className="raised-btn w-full justify-center gap-2">
         <FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("experiment.title")}
       </button>
-      {tried.length > 0 && (
-        <>
-          <p className="px-1 pt-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("helps.tried")}</p>
+      {/* kept going first, under their own name; then the ones tried before */}
+      {[["helps.keeping", tried.filter((x) => x.kept)], ["helps.tried", tried.filter((x) => !x.kept)]].filter(([, list]) => (list as Experiment[]).length > 0).map(([head, list]) => (
+        <div key={head as string}>
+          <p className="px-1 pb-2.5 pt-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t(head as string)}</p>
           <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
-            {tried.map((x) => {
+            {(list as Experiment[]).map((x) => {
               const r = experimentResult(x, trackers, entries);
               return (
-                <div key={x.id} className="px-4 py-3">
+                <div key={x.id} className="px-4 py-3" {...(x.kept ? { role: "button", tabIndex: 0, onClick: () => { haptics.tap(); setOpen(x); } } : {})}>
                   <p className="text-[16px] font-bold leading-snug">{testNameOf(x.change)}</p>
+                  {/* kept going: since when, and its reminder (opens to change or stop it) */}
+                  {x.kept && (
+                    <p className="mt-0.5 flex items-center gap-1 text-[14px] font-bold" style={{ color: TEAL }}>
+                      {lineOf(x)}<span className="font-semibold text-muted-foreground">{" · "}</span><Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{x.remind ?? t("experiment.noRemind")}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-[14px] font-semibold leading-snug text-muted-foreground">
                     {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] }) : t("helps.noData")}
                   </p>
@@ -464,9 +483,9 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
               );
             })}
           </div>
-        </>
-      )}
-      {open && <TestSheet test={open} trackers={trackers} entries={entries} line={lineOf(open)} onClose={() => setOpen(null)} />}
+        </div>
+      ))}
+      {open && <TestSheet test={open} trackers={trackers} entries={entries} line={lineOf(open)} onClose={() => setOpen(null)} onStop={open.reviewed && open.kept ? () => void stop(open) : undefined} />}
     </div>
   );
 };

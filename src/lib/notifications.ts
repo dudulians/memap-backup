@@ -4,7 +4,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
-import { runningExperiments, EXPERIMENT_DAYS, fixDefaultReminders, smartRemindTime, type Experiment } from "@/lib/experiments";
+import { keptExperiments, runningExperiments, EXPERIMENT_DAYS, fixDefaultReminders, smartRemindTime, type Experiment } from "@/lib/experiments";
 import { ideaOf, testNameOf, testTodayOf } from "@/lib/testWords";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
@@ -159,6 +159,10 @@ export const cancelNotification = async (): Promise<void> => {
       ids.push({ id: dateToNotificationId(d) + TRY_ID_OFFSET });
     }
     await LocalNotifications.cancel({ notifications: ids });
+    // every test reminder in any slot (Nov 8 2026: a test stopped on "No" kept its pushes in slots 2+)
+    const pending = await LocalNotifications.getPending();
+    const tries = pending.notifications.filter((n) => n.id >= TRY_ID_OFFSET).map((n) => ({ id: n.id }));
+    if (tries.length > 0) await LocalNotifications.cancel({ notifications: tries });
   } catch (error) {
     console.error("Notification cancel error", error);
   }
@@ -345,6 +349,23 @@ export const tryPlan = (): { id: number; title: string; body: string; schedule: 
       const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now()) continue;
       out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, ...tryWords(x, k), schedule: { at, allowWhileIdle: true } });
+    }
+  });
+  // kept going after the two weeks ("Продолжим в том же духе?" — yes): the reminder goes on, a week
+  // ahead at a time (rebuilt on every start and after every answer)
+  keptExperiments().filter((x) => !!x.remind).slice(0, 6).forEach((x, i) => {
+    const [h, m] = x.remind!.split(":").map(Number);
+    for (let d = 0; d < 7; d++) {
+      const at = new Date(); at.setDate(at.getDate() + d); at.setHours(h || 0, m || 0, 0, 0);
+      if (at.getTime() <= Date.now()) continue;
+      const body = i18n.t(`notifications.try.keep${(at.getDate() % 4) + 1}`);
+      const today = testTodayOf(x.change);
+      out.push({
+        id: dateToNotificationId(at) + TRY_ID_OFFSET + (8 + i) * 50_000_000,
+        title: today ?? i18n.t("notifications.try.ownTitle"),
+        body: today ? body : `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${body}`,
+        schedule: { at, allowWhileIdle: true },
+      });
     }
   });
   return out;

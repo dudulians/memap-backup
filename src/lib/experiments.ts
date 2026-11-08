@@ -213,15 +213,32 @@ export const weekDone = (x: Experiment, entries: TrackerEntry[], today = new Dat
   return entries.filter((e) => e.trackerId === x.trackerId && e.value === true && e.date >= from && e.date <= to).length;
 };
 
-/** She looked at the result: the test is over; keep the question or stop it. */
+/** Its own test question goes to the archive (answers stay); a weekly goal's question is hers and stays. */
+const archiveTestQuestion = async (x?: Experiment) => {
+  if (!x || x.same) return;
+  const ts = await getTrackers();
+  await saveTrackers(ts.map((t) => (t.id === x.trackerId ? { ...t, archived: true } : t)));
+  window.dispatchEvent(new Event("memap-settings-changed"));
+};
+
+/** She looked at the result and answered "Keep going like this?" (Nov 8 2026): yes keeps the question
+ *  and the reminder going; no ends both. */
 export const finishExperiment = async (id: string, keep: boolean) => {
-  const list = getExperiments().map((x) => (x.id === id ? { ...x, reviewed: isoLocal(new Date()), kept: keep } : x));
+  const list = getExperiments().map((x) => {
+    if (x.id !== id) return x;
+    const { remind, ...rest } = x;
+    return { ...rest, reviewed: isoLocal(new Date()), kept: keep, ...(keep && remind ? { remind } : {}) };
+  });
   save(list);
-  const x = list.find((e) => e.id === id);
-  // a weekly goal watched her own question: that question stays
-  if (!keep && !x?.same) {
-    const ts = await getTrackers();
-    await saveTrackers(ts.map((t) => (t.id === x?.trackerId ? { ...t, archived: true } : t)));
-    window.dispatchEvent(new Event("memap-settings-changed"));
-  }
+  if (!keep) await archiveTestQuestion(list.find((e) => e.id === id));
+};
+
+/** The ones she kept going after the two weeks. */
+export const keptExperiments = (): Experiment[] => getExperiments().filter((x) => !!x.reviewed && !!x.kept);
+
+/** Stop a kept one later: no more question (unless it's hers) and no more reminder. */
+export const stopKept = async (id: string) => {
+  const list = getExperiments().map((x) => { if (x.id !== id) return x; const { remind: _r, ...rest } = x; return { ...rest, kept: false }; });
+  save(list);
+  await archiveTestQuestion(list.find((e) => e.id === id));
 };

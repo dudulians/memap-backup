@@ -87,6 +87,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     if (!experiment) return;
     haptics.success();
     await finishExperiment(experiment.id, keep);
+    // the reminder goes on, or stops, right away
+    try { await scheduleNotification(getNotificationSettings()); } catch { /* next start */ }
     onClose();
   };
 
@@ -201,11 +203,18 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               <img src={mapPic("orange_tree")} alt="" width={64} height={56} className="object-contain" />
               <p className="text-[17px] font-semibold leading-snug">{t("experiment.garden", { island: islandName(t, experiment.island as IslandId) })}</p>
             </div>
-            <div className="mt-auto space-y-2 pt-8">
-              <Pressable tone="teal" haptic="none" onClick={() => finish(true)} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-                {t("experiment.keep")}
+            {/* "Keep going like this?" (her note, Nov 8 2026): yes keeps the question and the reminder */}
+            <div className="mt-auto pt-8">
+              <p className="text-[22px] font-bold leading-tight">{t("experiment.keepAsk")}</p>
+              <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">
+                {experiment.perWeek
+                  ? t(experiment.remind ? "experiment.keepGoalLine" : "experiment.keepGoalLineNoRemind", { n: experiment.perWeek, time: experiment.remind })
+                  : t(experiment.remind ? "experiment.keepLine" : "experiment.keepLineNoRemind", { time: experiment.remind })}
+              </p>
+              <Pressable tone="teal" haptic="none" onClick={() => finish(true)} className="mt-4 h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+                {t("experiment.keepYes")}
               </Pressable>
-              <button type="button" onClick={() => finish(false)} className="h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("experiment.stop")}</button>
+              <button type="button" onClick={() => finish(false)} className="mt-1 h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("experiment.keepNo")}</button>
             </div>
           </>
         )}
