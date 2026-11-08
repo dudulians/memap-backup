@@ -37,7 +37,7 @@ export const S: Record<string, [string, string, string, string]> = {
   "migraine": ["you ~get a migraine", "you ~have no migraine", "у тебя мигрень|~бывает мигрень", "мигрени ~нет"],
   "back-or-neck-pain": ["your back ~hurts", "your back ~is fine", "~болит спина", "спина ~не болит"],
   "stomach-issues": ["your stomach ~hurts", "your stomach ~is fine", "~болит живот", "живот ~не болит"],
-  "felt-nauseous": ["you ~feel nauseous", "you ~don't feel nauseous", "~тошнит", "~не тошнит"],
+  "felt-nauseous": ["you ~feel nauseous", "you ~don't feel nauseous", "тебя ~тошнит", "тебя ~не тошнит"],
   "joint-pain": ["your joints ~hurt", "your joints ~don't hurt", "~болят суставы", "суставы ~не болят"],
   "slept-enough": ["you ~sleep 7+ hours", "you ~sleep under 7 hours", "ты ~спишь 7+ часов", "ты ~спишь меньше 7 часов"],
   "woke-at-night": ["you ~wake up at night", "you ~sleep through the night", "ты ~просыпаешься ночью", "ты ~спишь без пробуждений"],

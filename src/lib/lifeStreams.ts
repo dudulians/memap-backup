@@ -208,8 +208,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 30,
         threshold: 3,
         problemWhen: "yes",
-        adviceAboveThreshold: "Name how those words landed — be specific with my partner",
-        adviceAboveThresholdRu: "Назвать конкретно какие слова ранили — поделиться с партнёром",
+        // her note, Nov 8 2026: the exact words, said to the partner (a talk: "once")
+        adviceAboveThreshold: "Talk to your partner and say which words hurt you",
+        adviceAboveThresholdRu: "Поговорить с партнёром и сказать, какие именно слова тебя ранят",
       },
       {
         id: "called-parent",
@@ -557,8 +558,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 30,
         threshold: 5,
         problemWhen: "yes",
-        adviceAboveThreshold: "Log time of day and what was happening just before",
-        adviceAboveThresholdRu: "Записывать время и что происходило перед этим",
+        // her note, Nov 8 2026: "давай попробуем отслеживать, что за тошнотой" (its test: experiment.idea.nauseaLog)
+        adviceAboveThreshold: "Let's track what comes before the nausea",
+        adviceAboveThresholdRu: "Давай попробуем отследить, что бывает перед тошнотой",
       },
       {
         id: "joint-pain",

@@ -45,7 +45,7 @@ export const smartRemindTime = (idea: string | null, text = ""): string => {
   const at: Record<string, string> = { bed23: "22:00", phoneAway: "21:30", noNewsEvening: "20:30", noMailEvening: "19:00", stop19: "18:30", noSweetsEvening: "19:30",
     noCoffee14: "13:30", water: "10:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00",
     threeLines: "20:30", talkNoPhones: "19:00", thankYou: "18:00", walkTogether: "17:30", playTogether: "17:30", extraWalk: "17:00", playTime: "18:00",
-    sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00" };
+    sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00", nauseaLog: "12:00" };
   if (idea && at[idea]) return at[idea];
   const s = text.toLowerCase();
   // eating or drinking hours before bed: early evening; anything else about bed: an hour before it
@@ -89,6 +89,8 @@ export const IDEAS: Record<string, string[]> = {
   other: ["walk20", "bed23", "phoneAway"],
 };
 export const ideasFor = (island: string): string[] => IDEAS[island] ?? IDEAS.other;
+/** Plans with their own test words (a question and today's line) that aren't island ideas (Nov 8 2026). */
+export const PLAN_IDEAS = ["nauseaLog"];
 
 export const getExperiments = (): Experiment[] => {
   try {

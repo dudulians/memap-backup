@@ -10,10 +10,10 @@
 //                 or turn it off.
 // No "all calm" before there is data: "Your world is still taking shape"
 // until a week of evenings. Gold, never red; no alarms.
-import { answerPhrase, cap } from "@/lib/answerPhrases";
+import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, Check, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
+import { Bell, Check, ChevronDown, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
 import { cardQuestion } from "@/lib/cardText";
 import { ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
@@ -107,6 +107,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const { t, i18n } = useTranslation();
   const name = useName();
   const [sheet, setSheet] = useState<{ id: string; mode: "show" | "change" } | null>(null);
+  // the cards opened to their details
+  const [openCards, setOpenCards] = useState<string[]>([]);
   const [trying, setTrying] = useState<TryAction | null>(null);
   const rows = trackers
     .filter((tr) => !tr.archived && tr.threshold > 0)
@@ -189,16 +191,38 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         const blocked = ownTest && !experimentOver(ownTest) ? t("rules.testing", { k: experimentDay(ownTest), count: EXPERIMENT_DAYS }) : ownTest ? "done"
           : keptOne?.reviewed ? t("experiment.keptSince", { date: new Date(keptOne.reviewed + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" }) }) : null;
         const once = planKindOf(tr) === "once";
+        const opened = openCards.includes(tr.id);
+        const hardYes = tr.problemWhen === "yes";
         return (
-          <div key={tr.id} className="surface rounded-[22px] px-4 pb-4 pt-4">
-            <div className="flex items-start gap-3">
+          <div key={tr.id} className="surface rounded-[22px]">
+            {/* the advice and how often, in words; the whole top opens the details (her note, Nov 8 2026:
+                "вместо вопроса — ты часто… судя по ответам… и можно посмотреть детали… клацнуть на весь блок") */}
+            <button type="button" aria-expanded={opened} onClick={() => { haptics.tap(); setOpenCards((l) => (l.includes(tr.id) ? l.filter((x) => x !== tr.id) : [...l, tr.id])); }}
+              className="flex w-full items-start gap-3 px-4 pb-4 pt-4 text-left">
               <img src={mapPic("lighthouse")} alt="" width={40} height={46} className="h-11 w-10 shrink-0 object-contain drop-shadow-[0_0_8px_hsl(44_96%_60%/0.7)]" />
-              <div className="min-w-0 flex-1">
-                <p className="text-[20px] font-bold leading-snug">{plan || name(tr)}</p>
-                <p className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{cardQuestion(tr)}</p>
-                <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} since={countedSince(tr)} className="mt-2" />
-              </div>
-            </div>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[20px] font-bold leading-snug">{plan || name(tr)}</span>
+                <span className="mt-1 block text-[15px] font-semibold leading-snug text-muted-foreground">
+                  {t("rules.oftenLine", { what: answerClause(t, tr, hardYes, "result", t("rules.often")), count: k, days: tr.periodDays })}
+                </span>
+                <span className="mt-2 inline-flex items-center gap-1 text-[15px] font-bold" style={{ color: TEAL }}>
+                  {t(opened ? "rules.lessDetails" : "rules.details")}
+                  <ChevronDown className={cn("h-4 w-4 transition-transform", opened && "rotate-180")} strokeWidth={2.6} />
+                </span>
+              </span>
+            </button>
+            {opened && (
+            <div className="px-4 pb-4 animate-fade-in">
+            <p className="text-[14px] font-semibold text-muted-foreground">{t("experiment.everyEvening")}</p>
+            <p className="mt-0.5 text-[17px] font-bold leading-snug">{cardQuestion(tr)}</p>
+            <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={hardYes} since={countedSince(tr)} className="mt-3" />
+            {/* what MeMap suggests: a test with its evening question, or a one-off step */}
+            {plan && (
+              <>
+                <p className="mt-4 text-[14px] font-semibold text-muted-foreground">{t("rules.suggests")}</p>
+                <p className="mt-0.5 text-[16px] font-bold leading-snug">{once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>
+              </>
+            )}
             {!plan ? (
               <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.noPlan")}</button>
             ) : once ? (
@@ -222,6 +246,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
             </div>
+            </div>
+            )}
           </div>
         );
       })}
