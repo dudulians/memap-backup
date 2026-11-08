@@ -186,15 +186,19 @@ const countsOf = (data: Data, q: Tracker) => {
   return { v, ans, yes: ans.filter((d) => v.get(d) === true).length, hard: neutralQ(q) ? 0 : ans.filter((d) => isHardAnswer(q, v.get(d))).length };
 };
 const capFirst = (x: string) => x.charAt(0).toLocaleUpperCase() + x.slice(1);
+/** What hurt or bothered most, then the good things most often missing: "In short" opens with these,
+ *  and the full report draws their calendars. */
+const hardTops = (data: Data) => {
+  const rows = data.qs.filter((q) => !neutralQ(q)).map((q) => ({ q, ...countsOf(data, q) }));
+  const byHard = (x: typeof rows[number], y: typeof rows[number]) => y.hard - x.hard || y.hard / y.ans.length - x.hard / x.ans.length;
+  return { rows, bad: rows.filter((r) => r.hard > 0 && r.q.problemWhen === "yes").sort(byHard), missed: rows.filter((r) => r.hard > 0 && r.q.problemWhen !== "yes").sort(byHard) };
+};
 /** "In short": what the numbers say, in plain sentences — the most frequent hard things, whether they
  *  came more or less often later, the longest stretch without the first one, and something good. */
 const findings = (data: Data, max: number): string[] => {
   const t = i18n.t.bind(i18n), out: string[] = [];
-  const rows = data.qs.filter((q) => !neutralQ(q)).map((q) => ({ q, ...countsOf(data, q) }));
   // what hurt or bothered first (a doctor reads symptoms first), then the good things that were missing
-  const byHard = (x: typeof rows[number], y: typeof rows[number]) => y.hard - x.hard || y.hard / y.ans.length - x.hard / x.ans.length;
-  const bad = rows.filter((r) => r.hard > 0 && r.q.problemWhen === "yes").sort(byHard);
-  const missed = rows.filter((r) => r.hard > 0 && r.q.problemWhen !== "yes").sort(byHard);
+  const { rows, bad, missed } = hardTops(data);
   const tops = [...bad, ...missed].slice(0, 3);
   if (!tops.length && rows.length) out.push(t("report.find.none"));
   const whatOf = (r: typeof rows[number]) => answerPhrase(t, r.q, r.q.problemWhen === "yes");
@@ -297,6 +301,64 @@ const linksList = (p: Pages, data: Data, max: number, pro: boolean) => {
     p.y += 42;
   }
   p.room(50); p.text(t("link.honest"), 20, 500, SOFT); p.y += 10;
+};
+
+/** One question's legend: its real answers in their colours. */
+const answerLegend = (p: Pages, q: Tracker) => {
+  const t = i18n.t.bind(i18n);
+  legend(p, [[tone(q, true), t("report.yes")], [tone(q, false), t("report.no")], [NONE, t("report.none")]]);
+};
+
+// --- a month calendar ------------------------------------------------------------
+type Mark = { fill: string | null; out?: boolean; icon?: HTMLImageElement | null };
+const monthsOf = (days: string[]) => [...new Set(days.map((d) => d.slice(0, 7)))].map((k) => ({ y: +k.slice(0, 4), m: +k.slice(5, 7) - 1 }));
+/** One month, Monday first, at (x, y), w wide. Returns its height. */
+const drawMonth = (g: CanvasRenderingContext2D, x: number, y: number, w: number, ym: { y: number; m: number }, mark: (iso: string) => Mark): number => {
+  const cell = w / 7;
+  const name = new Date(ym.y, ym.m, 1).toLocaleDateString(locale(), { month: "long", year: "numeric" }).replace(" г.", "");
+  g.font = `800 ${Math.round(Math.min(32, cell * 0.5))}px ${FONT}`; g.fillStyle = INK; g.textAlign = "left";
+  g.fillText(name.charAt(0).toUpperCase() + name.slice(1), x, y + cell * 0.45);
+  g.font = `600 ${Math.round(Math.min(21, cell * 0.32))}px ${FONT}`; g.fillStyle = SOFT; g.textAlign = "center";
+  for (let i = 0; i < 7; i++) {
+    const wd = new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "short" }).replace(".", "");
+    g.fillText(wd.slice(0, 2), x + cell * i + cell / 2, y + cell * 1.05);
+  }
+  const startDow = (new Date(ym.y, ym.m, 1).getDay() + 6) % 7;
+  const daysIn = new Date(ym.y, ym.m + 1, 0).getDate();
+  const top = y + cell * 1.3;
+  let rows = 0;
+  for (let d = 1; d <= daysIn; d++) {
+    const idx = startDow + d - 1, row = Math.floor(idx / 7), col = idx % 7;
+    rows = Math.max(rows, row + 1);
+    const cx = x + col * cell + cell / 2, cy = top + row * cell + cell / 2;
+    const mk = mark(isoLocal(new Date(ym.y, ym.m, d))), r = cell * 0.38;
+    const num = Math.round(Math.min(23, cell * 0.34));
+    g.textAlign = "center"; g.textBaseline = "middle";
+    if (mk.fill) {
+      g.fillStyle = mk.fill; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+      g.font = `700 ${num}px ${FONT}`; g.fillStyle = toneInk(mk.fill); g.fillText(String(d), cx, cy + 1);
+    } else {
+      g.font = `500 ${num}px ${FONT}`; g.fillStyle = mk.out ? "#dfe1e8" : FAINT; g.fillText(String(d), cx, cy + 1);
+    }
+    if (mk.icon) { const s = cell * 0.6; g.drawImage(mk.icon, cx + r * 0.2, cy - r - s * 0.45, s, s * (mk.icon.height / mk.icon.width)); }
+    g.textBaseline = "alphabetic";
+  }
+  g.textAlign = "left";
+  return cell * 1.3 + rows * cell;
+};
+/** All months of the period, up to three across, wrapping. */
+const drawCalendar = (p: Pages, data: Data, q: Tracker, icons?: Map<string, HTMLImageElement | null>) => {
+  const v = data.vals.get(q.id) ?? new Map();
+  const mark = (iso: string): Mark => iso < data.first || iso > data.last ? { fill: null, out: true } : { fill: v.has(iso) ? tone(q, v.get(iso)) : null, icon: icons?.get(iso) };
+  const months = monthsOf(data.days);
+  const cols = Math.min(3, months.length), gap = 50;
+  const w = Math.min(cols === 1 ? 620 : 9999, (SPAN - gap * (cols - 1)) / cols);
+  for (let i = 0; i < months.length; i += cols) {
+    p.room((w / 7) * 7.6 + 20);
+    let h = 0;
+    months.slice(i, i + cols).forEach((ym, j) => { h = Math.max(h, drawMonth(p.g, M + j * (w + gap), p.y, w, ym, mark)); });
+    p.y += h + 30;
+  }
 };
 
 const footers = (p: Pages, text: string) => {
@@ -423,6 +485,18 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
   for (const q of data.qs) {
     if (islandOf(q) !== isle) { isle = islandOf(q); p.room(130); p.y += 58; p.text(islandName(t, isle), 24, 800, INK); p.y += 2; }
     statRow(p, data, q, true);
+  }
+
+  // a calendar for each of what came up most (up to 3), the days by colour; in hers, treasures on their days
+  const icons = new Map<string, HTMLImageElement | null>();
+  if (me) { const kept = keptTreasures(); for (const it of ITEMS) { const d = kept[it.id]; if (d && d >= data.first && d <= data.last && !icons.has(d)) icons.set(d, await load(mapPicFor(it.pic, false))); } }
+  const calQs = (() => { const h = hardTops(data); return [...h.bad, ...h.missed].slice(0, 3).map((r) => r.q); })();
+  for (const [i, q] of calQs.entries()) {
+    // a calendar title never stays alone at the bottom of a page: room for its first row of months
+    p.heading(t("report.pro.calendar", { q: title(q) }), 560);
+    answerLegend(p, q); p.y += 34;
+    drawCalendar(p, data, q, me && i === 0 ? icons : undefined);
+    if (me && i === 0 && icons.size) { p.room(40); p.text(t("report.me.treasureDays"), 21, 500, SOFT); p.y += 10; }
   }
 
   // her islands (hers only)
