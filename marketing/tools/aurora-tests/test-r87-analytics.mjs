@@ -32,25 +32,12 @@ await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-you")));
 await hide(); await p.waitForTimeout(300);
 out.leftYou = logs.filter((l) => l.includes("app_left")).pop() ?? "NONE";
 await p.keyboard.press("Escape"); await p.waitForTimeout(800);
-// "Where did you hear about MeMap?" — on "Your world has begun", the end of onboarding
-await p.evaluate(async () => { const d = new Date(); const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const st = await import("/src/lib/storage.ts"); const T = await st.getTrackers(); const E = await st.getEntries(); await st.saveEntries([...E, { id: "today1", trackerId: T[0].id, date: iso, value: true }]); window.dispatchEvent(new CustomEvent("memap-world-begun", { detail: { date: iso } })); });
-await p.waitForTimeout(1200);
-out.cardShown = await p.getByText("Where did you hear about MeMap?").count();
-// the reminder sheet comes up after a moment: close it first
-await p.waitForTimeout(1200); await p.getByRole("button", { name: /Not now/i }).first().click().catch(() => {}); await p.waitForTimeout(500);
-await p.screenshot({ path: `${D}/01-source-on-begun.png` });
-if (out.cardShown) await p.getByRole("button", { name: "Instagram" }).first().click();
-await p.waitForTimeout(500);
-await p.screenshot({ path: `${D}/02-source-picked.png` });
-out.source = await p.evaluate(() => localStorage.getItem("memap_source"));
-out.sourceLog = logs.filter((l) => l.includes("source_answered")).pop() ?? "NONE";
-out.cardGone = await p.getByText("Thank you!").count() === 1 ? 0 : 1;
 out.screens = logs.filter((l) => l.includes("screen_viewed")).slice(0, 3);
 const check = {
   noOnboardingScreenOnStart: out.onbOnStart === 0,
   leftOnToday: /app_left[\s\S]*tab:cards/.test(out.leftToday),
   leftOnYou: /app_left[\s\S]*"you"|screen: 'you'|you/.test(out.leftYou) && !/tab:cards/.test(out.leftYou),
-  sourceCard: out.cardShown === 1 && out.source === "instagram" && /instagram/.test(out.sourceLog) && out.cardGone === 0,
+  sourceCard: true, // the question was removed (her decision, Nov 8 2026)
 };
 console.log(JSON.stringify({ check, out, errs }, null, 1));
 await b.close();

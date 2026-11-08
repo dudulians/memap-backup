@@ -203,16 +203,7 @@ const en = {
       flag_other: "A flag comes in {{count}} more days",
     },
   },
-  source: {
-    title: "Where did you hear about MeMap?",
-    instagram: "Instagram",
-    tiktok: "TikTok",
-    appstore: "App Store search",
-    friend: "A friend",
-    reddit: "Reddit",
-    other: "Somewhere else",
-    thanks: "Thank you!",
-  },
+
   tipDay: {
     step: "Worth watching",
     open: "Read",
