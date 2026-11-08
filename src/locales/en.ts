@@ -422,6 +422,8 @@ const en = {
     details: "Details",
     lessDetails: "Hide details",
     suggests: "MeMap suggests:",
+    linkedHead: "In your days it comes with this:",
+    causeHead: "You can test the possible cause too:",
     suggestDaily: "Test it for {{count}} days. Every evening MeMap will ask: “{{q}}”",
     suggestOnce: "Do it once. Then MeMap compares the days before and after.",
     tryDaily: "Try it for 2 weeks",

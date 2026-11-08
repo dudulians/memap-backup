@@ -22,7 +22,9 @@ import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { ruleCount } from "@/lib/lighthouses";
 import { ruleKeyOf } from "@/lib/rules";
-import { islandOf, mapPic, type IslandId } from "@/lib/islands";
+import { isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
+import { computeCorrelations } from "@/lib/correlations";
+import { linkSentence, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
@@ -109,6 +111,15 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const [sheet, setSheet] = useState<{ id: string; mode: "show" | "change" } | null>(null);
   // the cards opened to their details
   const [openCards, setOpenCards] = useState<string[]>([]);
+  // her links, read the same way as the Links list: what comes before a lit question's hard answer
+  const links = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).map(linkOf), [trackers, entries]);
+  const of = useMemo(() => trackerLookup(trackers), [trackers]);
+  const linksInto = (tr: Tracker) => links.filter((l) => l.second.id === tr.id && l.secondHard === true && !isTestQuestion(l.first)).slice(0, 2);
+  /** a link's first question, when it's that question's hard answer and it has a plan: a cause to test */
+  const causeOf = (tr: Tracker) => linksInto(tr).map((l) => l.first).find((c, i) => {
+    const l = linksInto(tr)[i];
+    return !isNeutralQuestion(c) && !c.archived && !!c.adviceAboveThreshold && l.firstYes === (c.problemWhen === "yes");
+  }) ?? null;
   const [trying, setTrying] = useState<TryAction | null>(null);
   const rows = trackers
     .filter((tr) => !tr.archived && tr.threshold > 0)
@@ -246,6 +257,36 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
             </div>
+            {/* what comes with it in her days, and the possible cause to test (Nov 8 2026) */}
+            {linksInto(tr).length > 0 && (() => {
+              const cause = causeOf(tr);
+              const causeTest = cause ? tests.find((x) => x.from === cause.id) : undefined;
+              return (
+                <div className="mt-4 border-t border-foreground/[0.07] pt-4">
+                  <p className="text-[14px] font-semibold text-muted-foreground">{t("rules.linkedHead")}</p>
+                  {linksInto(tr).map((l) => (
+                    <p key={l.first.id} className="mt-1 text-[16px] font-bold leading-snug">
+                      {linkSentence(t, { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n }, of)}
+                    </p>
+                  ))}
+                  {cause && (
+                    <>
+                      <p className="mt-3 text-[14px] font-semibold text-muted-foreground">{t("rules.causeHead")}</p>
+                      <p className="mt-0.5 text-[17px] font-bold leading-snug">{planOf(cause)}</p>
+                      {causeTest && !experimentOver(causeTest) ? (
+                        <p className="mt-2.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
+                          <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />{t("rules.testing", { k: experimentDay(causeTest), count: EXPERIMENT_DAYS })}
+                        </p>
+                      ) : planKindOf(cause) === "once" ? (
+                        <button type="button" onClick={() => void didOnce(cause, ruleCount(cause, entries))} className="raised-btn is-small mt-3 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+                      ) : (
+                        <button type="button" onClick={() => tryIt(cause, ruleCount(cause, entries))} className="raised-btn is-small mt-3 w-full justify-center">{t("rules.tryDaily")}</button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             </div>
             )}
           </div>

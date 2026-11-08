@@ -488,6 +488,8 @@ const ru: Translation = {
     details: "Подробнее",
     lessDetails: "Свернуть",
     suggests: "MeMap предлагает:",
+    linkedHead: "В твоих днях это бывает вместе с этим:",
+    causeHead: "Можно проверить и возможную причину:",
     suggestDaily: "Проверить это {{count}} дней. Каждый вечер MeMap спросит: «{{q}}»",
     suggestOnce: "Сделать это один раз. Потом MeMap сравнит дни до и после.",
     doneOnce: "Сделано",
