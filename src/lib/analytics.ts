@@ -149,6 +149,7 @@ export type AnalyticsEvent =
   // action and its kind, never a question, an answer or a note.
   | "onboarding_screen" // screen: welcome, fork, pain, good, promise, door, own, curious, companion
   | "path_step_started" // kind of step, week number
+  | "observe_tip_added" // a "Worth watching" tip added its question
   | "end_card_action" // what she chose on "Done for today"
   | "tour_started" | "tour_stop_viewed" | "tour_finished"
   | "first_link_seen" | "island_grew_seen" | "treasure_earned"

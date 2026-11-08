@@ -124,7 +124,7 @@ export const WeekChest = ({
     ];
     const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
     const insight = c.insight
-      ? linkSentence(t, { first: c.insight.a, second: c.insight.b, firstYes: true, secondYes: true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n }, trackerLookup(trackers))
+      ? linkSentence(t, { first: c.insight.a, second: c.insight.b, firstYes: c.insight.firstYes ?? true, secondYes: c.insight.secondYes ?? true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n }, trackerLookup(trackers))
       : undefined;
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),

@@ -10,7 +10,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, mapPic, type Island, type Route } from "@/lib/islands";
-import { linkArrow, trackerLookup } from "@/lib/linkText";
+import { linkArrow, trackerLookup, linkSentence } from "@/lib/linkText";
 import { countedDays } from "@/lib/pathSteps";
 import { isoLocal } from "@/lib/doors";
 import { haptics } from "@/lib/haptics";
@@ -110,7 +110,7 @@ export const UpgradeInvite = () => {
           <div className="rounded-[20px] bg-white px-5 py-4 shadow-[0_10px_24px_-14px_rgba(16,42,56,0.25)] animate-fade-in [animation-delay:250ms]">
             <img src={mapPic("sailboat")} alt="" width={40} height={40} />
             <p className="mt-2 text-[18px] font-bold">
-              {route ? `${t("upgrade.firstLink")}: ${linkArrow(t, route, of)}` : t("upgrade.linksLater")}
+              {route ? `${t("upgrade.firstLink")}: ${linkSentence(t, route, of)}` : t("upgrade.linksLater")}
             </p>
           </div>
           <div className="rounded-[20px] bg-white px-5 py-4 shadow-[0_10px_24px_-14px_rgba(16,42,56,0.25)] animate-fade-in [animation-delay:500ms]">

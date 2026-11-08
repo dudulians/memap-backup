@@ -7,22 +7,21 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, strongestContextFact, type ContextFact } from "@/lib/doors";
 import { activeQuestions } from "@/lib/pathSteps";
 import { computeCorrelations } from "@/lib/correlations";
+import { linkOf, linkWorthShowing } from "@/lib/islands";
 
 export interface ChestStat { trackerId: string; door: boolean; k: number; n: number }
-export interface ChestInsight { a: string; b: string; nextDay: boolean; k: number; n: number; otherK: number; otherN: number }
+export interface ChestInsight { a: string; b: string; nextDay: boolean; k: number; n: number; otherK: number; otherN: number; firstYes?: boolean; secondYes?: boolean }
 export interface ChestContent { main: ChestStat | null; rows: ChestStat[]; fact: ContextFact | null; insight: ChestInsight | null }
 
 /** The strongest link in her answers so far, read like the map's links
  *  ("After A, the next day B on k of n days"). */
+// The same link as the top of the Links list, read the same way round (QA, Nov 8 2026: the week
+// report said the opposite of the Links list about the same two questions).
 const strongestLink = (trackers: Tracker[], entries: TrackerEntry[]): ChestInsight | null => {
-  const c = computeCorrelations(trackers, entries, 6).find((x) => x.counts.bothYes + x.counts.aYesBNo >= 3);
+  const c = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing)[0];
   if (!c) return null;
-  const flip = c.lag === -1;
-  const { bothYes, aYesBNo, aNoBYes, bothNo } = c.counts;
-  const n = flip ? bothYes + aNoBYes : bothYes + aYesBNo;
-  const otherK = flip ? aYesBNo : aNoBYes;
-  const otherN = flip ? aYesBNo + bothNo : aNoBYes + bothNo;
-  return { a: flip ? c.trackerB.id : c.trackerA.id, b: flip ? c.trackerA.id : c.trackerB.id, nextDay: c.lag !== 0, k: bothYes, n, otherK, otherN };
+  const l = linkOf(c);
+  return { a: l.first.id, b: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, otherK: l.other.k, otherN: l.other.n };
 };
 
 export const chestContent = (trackers: Tracker[], entries: TrackerEntry[], dates: string[]): ChestContent => {

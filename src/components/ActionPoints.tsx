@@ -26,7 +26,7 @@ import { islandOf, mapPic, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
 import i18nInstance from "@/lib/i18n";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
@@ -182,7 +182,9 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       {lit.length > 0 && <p className="px-1 pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.timeToAct")}</p>}
       {lit.map(({ tr, k }) => {
         const plan = planOf(tr);
-        const blocked = blockedLine(t, testOnIsland(islandOf(tr)));
+        // several tests may run at once (Nov 8 2026); only this plan's own running test replaces the button
+        const ownTest = tests.find((x) => x.from === tr.id);
+        const blocked = ownTest && !experimentOver(ownTest) ? t("rules.testing", { k: experimentDay(ownTest), count: EXPERIMENT_DAYS }) : ownTest ? "done" : null;
         const once = planKindOf(tr) === "once";
         return (
           <div key={tr.id} className="surface rounded-[22px] px-4 pb-4 pt-4">
@@ -201,7 +203,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <button type="button" onClick={() => void didOnce(tr, k)} className="raised-btn is-small mt-4 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
             ) : blocked ? (() => {
               // one test per island: this one waits, and says why; a finished one opens its result
-              const isle = testOnIsland(islandOf(tr));
+              const isle = ownTest ?? null;
               return isle && experimentOver(isle) ? (
                 <button type="button" onClick={() => openTest(isle)} className="raised-btn is-small mt-4 w-full justify-center gap-2"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("rules.seeTest")}</button>
               ) : (
@@ -247,7 +249,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
       {current && sheet?.mode === "show" && (
         <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={cardQuestion(current.tr)} onClose={() => setSheet(null)}
-          onTry={() => tryIt(current.tr, current.k)} blocked={blockedLine(t, testOnIsland(islandOf(current.tr)))} />
+          onTry={() => tryIt(current.tr, current.k)} blocked={(() => { const o = tests.find((x) => x.from === current.tr.id && !experimentOver(x)); return o ? t("rules.testing", { k: experimentDay(o), count: EXPERIMENT_DAYS }) : null; })()} />
       )}
       {current && sheet?.mode === "change" && (
         <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
@@ -457,6 +459,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
                     {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] }) : t("helps.noData")}
                   </p>
                   {r.withChange[1] > 0 && r.without[1] > 0 && <p className="mt-0.5 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{t(`experiment.verdict.${verdictOf(r)}`)}</p>}
+                  {overlapping(x).length > 0 && <p className="mt-0.5 text-[13px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(x).map((o) => `“${testNameOf(o.change)}”`).join(", ") })}</p>}
                 </div>
               );
             })}

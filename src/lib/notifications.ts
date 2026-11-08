@@ -337,7 +337,7 @@ export const tryPlan = (): { id: number; title: string; body: string; schedule: 
   const out: { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] = [];
   fixDefaultReminders((x) => smartRemindTime(ideaOf(x.change), testNameOf(x.change)));
   // every running test (one per island); each its own id range
-  runningExperiments().slice(0, 4).forEach((x, i) => {
+  runningExperiments().slice(0, 8).forEach((x, i) => {
     if (!x.remind) return;
     const [h, m] = x.remind.split(":").map(Number);
     const start = new Date(x.start + "T00:00:00");

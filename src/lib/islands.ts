@@ -135,9 +135,14 @@ export interface Island {
   def: IslandDef;
   trackerIds: string[];
   weather: Weather;
-  /** hard days / answered days this week */
+  /** hard days / answered days, the last 7 days (the weather) */
   hardDays: number;
   answeredDays: number;
+  /** the same for this calendar week, since Monday (her note, Nov 8 2026: "называть календарные") */
+  weekHard: number;
+  weekAnswered: number;
+  /** this calendar week's answered days: date → hard */
+  weekDays: Record<string, boolean>;
   /** this week against her own last four (null until two of them have answers) */
   usual: "rougher" | "usual" | "calmer" | null;
   /** the question that came up most this week, and on how many days */
@@ -203,10 +208,12 @@ export const isNeutralQuestion = (t: Tracker): boolean => trackerPolarity(t) ===
 export const isTestQuestion = (t: Tracker) => t.id.endsWith("-test");
 
 /** The islands that have questions, busiest first, with this week's
- *  weather. Honest weather (plan §3.5, Nov 2 2026): a hard day is a day with
- *  a hard answer (isHardAnswer); no weather before 3 answered days;
- *  3+ hard days = often (storm), 1-2 = sometimes (clouds), 0 = calm. */
+ *  weather. Honest weather (plan §3.5, Nov 2 2026): no weather before 3 answered days;
+ *  3+ hard days = often (storm), 1-2 = sometimes (clouds), 0 = calm. A hard day on an
+ *  island (Nov 8 2026, QA: one hard answer made every day stormy): her topic's question
+ *  was hard there, or at least half of that day's answers there were hard. */
 export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Island[] => {
+  const door = getDoorState(), lead = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((x) => x.trackerId)] : []);
   const live = trackers.filter((t) => !t.archived && t.source !== "play");
   const groups = new Map<IslandId, Tracker[]>();
   for (const t of live) {
@@ -224,17 +231,31 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
     // hard/answered days per week, week 0 = the last 7 days
     const weeks = Array.from({ length: 5 }, () => ({ answered: new Set<string>(), hard: new Set<string>() }));
     const topCount = new Map<string, number>();
+    // each day on this island: answers that can be hard, hard ones, her topic hard
+    const perDay = new Map<string, { a: number; h: number; main: boolean }>();
     for (const e of entries) {
       const t = byId.get(e.trackerId);
       if (!t) continue;
-      for (let w = 0; w < 5; w++) {
-        if (e.date > dayStart(w * 7) || e.date < dayStart(w * 7 + 6)) continue;
-        weeks[w].answered.add(e.date);
-        if (isHardAnswer(t, e.value)) {
-          weeks[w].hard.add(e.date);
-          if (w === 0) topCount.set(t.id, (topCount.get(t.id) ?? 0) + 1);
-        }
+      const d = perDay.get(e.date) ?? { a: 0, h: 0, main: false };
+      if (!isNeutralQuestion(t) && !isTestQuestion(t)) d.a++;
+      if (isHardAnswer(t, e.value)) {
+        d.h++;
+        if (lead.has(t.id)) d.main = true;
+        if (e.date <= dayStart(0) && e.date >= dayStart(6)) topCount.set(t.id, (topCount.get(t.id) ?? 0) + 1);
       }
+      perDay.set(e.date, d);
+    }
+    const monday = dayStart((new Date().getDay() + 6) % 7);
+    const cal = { answered: 0, hard: 0 };
+    const weekDays: Record<string, boolean> = {};
+    for (const [date, d] of perDay) {
+      const hardDay = d.main || (d.a > 0 && d.h * 2 >= d.a);
+      for (let w = 0; w < 5; w++) {
+        if (date > dayStart(w * 7) || date < dayStart(w * 7 + 6)) continue;
+        weeks[w].answered.add(date);
+        if (hardDay) weeks[w].hard.add(date);
+      }
+      if (date >= monday && date <= dayStart(0) && d.a > 0) { cal.answered++; if (hardDay) cal.hard++; weekDays[date] = hardDay; }
     }
     const now = weeks[0];
     const weather: Weather = now.answered.size < 3 ? null : now.hard.size >= 3 ? "storm" : now.hard.size >= 1 ? "clouds" : "sun";
@@ -248,7 +269,7 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
     const wasStormy = past.some((w) => w.hard.size >= 3);
     return {
       id, def: islandDef(id), trackerIds: ts.map((t) => t.id), weather,
-      hardDays: now.hard.size, answeredDays: now.answered.size, usual,
+      hardDays: now.hard.size, answeredDays: now.answered.size, weekHard: cal.hard, weekAnswered: cal.answered, weekDays, usual,
       top: best ? { trackerId: best[0], days: best[1] } : null, wasStormy,
       hardBy: [...topCount].sort((x, y) => y[1] - x[1]).map(([trackerId, days]) => ({ trackerId, days })),
     };

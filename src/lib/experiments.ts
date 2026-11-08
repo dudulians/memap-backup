@@ -123,13 +123,19 @@ export const experimentOver = (x: Experiment, today = isoLocal(new Date())) => e
 /** Finished tests (looked at), the islands they grew a garden on. */
 export const finishedExperiments = () => getExperiments().filter((x) => !!x.reviewed);
 
+const sameChange = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+/** The other tests whose two weeks overlapped this one's: their effects mix into its result. */
+export const overlapping = (x: Experiment): Experiment[] => {
+  const end = (e: Experiment) => { const d = new Date(e.start + "T12:00:00"); d.setDate(d.getDate() + EXPERIMENT_DAYS - 1); return isoLocal(d); };
+  return getExperiments().filter((e) => e.id !== x.id && e.start <= end(x) && end(e) >= x.start);
+};
 /** Start a test: adds "Did you…?" to the island, from today (a weekly goal adds nothing:
  *  it watches the question she has). */
 export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number } = {}): Promise<Experiment> => {
   track("experiment_started", { from: from ? "action_point" : "pick", goal: !!opts.same });
   if (opts.same && from) {
     const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}) };
-    save([...getExperiments().filter((e) => e.reviewed || e.island !== island), g]);
+    save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), g]);
     window.dispatchEvent(new Event("memap-settings-changed"));
     return g;
   }
@@ -151,7 +157,8 @@ export const startExperiment = async (island: string, change: string, question: 
   };
   await saveTrackers([...existing, tracker]);
   const x: Experiment = { id: tracker.id, island, trackerId: tracker.id, change, start: isoLocal(new Date()), ...(from ? { from } : {}) };
-  save([...getExperiments().filter((e) => e.reviewed || e.island !== island), x]);
+  // several at once, even on one island (Nov 8 2026); the same change twice restarts it
+  save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), x]);
   window.dispatchEvent(new Event("memap-settings-changed"));
   return x;
 };

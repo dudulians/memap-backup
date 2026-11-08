@@ -60,10 +60,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           </div>
           )}
 
-          <p className="mt-5 text-[22px] font-bold leading-snug tracking-tight">
-            {linkArrow(t, r, of)}
-            {r.nextDay && <span className="ml-2 inline-flex h-7 translate-y-[-2px] items-center rounded-full bg-[hsl(var(--data-a)/0.14)] px-2.5 align-middle text-[14px] font-bold text-[hsl(var(--strong))]">{t("map.nextDay")}</span>}
-          </p>
+          <p className="mt-5 text-[21px] font-bold leading-snug tracking-tight">{linkSentence(t, r, of)}</p>
 
           {/* k of n, as dots: filled = it came */}
           <p className="mt-4 text-[34px] font-bold leading-none tracking-tight tabular-nums">{t("map.timesOf", { k: r.k, count: r.n })}</p>
@@ -72,11 +69,8 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
               <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < r.k ? dot(r.secondHard) : r.secondHard === null ? "hsl(var(--foreground) / 0.12)" : dot(!r.secondHard, 0.7) }} />
             ))}
           </div>
-          <p className="mt-3 text-[16px] font-medium leading-snug text-muted-foreground">
-            {linkSentence(t, r, of)}
-          </p>
           {/* the other days, so a coincidence looks like one */}
-          <p className="mt-1 text-[16px] font-bold leading-snug">{linkOther(t, r)}</p>
+          <p className="mt-3 text-[16px] font-bold leading-snug">{linkOther(t, r)}</p>
 
 
           <button type="button" onClick={() => { haptics.tap(); onChart([r.first, r.second]); }}

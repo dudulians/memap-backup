@@ -23,7 +23,7 @@ import { GROWTH_AT, ITEMS, growthLand, homeWord, itemProgress, keptTreasures, ma
 import { playSparkle } from "@/lib/feedback";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { experimentDay, EXPERIMENT_DAYS, testOnIsland } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, runningExperiments } from "@/lib/experiments";
 import { testNameOf } from "@/lib/testWords";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
@@ -113,7 +113,7 @@ export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tra
   const early = island.answeredDays < 3;
   const line = early
     ? t("isle.early")
-    : t("isle.hard", { k: island.hardDays, count: island.answeredDays }) + (island.usual ? `, ${t(`isle.usual.${island.usual}`)}` : "");
+    : t("isle.hardWeek", { k: island.weekHard, count: island.weekAnswered });
   return (
     <div className="px-1 pb-1">
       <div className="flex items-center gap-3">
@@ -168,7 +168,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
     .sort((p, q) => q.both - p.both)
     .slice(0, 1);
   // this island's own test: tests on other islands run side by side (Nov 7 2026)
-  const test = testOnIsland(island.id);
+  const tests = runningExperiments().filter((x) => x.island === island.id);
   const view = (v: IslandView, icon: React.ReactNode, label: string) => (
     <button type="button" onClick={() => { haptics.tap(); onView(v); }}
       className="surface flex h-[68px] flex-col items-center justify-center gap-1 rounded-[18px] text-[14px] font-semibold active:scale-[0.98] transition-transform">
@@ -196,15 +196,16 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
           ))}
         </>
       )}
-      {test && test.island === island.id ? (
-        <div className="surface flex items-center gap-3 rounded-[20px] px-4 py-3">
+      {tests.map((x) => (
+        <div key={x.id} className="surface flex items-center gap-3 rounded-[20px] px-4 py-3">
           <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
           <div className="min-w-0">
-            <p className="text-[16px] font-bold leading-snug">{testNameOf(test.change)}</p>
-            <p className="text-[14px] font-medium text-muted-foreground">{experimentDay(test) > EXPERIMENT_DAYS ? t("experiment.stepSub") : t("experiment.dayOf", { k: experimentDay(test), count: EXPERIMENT_DAYS })}</p>
+            <p className="text-[16px] font-bold leading-snug">{testNameOf(x.change)}</p>
+            <p className="text-[14px] font-medium text-muted-foreground">{experimentDay(x) > EXPERIMENT_DAYS ? t("experiment.stepSub") : t("experiment.dayOf", { k: experimentDay(x), count: EXPERIMENT_DAYS })}</p>
           </div>
         </div>
-      ) : !test && onTest ? (
+      ))}
+      {onTest ? (
         <button type="button" onClick={() => { haptics.tap(); onTest(); }}
           className="surface flex w-full items-center gap-3 rounded-[20px] px-4 py-3 text-left active:scale-[0.99] transition-transform">
           <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
@@ -245,7 +246,8 @@ export const IslandTreasures = ({ placed, facts, onAll }: { placed?: PlacedTreas
           </div>
         );
       })}
-      <button type="button" onClick={() => { haptics.tap(); onAll(); }} className="quiet-btn mt-3 h-11 w-full">{t("items.all")}</button>
+      <p className="mt-3 text-[14px] font-semibold leading-snug text-muted-foreground">{t("items.restInYou", { you: t("map.you") })}</p>
+      <button type="button" onClick={() => { haptics.tap(); onAll(); }} className="quiet-btn mt-2 h-11 w-full">{t("items.all")}</button>
     </div>
   );
 };
@@ -255,6 +257,13 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
   const title = useTitles(trackers);
   const days = countedDays(trackers, entries);
   const chests = Object.keys(getChests()).length;
+  // Monday to Sunday of this calendar week, and the days since the first answer
+  const today = isoLocal(new Date());
+  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + i); return isoLocal(d); });
+  const { i18n } = useTranslation();
+  const dayLetter = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { weekday: "short" }).slice(0, 2);
+  const first = entries.reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
+  const withUs = first ? Math.round((Date.parse(today + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1 : 0;
   // a treasure that came since she last looked says "New", once
   const [fresh] = useState<ItemId[]>(() => (facts ? unseenTreasures(facts) : []));
   useEffect(() => {
@@ -290,21 +299,33 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
           </div>
         </>
       )}
-      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisWeek")}</p>
+      {/* the calendar week, since Monday, the same "this week" as the island sheets (her note 5,
+          Nov 8 2026); days are dots, coloured by meaning: hard rose, good green */}
+      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisCalWeek")}</p>
+      {withUs > 0 && <p className="-mt-1 text-[15px] font-bold leading-snug">{t("map.withUs", { count: withUs })}</p>}
       <div className="surface space-y-3 rounded-[20px] px-4 py-3.5">
+        <div className="flex items-center gap-3" aria-hidden="true">
+          <span className="w-[30px] shrink-0" />
+          <div className="flex flex-1 justify-between px-[3px]">
+            {week.map((d) => <span key={d} className="w-4 text-center text-[11px] font-bold uppercase text-muted-foreground">{dayLetter(d)}</span>)}
+          </div>
+          <span className="w-[28px] shrink-0" />
+        </div>
         {islands.map((isl) => (
           <div key={isl.id} className="flex items-center gap-3">
             <img src={mapPic("icon_" + isl.def.icon)} alt="" width={30} height={30} />
             <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-[16px] font-bold">{islandName(t, isl.id)}</span>
-                <span className="shrink-0 text-[14px] font-semibold tabular-nums text-muted-foreground">{t("map.daysOf7", { k: isl.answeredDays })}</span>
-              </div>
-              <div className="mt-1 h-2 overflow-hidden rounded-full bg-foreground/[0.08]">
-                <div className="h-full rounded-full" style={{ width: `${(isl.answeredDays / 7) * 100}%`, background: `hsl(${islandHsl(isl.id)})` }} />
+              <span className="block truncate text-[16px] font-bold">{islandName(t, isl.id)}</span>
+              <div className="mt-1 flex justify-between px-[3px]" role="img" aria-label={t("map.daysOf7", { k: isl.weekAnswered })}>
+                {week.map((d) => {
+                  const v = isl.weekDays?.[d];
+                  return <span key={d} className="h-4 w-4 rounded-full" style={v === undefined
+                    ? { border: `2px solid hsl(var(--foreground) / ${d > today ? 0.08 : 0.16})` }
+                    : { background: v ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />;
+                })}
               </div>
             </div>
-            {isl.weather && <img src={mapPic(WEATHER_PIC[isl.weather])} alt={t(`map.legend.${isl.weather}`)} width={28} height={28} className="object-contain" />}
+            {isl.weather ? <img src={mapPic(WEATHER_PIC[isl.weather])} alt={t(`map.legend.${isl.weather}`)} width={28} height={28} className="object-contain" /> : <span className="w-[28px] shrink-0" />}
           </div>
         ))}
       </div>

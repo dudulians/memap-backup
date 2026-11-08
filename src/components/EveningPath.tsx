@@ -14,7 +14,9 @@
 // to do starts it at once; only a done step or day asks first (change
 // answers). The note step opens the note sheet right here.
 // Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top notes).
-import { TipCard, tipSeen } from "./Tips";
+import { ObserveTipSheet } from "@/components/ObserveTipSheet";
+import { OBSERVE_TIPS } from "@/lib/observeTipsData";
+import { TipCard, markTip as markTipSeen, tipSeen } from "./Tips";
 import { switchToOld } from "./UpgradeInvite";
 import { SupportSheet } from "./SupportSheet";
 import { HEAVY_MOOD_IDS } from "@/lib/supportLines";
@@ -22,7 +24,7 @@ import { templateIdOf as moodTemplateOf } from "@/lib/answerPhrases";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, Flag, FlaskConical, Flame, Layers, Lightbulb, Link2, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, Flag, FlaskConical, Flame, Layers, Lightbulb, Link2, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
@@ -291,6 +293,7 @@ export const EveningPath = ({
     if (s.kind === "discover") return t("tour.step");
     if (s.kind === "link") return t("firstLink.step");
     if (s.kind === "report") return t("path.lastReport");
+    if (s.kind === "tip") return t("tipDay.step");
     if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name;
@@ -308,6 +311,7 @@ export const EveningPath = ({
     if (s.kind === "unload") return "198 55% 58%";
     if (s.kind === "fill") return "205 46% 58%";
     if (s.kind === "link") return "174 52% 42%";
+    if (s.kind === "tip") return "215 55% 60%";
     return "var(--coin-teal)";
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
@@ -336,13 +340,17 @@ export const EveningPath = ({
     if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind : s.kind === "report" ? FileBarChart2
-      : s.kind === "discover" ? MapIcon : s.kind === "link" ? Link2
+      : s.kind === "discover" ? MapIcon : s.kind === "link" ? Link2 : s.kind === "tip" ? BookOpen
       : s.kind === "questions" ? (s.added ? Plus : s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
     const icon = s.done && !s.skipped && !replay ? <Check className="h-6 w-6" strokeWidth={3} /> : <Icon className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
     const look: NodeLook = s.done && !s.skipped ? "done" : current ? "current" : "todo";
     const hue = hueOf(s);
+    if (s.tonight) {
+      const moon = <MoonStar className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
+      return { look, icon: moon, hue, title: stepName(s), sub: t("path.tonightSub"), action: current ? t("path.answerNow") : undefined };
+    }
     if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
@@ -351,6 +359,7 @@ export const EveningPath = ({
     if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
     if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
+    if (s.kind === "tip") return { look, icon, hue, title: stepName(s), sub: tipTitle(s.tipId), action: t("tipDay.open") };
     if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t("firstLink.sub"), action: t("firstLink.see") };
     return {
       look, icon, hue, title: stepName(s),
@@ -369,6 +378,7 @@ export const EveningPath = ({
 
   // --- Bubbles ---------------------------------------------------------------
   const [open, setOpen] = useState<Open>(null);
+  const [tipOpen, setTipOpen] = useState<string | null>(null);
   const [wiggle, setWiggle] = useState<number | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -424,6 +434,10 @@ export const EveningPath = ({
   const focusRef = useRef<HTMLButtonElement>(null);
   // Malu's tip over the boat: which one (counts up across visits)
   const [maluTip, setMaluTip] = useState<number | null>(null);
+  // the bright step is only a suggestion (her note, Nov 8 2026: "можно скипнуть яркий шар… но это
+  // неочевидно"): Malu says so once, beside the boat, in the first days while two or more steps are open
+  const [orderTip, setOrderTip] = useState(() => !tipSeen("any-order"));
+  const closeOrderTip = () => { haptics.tap(); markTipSeen("any-order"); setOrderTip(false); };
   const nextMaluTip = () => setMaluTip((cur) => {
     if (cur !== null) return cur + 1;
     let k = 0; try { k = Number(localStorage.getItem("memap_malu_tip") || "0"); localStorage.setItem("memap_malu_tip", String(k + 1)); } catch { /* starts at the first */ }
@@ -572,6 +586,7 @@ export const EveningPath = ({
 
   const openActionPoints = () =>
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
+  const tipTitle = (id?: string) => { const x = OBSERVE_TIPS.find((o) => o.id === id); return x ? (i18n.language?.startsWith("ru") ? x.ru.title : x.en.title) : ""; };
   const startStep = (s: Step) => {
     setOpen(null);
     track("path_step_started", { kind: s.kind, week: m.week + 1, ...(s.task ? { task: s.task } : {}) });
@@ -584,6 +599,7 @@ export const EveningPath = ({
     else if (s.kind === "unload") setUnloadOpen(true);
     else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
     else if (s.kind === "link") window.dispatchEvent(new CustomEvent("memap-link-moment"));
+    else if (s.kind === "tip") setTipOpen(s.tipId ?? null);
     else if (s.kind === "report") setChestOpen({ week: m.week - 1, dates: m.pastWeeks[m.week - 1] ?? [] });
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
@@ -782,6 +798,14 @@ export const EveningPath = ({
         </>
       );
     }
+    if (s.kind === "tip") {
+      return (
+        <>
+          {head(stepName(s), tipTitle(s.tipId))}
+          {button(t("tipDay.open"), () => startStep(s), s.done ? "plain" : "teal")}
+        </>
+      );
+    }
     if (s.kind === "discover") {
       return (
         <>
@@ -833,9 +857,9 @@ export const EveningPath = ({
         {s.answered > 0 && dots(s.trackerIds, isoDay(new Date()))}
         {/* Early in the day: answer what already happened, the rest tonight. */}
         {!s.done && s.kind === "questions" && new Date().getHours() < 17 && (
-          <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("path.earlyHint")}</p>
+          <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t(s.tonight ? "path.tonightLine" : "path.earlyHint")}</p>
         )}
-        {!s.done && button(<>{s.answered > 0 ? t("path.continue") : t("path.start")} <ArrowRight className="h-4 w-4" /></>, () => startStep(s))}
+        {!s.done && button(<>{s.tonight ? t("path.answerNow") : s.answered > 0 ? t("path.continue") : t("path.start")} <ArrowRight className="h-4 w-4" /></>, () => startStep(s), s.tonight ? "plain" : undefined)}
         {s.done && s.kind === "questions" && button(t("path.changeAnswers"), () => { setOpen(null); onStartStep(s, stepName(s), true); }, "plain")}
       </>
     );
@@ -981,6 +1005,14 @@ export const EveningPath = ({
                     </span>
                   </button>
                 )}
+                {i === focus && avatar && !tipNow && orderTip && m.totalDays < 5 && openLeft >= 2 && (
+                  <div className="malu-tip surface absolute z-[8] w-[270px] rounded-[18px] px-3.5 py-3 animate-fade-in" role="note"
+                    style={{ left: Math.max(8, Math.min(f.x - 135, width - 278)), top: f.y - f.r - 70, transform: "translateY(-100%)" }}>
+                    <p className="text-[16px] font-bold leading-snug">{t("tips.anyOrderTitle")}</p>
+                    <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{t("tips.anyOrderLine")}</p>
+                    <button type="button" onClick={closeOrderTip} className="raised-btn is-small mt-2 px-5">{t("tips.anyOrderOk")}</button>
+                  </div>
+                )}
                 {i === focus && avatar && tipNow && (
                   <div className="malu-tip surface absolute z-[8] w-[248px] rounded-[18px] px-3.5 py-3 animate-fade-in" role="dialog"
                     style={{ left: Math.max(8, Math.min(avatar.x + avatar.w / 2 - 124, width - 256)), top: avatar.y - 12, transform: "translateY(-100%)" }}>
@@ -1071,6 +1103,8 @@ export const EveningPath = ({
         <ExperimentSheet mode={testOpen} experiment={testOpen === "result" ? runningExperiments().find((x) => experimentOver(x)) ?? null : currentExperiment()} trackers={trackers} entries={entries}
           onClose={() => { setTestOpen(null); setTick((k) => k + 1); }} />
       )}
+
+      <ObserveTipSheet id={tipOpen} onClose={() => { setTipOpen(null); setTick((k) => k + 1); }} />
 
       {gameOpen && (
         <HunchGame trackers={trackers} entries={entries} onClose={() => { setGameOpen(false); setTick((k) => k + 1); }} />

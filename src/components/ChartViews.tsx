@@ -9,7 +9,7 @@
 // in the app's colours — and the full chart is the same chart, bigger, with
 // dates, 8 weeks or 6 months, and a finger to read any week.
 import { linkOf, linkWorthShowing } from "@/lib/islands";
-import { linkArrow, trackerLookup } from "@/lib/linkText";
+import { linkArrow, trackerLookup, linkSentence } from "@/lib/linkText";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
@@ -203,7 +203,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
       .map((c) => {
         const l = linkOf(c);
         const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
-        return { a: l.first, b: l.second, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkArrow(t, route, of) };
+        return { a: l.first, b: l.second, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkSentence(t, route, of) };
       })
       .slice(0, 5);
   }, [live, mine, entries, focusIds, pair, t]);
@@ -219,7 +219,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
   const [detail, setDetail] = useState<{ ids: string[]; title: string; sub?: string } | null>(() => {
     if (!pair || focusIds?.length !== 2) return null;
     const l = links[0];
-    return l ? { ids: [l.a.id, l.b.id], title: `${l.arrow}${l.nextDay ? ` ${t("map.nextDay")}` : ""}`, sub: t("map.timesOf", { k: l.k, count: l.n }) } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
+    return l ? { ids: [l.a.id, l.b.id], title: l.arrow, sub: t("map.timesOf", { k: l.k, count: l.n }) } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
   });
   const [long, setLong] = useState(false);
 
@@ -273,7 +273,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
         <div className="mt-3 space-y-3">
           {links.length === 0 && <p className="surface rounded-[22px] px-4 py-4 text-[16px] font-semibold">{t("charts.noLinks")}</p>}
           {links.map((l, i) => {
-            const title = `${l.arrow}${l.nextDay ? ` ${t("map.nextDay")}` : ""}`;
+            const title = l.arrow;
             const sub = t("map.timesOf", { k: l.k, count: l.n });
             const series = [
               { color: PAIR_A, values: weekly(l.a, entries), label: name(l.a.id) },
