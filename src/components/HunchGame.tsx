@@ -6,7 +6,7 @@
 // already answers, ones that become new questions, or her own idea. MeMap
 // checks each as she answers and shows them together when there are enough
 // days. First, checked hunches, if any are ready. Counts only, never a cause.
-import { answerPhrase, cap } from "@/lib/answerPhrases";
+import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -61,6 +61,8 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
   const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
   const sName = (s: Suspect) => (s.kind === "tracked" ? localizeTrackerTitle(s.tracker.title) : ru ? s.template.titleRu : s.template.title);
   const x = target ? answerPhrase(t, target, true) : "";
+  // the question as a whole sentence (her note, Nov 8 2026: «What do you think comes before “long workday”? — что это вообще за вопрос?»)
+  const xc = target ? answerClause(t, target, true, "cause") : "";
   const tr = (id: string) => trackers.find((y) => y.id === id);
   const avatar = avatarUrl(getAvatar());
   const ownText = own.trim();
@@ -172,7 +174,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
         {stage === "ask" && target && (
           <>
             <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">
-              {t(target.problemWhen === "yes" ? "hunch.askHard" : "hunch.askGood", { x })}
+              {t(target.problemWhen === "yes" ? "hunch.askHard" : "hunch.askGood", { x: xc })}
             </p>
             <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("hunch.pickMany")}</p>
             <div className="mt-5 space-y-2.5">

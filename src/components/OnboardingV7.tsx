@@ -166,22 +166,24 @@ export const WhyV7 = ({ onBack, onPick, current }: { onBack: () => void; onPick:
 
 // --- 3. the islands and their topics -------------------------------------------------
 /** The globe's islands, in this order; the topics inside each, by tone. */
-const ISLAND_TOPICS: Record<Tone, { island: IslandId; ids: DoorId[] }[]> = {
+export const ISLAND_TOPICS: Record<Tone, { island: IslandId; ids: DoorId[] }[]> = {
   // each topic under the island its main question lives on (energy and moving are Mind & mood)
+  // Nov 8 2026 (her note: "почему так мало вариантов"): 4–8 topics on every island
   bother: [
-    { island: "health", ids: ["sleep", "migraine", "period"] },
-    { island: "me", ids: ["stress", "mood", "energy", "move"] },
-    { island: "love", ids: ["fights"] },
-    { island: "kids", ids: ["kid"] },
-    { island: "work", ids: ["quit"] },
-    { island: "body", ids: ["drinking"] },
+    { island: "health", ids: ["sleep", "migraine", "period", "headache", "backPain", "stomach", "fatigue"] },
+    { island: "me", ids: ["stress", "mood", "energy", "anxiety", "loneliness", "anger", "procrastination", "move"] },
+    { island: "love", ids: ["fights", "irritation", "aloneTogether", "phones", "chores"] },
+    { island: "kids", ids: ["kid", "bedtime", "meltdowns", "overwhelmed", "childSleep"] },
+    { island: "work", ids: ["quit", "overtime", "burnout", "boss", "noWork"] },
+    { island: "body", ids: ["drinking", "sweets", "screens", "lateEating", "smoking", "spending"] },
   ],
   good: [
-    { island: "health", ids: ["goodSleep"] },
-    { island: "me", ids: ["calm", "joy", "energy"] },
-    { island: "love", ids: ["closeness"] },
-    { island: "work", ids: ["focus"] },
-    { island: "body", ids: ["movement"] },
+    { island: "health", ids: ["goodSleep", "water", "daylight", "wakeTime", "nature"] },
+    { island: "me", ids: ["calm", "joy", "energy", "selfTime", "gratitude", "creative", "reading"] },
+    { island: "love", ids: ["closeness", "together", "friends"] },
+    { island: "kids", ids: ["kidTime", "brightMoment"] },
+    { island: "work", ids: ["focus", "focusHour", "fulfilled"] },
+    { island: "body", ids: ["movement", "steps", "veggies", "cooking", "phoneFree"] },
   ],
 };
 export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own }: {

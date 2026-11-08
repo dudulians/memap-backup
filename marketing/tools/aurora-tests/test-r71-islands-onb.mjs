@@ -12,14 +12,22 @@ const out = {}, errs = [];
   out.islandsMatch = await p.evaluate(async () => {
     localStorage.clear(); localStorage.setItem("memap_language", "en");
     const dz = await import("/src/lib/doors.ts"), I = await import("/src/lib/islands.ts"), st = await import("/src/lib/storage.ts");
-    const LIST = { bother: { health: ["sleep", "migraine", "period"], me: ["stress", "mood", "energy", "move"], love: ["fights"], kids: ["kid"], work: ["quit"], body: ["drinking"] },
-      good: { health: ["goodSleep"], me: ["calm", "joy", "energy"], love: ["closeness"], work: ["focus"], body: ["movement"] } };
+    // every topic on the onboarding screen (Nov 8 2026: 4–8 per island)
+    const O = await import("/src/components/OnboardingV7.tsx");
+    const LIST = Object.fromEntries(Object.entries(O.ISLAND_TOPICS).map(([tone, gs]) => [tone, Object.fromEntries(gs.map((g) => [g.island, g.ids]))]));
     const bad = [];
     for (const [tone, groups] of Object.entries(LIST)) for (const [island, ids] of Object.entries(groups)) for (const id of ids) {
       const door = dz.getDoor(id); await dz.ensureTemplates([door.mainTemplateId]);
       const tr = (await st.getTrackers()).find((x) => x.id.includes(door.mainTemplateId)) ?? (await st.getTrackers()).slice(-1)[0];
       const got = I.islandOf(tr); if (got !== island) bad.push(`${tone}/${id}: listed ${island}, question on ${got}`);
     }
+    // the words each topic needs, in both languages
+    const i18n = (await import("/src/lib/i18n.ts")).default;
+    for (const lng of ["en", "ru"]) for (const gs of Object.values(LIST)) for (const ids of Object.values(gs)) for (const id of ids) {
+      for (const k of [`doors.${id}.name`, `path.daysLabel.${id}`]) if (!i18n.exists(k, { lng })) bad.push(`${lng} missing ${k}`);
+      const n = i18n.t(`doors.${id}.noun`, { lng, count: 5 }); if (n.startsWith("doors.")) bad.push(`${lng} missing noun ${id}`);
+    }
+    bad.push(`topics: ${Object.values(LIST).flatMap((g) => Object.values(g).flat()).length}`);
     return bad;
   });
   await p.close();

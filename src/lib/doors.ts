@@ -23,7 +23,9 @@ export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid" | "slee
   // onboarding v2 (Nov 5 2026): "I want more good days"
   | "energy" | "calm" | "goodSleep" | "closeness" | "focus" | "movement" | "joy"
   // onboarding v7 (Nov 6 2026): health first; "a thought keeps coming back"
-  | "period" | "stress" | "quit" | "move";
+  | "period" | "stress" | "quit" | "move"
+  // Nov 8 2026 (her note: "почему так мало вариантов"): more topics on every island
+  | "headache" | "backPain" | "stomach" | "fatigue" | "anxiety" | "loneliness" | "anger" | "procrastination" | "irritation" | "aloneTogether" | "phones" | "chores" | "bedtime" | "meltdowns" | "overwhelmed" | "childSleep" | "overtime" | "burnout" | "boss" | "noWork" | "sweets" | "screens" | "lateEating" | "smoking" | "spending" | "water" | "daylight" | "wakeTime" | "nature" | "selfTime" | "gratitude" | "creative" | "reading" | "together" | "friends" | "kidTime" | "brightMoment" | "focusHour" | "fulfilled" | "steps" | "veggies" | "cooking" | "phoneFree";
 
 export interface Door {
   id: DoorId;
@@ -135,6 +137,56 @@ export const DOORS: Door[] = [
   ] as const).map(([id, main, ctx, icon, iconClass]): Door => ({
     id, branch: "good", kind: "event", mainTemplateId: main, contextTemplateIds: [...ctx] as [string, string, string],
     reasons: ["sleptWell", "moved", "outside", "ateWell", "goodPeople", "rest", "sun", "dontKnow"], icon, iconClass,
+  })),
+  // Nov 8 2026: more topics, each a library question and three asked around it
+  ...([
+    ["headache", "pain", "headache", ["slept-enough", "felt-stressed", "drank-water"]],
+    ["backPain", "pain", "back-or-neck-pain", ["slept-enough", "stretched", "felt-stressed"]],
+    ["stomach", "pain", "stomach-issues", ["ate-late", "felt-stressed", "ate-fast-food"]],
+    ["fatigue", "pain", "felt-fatigued", ["slept-enough", "outside-30min", "skipped-meal"]],
+    ["anxiety", "pain", "felt-anxious", ["slept-enough", "coffee-late", "doomscrolled-news"]],
+    ["loneliness", "pain", "felt-lonely", ["saw-friends", "isolated-at-home", "social-media-hour"]],
+    ["anger", "pain", "felt-angry", ["slept-enough", "felt-stressed", "skipped-meal"]],
+    ["procrastination", "pain", "procrastinated", ["slept-enough", "social-media-hour", "many-interruptions"]],
+    ["irritation", "pain", "partner-irritated-me", ["slept-enough", "felt-stressed", "unfair-chores"]],
+    ["aloneTogether", "pain", "felt-lonely-with-partner", ["phones-together", "felt-stressed", "slept-enough"]],
+    ["phones", "pain", "phones-together", ["felt-stressed", "screen-time-long", "slept-enough"]],
+    ["chores", "pain", "unfair-chores", ["argued-with-partner", "felt-fatigued", "got-help-with-kids"]],
+    ["bedtime", "pain", "bedtime-battle", ["child-too-much-screen", "child-physical-activity", "slept-enough"]],
+    ["meltdowns", "pain", "child-meltdown", ["child-slept-poorly", "child-too-much-screen", "child-refused-food"]],
+    ["overwhelmed", "pain", "felt-overwhelmed-parenting", ["slept-enough", "got-help-with-kids", "time-for-myself"]],
+    ["childSleep", "pain", "child-slept-poorly", ["child-too-much-screen", "child-physical-activity", "child-sick-symptoms"]],
+    ["overtime", "pain", "worked-overtime", ["slept-enough", "felt-stressed", "many-interruptions"]],
+    ["burnout", "pain", "burned-out-after-work", ["worked-overtime", "slept-enough", "felt-fulfilled-at-work"]],
+    ["boss", "pain", "boss-was-difficult", ["slept-enough", "worked-overtime", "felt-stressed"]],
+    ["noWork", "pain", "didnt-want-to-work", ["slept-enough", "burned-out-after-work", "felt-fulfilled-at-work"]],
+    ["sweets", "pain", "ate-sweets", ["slept-enough", "felt-stressed", "skipped-meal"]],
+    ["screens", "pain", "screen-time-long", ["felt-lonely", "slept-enough", "felt-stressed"]],
+    ["lateEating", "pain", "ate-late", ["skipped-meal", "worked-overtime", "slept-enough"]],
+    ["smoking", "pain", "smoked", ["felt-stressed", "drank-alcohol", "saw-friends"]],
+    ["spending", "pain", "impulse-spending", ["felt-stressed", "social-media-hour", "felt-lonely"]],
+    ["water", "good", "drank-water", ["had-energy", "headache", "exercised"]],
+    ["daylight", "good", "saw-daylight", ["slept-enough", "had-energy", "felt-happy"]],
+    ["wakeTime", "good", "same-wake-time", ["slept-enough", "had-energy", "screens-before-bed"]],
+    ["nature", "good", "time-in-nature", ["felt-calm", "had-energy", "felt-stressed"]],
+    ["selfTime", "good", "time-for-myself", ["felt-calm", "slept-enough", "worked-overtime"]],
+    ["gratitude", "good", "felt-grateful", ["felt-happy", "outside-30min", "saw-friends"]],
+    ["creative", "good", "did-creative-work", ["felt-happy", "time-for-myself", "screen-time-long"]],
+    ["reading", "good", "read-book", ["screens-before-bed", "felt-calm", "slept-enough"]],
+    ["together", "good", "good-time-together", ["slept-enough", "phones-together", "felt-stressed"]],
+    ["friends", "good", "saw-friends", ["felt-happy", "felt-lonely", "had-energy"]],
+    ["kidTime", "good", "quality-time-kid", ["slept-enough", "worked-overtime", "child-too-much-screen"]],
+    ["brightMoment", "good", "child-bright-moment", ["quality-time-kid", "slept-enough", "child-physical-activity"]],
+    ["focusHour", "good", "focus-hour", ["slept-enough", "many-interruptions", "phone-free-morning"]],
+    ["fulfilled", "good", "felt-fulfilled-at-work", ["main-thing-done", "got-recognition", "worked-overtime"]],
+    ["steps", "good", "walked-a-lot", ["had-energy", "slept-enough", "felt-calm"]],
+    ["veggies", "good", "ate-vegetables", ["had-energy", "cooked-myself", "ate-fast-food"]],
+    ["cooking", "good", "cooked-myself", ["had-energy", "worked-overtime", "stayed-on-budget"]],
+    ["phoneFree", "good", "phone-free-morning", ["felt-calm", "main-thing-done", "slept-enough"]],
+  ] as const).map(([id, branch, main, ctx]): Door => ({
+    id, branch, kind: "event", mainTemplateId: main, contextTemplateIds: [...ctx] as [string, string, string],
+    reasons: branch === "good" ? ["sleptWell", "moved", "outside", "ateWell", "goodPeople", "rest", "sun", "dontKnow"] : ["dontKnow"],
+    icon: branch === "good" ? Sparkles : Activity, iconClass: "text-[hsl(var(--coin-teal))]",
   })),
 ];
 

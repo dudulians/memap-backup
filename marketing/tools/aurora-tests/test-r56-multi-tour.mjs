@@ -52,7 +52,7 @@ for (const run of ["evening", "daytime"]) {
   await shot("questions-bottom");
   await click(W(/^Continue/, /^Дальше|^Продолжить/)); await p.waitForTimeout(800);
   await click(W(/Answer today's questions/, /Ответить на вопросы/)); await p.waitForTimeout(900);
-  if (run === "daytime") { await click(W(/Tonight/, /Сегодня вечером|Вечером/)); await click(W(/^Continue/, /^Дальше|^Продолжить/)); await p.waitForTimeout(1500); }
+  if (run === "daytime") { await click(W(/Tonight|this evening/, /Сегодня вечером|Вечером|вечером/)); await click(W(/^Continue/, /^Дальше|^Продолжить/)); await p.waitForTimeout(1500); }
   else {
     await p.waitForTimeout(1000);
     for (let i = 0; i < 14; i++) {

@@ -603,6 +603,22 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     if (!step.done || kept < 0) saveAddedAnchor(today, steps[at]?.id ?? "end");
     steps.splice(at, 0, step);
   }
+  // Day 1 with "yesterday" picked (her question, Nov 8 2026: "если я заполнила вопросы за yesterday,
+  // а потом ханч дал мне заполнить два-три новых вопроса — за вчера или за сегодня?"): questions
+  // added that morning are asked for yesterday too, so yesterday stays one whole day; tonight they
+  // come with the rest of today's.
+  let pickedYesterday = false;
+  try { pickedYesterday = localStorage.getItem("memap_first_day_pick") === "yesterday"; } catch { /* ignore */ }
+  if (dayOneMorning && pickedYesterday && addedIds.length > 0) {
+    const y = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+    if (!steps.some((s) => s.id === `fill:${y}`)) {
+      const gotY = new Set(entries.filter((e) => e.date === y).map((e) => e.trackerId));
+      const answeredY = addedIds.filter((id) => gotY.has(id)).length;
+      const at = steps.findIndex((s) => s.id === "q:added");
+      const fill: Step = { id: `fill:${y}`, kind: "fill", date: y, trackerIds: addedIds, answered: answeredY, done: answeredY === addedIds.length, onPath: true };
+      steps.splice(at >= 0 ? at : steps.length, 0, fill);
+    }
+  }
   // Her first link (Nov 6 2026): where the boat is, the day it's found; seen = done.
   const fl = entries.length > 0 ? firstLinkState(buildRoutes(trackers, entries, buildIslands(trackers, entries)), true) : { route: null, seenToday: false };
   if (fl.route || fl.seenToday) {

@@ -45,7 +45,7 @@ const run = async (tag, { lang = "en", theme = "aurora-light", hour = 19, path }
   out[`${tag} questions`] = await p.evaluate(() => document.body.innerText.replace(/\s+/g, " ").slice(0, 260));
   await btn(T.cont).click(); await shot("value");
   await btn(T.answer).click(); await p.waitForTimeout(500);
-  if (hour < 17) { await shot("daytime"); const sh = p.locator(".onb [role=dialog]"); await sh.getByRole("button", { name: path.day === "yesterday" ? (lang === "ru" ? /За вчера/ : /^Yesterday/) : (lang === "ru" ? /Вечером/ : /^Tonight/) }).click(); await sh.getByRole("button", { name: T.cont }).click(); }
+  if (hour < 17) { await shot("daytime"); const sh = p.locator(".onb [role=dialog]"); await sh.getByRole("button", { name: path.day === "yesterday" ? (lang === "ru" ? /За вчера/ : /^Yesterday/) : (lang === "ru" ? /Вечером|вечером/ : /^Tonight|this evening/) }).click(); await sh.getByRole("button", { name: T.cont }).click(); }
   await p.waitForTimeout(1800); await shot("after-onboarding");
   if (path.day === "tonight") {
     out[`${tag} end`] = await p.evaluate(() => document.querySelector("[role=dialog]")?.innerText.replace(/\s+/g, " ").slice(0, 200));
