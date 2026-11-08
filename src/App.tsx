@@ -17,7 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { maybeRequestRating } from "@/lib/appRating";
-import { track, setUserProperty } from "@/lib/analytics";
+import { track, setUserProperty, currentScreen } from "@/lib/analytics";
 import { getTheme } from "@/lib/theme";
 import { getLanguage } from "@/lib/i18n";
 
@@ -132,8 +132,15 @@ const App = () => {
     // extra native plugin needed. Throttled to one event per 10 min so
     // a quick switch to Messages and back doesn't count as a return.
     let lastForegroundAt = Date.now();
+    let sessionStart = Date.now();
     const onVisibility = () => {
-      if (document.visibilityState !== "visible") return;
+      // closed or switched away: where she was and how long (her note, Nov 8 2026: "на каком моменте закрыли")
+      if (document.visibilityState === "hidden") {
+        const seconds = Math.round((Date.now() - sessionStart) / 1000);
+        if (seconds >= 2) track("app_left", { screen: currentScreen(), seconds }, true);
+        return;
+      }
+      sessionStart = Date.now();
       const now = Date.now();
       if (now - lastForegroundAt < 10 * 60 * 1000) return;
       lastForegroundAt = now;

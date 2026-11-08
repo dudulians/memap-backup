@@ -30,12 +30,43 @@
  */
 import mixpanel from "mixpanel-browser";
 import { Capacitor } from "@capacitor/core";
+import { useEffect } from "react";
+
+/** The version people run (keep with iOS MARKETING_VERSION). */
+export const APP_VERSION = "2.0";
+
+/** Old user (answers from before 2.0) or a new install: decided once, on the first launch of 2.0,
+ *  so their numbers never mix (her note, Nov 8 2026). */
+export const cohort = (): "old" | "new" => {
+  try {
+    const saved = localStorage.getItem("memap_cohort");
+    if (saved === "old" || saved === "new") return saved;
+    const had = localStorage.getItem("memap_tour_seen") === "true" || !!localStorage.getItem("memap_door") || (localStorage.getItem("memap_entries") ?? "[]").length > 2;
+    const c = had ? "old" : "new";
+    localStorage.setItem("memap_cohort", c);
+    return c;
+  } catch { return "new"; }
+};
+
+/** Where she heard about MeMap (the one-tap card on Today), once answered. */
+export const getSource = (): string | null => { try { return localStorage.getItem("memap_source"); } catch { return null; } };
+
+// ---- which screen is on top: the last one when the app is closed ("на каком моменте закрыли") ----
+const screens: string[] = ["start"];
+/** The tab underneath everything. */
+export const setBaseScreen = (name: string) => { screens[0] = name; };
+/** A screen over the tab (a sheet, the questions, onboarding); returns how to leave it. */
+export const enterScreen = (name: string) => { screens.push(name); return () => { const i = screens.lastIndexOf(name); if (i > 0) screens.splice(i, 1); }; };
+export const currentScreen = () => screens[screens.length - 1];
+/** While it's on screen (and active), this is the screen she is on. */
+export const useScreen = (name: string, active = true) => { useEffect(() => (active ? enterScreen(name) : undefined), [name, active]); };
 
 const MIXPANEL_TOKEN = "60e2fb1904bc6c57d3438b0336c0f5c4";
 
 let initialised = false;
 
 export const initAnalytics = (): void => {
+  cohort();
   if (import.meta.env.DEV) return;
   // Only the real app on a phone (Nov 8 2026: our own test builds opened on the computer,
   // http://127.0.0.1:4180 and file:///…, showed up in Mixpanel as dozens of users "(not set)")
@@ -76,6 +107,17 @@ export const initAnalytics = (): void => {
       ip: true,
     });
     initialised = true;
+    // on every event (her note, Nov 8 2026: "чтобы не путались со старыми пользователями"): the version,
+    // old or new, the phone's language and region setting, where she heard about us when she said
+    const source = getSource();
+    mixpanel.register({ app_version: APP_VERSION, cohort: cohort(), region: navigator.language || "", ...(source ? { source } : {}) });
+    // the first launch of this install, once
+    try {
+      if (!localStorage.getItem("memap_first_open")) {
+        localStorage.setItem("memap_first_open", new Date().toISOString());
+        mixpanel.track("first_open", { region: navigator.language || "" });
+      }
+    } catch { /* counted next time */ }
   } catch (err) {
     // Init failure (network blip, blocked by ad blocker, etc.) is
     // not fatal — analytics is best-effort, never a hard dep.
@@ -92,6 +134,8 @@ export const initAnalytics = (): void => {
 export const track = (
   event: AnalyticsEvent,
   props?: Record<string, string | number | boolean>,
+  /** the app is closing: send at once, in a way that survives the close */
+  closing = false,
 ): void => {
   if (import.meta.env.DEV) {
     console.log("[analytics:would-track]", event, props);
@@ -99,7 +143,8 @@ export const track = (
   }
   if (!initialised) return;
   try {
-    mixpanel.track(event, props);
+    if (closing) mixpanel.track(event, props, { transport: "sendBeacon", send_immediately: true });
+    else mixpanel.track(event, props);
   } catch {
     // Best-effort — never let analytics throw.
   }
@@ -160,6 +205,12 @@ export type AnalyticsEvent =
   | "unload_played" | "hunch_made" | "note_saved" | "experiment_started"
   | "report_opened" | "island_opened" | "link_opened" | "map_view_changed"
   | "ui_switched" | "reminders_changed" | "world_shared"
+  // Nov 8 2026: where people come from and where they leave
+  | "first_open" // the first launch of this install
+  | "app_left" // the app went to the background: the screen she was on, seconds in the app
+  | "screen_viewed" // a tab or a main screen opened
+  | "source_answered" // "Where did you hear about MeMap?"
+  | "old_tour_screen" // the old users' onboarding, screen by screen
   | "doctor_report_made"
   // onboarding v7 (Nov 6 2026)
   | "onboarding_questions"
@@ -167,3 +218,11 @@ export type AnalyticsEvent =
   | "world_begun"
   | "world_waiting"
   | "experiment_remind";
+
+/** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
+export const setSource = (source: string) => {
+  try { localStorage.setItem("memap_source", source); } catch { /* asked again next time */ }
+  track("source_answered", { source });
+  if (import.meta.env.DEV || !initialised) return;
+  try { mixpanel.register({ source }); } catch { /* best effort */ }
+};

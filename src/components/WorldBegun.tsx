@@ -3,6 +3,7 @@
 // stage, with the ladder and the evenings to the next one; then a reminder as a sheet.
 // "Tonight" (daytime onboarding): "Your world is waiting" + the reminder. All "Not sure":
 // nothing saved, no reward. Events: memap-world-begun {date}, memap-world-waiting.
+import { SourceAsk } from "./SourceAsk";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
@@ -113,6 +114,8 @@ export const WorldBegun = () => {
             <p className="mt-2 text-center text-[17px] font-semibold leading-snug text-muted-foreground">{t("onb7.begunLine", { island: islandName(t, shown.island) })}</p>
             <div className="mt-5"><GrowthLadder island={shown.island} days={shown.days} /></div>
             {left !== null && <p className="text-center text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.begunNext", { count: left })}</p>}
+            {/* where she heard about MeMap: one tap, never required (Nov 8 2026) */}
+            <SourceAsk className="mt-5" />
             <div className="min-h-6 flex-1" />
             <button type="button" onClick={() => {
               haptics.tap();
@@ -127,6 +130,7 @@ export const WorldBegun = () => {
           <>
             <h1 className="mt-6 text-center text-[29px] font-bold leading-tight tracking-tight">{t("onb7.waitTitle")}</h1>
             <p className="mt-2 text-center text-[17px] font-semibold leading-snug text-muted-foreground">{t("onb7.waitLine")}</p>
+            <SourceAsk className="mt-5" />
             {getNotificationSettings().enabled
               ? <><div className="min-h-6 flex-1" /><button type="button" onClick={() => { haptics.tap(); closeAndTour(); }} className="raised-btn mb-5 w-full justify-center">{t("onb7.showAround")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button></>
               : <Reminder inline onDone={closeAndTour} />}

@@ -10,7 +10,7 @@ import {
   SupportedLanguage,
   EXPLICIT_LANGUAGE_KEY,
 } from "@/lib/i18n";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 import {
   requestNotificationPermissionDetailed,
   getNotificationSettings,
@@ -43,7 +43,9 @@ type Step = "welcome" | "why" | "topic" | "own" | "questions" | "value";
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   const [step, setStep] = useState<Step>("welcome");
   // where people stop in onboarding (2.0 funnel)
-  useEffect(() => { track("onboarding_screen", { screen: String(step) }); }, [step]);
+  // only while it's open (Nov 8 2026: "welcome" was counted on every start of the app)
+  useEffect(() => { if (open) track("onboarding_screen", { screen: String(step) }); }, [step, open]);
+  useScreen(`onb:${String(step)}`, open);
   const [pick, setPick] = useState<V7Pick | null>(null);
   const [setup, setSetup] = useState<V7Setup | null>(null);
   // the topics ticked and her own question, kept while she goes back and forth

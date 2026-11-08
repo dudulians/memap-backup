@@ -12,7 +12,7 @@ import { Share } from "@capacitor/share";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { getNotes, type Note } from "@/lib/notes";
 import { getDoorState } from "@/lib/doors";
@@ -31,6 +31,7 @@ const saveOff = (s: Set<string>) => { try { localStorage.setItem(OFF_KEY, JSON.s
 export const DoctorReport = () => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  useScreen("report", open);
   const [data, setData] = useState<{ trackers: Tracker[]; entries: TrackerEntry[]; notes: Note[] } | null>(null);
   const [audience, setAudience] = useState<Audience>("doctor");
   const [kind, setKind] = useState<ReportKind>("short");

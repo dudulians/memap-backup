@@ -18,7 +18,7 @@ import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { countedDays, markDiscovered, pathModel } from "@/lib/pathSteps";
 import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 
 type Tab = "cards" | "patterns" | "notes";
 interface Stop {
@@ -304,6 +304,7 @@ const Treasures = () => (
 export const AppTour = () => {
   const { t } = useTranslation();
   const [at, setAt] = useState<number | null>(null);
+  useScreen("tour", at !== null);
   /** what's on screen: the stop and where its place is (null: nothing to light up) */
   const [view, setView] = useState<{ at: number; rect: DOMRect | null; link?: { a: Pt; b: Pt }; isle?: IslandId } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);

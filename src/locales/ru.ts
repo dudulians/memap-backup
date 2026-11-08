@@ -241,6 +241,16 @@ const ru: Translation = {
       flag_other: "Через {{count}} дня появится флаг",
     },
   },
+  source: {
+    title: "Откуда ты о нас знаешь?",
+    instagram: "Instagram",
+    tiktok: "TikTok",
+    appstore: "Поиск в App Store",
+    friend: "От друзей",
+    reddit: "Reddit",
+    other: "Откуда-то ещё",
+    thanks: "Спасибо!",
+  },
   tipDay: {
     step: "Стоит понаблюдать",
     open: "Читать",

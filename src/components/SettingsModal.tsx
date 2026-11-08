@@ -38,7 +38,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { switchToOld } from "@/components/UpgradeInvite";
 import { History } from "lucide-react";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 import { getDoorState } from "@/lib/doors";
@@ -113,6 +113,7 @@ const saveSessionSettings = (settings: SessionSettings) => {
 };
 
 export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps) => {
+  useScreen("settings", open);
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings());
   const [sessionSettings, setSessionSettings] = useState(getSessionSettings());
   const [avatarOpen, setAvatarOpen] = useState(false);

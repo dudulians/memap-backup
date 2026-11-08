@@ -26,7 +26,7 @@ import { haptics } from "@/lib/haptics";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion, localizeTrackerTheme } from "@/lib/trackerLocalize";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 import { ru as ruLocale } from "date-fns/locale";
 import { format } from "date-fns";
 import { calculateGlobalStreak } from "@/lib/globalStreak";
@@ -178,6 +178,7 @@ export const DailySession = ({
   autoComplete = false,
 }: DailySessionProps) => {
   const { t } = useTranslation();
+  useScreen(playMode ? "play" : "questions");
   // The swipe sounds, ready before the first card goes.
   useEffect(() => { preloadSounds("swipeYes", "swipeNo", "swipeSkip"); }, []);
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;

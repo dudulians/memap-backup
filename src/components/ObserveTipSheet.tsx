@@ -11,11 +11,12 @@ import { ensureTemplates, findTemplate } from "@/lib/doors";
 import { templateQuestion } from "@/lib/cardText";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 
 export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: () => void }) => {
   const { t, i18n } = useTranslation();
   const [added, setAdded] = useState(false);
+  useScreen("tip", !!id);
   const tip = id ? OBSERVE_TIPS.find((x) => x.id === id) ?? null : null;
   const ru = i18n.language?.startsWith("ru");
   const words = tip ? (ru ? tip.ru : tip.en) : null;

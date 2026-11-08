@@ -1,3 +1,4 @@
+import { setBaseScreen, track } from "@/lib/analytics";
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { TodayTab } from "@/components/TodayTab";
@@ -44,6 +45,8 @@ const Index = () => {
   });
   const tabRef = useRef(activeTab);
   tabRef.current = activeTab;
+  // the tab underneath, for "where she left" and the screens she opens (Nov 8 2026)
+  useEffect(() => { setBaseScreen(`tab:${activeTab}`); track("screen_viewed", { screen: `tab:${activeTab}` }); }, [activeTab]);
   // Her questions open from the Map (her note, Nov 3 2026: in the tab bar
   // they looked like a place she must visit); Back returns there.
   const [questionsFrom, setQuestionsFrom] = useState<Tab>("patterns");

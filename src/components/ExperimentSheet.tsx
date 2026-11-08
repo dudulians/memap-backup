@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { Check, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
@@ -42,6 +42,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   from?: { trackerId: string; k: number };
   onClose: () => void;
 }) => {
+  useScreen(`test:${mode}`);
   const { t } = useTranslation();
   const islands = useMemo(() => buildIslands(trackers, entries).filter((i) => i.trackerIds.length > 0), [trackers, entries]);
   // The stormiest island first: that's where a change can show.

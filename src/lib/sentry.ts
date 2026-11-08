@@ -55,7 +55,7 @@ export const initSentry = (): void => {
         // BUMP THIS on every release alongside the iOS/Android version
         // numbers. Sentry groups errors by release, so this is what
         // makes the "this bug was introduced in v1.7.6" analytics work.
-        release: "memap@1.7.9",
+        release: "memap@2.0",
 
         // Free-tier-friendly sample rates (see file header for reasoning).
         tracesSampleRate: 0,

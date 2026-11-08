@@ -6,6 +6,7 @@
 // already answers, ones that become new questions, or her own idea. MeMap
 // checks each as she answers and shows them together when there are enough
 // days. First, checked hunches, if any are ready. Counts only, never a cause.
+import { useScreen } from "@/lib/analytics";
 import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -37,6 +38,7 @@ const listOf = (xs: string[], lang: string) => {
 };
 
 export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[]; entries: TrackerEntry[]; onClose: () => void }) => {
+  useScreen("hunch");
   const { t } = useTranslation();
   const lang = getLanguage();
   const ru = lang === "ru";

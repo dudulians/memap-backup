@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, FlaskConical, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
 import { islandEvenings } from "@/lib/globeArt";
@@ -59,6 +59,8 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
     return () => { live = false; };
   }, [open]);
 
+  useScreen(`old:${step}`, open);
+  useEffect(() => { if (open) track("old_tour_screen", { step }); }, [open, step]);
   const daysOf = useMemo(() => (data ? Object.fromEntries(data.evenings) as Record<string, number> : {}), [data]);
   if (!open || !data) return null;
 

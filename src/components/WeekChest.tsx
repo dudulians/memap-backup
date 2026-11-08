@@ -47,7 +47,7 @@ const WeekDots = ({ k, n, calm, delay }: { k: number; n: number; calm?: boolean;
   </span>
 );
 import { Pressable } from "@/components/ui/pressable";
-import { track } from "@/lib/analytics";
+import { track, useScreen } from "@/lib/analytics";
 
 export const WeekChest = ({
   week,
@@ -65,6 +65,7 @@ export const WeekChest = ({
   /** After "Put it on my map": show it there. */
   onPlaced: () => void;
 }) => {
+  useScreen("week_report");
   const { t } = useTranslation();
   const [rec, setRec] = useState<ChestRecord | null>(() => getChests()[week] ?? null);
   // Cards shown so far; an already opened chest shows them all.

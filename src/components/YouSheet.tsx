@@ -4,6 +4,7 @@
 // "куда идут?"). One sheet behind her animal: the animal with Change, her
 // questions, Settings, then her week, her treasures and her links. It opens
 // from the header, the boat on the map and the animal beside her step.
+import { useScreen } from "@/lib/analytics";
 import { TipCard, tourCompleted } from "./Tips";
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
@@ -41,6 +42,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
   onAddQuestion: () => void;
 }) => {
   const { t } = useTranslation();
+  useScreen("you", open);
   const [data, setData] = useState<{ trackers: Tracker[]; entries: TrackerEntry[]; notes: number } | null>(null);
   // each visit draws the shelf afresh, with what she has now
   const [visit, setVisit] = useState(0);
