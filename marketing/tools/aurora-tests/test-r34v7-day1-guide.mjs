@@ -79,7 +79,7 @@ let addedOnce = false;
 for (let move = 0; move < 18; move++) {
   const at = await here();
   if (at === "NO START BUBBLE") { log.push({ move, note: "no start bubble" }); break; }
-  if (/Done for today|What's next|На сегодня всё|Что дальше/.test(at)) {
+  if (/Done for today|What's next|На сегодня всё|Что дальше|Pop bubbles|Полопать пузыри|Play|Играть/.test(at)) {
     await p.locator(".path-start").first().click(); await p.waitForTimeout(900);
     await shot("end-card");
     log.push({ move, end: await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD") });

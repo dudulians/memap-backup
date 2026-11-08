@@ -94,9 +94,12 @@ export const LEGACY_IDEA_NAMES: Record<string, { en?: string; ru?: string }> = {
     "ru": "3 строчки вечером"
   },
   "screenFreeHour": {
-    "ru": "Без экранов за час до сна детей"
+    "ru": "Без экранов за час до сна детей",
+    "en": "No screens in the hour before the kids' bedtime"
   },
   "stop19": {
     "ru": "Закончить работу до 19:00"
-  }
+  },
+  "talkNoPhones__ru2": { "ru": "10 минут говорить без телефонов" },
+  "outsideMorning__ru2": { "ru": "Утром 10 минут побыть на улице" },
 };

@@ -69,6 +69,6 @@ await p.waitForTimeout(1200); await shot("today-scrolled");
 await p.mouse.wheel(0, -800); await p.waitForTimeout(1200); await shot("today-top");
 // Done for today before today is answered: what does it say?
 const done = p.locator("button[aria-label*=\"Done for today\"]").first();
-if (true) { const box = await p.getByText("Done for today", { exact: true }).first().boundingBox(); if (box) await p.mouse.click(box.x + box.width / 2, box.y - 60); await p.waitForTimeout(1200); await shot("done-card"); log.push({ doneCard: await p.evaluate(() => document.querySelector("[role=dialog], .path-card, [class*=bubble]")?.innerText?.replace(/s+/g, " ").slice(0, 200) ?? "") }); }
+if (true) { const box = await p.getByText("The end of today's path", { exact: true }).first().boundingBox(); if (box) await p.mouse.click(box.x + box.width / 2, box.y - 60); await p.waitForTimeout(1200); await shot("done-card"); log.push({ doneCard: await p.evaluate(() => document.querySelector("[role=dialog], .path-card, [class*=bubble]")?.innerText?.replace(/s+/g, " ").slice(0, 200) ?? "") }); }
 console.log(JSON.stringify({ log, errs }, null, 1));
 await b.close();

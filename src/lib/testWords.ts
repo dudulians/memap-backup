@@ -24,7 +24,8 @@ export const ideaOf = (text: string): string | null => {
   if (!n) return null;
   for (const k of ideaKeys()) {
     for (const lng of ["en", "ru"]) if (norm(i18n.t(`experiment.idea.${k}.change`, { lng })) === n) return k;
-    if (Object.values(LEGACY_IDEA_NAMES[k] ?? {}).some((x) => !!x && norm(x) === n)) return k;
+    const olds = Object.entries(LEGACY_IDEA_NAMES).filter(([key]) => key === k || key.startsWith(`${k}__`)).flatMap(([, v]) => Object.values(v));
+    if (olds.some((x) => !!x && norm(x) === n)) return k;
   }
   return null;
 };

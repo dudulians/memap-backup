@@ -108,7 +108,7 @@ export const GrowMoment = () => {
       <div className="fixed left-4 right-4 mx-auto max-w-[380px]" style={place}>
         <div ref={cardRef} className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", !cardOn && "is-moving")}>
           <p className="text-[24px] font-bold leading-tight tracking-tight">{t("growMoment.title", { island: name })}</p>
-          <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{t(`path.stage${shown.stage}`)} · {left === null ? t("path.fullyGrown") : t("path.toNext", { count: left })}</p>
+          <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{left === null ? t("path.stageFull", { stage: t(`path.stage${shown.stage}`) }) : t("path.stageLine", { stage: t(`path.stage${shown.stage}`), count: left })}</p>
           {/* the four stages, the one now ringed */}
           <div className="mt-3 grid grid-cols-4 items-end gap-1 rounded-[16px] bg-foreground/[0.035] px-2 py-2" aria-hidden="true">
             {([1, 2, 3, 4] as const).map((s) => (

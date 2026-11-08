@@ -797,7 +797,7 @@ export const DailySession = ({
         </span>
         <p className="mt-6 text-[28px] font-bold tracking-tight">{t("path.stepDone")}</p>
         <p className="mt-1 text-[17px] font-medium text-muted-foreground">
-          {stepTitle ? `${stepTitle} · ` : ""}{t("path.answers", { count: answeredCount })}
+          {t("path.stepSaved", { count: answeredCount })}
         </p>
         <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("path.continue")}
@@ -1286,12 +1286,10 @@ export const DailySession = ({
                     const s = format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM", { locale: dateLocale });
                     return s.charAt(0).toUpperCase() + s.slice(1);
                   })()}
-              <span className="font-medium text-muted-foreground">
-                {" · "}
-                {t("dailySession.countOf", { current: currentIndex + 1, total: totalQuestions })}
-              </span>
               {onDateChange && <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showDates && "rotate-180")} strokeWidth={2.4} />}
             </button>
+            {/* which question of how many, on its own line (her note, Nov 8 2026: "Health 1/2 · 3 of 8") */}
+            <p className="text-[13px] font-semibold text-muted-foreground">{t("dailySession.questionOf", { current: currentIndex + 1, total: totalQuestions })}</p>
             {/* Which day the questions are about (her note, Nov 3 2026: a
                 card says "Felt anxious", and it wasn't clear: today? ever?).
                 A past day is already named in the title. */}

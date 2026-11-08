@@ -25,7 +25,7 @@ import { litTrackers } from "@/lib/lighthouses";
 import { getNotes } from "@/lib/notes";
 import { ITEMS, gardenTrees, growthOf, islandDays, owned, placeTreasures, syncTreasures, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "./ExperimentSheet";
-import type { TryAction } from "./ActionPoints";
+import { WhatHelps, type TryAction } from "./ActionPoints";
 import { avatarDeclined, avatarUrl, getAvatar } from "@/lib/avatar";
 import { islandOf } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
@@ -217,10 +217,11 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   }, [trackers]);
   // every link worth showing, not only the ones drawn between islands
   const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length, [trackers, entries]);
-  const onHelps = () => {
-    const x = currentExperiment();
-    if (x && experimentOver(x)) { setHelpsResult(x); return; }
-    if (x) { setOpen(x.island as IslandId); return; }
+  // What helps opens its own sheet (Nov 8 2026: it opened a test's island, and an empty "Week summary"
+  // when that island wasn't there)
+  const [helpsOpen, setHelpsOpen] = useState(false);
+  const onHelps = () => setHelpsOpen(true);
+  const pickTest = () => {
     const first = mainIsland && islands.some((i) => i.id === mainIsland) ? mainIsland : islands.find((i) => i.trackerIds.length > 0)?.id;
     if (first) setTestFor(first);
   };
@@ -265,7 +266,16 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           </button>
         </div>
       )}
-      <BottomSheet open={!!open && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
+      <BottomSheet open={helpsOpen} onOpenChange={(o) => { if (!o) setHelpsOpen(false); }} className="h-auto max-h-[88vh]" ariaTitle={t("world4.whatHelps")}>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
+          <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("world4.whatHelps")}</h2>
+          <WhatHelps trackers={trackers} entries={entries}
+            onResult={(x) => { setHelpsOpen(false); window.setTimeout(() => setHelpsResult(x), 250); }}
+            onPick={() => { setHelpsOpen(false); window.setTimeout(pickTest, 250); }} />
+        </div>
+      </BottomSheet>
+      {/* an island's sheet only when the island is there (never an empty one) */}
+      <BottomSheet open={!!island && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <div className="flex items-center gap-3 pb-3 pr-10 pt-1">
             {/* the island as it stands now, and how far its next stage is (WORLD-BIBLE, "Рост острова") */}
@@ -278,7 +288,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
               {island && (() => { const n = dayCount[island.id] ?? 0, left = toNextStage(n); return (
-                <p className="truncate text-[15px] font-semibold text-muted-foreground">{t(`path.stage${stageOf(n)}`)} · {left === null ? t("path.fullyGrown") : t("path.toNext", { count: left })}</p>
+                <p className="text-[15px] font-semibold leading-snug text-muted-foreground">{left === null ? t("path.stageFull", { stage: t(`path.stage${stageOf(n)}`) }) : t("path.stageLine", { stage: t(`path.stage${stageOf(n)}`), count: left })}</p>
               ); })()}
             </div>
             {island && isOwnIsland(island.id) && (

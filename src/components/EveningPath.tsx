@@ -290,7 +290,7 @@ export const EveningPath = ({
     if (s.kind === "link") return t("firstLink.step");
     if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
-    return name + (s.part ? ` ${s.part[0]}/${s.part[1]}` : "");
+    return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name;
   };
 
   /** What a node looks like and says. */
@@ -323,7 +323,7 @@ export const EveningPath = ({
       if (eveningDone) return { look: current ? "current" : "todo", hue: "198 55% 58%", icon: <Wind className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />, title: t("path.end.playTitle"), action: current ? t("path.end.playAction") : undefined };
       return {
         look: current ? "current" : "todo", icon: <Flag className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />,
-        title: t("path.end.title"), action: current ? t("path.end.action") : undefined,
+        title: t("path.end.titleAhead"), action: current ? t("path.end.action") : undefined,
       };
     }
     const s = n.step;
@@ -633,7 +633,7 @@ export const EveningPath = ({
   /** An island's picture at its stage now, and how far the next one is. */
   const stageLine = (island: IslandId) => {
     const n = evenings.get(island) ?? 0, left = toNextStage(n);
-    return `${t(`path.stage${stageOf(n)}`)} · ${left === null ? t("path.fullyGrown") : t("path.toNext", { count: left })}`;
+    return left === null ? t("path.stageFull", { stage: t(`path.stage${stageOf(n)}`) }) : t("path.stageLine", { stage: t(`path.stage${stageOf(n)}`), count: left });
   };
   const islandPic = (island: IslandId, w: number) => {
     const name = artOf(island, evenings.get(island) ?? 0);
@@ -708,7 +708,7 @@ export const EveningPath = ({
     // "Done for today": what's left, all optional (the week's report first when it's ready)
     if (n.kind === "end") {
       // before today is answered: say plainly it comes later, and take her to her step (phone test, Nov 7 2026)
-      if (!eveningDone) return (<>{head(t("path.end.title"), t("path.end.notYet", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
+      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), t("path.end.notYet", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
       const go = (f: () => void, action = "") => () => { setOpen(null); if (action) track("end_card_action", { action }); f(); };
       const ic = "h-5 w-5";
       // Links and the calendar only once there's something on them (her note, Nov 5

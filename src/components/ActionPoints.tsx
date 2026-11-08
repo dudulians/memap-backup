@@ -26,7 +26,7 @@ import { islandOf, mapPic, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { experimentDay, EXPERIMENT_DAYS, ideasFor, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, weekDone, type Experiment } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, weekDone, type Experiment } from "@/lib/experiments";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -141,9 +141,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-[17px] font-bold leading-snug">{testNameOf(test.change)}</span>
-            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>
-              {lineOf(test)}{test.perWeek ? ` · ${t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}` : ""}
-            </span>
+            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}</span>
+            {test.perWeek && <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}</span>}
             <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
               <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${test.remind}` : t("experiment.noRemind")}
             </span>
@@ -383,6 +382,69 @@ const TestSheet = ({ test, trackers, entries, line, onClose }: { test: Experimen
         <button type="button" onClick={onClose} className="raised-btn mt-6 w-full justify-center">{t("common.close")}</button>
       </div>
     </BottomSheet>
+  );
+};
+
+/** "What helps" (the World's 4th part; her note, Nov 8 2026: it opened an empty "Week summary"):
+ *  the tests running now (each opens with its reminder), a finished one's result, the ones tried
+ *  before with what they showed, and "Test one change". */
+export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: Tracker[]; entries: TrackerEntry[]; onResult: (x: Experiment) => void; onPick: () => void }) => {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState<Experiment | null>(null);
+  const running = runningExperiments();
+  const tried = [...finishedExperiments()].reverse();
+  const lineOf = (x: Experiment) => t("rules.testing", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS });
+  return (
+    <div className="space-y-2.5">
+      {running.map((x) => experimentOver(x) ? (
+        <button key={x.id} type="button" onClick={() => { haptics.tap(); onResult(x); }} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
+          <span className="icon-dot h-11 w-11"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px] font-bold leading-snug">{testNameOf(x.change)}</span>
+            <span className="block text-[14px] font-bold" style={{ color: TEAL }}>{t("experiment.stepSub")}</span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+        </button>
+      ) : (
+        <button key={x.id} type="button" onClick={() => { haptics.tap(); setOpen(x); }} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
+          <span className="icon-dot h-11 w-11"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[17px] font-bold leading-snug">{testNameOf(x.change)}</span>
+            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(x)}</span>
+            {x.perWeek && <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{t("experiment.weekOf", { k: weekDone(x, entries), n: x.perWeek })}</span>}
+            <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
+              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{x.remind ? `${t("experiment.remindAt")} ${x.remind}` : t("experiment.noRemind")}
+            </span>
+          </span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+        </button>
+      ))}
+      {running.length === 0 && tried.length === 0 && (
+        <p className="surface rounded-[22px] px-5 py-4 text-[17px] font-semibold leading-snug">{t("helps.empty")}</p>
+      )}
+      <button type="button" onClick={() => { haptics.tap(); onPick(); }} className="raised-btn w-full justify-center gap-2">
+        <FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("experiment.title")}
+      </button>
+      {tried.length > 0 && (
+        <>
+          <p className="px-1 pt-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("helps.tried")}</p>
+          <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
+            {tried.map((x) => {
+              const r = experimentResult(x, trackers, entries);
+              return (
+                <div key={x.id} className="px-4 py-3">
+                  <p className="text-[16px] font-bold leading-snug">{testNameOf(x.change)}</p>
+                  <p className="mt-0.5 text-[14px] font-semibold leading-snug text-muted-foreground">
+                    {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] }) : t("helps.noData")}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {open && <TestSheet test={open} trackers={trackers} entries={entries} line={lineOf(open)} onClose={() => setOpen(null)} />}
+    </div>
   );
 };
 
