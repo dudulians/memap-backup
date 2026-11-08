@@ -27,6 +27,7 @@ import { experimentDay, EXPERIMENT_DAYS, runningExperiments } from "@/lib/experi
 import { testNameOf } from "@/lib/testWords";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
+import { weekRange } from "@/lib/weekRange";
 
 const WEATHER_PIC = { storm: "thunder_cloud", clouds: "partly_cloudy", sun: "sun" } as const;
 
@@ -108,12 +109,12 @@ export const GrowthLadder = ({ island, days }: { island: IslandId; days: number 
  *  what it is (her ask via the GPT review, Nov 5 2026): the rule in a line,
  *  then the questions whose answers made the hard days. */
 export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tracker[] }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const title = useTitles(trackers);
   const early = island.answeredDays < 3;
   const line = early
     ? t("isle.early")
-    : t("isle.hardWeek", { k: island.weekHard, count: island.weekAnswered });
+    : t("isle.hardWeek", { count: island.weekHard, n: island.weekAnswered, range: weekRange(i18n.language ?? "en") });
   return (
     <div className="px-1 pb-1">
       <div className="flex items-center gap-3">
@@ -301,7 +302,7 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
       )}
       {/* the calendar week, since Monday, the same "this week" as the island sheets (her note 5,
           Nov 8 2026); days are dots, coloured by meaning: hard rose, good green */}
-      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisCalWeek")}</p>
+      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisCalWeek", { range: weekRange(i18n.language ?? "en") })}</p>
       {withUs > 0 && <p className="-mt-1 text-[15px] font-bold leading-snug">{t("map.withUs", { count: withUs })}</p>}
       <div className="surface space-y-3 rounded-[20px] px-4 py-3.5">
         <div className="flex items-center gap-3" aria-hidden="true">

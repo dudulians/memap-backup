@@ -502,7 +502,8 @@ const en = {
   isle: {
     early: "This week: too early to tell",
     hard: "This week: {{k}} hard days of {{count}}",
-    hardWeek: "This week, since Monday: {{k}} hard days of {{count}}",
+    hardWeek_one: "This week, {{range}}: {{count}} hard day out of {{n}}",
+    hardWeek_other: "This week, {{range}}: {{count}} hard days out of {{n}}",
     answered: "This week: answered on {{k}} of 7 days",
     usual: { rougher: "more than usual", usual: "about as usual", calmer: "fewer than usual" },
     why: { storm: "Storm: 3 or more hard days in the last 7", clouds: "Clouds: 1 or 2 hard days in the last 7", sun: "Sun: no hard days in the last 7" },
@@ -726,7 +727,7 @@ const en = {
     inARow: "In a row",
     chests: "Week reports",
     daysOf7: "{{k}} of 7 days",
-    thisCalWeek: "This week, since Monday",
+    thisCalWeek: "This week, {{range}}",
     withUs_one: "You've been with MeMap for {{count}} day",
     withUs_other: "You've been with MeMap for {{count}} days",
     aria: "Your world as a ball of islands. Drag to roll it, tap an island to open it.",
