@@ -65,11 +65,11 @@ export const initAnalytics = (): void => {
       // Don't log to console in prod (would spam DevTools when user
       // opens it for any reason)
       debug: false,
-      // No country/city lookup from the request IP. Without this
-      // Mixpanel geolocates every event, which is why the App Store
-      // privacy label had to list "Location" even though the app
-      // has no location code at all.
-      ip: false,
+      // Country and city from the request IP, as in the live 1.7.9 (her note, Nov 8 2026:
+      // "я в Mixpanel вижу страну"): Mixpanel works them out on its side; the app has no
+      // location code. The App Store privacy label lists approximate location for this.
+      // (1.8.0 had turned it off with `ip: false`, which would have lost the country in 2.0.)
+      ip: true,
     });
     initialised = true;
   } catch (err) {
