@@ -14,14 +14,15 @@ import { track } from "@/lib/analytics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
-import { EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
+import { comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
+import { answerPhrase } from "@/lib/answerPhrases";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
 import { countFromToday } from "@/lib/actionPoints";
 import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { Pressable } from "@/components/ui/pressable";
 import { cardQuestion } from "@/lib/cardText";
-import { goalOf, ideaOf, testNameOf, testQuestionOf } from "@/lib/testWords";
+import { goalOf, ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
 
 /* Chosen: a teal ring and a teal tick (the Aurora kit, Nov 5 2026: no
    tinted backgrounds, one accent colour). */
@@ -149,7 +150,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               )}
               {runningHere.length > 0 && (
                 <p className="mb-3 rounded-2xl bg-foreground/[0.05] px-4 py-3 text-center text-[15px] font-semibold leading-snug text-muted-foreground">
-                  {t("experiment.alsoRunning", { list: runningHere.map((x) => `“${testNameOf(x.change)}”`).join(", ") })}
+                  {t("experiment.alsoRunning", { list: runningHere.map((x) => quotedTestName(x.change)).join(", ") })}
                 </p>
               )}
               <Pressable tone="teal" haptic="none" onClick={start} disabled={!island || !change} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
@@ -188,15 +189,45 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
         {mode === "result" && experiment && result && (
           <>
             <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(experiment.change)}</p>
-            <p className="mt-1 text-[17px] font-medium text-muted-foreground">{t("experiment.didDays", { k: result.did, count: EXPERIMENT_DAYS })}</p>
+            {/* a weekly goal: each week, and praise when it was met (Nov 8 2026); else the days, all 14 praised */}
+            {experiment.perWeek && result.weeks ? (
+              <>
+                <p className="mt-1 text-[17px] font-medium text-muted-foreground">{t("experiment.weeksLine", { a: result.weeks[0], b: result.weeks[1], n: experiment.perWeek })}</p>
+                {result.weeks.filter((k) => k >= experiment.perWeek!).length > 0 && (
+                  <p className="mt-1 text-[17px] font-bold" style={{ color: "hsl(var(--balanced))" }}>{t(result.weeks.every((k) => k >= experiment.perWeek!) ? "experiment.goalBoth" : "experiment.goalOne")}</p>
+                )}
+              </>
+            ) : (
+              <p className="mt-1 text-[17px] font-medium text-muted-foreground">{result.did === EXPERIMENT_DAYS ? t("experiment.didAll", { count: EXPERIMENT_DAYS }) : t("experiment.didDays", { k: result.did, count: EXPERIMENT_DAYS })}</p>
+            )}
             <div className="surface mt-5 rounded-[22px] px-5 py-4">
               <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>
-              <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.withIt", { k: result.withChange[0], count: result.withChange[1] })}</p>
-              <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
+              {comparedBy(result) === "before" ? (
+                <>
+                  <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.duringIt", { k: result.during[0], count: result.during[1] })}</p>
+                  <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.beforeIt", { k: result.before[0], count: result.before[1] })}</p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.withIt", { k: result.withChange[0], count: result.withChange[1] })}</p>
+                  <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
+                </>
+              )}
               <p className="mt-2 text-[16px] font-bold leading-snug text-[hsl(var(--coin-teal))]">{t(`experiment.verdict.${verdictOf(result)}`)}</p>
+              {/* the biggest difference on any island, in plain words (Nov 8 2026) */}
+              {result.most && (() => {
+                const m = result.most, tr = trackers.find((x) => x.id === m.trackerId);
+                if (!tr) return null;
+                const what = answerPhrase(t, tr, m.hardYes);
+                return (
+                  <p className="mt-3 border-t border-foreground/[0.07] pt-3 text-[16px] font-semibold leading-snug">
+                    {t(m.by === "with" ? "experiment.mostWith" : "experiment.mostBefore", { what, a: m.a[0], b: m.a[1], c: m.b[0], d: m.b[1] })}
+                  </p>
+                );
+              })()}
               {/* other changes at the same time: their effects mix into this one (Nov 8 2026) */}
               {experiment && overlapping(experiment).length > 0 && (
-                <p className="mt-1.5 text-[14px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(experiment).map((x) => `“${testNameOf(x.change)}”`).join(", ") })}</p>
+                <p className="mt-1.5 text-[14px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(experiment).map((x) => quotedTestName(x.change)).join(", ") })}</p>
               )}
             </div>
             <div className="mt-5 flex items-center gap-4">

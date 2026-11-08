@@ -100,13 +100,14 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
           <div className="surface shrink-0 overflow-hidden rounded-[20px]">
             <Row icon={ListChecks} label={data ? `${t("today.myQuestions")} · ${questions}` : t("today.myQuestions")} onClick={onQuestions} />
             <div className="ml-[66px] h-px bg-foreground/[0.07]" />
-            <Row icon={Settings} label={t("common.settings")} onClick={onSettings} />
-            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
             <Row icon={Stethoscope} label={t("report.title")} onClick={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />
             <div className="ml-[66px] h-px bg-foreground/[0.07]" />
             <Row icon={Share2} label={t("share.button")} onClick={() => window.dispatchEvent(new CustomEvent("memap-share-world", { detail: { from: "you" } }))} />
             <div className="ml-[66px] h-px bg-foreground/[0.07]" />
             <Row icon={Compass} label={t("how.title")} onClick={() => setHow(true)} />
+            {/* Settings last (her note, Nov 8 2026) */}
+            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
+            <Row icon={Settings} label={t("common.settings")} onClick={onSettings} />
           </div>
           <div className="mt-5 shrink-0">
             {data && <WorldStats key={visit} islands={islands} routes={routes} trackers={data.trackers} entries={data.entries} facts={facts} />}

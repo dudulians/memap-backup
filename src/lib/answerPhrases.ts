@@ -19,7 +19,6 @@ const P: Record<string, [string, string, string, string]> = {
   "felt-lonely-with-partner": ["feeling alone next to partner", "no distance from partner", "одиночество рядом с партнёром", "без дистанции с партнёром"],
   "partner-irritated-me": ["irritation at partner", "no irritation at partner", "раздражение на партнёра", "без раздражения на партнёра"],
   "good-time-together": ["good time together", "no good time together", "хорошее время вдвоём", "без хорошего времени вдвоём"],
-  "partner-brought-flowers": ["flowers from partner", "no flowers", "цветы от партнёра", "без цветов"],
   "partner-complimented-me": ["compliment from partner", "no compliment from partner", "комплимент от партнёра", "без комплимента от партнёра"],
   "partner-raised-voice": ["partner raised their voice", "no raised voice", "партнёр повысил голос", "без повышенного голоса"],
   "partner-said-hurtful": ["hurtful words from partner", "no hurtful words", "обидные слова партнёра", "без обидных слов"],

@@ -34,6 +34,8 @@ export const ideaOf = (text: string): string | null => {
 
 /** A test's name (her plan) in today's language; her own words stay hers. A weekly goal, also in
  *  its old words ("Внести 3 тренировки в календарь на эту неделю"), is "3 workouts a week". */
+/** A test name in quotes of the language: «…» in Russian, “…” in English. */
+export const quotedTestName = (change: string): string => { const n = testNameOf(change); return i18n.language?.startsWith("ru") ? `«${n}»` : `“${n}”`; };
 export const testNameOf = (change: string): string => {
   const k = ideaOf(change);
   if (k) return i18n.t(`experiment.idea.${k}.change`);

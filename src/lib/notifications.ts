@@ -54,6 +54,12 @@ const isTodayFilled = async (): Promise<boolean> => {
     const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
     const active = trackers.filter((t) => !t.archived);
     if (active.length === 0) return true;
+    // the new screens: done when the path says so (a follow-up that wasn't needed counts as done;
+    // Nov 8 2026: the reminder came on a finished evening)
+    if (getUiMode() === "new") {
+      const { pathModel } = await import("@/lib/pathSteps");
+      return pathModel(trackers, entries).leftToday === 0;
+    }
     const todayIso = localISODate(new Date());
     const answered = new Set(
       entries.filter((e) => e.date === todayIso).map((e) => e.trackerId),
@@ -192,6 +198,10 @@ export const reminderPlan = async (
   // settings change). Acceptable tradeoff for keeping the pipeline
   // simple — the queue is rebuilt often enough in practice.
   const activeTrackers = (await getTrackers()).filter((t) => !t.archived);
+  // how many the evening really asks: no follow-ups (they come only after a "yes") and no Play cards
+  const { FOLLOW_UPS } = await import("@/lib/bodyTemplates");
+  const { templateIdOf } = await import("@/lib/answerPhrases");
+  const askedCount = activeTrackers.filter((t) => t.source !== "play" && !FOLLOW_UPS[templateIdOf(t) ?? ""]).length || activeTrackers.length;
   // how close she is to the next things, for the new screens' reminders
   const progress = getUiMode() === "new"
     ? await (async () => {
@@ -268,8 +278,8 @@ export const reminderPlan = async (
         // a warm line that changes from day to day, not just "MeMap" (Nov 8 2026)
         dayTitle = i18n.t(`notifications.dayTitle${(fireAt.getDate() % 5) + 1}`);
         const today = i18n.t("notifications.privateBody", {
-          count: activeTrackers.length,
-          min: Math.max(1, Math.round((activeTrackers.length * 4) / 60)),
+          count: askedCount,
+          min: Math.max(1, Math.round((askedCount * 4) / 60)),
         });
         // How close she is (Nov 6 2026, src/lib/reminderLines.ts): the first reminder
         // says the closest thing; after it, every other day, the next ones in turn.
@@ -302,7 +312,7 @@ export const scheduleNotification = async (
   await cancelNotification();
 
   // a try with its own reminder counts even when the evening one is off
-  const tries = tryPlan();
+  const tries = tryPlan(await getEntries().catch(() => []));
   if (!settings.enabled && tries.length === 0) return;
 
   const granted = await requestNotificationPermission();
@@ -337,8 +347,18 @@ const tryWords = (x: Experiment, k: number): { title: string; body: string } => 
 };
 
 /** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */
-export const tryPlan = (): { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] => {
+export const tryPlan = (entries: TrackerEntry[] = []): { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] => {
   const out: { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] = [];
+  // no push on a day already done ("yes" today), nor for the rest of a week whose goal is met (Nov 8 2026)
+  const now = new Date(), todayIso = localISODate(now);
+  const monday = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)));
+  const sunday = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - ((now.getDay() + 6) % 7))));
+  const yesOn = (id: string, from: string, to: string) => entries.filter((e) => e.trackerId === id && e.value === true && e.date >= from && e.date <= to).length;
+  const skip = (x: Experiment, at: Date) => {
+    const d = localISODate(at);
+    if (d === todayIso && yesOn(x.trackerId, todayIso, todayIso) > 0) return true;
+    return !!x.perWeek && d >= monday && d <= sunday && yesOn(x.trackerId, monday, todayIso) >= x.perWeek;
+  };
   fixDefaultReminders((x) => smartRemindTime(ideaOf(x.change), testNameOf(x.change)));
   // every running test (one per island); each its own id range
   runningExperiments().slice(0, 8).forEach((x, i) => {
@@ -347,7 +367,7 @@ export const tryPlan = (): { id: number; title: string; body: string; schedule: 
     const start = new Date(x.start + "T00:00:00");
     for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
       const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
-      if (at.getTime() <= Date.now()) continue;
+      if (at.getTime() <= Date.now() || skip(x, at)) continue;
       out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, ...tryWords(x, k), schedule: { at, allowWhileIdle: true } });
     }
   });
@@ -357,7 +377,7 @@ export const tryPlan = (): { id: number; title: string; body: string; schedule: 
     const [h, m] = x.remind!.split(":").map(Number);
     for (let d = 0; d < 7; d++) {
       const at = new Date(); at.setDate(at.getDate() + d); at.setHours(h || 0, m || 0, 0, 0);
-      if (at.getTime() <= Date.now()) continue;
+      if (at.getTime() <= Date.now() || skip(x, at)) continue;
       const body = i18n.t(`notifications.try.keep${(at.getDate() % 4) + 1}`);
       const today = testTodayOf(x.change);
       out.push({

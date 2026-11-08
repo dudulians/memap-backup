@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, Check, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
 import { cardQuestion } from "@/lib/cardText";
-import { ideaOf, testNameOf, testQuestionOf } from "@/lib/testWords";
+import { ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
@@ -475,10 +475,11 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
                     </p>
                   )}
                   <p className="mt-0.5 text-[14px] font-semibold leading-snug text-muted-foreground">
-                    {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] }) : t("helps.noData")}
+                    {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] })
+                      : r.during[1] && r.before[1] ? t("helps.beforeLine", { a: r.during[0], b: r.during[1], c: r.before[0], d: r.before[1] }) : t("helps.noData")}
                   </p>
-                  {r.withChange[1] > 0 && r.without[1] > 0 && <p className="mt-0.5 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{t(`experiment.verdict.${verdictOf(r)}`)}</p>}
-                  {overlapping(x).length > 0 && <p className="mt-0.5 text-[13px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(x).map((o) => `“${testNameOf(o.change)}”`).join(", ") })}</p>}
+                  {verdictOf(r) !== "few" && <p className="mt-0.5 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{t(`experiment.verdict.${verdictOf(r)}`)}</p>}
+                  {overlapping(x).length > 0 && <p className="mt-0.5 text-[13px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(x).map((o) => quotedTestName(o.change)).join(", ") })}</p>}
                 </div>
               );
             })}

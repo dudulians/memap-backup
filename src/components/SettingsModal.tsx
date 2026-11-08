@@ -739,7 +739,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           {screen !== "main" && (
             <button
               type="button"
-              onClick={() => setScreen(screen === "soundHaptics" || screen === "help" || screen === "data" ? "more" : "main")}
+              onClick={() => setScreen("main")}
               className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 -ml-1 px-2 py-1 -my-1 rounded-md min-h-[40px] active:bg-primary/10 transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -793,14 +793,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   return (
                     <>
                       <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
-                        {/* Avatar (Aurora, optional; Malu first). */}
-                        <button type="button" onClick={() => setAvatarOpen(true)} className={cn(row, "active:bg-muted/60 transition-colors")}>
-                          <span className="flex-1 text-[17px] font-medium">{t("avatar.title")}</span>
-                          {avatarUrl(avatarId)
-                            ? <img src={avatarUrl(avatarId)!} alt="" className="h-9 w-9 object-contain" />
-                            : <span className="text-[16px] text-muted-foreground">{t("avatar.none")}</span>}
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
-                        </button>
+                        {/* no avatar row (Nov 8 2026): the animal in You has its own "Change" */}
                         <div className={row}>
                           <button type="button" onClick={() => setScreen("notifications")} className="flex-1 min-w-0 text-left text-[17px] font-medium">
                             {t("settings.eveningReminder")}
@@ -857,6 +850,22 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         {currentLang === "ru" && nav("gender", t("gender.settingsLabel"), t(`gender.${currentPol}`))}
                       </div>
 
+                      {/* what used to hide under "More" (her note, Nov 8 2026: "зачем more… и там повторяется
+                          вернуться к старому виду"): right here, one tap each */}
+                      <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                        {([
+                          ["soundHaptics", Volume2, t("settings.soundAndHaptics")],
+                          ["help", HelpCircle, t("settings.helpTitle")],
+                          ["data", Database, t("settings.dataPrivacyTitle")],
+                        ] as const).map(([key, Icon, label]) => (
+                          <button key={key} type="button" onClick={() => setScreen(key)} className={cn(row, "active:bg-muted/60 transition-colors")}>
+                            <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                            <span className="flex-1 text-[17px] font-medium">{label}</span>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
+
                       <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                         {Capacitor.getPlatform() !== "android" && (
                           <button
@@ -867,11 +876,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                             }}
                             className={cn(row, "active:bg-muted/60 transition-colors")}
                           >
+                            <Star className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
                             <span className="flex-1 text-[17px] font-medium">{t("settings.rateApp")}</span>
-                            <Star className="h-5 w-5 text-muted-foreground/60" />
                           </button>
                         )}
-                        {nav("more", t("settings.more"))}
                         {/* Back to the old screens, right here (her note, Nov 6 2026: ads bring
                             people to the old version; whoever tries the new one and doesn't
                             like it must find the way back without digging into "More"). */}
@@ -885,38 +893,6 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   );
                 })()}
               </>
-            )}
-
-            {/* === MORE SUB-SCREEN === */}
-            {screen === "more" && (
-              <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
-                {([
-                  ["soundHaptics", Volume2, t("settings.soundAndHaptics")],
-                  ["help", HelpCircle, t("settings.helpTitle")],
-                  ["data", Database, t("settings.dataPrivacyTitle")],
-                ] as const).map(([key, Icon, label]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setScreen(key)}
-                    className="w-full flex items-center gap-3 px-4 min-h-[60px] text-left active:bg-muted/60 transition-colors"
-                  >
-                    <Icon className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                    <span className="flex-1 text-[17px] font-medium">{label}</span>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
-                  </button>
-                ))}
-                {/* Back to the 1.7.9 screens any time (plan §3.7, §3.8). */}
-                <button
-                  type="button"
-                  onClick={switchToOld}
-                  className="w-full flex items-center gap-3 px-4 min-h-[60px] text-left active:bg-muted/60 transition-colors"
-                >
-                  <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                  <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
-                </button>
-              </div>
             )}
 
             {/* Sub-screens (1.8.0): the same card of big rows as the

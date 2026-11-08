@@ -140,6 +140,16 @@ const GOAL_RULES: Record<string, { was: [number, number]; now: [number, number] 
   "strength-training": { was: [23, 30], now: [6, 7] },
   "time-in-nature": { was: [12, 14], now: [6, 7] },
 };
+/** Removed from MeMap (her note, Nov 8 2026: "давай вообще уберём этот вопрос"): "Partner brought me
+ *  flowers" goes to the archive once; the answers stay. */
+const REMOVED_TITLES = ["partner brought me flowers", "партнёр подарил мне цветы"];
+const archiveRemoved = async (): Promise<void> => {
+  if (localStorage.getItem("memap_removed_flowers")) return;
+  localStorage.setItem("memap_removed_flowers", "1");
+  const trackers = await getTrackers();
+  if (!trackers.some((t) => !t.archived && REMOVED_TITLES.includes(t.title.trim().toLowerCase()))) return;
+  await saveTrackers(trackers.map((t) => (REMOVED_TITLES.includes(t.title.trim().toLowerCase()) ? { ...t, archived: true } : t)));
+};
 const migrateGoalRules = async (): Promise<void> => {
   const trackers = await getTrackers();
   let changed = false;
@@ -158,6 +168,7 @@ export const runStartupMigrations = async (): Promise<void> => {
   try {
     await migrateLegacyAdvice();
     await migrateGoalRules();
+    await archiveRemoved();
     // a running old-style weekly-goal test moves onto her own question (Nov 8 2026)
     await (await import("@/lib/testWords")).migrateGoalTests();
   } catch (e) {

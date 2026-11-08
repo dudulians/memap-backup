@@ -163,24 +163,9 @@ export const LIFE_STREAMS: LifeStream[] = [
       // ─── 4 partner-specific markers added in 1.7.5 for the "Behind
       // the relationship" demo pack and for users who want to track
       // their partner's behavior alongside their own feelings.
-      // Two positive (flowers, compliments) and two negative (raised
+      // One positive (compliments) and two negative (raised
       // voice, hurtful words) so correlations across them tell a
       // clear story when paired with how the user felt that day.
-      {
-        id: "partner-brought-flowers",
-        title: "Partner brought me flowers",
-        titleRu: "Партнёр подарил мне цветы",
-        questionText: "Did your partner bring you flowers today?",
-        questionTextRu: "Партнёр подарил мне цветы сегодня?",
-        category: "Connections",
-        subcategory: "Partner",
-        answerType: "boolean",
-        periodDays: 60,
-        threshold: 4,
-        problemWhen: "no",
-        adviceAboveThreshold: "Notice and name the small acts of love",
-        adviceAboveThresholdRu: "Замечать и называть маленькие знаки внимания",
-      },
       {
         id: "partner-complimented-me",
         title: "Partner gave me a real compliment",

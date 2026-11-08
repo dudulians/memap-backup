@@ -408,7 +408,6 @@ const packBehindFight: DemoPack = {
 const packRelationshipReality: DemoPack = {
   id: "relationship-reality",
   templateIds: [
-    "partner-brought-flowers",
     "partner-complimented-me",
     "partner-raised-voice",
     "partner-said-hurtful",
@@ -490,7 +489,6 @@ const packRelationshipReality: DemoPack = {
     }
 
     return new Map<string, boolean[]>([
-      ["partner-brought-flowers", flowers],
       ["partner-complimented-me", compliment],
       ["partner-raised-voice", raisedVoice],
       ["partner-said-hurtful", hurtful],

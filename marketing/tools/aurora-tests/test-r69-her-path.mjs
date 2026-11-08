@@ -15,7 +15,8 @@ const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
 let n = 0;
 const shot = async (name) => { await p.waitForTimeout(700); await p.screenshot({ path: `${D}/${String(++n).padStart(2, "0")}-${name}.png` }); };
 const click = async (re) => { await p.getByRole("button", { name: re }).first().click(); await p.waitForTimeout(500); };
-// real time (her test was at 15:27, daytime)
+// her test was at 15:27, daytime: the clock stays there (after 17:00 the app asks for tonight straight away)
+{ const at = new Date(); at.setHours(15, 27, 0, 0); await p.clock.install({ time: at }); }
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); });
 await p.reload(); await p.waitForTimeout(2200);

@@ -13,7 +13,6 @@ export const S: Record<string, [string, string, string, string]> = {
   "felt-lonely-with-partner": ["you ~feel alone next to your partner", "you ~feel close to your partner", "тебе ~одиноко рядом с партнёром", "дистанции с партнёром ~нет"],
   "partner-irritated-me": ["your partner ~irritates you", "your partner ~doesn't irritate you", "партнёр ~раздражает", "партнёр ~не раздражает"],
   "good-time-together": ["you ~have a good time together", "you ~don't have a good time together", "вам ~хорошо вдвоём", "хорошего времени вдвоём ~нет"],
-  "partner-brought-flowers": ["your partner ~brings you flowers", "there are ~no flowers", "партнёр ~дарит цветы", "цветов ~нет"],
   "partner-complimented-me": ["your partner ~pays you a real compliment", "there's ~no compliment from your partner", "партнёр ~говорит искренний комплимент", "комплиментов от партнёра ~нет"],
   "partner-raised-voice": ["your partner ~raises their voice", "your partner ~doesn't raise their voice", "партнёр ~повышает голос", "партнёр ~не повышает голос"],
   "partner-said-hurtful": ["your partner ~says something hurtful", "your partner ~says nothing hurtful", "партнёр ~говорит что-то обидное", "обидных слов ~нет"],
