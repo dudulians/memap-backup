@@ -271,7 +271,11 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                   ))}
                   {cause && (
                     <>
+                      {/* not "test the cause" (her note, Nov 8 2026: "протестировать причину — поговорить с партнёром?"):
+                          the possible cause by name, then what can be done about it; the button says once or daily */}
                       <p className="mt-3 text-[14px] font-semibold text-muted-foreground">{t("rules.causeHead")}</p>
+                      <p className="mt-0.5 text-[17px] font-bold leading-snug">{cap(answerPhrase(t, cause, cause.problemWhen === "yes"))}</p>
+                      <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("rules.causeDo")}</p>
                       <p className="mt-0.5 text-[17px] font-bold leading-snug">{planOf(cause)}</p>
                       {causeTest && !experimentOver(causeTest) ? (
                         <p className="mt-2.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">

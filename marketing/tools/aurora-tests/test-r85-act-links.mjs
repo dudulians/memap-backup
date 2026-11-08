@@ -43,8 +43,8 @@ for (const lang of ["en", "ru"]) {
 }
 const check = {
   linkShown: /In your days it comes with this:/.test(out["en.open"]) && /hurtful/i.test(out["en.open"].split("In your days")[1] ?? ""),
-  causeOffered: /You can test the possible cause too: Talk to your partner and say which words hurt you/.test(out["en.open"]),
-  linkShownRu: /В твоих днях это бывает вместе с этим:/.test(out["ru.open"]) && /Можно проверить и возможную причину: Поговорить с партнёром/.test(out["ru.open"]),
+  causeOffered: /Possible cause: Hurtful words from partner What you can do about it: Talk to your partner and say which words hurt you/.test(out["en.open"]),
+  linkShownRu: /В твоих днях это бывает вместе с этим:/.test(out["ru.open"]) && /Возможная причина: Обидные слова партнёра Что можно с этим сделать: Поговорить с партнёром/.test(out["ru.open"]),
 };
 console.log(JSON.stringify({ check, out, errs }, null, 1));
 await b.close();
