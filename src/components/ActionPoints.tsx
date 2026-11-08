@@ -13,7 +13,10 @@
 import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, FlaskConical, RotateCcw } from "lucide-react";
+import { Bell, Check, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
+import { cardQuestion } from "@/lib/cardText";
+import { ideaOf, testNameOf, testQuestionOf } from "@/lib/testWords";
+import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
@@ -23,7 +26,7 @@ import { islandOf, mapPic, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { experimentDay, EXPERIMENT_DAYS, ideasFor, runningExperiments, testOnIsland, type Experiment } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, ideasFor, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, weekDone, type Experiment } from "@/lib/experiments";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -43,7 +46,7 @@ const useName = () => {
     return id ? t(`doors.${id}.name`) : localizeTrackerTitle(tr.title);
   };
 };
-const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? localizeTrackerAdvice(tr.adviceAboveThreshold) : "");
+const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? testNameOf(tr.adviceAboveThreshold) : "");
 
 /** After "I did it": the window before it and the days since (from 7 days on). */
 const beforeAfter = (tr: Tracker, entries: TrackerEntry[]): { k1: number; n1: number; k2: number; n2: number } | null => {
@@ -66,22 +69,21 @@ const blockedLine = (t: (k: string, o?: Record<string, unknown>) => string, x: E
  *  then "то кружками, то квадратиками" — a day is always a dot). The same
  *  meter in the list, on the card and in Show; in Show its filled dots are
  *  the dark dots of the last days under it. */
-const RuleMeter = ({ k, n, period, bare, className }: { k: number; n: number; period: number; bare?: boolean; className?: string }) => {
+const RuleMeter = ({ k, n, period, hardYes, className }: { k: number; n: number; period: number; hardYes: boolean; className?: string }) => {
   const { t } = useTranslation();
   const done = k >= n;
+  const ans = t(hardYes ? "rules.ansYes" : "rules.ansNo");
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex min-w-0 flex-1 items-center gap-1" aria-hidden="true">
+    <span className={cn("block", className)}>
+      <span className="flex max-w-[240px] items-center gap-1" aria-hidden="true">
         {Array.from({ length: n }, (_, i) => (
           <span key={i} className="aspect-square min-w-0 max-w-3 flex-1 rounded-full" style={{ background: i < k ? "hsl(var(--strong))" : "hsl(var(--foreground) / 0.1)" }} />
         ))}
       </span>
-      {/* in Show the big line above already says it */}
-      {!bare && (
-        <span className={cn("shrink-0 text-[14px] font-bold tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
-          {t(done ? "rules.meterDone" : "rules.meterOf", { k, n, count: period })}
-        </span>
-      )}
+      {/* the answer that counts, how often, in how many days (Nov 8 2026) */}
+      <span className={cn("mt-1.5 block text-[14px] font-bold leading-snug tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
+        {t(done ? "rules.why" : "rules.whySoFar", { ans, k, n, count: period })}
+      </span>
     </span>
   );
 };
@@ -105,11 +107,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   /** the question under the plan; a good one is counted when it's missing */
   // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
-  const why = (tr: Tracker, k: number) => t("rules.whyHard", { name: label(tr), k, count: tr.periodDays });
+  const why = (tr: Tracker, k: number) => t("rules.why", { ans: t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo"), k, count: tr.periodDays });
   const evenings = answeredEvenings(trackers, entries);
   // The tests running now: one per island, side by side (Nov 7 2026).
   const tests = runningExperiments();
   const lineOf = (x: Experiment) => { const d = experimentDay(x); return d > EXPERIMENT_DAYS ? t("rules.testDone") : t("rules.testing", { k: d, count: EXPERIMENT_DAYS }); };
+  const [testOpen, setTestOpen] = useState<Experiment | null>(null);
   const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); };
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
@@ -132,15 +135,21 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     <div className="space-y-2.5 animate-fade-in">
       {/* The tests she is trying now. */}
       {tests.map((test) => (
-        <div key={test.id} className="surface flex items-center gap-3 rounded-[22px] px-4 py-3.5">
+        <button key={test.id} type="button" onClick={() => { haptics.tap(); setTestOpen(test); }} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
           <span className="icon-dot h-11 w-11">
             <FlaskConical className="h-5 w-5" strokeWidth={2.4} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[17px] font-bold leading-snug">{test.change}</span>
-            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}</span>
+            <span className="block text-[17px] font-bold leading-snug">{testNameOf(test.change)}</span>
+            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>
+              {lineOf(test)}{test.perWeek ? ` · ${t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}` : ""}
+            </span>
+            <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
+              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${test.remind}` : t("experiment.noRemind")}
+            </span>
           </span>
-        </div>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+        </button>
       ))}
 
       {lit.length === 0 && (evenings < SHAPING_EVENINGS ? (
@@ -169,8 +178,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <img src={mapPic("lighthouse")} alt="" width={40} height={46} className="h-11 w-10 shrink-0 object-contain drop-shadow-[0_0_8px_hsl(44_96%_60%/0.7)]" />
               <div className="min-w-0 flex-1">
                 <p className="text-[20px] font-bold leading-snug">{plan || name(tr)}</p>
-                {plan && <p className="mt-1 truncate text-[14px] font-medium text-muted-foreground">{label(tr)}</p>}
-                <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} className="mt-2" />
+                <p className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{cardQuestion(tr)}</p>
+                <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} className="mt-2" />
               </div>
             </div>
             {!plan ? (
@@ -206,12 +215,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               return (
                 <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="block w-full px-4 py-3 text-left">
                   <span className="line-clamp-2 block text-[16px] font-semibold leading-snug">{planOf(tr) || name(tr)}</span>
-                  <span className={cn("mt-0.5 flex items-center gap-1 truncate text-[13px] font-medium", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
+                  <span className={cn("mt-0.5 flex items-center gap-1 text-[14px] font-medium leading-snug", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
                     {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
-                    {mineTest ? lineOf(mineTest) : planOf(tr) ? label(tr) : ""}
+                    {mineTest ? lineOf(mineTest) : planOf(tr) ? cardQuestion(tr) : ""}
                   </span>
                   {ba && <span className="mt-1 block text-[13px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</span>}
-                  <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} className="mt-2" />
+                  <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} className="mt-2" />
                 </button>
               );
             })}
@@ -220,12 +229,13 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       )}
 
       {current && sheet?.mode === "show" && (
-        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={label(current.tr)} onClose={() => setSheet(null)}
+        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={cardQuestion(current.tr)} onClose={() => setSheet(null)}
           onTry={() => tryIt(current.tr, current.k)} blocked={blockedLine(t, testOnIsland(islandOf(current.tr)))} />
       )}
       {current && sheet?.mode === "change" && (
-        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={label(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
+        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
       )}
+      {testOpen && <TestSheet test={testOpen} trackers={trackers} entries={entries} line={lineOf(testOpen)} onClose={() => setTestOpen(null)} />}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
           trackers={trackers} entries={entries} onClose={() => setTrying(null)} />
@@ -274,7 +284,7 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
       <div className="flex min-h-0 flex-1 flex-col space-y-5 overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
           {/* the question is the title (her note: "непонятно, к какому вопросу это действие") */}
-          <p className="text-[26px] font-bold leading-tight tracking-tight">{name}</p>
+          <p className="text-[24px] font-bold leading-tight tracking-tight">{name}</p>
           <p className="mt-1.5 text-[19px] font-bold tabular-nums">
             {k >= tracker.threshold
               ? t("rules.bigDone", { k, count: tracker.periodDays })
@@ -293,8 +303,8 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
             ))}
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-semibold text-muted-foreground">
-            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--strong))" }} />{name}</span>
-            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--balanced) / 0.75)" }} />{t("rules.legendOther")}</span>
+            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--strong))" }} />{t(tracker.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo")}</span>
+            <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--balanced) / 0.75)" }} />{t(tracker.problemWhen === "yes" ? "rules.ansNo" : "rules.ansYes")}</span>
             <span className="flex items-center gap-1.5"><i className="block h-2.5 w-2.5 rounded-full bg-foreground/[0.12]" />{t("rules.legendNone")}</span>
           </div>
           {tracker.cycleStartDate && days.some((d) => d.look === "before") && (
@@ -334,6 +344,48 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
   );
 };
 
+/** A running test (Nov 8 2026, her note: "как поменять время уведомлений на тесты — непонятно, они
+ *  нигде не отжимаются"): its name, its day, the evening question, the week's goal, the reminder. */
+const TestSheet = ({ test, trackers, entries, line, onClose }: { test: Experiment; trackers: Tracker[]; entries: TrackerEntry[]; line: string; onClose: () => void }) => {
+  const { t } = useTranslation();
+  const tr = trackers.find((x) => x.id === test.trackerId);
+  const [on, setOn] = useState(!!test.remind);
+  const [at, setAt] = useState(test.remind ?? smartRemindTime(ideaOf(test.change), testNameOf(test.change)));
+  const apply = async (nextOn: boolean, nextAt: string) => {
+    setExperimentRemind(test.id, nextOn ? nextAt : null);
+    try {
+      if (nextOn) { const r = await requestNotificationPermissionDetailed(); if (!r.granted) return; }
+      await scheduleNotification(getNotificationSettings());
+    } catch { /* never blocks */ }
+  };
+  return (
+    <BottomSheet open onOpenChange={(o) => { if (!o) onClose(); }} className="h-auto max-h-[88vh]" ariaTitle={t("experiment.title")}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-8">
+        <p className="flex items-center gap-1.5 pr-10 pt-1 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
+          <FlaskConical className="h-4 w-4" strokeWidth={2.4} style={{ color: TEAL }} />{t("experiment.title")}
+        </p>
+        <p className="mt-1 pr-10 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(test.change)}</p>
+        <p className="mt-1 text-[16px] font-bold" style={{ color: TEAL }}>{line}</p>
+        {test.perWeek && <p className="mt-0.5 text-[16px] font-bold">{t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}</p>}
+        <p className="mt-5 text-[14px] font-semibold text-muted-foreground">{t("experiment.everyEvening")}</p>
+        <p className="mt-0.5 text-[19px] font-bold leading-snug">{tr ? cardQuestion(tr) : testQuestionOf(test.change)}</p>
+        <div className="surface mt-5 flex items-center gap-3 rounded-[18px] px-4 py-3">
+          <Bell className="h-5 w-5 shrink-0" strokeWidth={2.4} style={{ color: TEAL }} />
+          <span className="min-w-0 flex-1 text-[16px] font-bold">{t("experiment.remindMe")}</span>
+          <input type="time" value={at} disabled={!on} aria-label={t("experiment.remindAt")}
+            onChange={(e) => { const v = e.target.value || "09:00"; setAt(v); if (on) void apply(true, v); }}
+            className="h-10 w-[124px] rounded-[12px] bg-foreground/[0.05] px-2 text-center text-[15px] font-bold tabular-nums outline-none disabled:opacity-40" />
+          <button type="button" role="switch" aria-checked={on} aria-label={t("experiment.remindMe")} onClick={() => { haptics.tap(); const v = !on; setOn(v); void apply(v, at); }}
+            className={`relative h-[30px] w-[50px] shrink-0 rounded-full transition-colors ${on ? "bg-[hsl(var(--coin-teal))]" : "bg-foreground/20"}`}>
+            <span className={`absolute top-[3px] h-6 w-6 rounded-full bg-white transition-all ${on ? "left-[23px]" : "left-[3px]"}`} />
+          </button>
+        </div>
+        <button type="button" onClick={onClose} className="raised-btn mt-6 w-full justify-center">{t("common.close")}</button>
+      </div>
+    </BottomSheet>
+  );
+};
+
 /** "Not for me" (or no plan yet): another plan, or turn it off. */
 const ChangeSheet = ({ tracker, name, why, onClose }: { tracker: Tracker; k: number; name: string; why: string; onClose: () => void }) => {
   const { t } = useTranslation();
@@ -358,7 +410,7 @@ const ChangeSheet = ({ tracker, name, why, onClose }: { tracker: Tracker; k: num
     <BottomSheet open onOpenChange={(o) => { if (!o) onClose(); }} className="h-auto max-h-[88vh]" ariaTitle={t(had ? "rules.instead" : "rules.plan")}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
-          <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{name}</p>
+          <p className="text-[16px] font-bold leading-snug">{name}</p>
           <p className="mt-1 text-[15px] font-medium leading-snug text-muted-foreground">{why}</p>
           <p className="mt-3 text-[24px] font-bold leading-tight tracking-tight">{t(had ? "rules.instead" : "rules.plan")}</p>
         </div>

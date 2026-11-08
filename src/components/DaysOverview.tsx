@@ -16,6 +16,7 @@ import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
 import { Spline, Sprout } from "lucide-react";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments } from "@/lib/experiments";
+import { testNameOf } from "@/lib/testWords";
 import { cn } from "@/lib/utils";
 import { smooth } from "./ChartViews";
 
@@ -169,7 +170,7 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
           <Sprout className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
           {test ? `${Math.min(experimentDay(test), EXPERIMENT_DAYS)}/${EXPERIMENT_DAYS}` : tried}
         </span>
-        {sub(test ? test.change : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
+        {sub(test ? testNameOf(test.change) : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
       </button>
     </div>
   );

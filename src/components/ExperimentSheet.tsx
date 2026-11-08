@@ -20,13 +20,13 @@ import { Bell } from "lucide-react";
 import { countFromToday } from "@/lib/actionPoints";
 import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { Pressable } from "@/components/ui/pressable";
+import { cardQuestion } from "@/lib/cardText";
+import { goalOf, ideaOf, testNameOf, testQuestionOf } from "@/lib/testWords";
 
 /* Chosen: a teal ring and a teal tick (the Aurora kit, Nov 5 2026: no
    tinted backgrounds, one accent colour). */
 
 const PLAN = "__plan";
-/** "Did you…?" from her own words: "Walk 20 minutes" → "Walk 20 minutes?" */
-const asQuestion = (s: string) => `${s.trim().replace(/[.?？!]+$/, "")}?`;
 
 export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, onClose }: {
   mode: "pick" | "result";
@@ -61,18 +61,22 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     onClose();
   };
 
+  // a whole evening question (Nov 8 2026: "In bed by 23:00?" was no question); a plan that is a
+  // weekly goal for her own question ("3 workouts a week") asks that question, with the goal
+  const source = from ? trackers.find((x) => x.id === from.trackerId) : undefined;
+  const goal = idea === PLAN && source ? goalOf(source) : null;
   const change = idea === PLAN ? plan!.trim() : idea ? t(`experiment.idea.${idea}.change`) : own.trim();
-  const question = idea === PLAN ? asQuestion(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? asQuestion(own) : "";
+  const question = goal && source ? cardQuestion(source) : idea === PLAN ? testQuestionOf(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? testQuestionOf(own) : "";
   const start = async () => {
     if (!island || !change) return;
     haptics.rise();
-    const x = await startExperiment(island, change, question, from?.trackerId);
+    const x = await startExperiment(island, change, question, from?.trackerId, goal ? { same: true, perWeek: goal } : {});
     if (from) await countFromToday(from.trackerId, from.k);
-    setRemindAt(smartRemindTime(idea === PLAN ? null : idea));
+    setRemindAt(smartRemindTime(idea === PLAN ? ideaOf(plan!) : idea, change));
     setStarted(x);
   };
   const choices = [...(plan ? [PLAN] : []), ...(island ? ideasFor(island) : [])];
-  const label = (k: string) => (k === PLAN ? plan! : t(`experiment.idea.${k}.change`));
+  const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
   // The result screen: a garden grew.
@@ -129,7 +133,16 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               </div>
             )}
             <div className="mt-auto pt-8">
-              <p className="mb-3 text-center text-[15px] font-medium text-muted-foreground">{t("experiment.how")}</p>
+              {question ? (
+                // what MeMap will ask every evening, before it starts
+                <div className="mb-4 text-center">
+                  <p className="text-[14px] font-semibold text-muted-foreground">{t("experiment.everyEvening")}</p>
+                  <p className="mt-0.5 text-[18px] font-bold leading-snug">{question}</p>
+                  {goal && <p className="mt-1 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("experiment.goal", { count: goal })}</p>}
+                </div>
+              ) : (
+                <p className="mb-3 text-center text-[15px] font-medium text-muted-foreground">{t("experiment.how")}</p>
+              )}
               <Pressable tone="teal" haptic="none" onClick={start} disabled={!island || !change} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                 {t("experiment.start")}
               </Pressable>
@@ -165,7 +178,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
 
         {mode === "result" && experiment && result && (
           <>
-            <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">{experiment.change}</p>
+            <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(experiment.change)}</p>
             <p className="mt-1 text-[17px] font-medium text-muted-foreground">{t("experiment.didDays", { k: result.did, count: EXPERIMENT_DAYS })}</p>
             <div className="surface mt-5 rounded-[22px] px-5 py-4">
               <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>

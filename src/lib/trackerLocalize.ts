@@ -2,6 +2,9 @@ import { LIFE_STREAMS, TRENDING_TEMPLATES_SOURCE } from "./lifeStreams";
 import { getLanguage } from "./i18n";
 import { polishRu, getPol } from "./genderPolish";
 import { matchTemplateIdByTitle } from "./relatedQuestions";
+import enLocale from "@/locales/en";
+import ruLocale from "@/locales/ru";
+import { LEGACY_IDEA_NAMES } from "./ideaNames";
 
 /**
  * Display-time English → Russian mapping for tracker titles & question text.
@@ -426,6 +429,25 @@ const buildMap = (): LookupMaps => {
     addPair(groupDescriptions, stream.description, stream.descriptionRu);
   });
 
+  // 2-week tests (Nov 8 2026, "не всё трансформируется с англ на рус"): a ready idea's name and
+  // question, and a library plan used as a test's name, follow the language.
+  type Idea = { change: string; q: string };
+  const enIdeas = enLocale.experiment.idea as Record<string, Idea>, ruIdeas = ruLocale.experiment.idea as Record<string, Idea>;
+  for (const k of Object.keys(enIdeas)) {
+    const e = enIdeas[k], r = ruIdeas[k];
+    if (!r) continue;
+    addPair(titles, e.change, r.change); addPair(advices, e.change, r.change); addPair(questions, e.q, r.q);
+    // an idea's old name (before Nov 8 2026) shows the new one in the other language
+    const old = LEGACY_IDEA_NAMES[k];
+    for (const m of [titles, advices]) {
+      if (old?.en) m.enToRu.set(old.en, r.change);
+      if (old?.ru) m.ruToEn.set(old.ru, e.change);
+    }
+  }
+  LIFE_STREAMS.forEach((stream) => stream.templates.forEach((t) => {
+    if (t.adviceAboveThreshold && !titles.enToRu.has(t.adviceAboveThreshold)) addPair(titles, t.adviceAboveThreshold, t.adviceAboveThresholdRu);
+  }));
+
   return { titles, questions, advices, groupTitles, groupDescriptions };
 };
 
@@ -529,6 +551,11 @@ export const localizeTrackerQuestion = (q: string, titleHint?: string): string =
 
 export const localizeTrackerAdvice = (a: string): string =>
   lookup(getMap().advices, a);
+/** A plan in both languages when it's a known one (to tell "once" from "every day" the same way in each). */
+export const adviceVariants = (a: string): string[] => {
+  const m = getMap().advices;
+  return [a, m.enToRu.get(a), m.ruToEn.get(a)].filter((x): x is string => !!x);
+};
 
 // Used by storage migration to decide if a stored tracker came from
 // the library (title is in the current map → safe to refresh advice

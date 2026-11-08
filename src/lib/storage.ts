@@ -41,6 +41,13 @@ const ENTRIES_KEY = "memap_entries";
 /** Library advice that was retired (Nov 7 2026: no tests, drugs or therapies by name). Only these
  *  are refreshed to the current text; a plan she wrote herself is never touched. */
 const RETIRED_ADVICE = new Set<string>([
+    // weekly goals said plainly (Nov 8 2026)
+    "Book 3 workout slots in calendar this week",
+    "Внести 3 тренировки в календарь на эту неделю",
+    "Put 2 strength sessions in the calendar this week",
+    "Внести в календарь 2 силовые тренировки на эту неделю",
+    "Plan two nature walks this week",
+    "Запланировать на неделе две прогулки на природе",
     "Book a neurologist with my data",
     "Записаться к неврологу с данными",
     "See an osteopath or physiotherapist with my data",
@@ -126,11 +133,31 @@ const migrateLegacyAdvice = async (): Promise<void> => {
   }
 };
 
+/** The weekly goals' rules (Nov 8 2026): "12 days without a workout in 30" didn't match
+ *  "3 workouts a week"; a question still on the old library rule gets the weekly one. */
+const GOAL_RULES: Record<string, { was: [number, number]; now: [number, number] }> = {
+  exercised: { was: [12, 30], now: [5, 7] },
+  "strength-training": { was: [23, 30], now: [6, 7] },
+  "time-in-nature": { was: [12, 14], now: [6, 7] },
+};
+const migrateGoalRules = async (): Promise<void> => {
+  const trackers = await getTrackers();
+  let changed = false;
+  const next = trackers.map((tr) => {
+    const id = matchTemplateIdByTitle(tr.title), r = id ? GOAL_RULES[id] : undefined;
+    if (!r || tr.threshold !== r.was[0] || tr.periodDays !== r.was[1]) return tr;
+    changed = true;
+    return { ...tr, threshold: r.now[0], periodDays: r.now[1] };
+  });
+  if (changed) await saveTrackers(next);
+};
+
 // Public — call once on app startup. Wraps in try/catch so a
 // corrupted entry can't break the whole app boot.
 export const runStartupMigrations = async (): Promise<void> => {
   try {
     await migrateLegacyAdvice();
+    await migrateGoalRules();
   } catch (e) {
     console.error("startup migrations failed:", e);
   }

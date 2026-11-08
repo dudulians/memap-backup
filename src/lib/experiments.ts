@@ -32,13 +32,41 @@ export interface Experiment {
   from?: string;
   /** "HH:MM": a daily reminder until the try ends (board 65, Nov 6 2026) */
   remind?: string;
+  /** a weekly goal for the question itself ("3 workouts a week", Nov 8 2026): no new
+   *  question, the test watches the one she has (trackerId) */
+  same?: boolean;
+  /** the goal a week, for "This week: 2 of 3" */
+  perWeek?: number;
 }
 
-/** A time that fits the change (board 65): bedtime ones in the evening, morning ones early. */
-export const smartRemindTime = (idea: string | null): string => {
+/** A time that fits the change (board 65): bedtime ones in the evening, morning ones early. Her own
+ *  plan too, by its words (Nov 8 2026: "Go to bed by 23:00" came at 9:00 in the morning). */
+export const smartRemindTime = (idea: string | null, text = ""): string => {
   const at: Record<string, string> = { bed23: "22:00", phoneAway: "21:30", noNewsEvening: "20:30", noMailEvening: "19:00", stop19: "18:30", noSweetsEvening: "19:30",
-    noCoffee14: "13:30", water: "12:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00" };
-  return (idea && at[idea]) || "09:00";
+    noCoffee14: "13:30", water: "10:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00",
+    threeLines: "20:30", talkNoPhones: "19:00", thankYou: "18:00", walkTogether: "17:30", playTogether: "17:30", extraWalk: "17:00", playTime: "18:00",
+    sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00" };
+  if (idea && at[idea]) return at[idea];
+  const s = text.toLowerCase();
+  // eating or drinking hours before bed: early evening; anything else about bed: an hour before it
+  if (/(d|two|three) hours before bed|за [2-9] час|finish eating|dinner|drinks|ужин|заканчивать есть|ничего не пить/.test(s)) return "18:30";
+  if (/bed|sleep|night|asleep|сна|спать|сон|ночь|кроват|отбой|wind(ing)? down|укладыв/.test(s)) return "21:00";
+  if (/morning|breakfast|wake|утр|завтрак|подъ[её]м/.test(s)) return "08:00";
+  if (/lunch|обед/.test(s)) return "12:00";
+  if (/coffee|caffeine|кофе/.test(s)) return "13:30";
+  if (/evening|вечер/.test(s)) return "19:00";
+  if (/work|работ/.test(s)) return "17:30";
+  return "10:00";
+};
+/** Once (Nov 8 2026): tests that got the old 9:00 default move to a time that fits them. */
+export const fixDefaultReminders = (fit: (x: Experiment) => string) => {
+  try {
+    if (localStorage.getItem("memap_try_time_fixed")) return;
+    localStorage.setItem("memap_try_time_fixed", "1");
+    const list = getExperiments();
+    if (!list.some((x) => !x.reviewed && x.remind === "09:00")) return;
+    save(list.map((x) => (!x.reviewed && x.remind === "09:00" ? { ...x, remind: fit(x) } : x)));
+  } catch { /* stays as it was */ }
 };
 /** Turn the try's daily reminder on (a time) or off (null). */
 export const setExperimentRemind = (id: string, time: string | null) => {
@@ -93,9 +121,16 @@ export const experimentOver = (x: Experiment, today = isoLocal(new Date())) => e
 /** Finished tests (looked at), the islands they grew a garden on. */
 export const finishedExperiments = () => getExperiments().filter((x) => !!x.reviewed);
 
-/** Start a test: adds "Did you…?" to the island, from today. */
-export const startExperiment = async (island: string, change: string, question: string, from?: string): Promise<Experiment> => {
-  track("experiment_started", { from: from ? "action_point" : "pick" });
+/** Start a test: adds "Did you…?" to the island, from today (a weekly goal adds nothing:
+ *  it watches the question she has). */
+export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number } = {}): Promise<Experiment> => {
+  track("experiment_started", { from: from ? "action_point" : "pick", goal: !!opts.same });
+  if (opts.same && from) {
+    const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}) };
+    save([...getExperiments().filter((e) => e.reviewed || e.island !== island), g]);
+    window.dispatchEvent(new Event("memap-settings-changed"));
+    return g;
+  }
   const existing = await getTrackers();
   const tracker: Tracker = {
     id: `${Date.now()}-test`,
@@ -138,7 +173,7 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
   }));
   // The island's questions (not test questions), hard days by the one rule
   // (isHardAnswer: YES to a hard question, NO to a good one).
-  const own = new Map(trackers.filter((t) => !t.archived && !isTestQuestion(t) && islandOf(t) === x.island).map((t) => [t.id, t]));
+  const own = new Map(trackers.filter((t) => !t.archived && !isTestQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island).map((t) => [t.id, t]));
   const did = new Map<string, boolean>();
   for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date)) did.set(e.date, e.value === true);
   const hard = new Set(entries.filter((e) => days.has(e.date) && own.has(e.trackerId) && isHardAnswer(own.get(e.trackerId)!, e.value)).map((e) => e.date));
@@ -153,12 +188,20 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
   };
 };
 
+/** "This week: 2 of 3": the days with "yes" since Monday. */
+export const weekDone = (x: Experiment, entries: TrackerEntry[], today = new Date()): number => {
+  const mon = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
+  const from = isoLocal(mon), to = isoLocal(today);
+  return entries.filter((e) => e.trackerId === x.trackerId && e.value === true && e.date >= from && e.date <= to).length;
+};
+
 /** She looked at the result: the test is over; keep the question or stop it. */
 export const finishExperiment = async (id: string, keep: boolean) => {
   const list = getExperiments().map((x) => (x.id === id ? { ...x, reviewed: isoLocal(new Date()), kept: keep } : x));
   save(list);
-  if (!keep) {
-    const x = list.find((e) => e.id === id);
+  const x = list.find((e) => e.id === id);
+  // a weekly goal watched her own question: that question stays
+  if (!keep && !x?.same) {
     const ts = await getTrackers();
     await saveTrackers(ts.map((t) => (t.id === x?.trackerId ? { ...t, archived: true } : t)));
     window.dispatchEvent(new Event("memap-settings-changed"));

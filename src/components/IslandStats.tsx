@@ -24,6 +24,7 @@ import { playSparkle } from "@/lib/feedback";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { experimentDay, EXPERIMENT_DAYS, testOnIsland } from "@/lib/experiments";
+import { testNameOf } from "@/lib/testWords";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
 
@@ -199,7 +200,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
         <div className="surface flex items-center gap-3 rounded-[20px] px-4 py-3">
           <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
           <div className="min-w-0">
-            <p className="text-[16px] font-bold leading-snug">{test.change}</p>
+            <p className="text-[16px] font-bold leading-snug">{testNameOf(test.change)}</p>
             <p className="text-[14px] font-medium text-muted-foreground">{t("experiment.dayOf", { k: Math.min(experimentDay(test), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</p>
           </div>
         </div>

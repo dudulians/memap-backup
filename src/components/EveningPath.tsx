@@ -33,6 +33,7 @@ import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growt
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
+import { testNameOf } from "@/lib/testWords";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkWorthShowing } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
@@ -318,6 +319,8 @@ export const EveningPath = ({
         : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
     }
     if (n.kind === "end") {
+      // the day is done: the last light is the bubbles (Nov 8 2026)
+      if (eveningDone) return { look: current ? "current" : "todo", hue: "198 55% 58%", icon: <Wind className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />, title: t("path.end.playTitle"), action: current ? t("path.end.playAction") : undefined };
       return {
         look: current ? "current" : "todo", icon: <Flag className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />,
         title: t("path.end.title"), action: current ? t("path.end.action") : undefined,
@@ -559,7 +562,7 @@ export const EveningPath = ({
     }
     if (part === 2) { const lit = litTrackers(trackers, entries).size; return { text: lit > 0 ? t("path.next4.lit", { count: lit }) : t("path.next4.rule"), open: "signals" as const }; }
     const x = currentExperiment();
-    return { text: x ? t("path.next4.trying", { change: x.change, k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : t("path.next4.try"), open: "world" as const };
+    return { text: x ? t("path.next4.trying", { change: testNameOf(x.change), k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : t("path.next4.try"), open: "world" as const };
   })();
 
   const openActionPoints = () =>
@@ -714,9 +717,9 @@ export const EveningPath = ({
       return (
         <>
           {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
+          {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
           {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"), "gold")}
-          {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), m.weekComplete ? "plain" : "teal")}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}
           {hasLinks && button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap, "links"), "plain")}
           {m.totalDays >= 7 && button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => onTask("calendar"), "calendar"), "plain")}

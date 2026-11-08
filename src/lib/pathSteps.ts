@@ -582,8 +582,8 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   if (hasQuestions) {
     // The day's hunch: done once made (or "not now"), unless a checked one waits.
     steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: hunchDoneToday() && !readyHunch(trackers, entries) });
-    // Her "разгрузи свой мозг": a calm game any time, from day 1.
-    steps.push({ id: "unload", kind: "unload", trackerIds: [], answered: 0, done: unloadPlayedToday() });
+    // Her "разгрузи свой мозг" is the reward after the day now (Nov 8 2026: "не понимаю, где шарики
+    // пулять, они должны быть как когда всё закончено — поиграй"): on "Done for today", not a step.
   }
   // "New questions" go where the boat is: before the first step still to do
   // (the calm game doesn't count), else at the end; once answered the step

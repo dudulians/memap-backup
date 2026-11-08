@@ -4,7 +4,8 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
-import { runningExperiments, EXPERIMENT_DAYS } from "@/lib/experiments";
+import { runningExperiments, EXPERIMENT_DAYS, fixDefaultReminders, smartRemindTime, type Experiment } from "@/lib/experiments";
+import { ideaOf, testNameOf } from "@/lib/testWords";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { progressLines } from "@/lib/reminderLines";
@@ -260,7 +261,8 @@ export const reminderPlan = async (
       // ("A fight with your partner?"), so the lock screen shows only
       // how much there is. Classic keeps its rotating question.
       if (getUiMode() === "new") {
-        dayTitle = fallbackTitle;
+        // a warm line that changes from day to day, not just "MeMap" (Nov 8 2026)
+        dayTitle = i18n.t(`notifications.dayTitle${(fireAt.getDate() % 5) + 1}`);
         const today = i18n.t("notifications.privateBody", {
           count: activeTrackers.length,
           min: Math.max(1, Math.round((activeTrackers.length * 4) / 60)),
@@ -315,9 +317,20 @@ export const scheduleNotification = async (
   }
 };
 
+/** A test's push for day k (Nov 8 2026, her: "дурацкое уведомление… у нас есть возможность сделать
+ *  нормальные красивые ответы, мотивации"): the first day, the days between (four turns of words,
+ *  a weekly goal its own), a week done, two days left, the last day. Her step in her words. */
+const tryWords = (x: Experiment, k: number): { title: string; body: string } => {
+  const key = k === 1 ? "start" : k === EXPERIMENT_DAYS ? "last" : k === EXPERIMENT_DAYS - 1 ? "twoLeft" : k === 8 ? "half"
+    : x.perWeek && k % 2 === 0 ? "goal" : `mid${(k % 4) + 1}`;
+  const o = { change: testNameOf(x.change), k, count: EXPERIMENT_DAYS, left: EXPERIMENT_DAYS + 1 - k };
+  return { title: i18n.t(`notifications.try.${key}.title`, o), body: i18n.t(`notifications.try.${key}.body`, o) };
+};
+
 /** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */
 export const tryPlan = (): { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] => {
   const out: { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] = [];
+  fixDefaultReminders((x) => smartRemindTime(ideaOf(x.change), testNameOf(x.change)));
   // every running test (one per island); each its own id range
   runningExperiments().slice(0, 4).forEach((x, i) => {
     if (!x.remind) return;
@@ -326,7 +339,7 @@ export const tryPlan = (): { id: number; title: string; body: string; schedule: 
     for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
       const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now()) continue;
-      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, title: x.change, body: i18n.t(k === EXPERIMENT_DAYS ? "notifications.tryLast" : "notifications.tryBody", { k, count: EXPERIMENT_DAYS }), schedule: { at, allowWhileIdle: true } });
+      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, ...tryWords(x, k), schedule: { at, allowWhileIdle: true } });
     }
   });
   return out;

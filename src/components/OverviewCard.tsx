@@ -7,7 +7,8 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Note, getNotes } from "@/lib/notes";
-import { Check, ChevronLeft, ChevronRight, FileText, ListChecks } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, FileText, ListChecks } from "lucide-react";
+import { cardQuestion } from "@/lib/cardText";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -207,17 +208,9 @@ export const OverviewCard = ({
     if (hasPicked) panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [hasPicked]);
 
-  // Keep the active chip in view.
-  useEffect(() => {
-    const container = chipsContainerRef.current;
-    const activeChip = container?.children[activeTrackerIndex] as HTMLElement | undefined;
-    if (!container || !activeChip) return;
-    const containerRect = container.getBoundingClientRect();
-    const chipRect = activeChip.getBoundingClientRect();
-    if (chipRect.left < containerRect.left || chipRect.right > containerRect.right) {
-      activeChip.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
-  }, [activeTrackerIndex]);
+  // the list of questions under the picker (Nov 8 2026: chips cut the questions off at the edges)
+  const [listOpen, setListOpen] = useState(false);
+  const stepQ = (d: number) => { haptics.tap(); setListOpen(false); setActiveTrackerIndex((i) => (i + d + trackers.length) % trackers.length); };
 
   useEffect(() => {
     const node = swipeAreaRef.current;
@@ -315,27 +308,41 @@ export const OverviewCard = ({
 
   return (
     <div className="animate-fade-in">
-      {/* Question chips */}
-      <div
-        ref={chipsContainerRef}
-        className="-mx-4 px-4 flex gap-2 overflow-x-auto scrollbar-hide"
-        data-no-tabswipe
-      >
-        {trackers.map((tr, i) => {
-          const on = i === activeTrackerIndex;
-          return (
-            <button
-              key={tr.id}
-              type="button"
-              onClick={() => { haptics.tap(); setActiveTrackerIndex(i); }}
-              aria-pressed={on}
-              className={cn("chip block max-w-[230px] truncate leading-[38px]", on && "is-on")}
-            >
-              {doorOf.has(tr.id) ? t(`doors.${doorOf.get(tr.id)}.name`) : localizeTrackerTitle(tr.title)}
-            </button>
-          );
-        })}
+      {/* The question, whole (her note, Nov 8 2026: "в календаре иногда плохо читаются вопросы" —
+          a row of chips cut them off at both edges): ‹ the question › and the list on a tap. */}
+      <div ref={chipsContainerRef} className="surface flex items-center gap-1 rounded-[20px] px-1.5 py-1.5" data-no-tabswipe>
+        {trackers.length > 1 && (
+          <button type="button" onClick={() => stepQ(-1)} aria-label={t("overview.prevQ")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground">
+            <ChevronLeft className="h-6 w-6" strokeWidth={2.4} />
+          </button>
+        )}
+        <button type="button" onClick={() => { haptics.tap(); setListOpen((o) => !o); }} aria-expanded={listOpen} className="min-w-0 flex-1 px-1 py-1.5 text-center">
+          <span className="block text-[18px] font-bold leading-snug">{cardQuestion(activeTracker)}</span>
+          <span className="mt-0.5 flex items-center justify-center gap-1 text-[13px] font-semibold text-muted-foreground">
+            {t("overview.qOf", { k: activeTrackerIndex + 1, n: trackers.length })}
+            <ChevronDown className={cn("h-4 w-4 transition-transform", listOpen && "rotate-180")} strokeWidth={2.4} />
+          </span>
+        </button>
+        {trackers.length > 1 && (
+          <button type="button" onClick={() => stepQ(1)} aria-label={t("overview.nextQ")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground">
+            <ChevronRight className="h-6 w-6" strokeWidth={2.4} />
+          </button>
+        )}
       </div>
+      {listOpen && (
+        <div className="surface mt-2 max-h-[46vh] overflow-y-auto rounded-[20px] py-1.5 animate-fade-in">
+          {trackers.map((tr, i) => {
+            const on = i === activeTrackerIndex;
+            return (
+              <button key={tr.id} type="button" aria-pressed={on} onClick={() => { haptics.tap(); setActiveTrackerIndex(i); setListOpen(false); }}
+                className="flex min-h-[48px] w-full items-center gap-3 px-4 py-2 text-left">
+                <span className={cn("min-w-0 flex-1 text-[16px] leading-snug", on ? "font-bold" : "font-semibold")}>{cardQuestion(tr)}</span>
+                {on && <Check className="h-5 w-5 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={3} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Month or year. */}
       <div className="mt-4 flex justify-center">

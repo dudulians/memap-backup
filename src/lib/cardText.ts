@@ -12,6 +12,7 @@ import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { testQuestionOf } from "@/lib/testWords";
 
 const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   // door questions
@@ -71,6 +72,8 @@ const TEMPLATES = new Map(LIFE_STREAMS.flatMap((s) => s.templates).map((t) => [t
 /** The card's question: the short wording when this tracker is still the
  *  library's question, else the usual localized text (her own stays hers). */
 export const cardQuestion = (tracker: Tracker): string => {
+  // a 2-week test: its name as a whole question in today's language (Nov 8 2026: "In bed by 23:00?")
+  if (tracker.id.endsWith("-test")) return testQuestionOf(tracker.title);
   const shown = localizeTrackerQuestion(tracker.questionText, tracker.title);
   const id = matchTemplateIdByTitle(tracker.title);
   const short = id ? CARD_TEXT[id] : undefined;

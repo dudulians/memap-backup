@@ -22,13 +22,14 @@ const setup = async (p, lang, theme, played) => {
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
     for (const k of ["memap_hunch_day", "memap_act_seen"]) localStorage.setItem(k, iso(0));
     if (played) localStorage.setItem("memap_unload_played", iso(0));
+    localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(9) })); // the day-1 look around, long seen
     const ps = await import("/src/lib/pathSteps.ts");
     for (const s of ps.pathModel(T, E).steps) if (s.kind === "task") ps.markTaskDone(s.task);
   }, { lang, theme, played });
   await p.reload(); await p.waitForTimeout(2500);
 };
 const tapLast = async (p, lang) => {
-  const name = lang === "ru" ? "Разгрузи голову" : "Unload your mind";
+  const name = lang === "ru" ? "Полопать пузыри" : "Pop bubbles"; // v96: the last light of a done day
   await p.locator(`.path-node[aria-label*="${name}"]`).first().click(); await p.waitForTimeout(900);
 };
 for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "aurora-light", true], ["ru", "aurora", true]]) {
@@ -44,7 +45,7 @@ for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "auro
   await p.screenshot({ path: `${D}/${tag}-tap.png` });
   out[tag] = await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD");
   if (tag === "en-day-new") {
-    await p.getByRole("button", { name: "Pop bubbles" }).click(); await p.waitForTimeout(1200);
+    await p.getByRole("dialog").getByRole("button", { name: "Pop bubbles" }).click(); await p.waitForTimeout(1200);
     out.bubblesOpen = await p.evaluate(() => document.body.innerText.includes("How it works") || document.body.innerText.includes("popped"));
     await p.reload(); await p.waitForTimeout(2200);
     await tapLast(p, lang);
