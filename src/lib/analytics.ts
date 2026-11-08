@@ -211,6 +211,12 @@ export type AnalyticsEvent =
   | "screen_viewed" // a tab or a main screen opened
   | "source_answered" // "Where did you hear about MeMap?"
   | "old_tour_screen" // the old users' onboarding, screen by screen
+  // Nov 8 2026 (her "add all"): what brings people back and how an evening goes
+  | "notification_opened" // a push was tapped: which kind (evening, test…), which words
+  | "returned_after_gap" // opened again after 2+ days away
+  | "experiment_finished" // a test's result: kept or not, what it showed
+  | "experiment_stopped" // a kept test stopped later
+  | "observe_tip_later" // a "Worth watching" tip: not now
   | "doctor_report_made"
   // onboarding v7 (Nov 6 2026)
   | "onboarding_questions"
@@ -225,4 +231,24 @@ export const setSource = (source: string) => {
   track("source_answered", { source });
   if (import.meta.env.DEV || !initialised) return;
   try { mixpanel.register({ source }); } catch { /* best effort */ }
+};
+
+/** Put these on every later event (the week, the day since she started). */
+export const registerProps = (props: Record<string, string | number | boolean>) => {
+  if (import.meta.env.DEV) { console.log("[analytics:would-register]", props); return; }
+  if (!initialised) return;
+  try { mixpanel.register(props); } catch { /* best effort */ }
+};
+
+/** On every start and return: when she was last here; 2+ days away is counted (what brings people back). */
+export const noteActive = () => {
+  try {
+    const today = new Date(); const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const last = localStorage.getItem("memap_last_active");
+    if (last && last !== iso) {
+      const days = Math.round((Date.parse(iso + "T12:00:00") - Date.parse(last + "T12:00:00")) / 86_400_000);
+      if (days >= 2) track("returned_after_gap", { days });
+    }
+    localStorage.setItem("memap_last_active", iso);
+  } catch { /* counted next time */ }
 };

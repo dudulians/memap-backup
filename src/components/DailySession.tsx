@@ -395,6 +395,9 @@ export const DailySession = ({
   const [deck, setDeck] = useState<SessionQuestion[]>(() => buildDeck());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answeredCount, setAnsweredCount] = useState(0);
+  // how the evening went (Nov 8 2026): "not sure" taps and how long it took
+  const notSureCount = useRef(0);
+  const startedAt = useRef(Date.now());
   // Tracks whether the user has ever answered a swipe card on this
   // device. Drives the first-card swipe hint — a gentle left/right
   // wiggle on the card itself + two faint chevrons floating just
@@ -420,7 +423,11 @@ export const DailySession = ({
   useEffect(() => {
     if (!completed) return;
     haptics.success();
-    track("daily_session_completed");
+    track("daily_session_completed", {
+      answered: answeredCount, not_sure: notSureCount.current, cards: deck.length,
+      seconds: Math.round((Date.now() - startedAt.current) / 1000), hour: new Date().getHours(),
+      kind: playMode ? "play" : onlyIds ? "step" : "all",
+    });
     if (playMode) return;
     // Best moment to ask for a rating: the evening is closed and the
     // echo card below just showed a fact. Delay so the done screen is
@@ -629,6 +636,7 @@ export const DailySession = ({
       index: currentIndex,
     });
 
+    notSureCount.current += 1;
     // Play sound and haptic
     playFeedbackSound("skip");
     triggerHaptic("light");

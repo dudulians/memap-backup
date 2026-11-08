@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { Check, FlaskConical, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { track, useScreen } from "@/lib/analytics";
+import { track, useScreen  } from "@/lib/analytics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
@@ -88,6 +88,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const finish = async (keep: boolean) => {
     if (!experiment) return;
     haptics.success();
+    if (result) track("experiment_finished", { kept: keep, verdict: verdictOf(result), goal: !!experiment.same, did: result.did, overlap: overlapping(experiment).length > 0 });
     await finishExperiment(experiment.id, keep);
     // the reminder goes on, or stops, right away
     try { await scheduleNotification(getNotificationSettings()); } catch { /* next start */ }

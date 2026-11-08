@@ -31,9 +31,9 @@ export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: (
     track("observe_tip_added", { tip: tip.id });
     setAdded(true);
   };
-  const later = () => { if (tip) markTip(tip.id, "later"); haptics.tap(); close(); };
+  const later = () => { if (tip) { markTip(tip.id, "later"); track("observe_tip_later", { tip: tip.id }); } haptics.tap(); close(); };
   return (
-    <BottomSheet open={!!tip} onOpenChange={(o) => { if (!o) { if (tip && !added) markTip(tip.id, "later"); close(); } }} ariaTitle={t("tipDay.step")}>
+    <BottomSheet open={!!tip} onOpenChange={(o) => { if (!o) { if (tip && !added) { markTip(tip.id, "later"); track("observe_tip_later", { tip: tip.id }); } close(); } }} ariaTitle={t("tipDay.step")}>
       {tip && words && (
         <div className="px-5 pb-8 pt-1">
           <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">

@@ -17,7 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { maybeRequestRating } from "@/lib/appRating";
-import { track, setUserProperty, currentScreen } from "@/lib/analytics";
+import { track, setUserProperty, currentScreen, noteActive, registerProps } from "@/lib/analytics";
 import { getTheme } from "@/lib/theme";
 import { getLanguage } from "@/lib/i18n";
 
@@ -72,7 +72,10 @@ const App = () => {
     if (Capacitor.isNativePlatform()) {
       notifSubPromise = LocalNotifications.addListener(
         "localNotificationActionPerformed",
-        () => {
+        (action) => {
+          // which push brought her back (Nov 8 2026)
+          const ex = ((action as { notification?: { extra?: Record<string, unknown> } })?.notification?.extra ?? {}) as Record<string, unknown>;
+          track("notification_opened", { kind: String(ex.kind ?? "unknown"), variant: String(ex.variant ?? ""), hour: new Date().getHours() });
           // Switch active tab to Cards (Index owns the activeTab state).
           window.dispatchEvent(
             new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }),
@@ -102,6 +105,7 @@ const App = () => {
     // theme + language as event properties, so we can answer "is Pop
     // theme used more than Aurora?" / "are Russian users retaining
     // better?" without identifying anyone.
+    noteActive();
     track("app_opened", {
       theme: getTheme(),
       language: getLanguage(),
@@ -123,6 +127,10 @@ const App = () => {
         setUserProperty("islands", buildIslands(trackers, entries).length);
         setUserProperty("week", pathModel(trackers, entries).week + 1);
         setUserProperty("topic", getDoorState()?.id ?? "none");
+        // on every later event: the path's week and the day since she started (Nov 8 2026)
+        const start = localStorage.getItem("memap_path_start") ?? localStorage.getItem("memap_first_open")?.slice(0, 10);
+        const day = start ? Math.round((Date.now() - Date.parse(start + "T00:00:00")) / 86_400_000) + 1 : 1;
+        registerProps({ week: pathModel(trackers, entries).week + 1, day, days_answered: countedDays(trackers, entries).length });
       } catch { /* best effort */ }
     })();
 
@@ -141,6 +149,7 @@ const App = () => {
         return;
       }
       sessionStart = Date.now();
+      noteActive();
       const now = Date.now();
       if (now - lastForegroundAt < 10 * 60 * 1000) return;
       lastForegroundAt = now;

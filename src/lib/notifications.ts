@@ -181,7 +181,7 @@ export const cancelNotification = async (): Promise<void> => {
  *  today is done). Apart from scheduling so it can be checked anywhere. */
 export const reminderPlan = async (
   settings: NotificationSettings,
-): Promise<{ id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[]> => {
+): Promise<Push[]> => {
   const [hour, minute] = settings.time.split(":").map(Number);
   const now = new Date();
   const todayFilled = await isTodayFilled();
@@ -224,12 +224,7 @@ export const reminderPlan = async (
   // ("Answer in one swipe" / "Ответь одним свайпом").
   const promptBody = i18n.t("notifications.dailyPromptBody");
 
-  type ScheduledNotification = {
-    id: number;
-    title: string;
-    body: string;
-    schedule: { at: Date; allowWhileIdle: boolean };
-  };
+  type ScheduledNotification = Push;
   const notifications: ScheduledNotification[] = [];
 
   for (let offset = 0; offset < DAYS_AHEAD; offset++) {
@@ -295,6 +290,8 @@ export const reminderPlan = async (
       title: dayTitle,
       body: dayBody,
       schedule: { at: fireAt, allowWhileIdle: true },
+      // which words: the title's turn and whether a "how close" line was in it
+      extra: { kind: "evening", variant: getUiMode() === "new" ? `title${(fireAt.getDate() % 5) + 1}${dayBody.includes("\n") ? "+progress" : ""}` : "question" },
     });
   }
 
@@ -334,7 +331,7 @@ export const scheduleNotification = async (
 /** A test's push for day k (Nov 8 2026, her: "дурацкое уведомление… у нас есть возможность сделать
  *  нормальные красивые ответы, мотивации"): the first day, the days between (four turns of words,
  *  a weekly goal its own), a week done, two days left, the last day. Her step in her words. */
-const tryWords = (x: Experiment, k: number): { title: string; body: string } => {
+const tryWords = (x: Experiment, k: number): { title: string; body: string; key: string } => {
   const key = k === 1 ? "start" : k === EXPERIMENT_DAYS ? "last" : k === EXPERIMENT_DAYS - 1 ? "twoLeft" : k === 8 ? "half"
     : x.perWeek && k % 2 === 0 ? "goal" : `mid${(k % 4) + 1}`;
   const o = { k, count: EXPERIMENT_DAYS, left: EXPERIMENT_DAYS + 1 - k, n: x.perWeek ?? 0 };
@@ -342,13 +339,13 @@ const tryWords = (x: Experiment, k: number): { title: string; body: string } => 
   // today's step on top ("Не забудь потренироваться сегодня"); her own plan in her words under a kind title
   const today = testTodayOf(x.change);
   return today
-    ? { title: today, body: day }
-    : { title: i18n.t("notifications.try.ownTitle"), body: `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${day}` };
+    ? { title: today, body: day, key }
+    : { title: i18n.t("notifications.try.ownTitle"), body: `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${day}`, key };
 };
 
 /** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */
-export const tryPlan = (entries: TrackerEntry[] = []): { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] => {
-  const out: { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean } }[] = [];
+export const tryPlan = (entries: TrackerEntry[] = []): Push[] => {
+  const out: Push[] = [];
   // no push on a day already done ("yes" today), nor for the rest of a week whose goal is met (Nov 8 2026)
   const now = new Date(), todayIso = localISODate(now);
   const monday = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)));
@@ -368,7 +365,8 @@ export const tryPlan = (entries: TrackerEntry[] = []): { id: number; title: stri
     for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
       const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now() || skip(x, at)) continue;
-      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, ...tryWords(x, k), schedule: { at, allowWhileIdle: true } });
+      const w = tryWords(x, k);
+      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, title: w.title, body: w.body, schedule: { at, allowWhileIdle: true }, extra: { kind: x.same ? "goal" : "test", variant: w.key } });
     }
   });
   // kept going after the two weeks ("Продолжим в том же духе?" — yes): the reminder goes on, a week
@@ -385,11 +383,15 @@ export const tryPlan = (entries: TrackerEntry[] = []): { id: number; title: stri
         title: today ?? i18n.t("notifications.try.ownTitle"),
         body: today ? body : `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${body}`,
         schedule: { at, allowWhileIdle: true },
+        extra: { kind: "test_kept", variant: `keep${(at.getDate() % 4) + 1}` },
       });
     }
   });
   return out;
 };
+
+/** A scheduled push; `extra` says what kind it is and which words, for "which pushes bring people back". */
+export type Push = { id: number; title: string; body: string; schedule: { at: Date; allowWhileIdle: boolean }; extra?: Record<string, string | number> };
 
 const getNotifiedCycles = (): Record<string, string> => {
   try {
@@ -450,6 +452,7 @@ const fireThresholdNotification = async (tracker: Tracker) => {
           title,
           body,
           schedule: { at: new Date(Date.now() + 1000) },
+          extra: { kind: "rule" },
         },
       ],
     });

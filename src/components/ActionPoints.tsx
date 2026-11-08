@@ -10,6 +10,7 @@
 //                 or turn it off.
 // No "all calm" before there is data: "Your world is still taking shape"
 // until a week of evenings. Gold, never red; no alarms.
+import { track } from "@/lib/analytics";
 import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -494,6 +495,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
   const since = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" });
   const lineOf = (x: Experiment) => (x.reviewed && x.kept ? t("experiment.keptSince", { date: since(x.reviewed) }) : t("rules.testing", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }));
   const stop = async (x: Experiment) => {
+    track("experiment_stopped", { goal: !!x.same });
     await stopKept(x.id);
     try { await scheduleNotification(getNotificationSettings()); } catch { /* next start */ }
     setOpen(null); setTick((k) => k + 1);
