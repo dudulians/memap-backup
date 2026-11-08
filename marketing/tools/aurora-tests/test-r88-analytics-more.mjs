@@ -28,7 +28,7 @@ logs.length = 0;
 await p.reload(); await p.waitForTimeout(3500);
 const out = {};
 out.gap = logs.find((l) => l.includes("returned_after_gap")) ?? "NONE";
-out.register = logs.find((l) => l.includes("would-register")) ?? "NONE";
+out.register = logs.find((l) => l.includes("would-register") && l.includes("week")) ?? "NONE";
 // an evening: open the questions and answer, one "Not sure"
 await p.evaluate(() => window.dispatchEvent(new Event("memap-open-session"))); await p.waitForTimeout(1500);
 for (let i = 0; i < 8; i++) {

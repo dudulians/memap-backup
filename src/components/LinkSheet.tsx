@@ -2,6 +2,7 @@
 // Globe (her note, Nov 5 2026, WORLD-BIBLE "Решения 5 ноября" #4): which two
 // questions, how many times out of how many, and, honestly, that this is what
 // happened together in her days, not proof of a cause.
+import { TipCard, tourCompleted } from "./Tips";
 import { useTranslation } from "react-i18next";
 import { BarChart3 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -39,6 +40,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
     <BottomSheet open={!!r} onOpenChange={(o) => { if (!o) onClose(); }} ariaTitle={t("link.title")}>
       {r && (
         <div className="px-5 pb-8 pt-1">
+          {!tourCompleted() && <TipCard id="block:findings" className="mb-4" title={t("tour.links.title")} line={t("tour.links.line")} />}
           {/* the two islands and the dotted route between them */}
           {r.a === r.b ? (
             <div className="flex flex-col items-center">

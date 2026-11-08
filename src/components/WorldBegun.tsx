@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
-import { track } from "@/lib/analytics";
+import { onbVariant, track } from "@/lib/analytics";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { getDoorState } from "@/lib/doors";
 import { art, artOf, islandEvenings, toNextStage } from "@/lib/globeArt";
@@ -16,7 +16,7 @@ import { islandName, islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { getNotificationSettings, requestNotificationPermissionDetailed, saveNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { GrowthLadder } from "./IslandStats";
 
-type Shown = { kind: "begun"; island: IslandId; days: number; date: string } | { kind: "waiting" } | { kind: "nothing"; date: string; ids?: string[] };
+type Shown = { kind: "begun"; island: IslandId; days: number; date: string } | { kind: "waiting" } | { kind: "nothing"; date: string; ids?: string[] } | { kind: "remind" };
 const TIMES = ["20:00", "21:00", "22:00"];
 
 const Reminder = ({ onDone, inline = false }: { onDone: () => void; inline?: boolean }) => {
@@ -66,6 +66,13 @@ export const WorldBegun = () => {
       const { date, ids } = (e as CustomEvent<{ date: string; ids?: string[] }>).detail ?? {};
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
       const saved = entries.filter((x) => x.date === date && typeof x.value === "boolean");
+      // variant C (Nov 8 2026): no "Your world has begun" and no tour — the reminder, then Today
+      if (onbVariant() === "C") {
+        track("world_begun", { saved: saved.length, short: true });
+        if (!getNotificationSettings().enabled) setShown({ kind: "remind" });
+        else window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
+        return;
+      }
       if (saved.length === 0) { setShown({ kind: "nothing", date, ids }); track("world_begun", { saved: 0 }); return; }
       const door = getDoorState();
       const main = trackers.find((x) => x.id === door?.trackerId) ?? trackers.find((x) => x.id === saved[0].trackerId);
@@ -85,6 +92,17 @@ export const WorldBegun = () => {
 
   if (!shown) return null;
   const close = () => { setSheet(false); setShown(null); };
+  if (shown.kind === "remind") {
+    const done = () => { close(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } })); };
+    return (
+      <div className="fixed inset-0 z-[95] flex items-end bg-[rgba(14,24,60,.32)] animate-fade-in" onClick={done}>
+        <div role="dialog" aria-modal="true" aria-label={t("onb7.remindTitle")} className="w-full rounded-t-[28px] bg-white px-5 pb-safe pt-3 dark:bg-[hsl(var(--surface))]" onClick={(e) => e.stopPropagation()}>
+          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-foreground/15" />
+          <Reminder onDone={done} />
+        </div>
+      </div>
+    );
+  }
   // her note, Nov 6 2026: after onboarding nothing showed Today and its steps. Every
   // ending goes on to Today and the tour of it, then the World ("Look around").
   const closeAndTour = () => {

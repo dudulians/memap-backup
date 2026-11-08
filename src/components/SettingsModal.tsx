@@ -38,7 +38,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { switchToOld } from "@/components/UpgradeInvite";
 import { History } from "lucide-react";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
-import { track, useScreen } from "@/lib/analytics";
+import { track, useScreen, onbLabel, setOnbPreview, type OnbVariant } from "@/lib/analytics";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 import { getDoorState } from "@/lib/doors";
@@ -374,6 +374,21 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [versionTapCount, setVersionTapCount] = useState(0);
   const versionTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const showDemoButtons = import.meta.env.DEV || demoUnlocked;
+  // the onboarding test (Nov 8 2026): see A, B or C from the very start; "Random" = this phone's own group
+  const [onbNow, setOnbNow] = useState(() => onbLabel());
+  const previewOnb = (v: OnbVariant | null) => {
+    setOnbPreview(v);
+    setOnbNow(onbLabel());
+    if (!v) return;
+    // a clean start of that onboarding: no tips seen, no tour walked, no "Look around" step
+    try {
+      localStorage.removeItem("memap_tips_seen");
+      localStorage.removeItem("memap_tour_completed");
+      localStorage.removeItem("memap_discover_seen");
+    } catch { /* ignore */ }
+    resetTourSeen();
+    onStartTour?.();
+  };
   const handleGenerateDevData = async () => {
     setDevGenRunning(true);
     try {
@@ -1141,6 +1156,19 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <Trash2 className="h-5 w-5 text-destructive/70" />
                   </button>
                 </div>
+
+                {showDemoButtons && (
+                  <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+                    <div className="text-xs font-medium text-primary">{t("settings.onbTest")}</div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(["A", "B", "C"] as const).map((v) => (
+                        <Button key={v} variant="outline" size="sm" onClick={() => previewOnb(v)} className="border-primary/40 text-primary hover:bg-primary/10 hover:text-primary">{v}</Button>
+                      ))}
+                      <Button variant="outline" size="sm" onClick={() => previewOnb(null)} className="border-primary/40 text-primary hover:bg-primary/10 hover:text-primary text-xs">{t("settings.onbTestOff")}</Button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{t("settings.onbTestNow", { group: onbNow })}</p>
+                  </div>
+                )}
 
                 {/* Version, and the secret 7-tap target that unlocks the
                     demo packs in store builds. */}

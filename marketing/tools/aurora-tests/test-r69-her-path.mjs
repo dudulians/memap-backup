@@ -18,7 +18,7 @@ const click = async (re) => { await p.getByRole("button", { name: re }).first().
 // her test was at 15:27, daytime: the clock stays there (after 17:00 the app asks for tonight straight away)
 { const at = new Date(); at.setHours(15, 27, 0, 0); await p.clock.install({ time: at }); }
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); });
+await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); });
 await p.reload(); await p.waitForTimeout(2200);
 await shot("welcome");
 await click(/^Get started/); await whyStep(p);

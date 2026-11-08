@@ -5,7 +5,7 @@
 // Charts / Limits (the old Patterns, just for that island). "World" shows
 // the same for everything. One view only: the rolling globe is gone (her
 // note, Nov 2: two ways into the map were confusing).
-import { TipCard, tourCompleted } from "./Tips";
+import { TipCard, tipSeen, tourCompleted } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus } from "lucide-react";
@@ -228,6 +228,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     const first = mainIsland && islands.some((i) => i.id === mainIsland) ? mainIsland : islands.find((i) => i.trackerIds.length > 0)?.id;
     if (first) setTestFor(first);
   };
+  // no tour walked (variant C, or skipped): the World says once what it is; the globe's "turn me" line waits for it
+  const [worldTip, setWorldTip] = useState(() => !tourCompleted() && !tipSeen("block:world"));
   const onlyTitle = (o: Only) => t(o === "findings" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");
 
   return (
@@ -244,13 +246,14 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       {loaded && islands.length > 0 && (
         <div className="relative z-[6] mt-1">
           <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
+          {worldTip && <TipCard id="block:world" onClose={() => setWorldTip(false)} className="mx-4 mt-2 !bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" title={t("tour.world.title")} line={t("tour.world.line")} />}
         </div>
       )}
       {/* the k/n signs of links inside one island are off on the globe: they sat on the
           islands (her note, Nov 7 2026); those links are in Links */}
       {loaded && islands.length > 0 && (
         <div className="absolute inset-0 z-0" data-tour="world">
-          <PlanetGlobe sky={false} below islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
+          <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
             paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={() => setNewOpen(true)} />
         </div>
@@ -272,6 +275,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       <BottomSheet open={helpsOpen} onOpenChange={(o) => { if (!o) setHelpsOpen(false); }} className="h-auto max-h-[88vh]" ariaTitle={t("world4.whatHelps")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("world4.whatHelps")}</h2>
+          {!tourCompleted() && <TipCard id="block:helps" className="mb-3" title={t("world4.whatHelps")} line={t("tour.helps.line")} />}
           <WhatHelps trackers={trackers} entries={entries}
             onResult={(x) => { setHelpsOpen(false); window.setTimeout(() => setHelpsResult(x), 250); }}
             onPick={() => { setHelpsOpen(false); window.setTimeout(pickTest, 250); }} />

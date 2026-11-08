@@ -10,7 +10,7 @@ const out = {}, errs = [];
   const p = await b.newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   out.islandsMatch = await p.evaluate(async () => {
-    localStorage.clear(); localStorage.setItem("memap_language", "en");
+    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_language", "en");
     const dz = await import("/src/lib/doors.ts"), I = await import("/src/lib/islands.ts"), st = await import("/src/lib/storage.ts");
     // every topic on the onboarding screen (Nov 8 2026: 4–8 per island)
     const O = await import("/src/components/OnboardingV7.tsx");
@@ -38,7 +38,7 @@ for (const [lang, tone] of [["en", "bother"], ["en", "good"], ["ru", "bother"]])
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${tag}: ${e.message}`));
   let n = 0; const shot = async (name) => { await p.waitForTimeout(500); await p.screenshot({ path: `${D}/${tag}-${++n}-${name}.png` }); };
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
-  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
+  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
   await p.reload(); await p.waitForTimeout(2200);
   await p.getByRole("button", { name: lang === "ru" ? /^Начать/ : /^Get started/ }).first().click(); await p.waitForTimeout(600);
   await shot("why");

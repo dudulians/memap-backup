@@ -48,6 +48,40 @@ export const cohort = (): "old" | "new" => {
   } catch { return "new"; }
 };
 
+/** The onboarding test (her "Yes, build A/B/C", Nov 8 2026): every new install gets A, B or C at random, kept
+ *  for good. A = "What brings you here?" first; B = all topics at once; C = all topics → the first answers →
+ *  a reminder, with hints on the first taps. Old users are not in the test (their onboarding is A's). */
+export type OnbVariant = "A" | "B" | "C";
+const ONB_KEY = "memap_ab_onb";
+const ONB_PREVIEW = "memap_ab_onb_preview";
+const isOnb = (x: unknown): x is OnbVariant => x === "A" || x === "B" || x === "C";
+export const onbVariant = (): OnbVariant => {
+  try {
+    const preview = localStorage.getItem(ONB_PREVIEW);
+    if (isOnb(preview)) return preview;
+    const saved = localStorage.getItem(ONB_KEY);
+    if (isOnb(saved)) return saved;
+    if (cohort() === "old") return "A";
+    const v = (["A", "B", "C"] as const)[Math.floor(Math.random() * 3)];
+    localStorage.setItem(ONB_KEY, v);
+    return v;
+  } catch { return "A"; }
+};
+/** For Mixpanel: the group; "none" for old users, "B-preview" while the owner looks at one. */
+export const onbLabel = (): string => {
+  try {
+    const preview = localStorage.getItem(ONB_PREVIEW);
+    if (isOnb(preview)) return `${preview}-preview`;
+    const saved = localStorage.getItem(ONB_KEY);
+    return isOnb(saved) ? saved : "none";
+  } catch { return "none"; }
+};
+/** The owner's switch (Settings → Data & privacy, after 7 taps on the version): see A, B or C from the start. */
+export const setOnbPreview = (v: OnbVariant | null) => {
+  try { if (v) localStorage.setItem(ONB_PREVIEW, v); else localStorage.removeItem(ONB_PREVIEW); } catch { /* ignore */ }
+  registerProps({ onb_variant: onbLabel() });
+};
+
 /** Where she heard about MeMap (the one-tap card on Today), once answered. */
 export const getSource = (): string | null => { try { return localStorage.getItem("memap_source"); } catch { return null; } };
 
@@ -67,7 +101,8 @@ let initialised = false;
 
 export const initAnalytics = (): void => {
   cohort();
-  if (import.meta.env.DEV) return;
+  onbVariant(); // a new install's onboarding group is drawn on its first launch
+  if (import.meta.env.DEV) { registerProps({ onb_variant: onbLabel() }); return; }
   // Only the real app on a phone (Nov 8 2026: our own test builds opened on the computer,
   // http://127.0.0.1:4180 and file:///…, showed up in Mixpanel as dozens of users "(not set)")
   if (!Capacitor.isNativePlatform()) return;
@@ -110,7 +145,7 @@ export const initAnalytics = (): void => {
     // on every event (her note, Nov 8 2026: "чтобы не путались со старыми пользователями"): the version,
     // old or new, the phone's language and region setting, where she heard about us when she said
     const source = getSource();
-    mixpanel.register({ app_version: APP_VERSION, cohort: cohort(), region: navigator.language || "", ...(source ? { source } : {}) });
+    mixpanel.register({ app_version: APP_VERSION, cohort: cohort(), onb_variant: onbLabel(), region: navigator.language || "", ...(source ? { source } : {}) });
     // the first launch of this install, once
     try {
       if (!localStorage.getItem("memap_first_open")) {

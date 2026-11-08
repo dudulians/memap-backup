@@ -186,11 +186,13 @@ export const ISLAND_TOPICS: Record<Tone, { island: IslandId; ids: DoorId[] }[]> 
     { island: "body", ids: ["movement", "steps", "veggies", "cooking", "phoneFree"] },
   ],
 };
-export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own }: {
-  tone: Tone; onBack: () => void; onPick: (ids: DoorId[]) => void; onOwn: (ids: DoorId[]) => void; onClearOwn: () => void; initial?: DoorId[]; own?: string | null;
+/** Variants B and C (Nov 8 2026): no first door, every topic at once — both tones, island by island. */
+const ALL_TOPICS = ISLAND_TOPICS.bother.map((g) => ({ island: g.island, ids: [...new Set([...g.ids, ...(ISLAND_TOPICS.good.find((x) => x.island === g.island)?.ids ?? [])])] }));
+export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own, progress = [1, 5] }: {
+  tone: Tone | "all"; onBack: () => void; onPick: (ids: DoorId[]) => void; onOwn: (ids: DoorId[]) => void; onClearOwn: () => void; initial?: DoorId[]; own?: string | null; progress?: [number, number];
 }) => {
   const { t } = useTranslation();
-  const groups = ISLAND_TOPICS[tone];
+  const groups = tone === "all" ? ALL_TOPICS : ISLAND_TOPICS[tone];
   const [sel, setSel] = useState<DoorId[]>(initial ?? []);
   // closed at first; an island with a pick stays open (her note: "все списки будут раскрываться?")
   const [opened, setOpened] = useState<IslandId[]>(() => groups.filter((g) => g.ids.some((id) => (initial ?? []).includes(id))).map((g) => g.island));
@@ -212,8 +214,8 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own 
   return (
     <Screen
       head={<>
-        <Top onBack={onBack} step={1} steps={5} />
-        <H1 className="mt-5">{t(tone === "good" ? "doors.goodTitle" : "doors.pickTitle")}</H1>
+        <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
+        <H1 className="mt-5">{t(tone === "all" ? "onb7.topicTitle" : tone === "good" ? "doors.goodTitle" : "doors.pickTitle")}</H1>
         <p className={cn("mt-1.5 pb-3 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
       </>}
       foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0), tone }); onPick(sel); }}>{t("doors.continue")}</Main>}>
@@ -255,13 +257,13 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own 
 
 // --- 2b. your own question -----------------------------------------------------------
 const IDEAS = ["onb7.idea1", "onb7.idea2", "onb7.idea3", "onb7.idea4"];
-export const OwnV7 = ({ onBack, onDone, initial = "" }: { onBack: () => void; onDone: (text: string) => void; initial?: string }) => {
+export const OwnV7 = ({ onBack, onDone, initial = "", progress = [1, 5] }: { onBack: () => void; onDone: (text: string) => void; initial?: string; progress?: [number, number] }) => {
   const { t } = useTranslation();
   const [text, setText] = useState(initial);
   const ok = text.trim().length >= 4;
   return (
     <Page>
-      <Top onBack={onBack} step={1} steps={5} />
+      <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
       <H1 className="mt-5">{t("onb7.ownTitle")}</H1>
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.ownSub")}</p>
       <input value={text} onChange={(e) => setText(e.target.value.slice(0, 80))} placeholder={t("onb7.ownPlaceholder")} aria-label={t("onb7.ownTitle")} data-onb-interactive
@@ -291,37 +293,61 @@ const qOf = (id: string) => { const f = findTemplate(id); return f ? templateQue
 
 type MainQ = { key: string; tpl: string | null; base: string; door: Door | null };
 
-export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: () => void; onDone: (s: V7Setup) => void }) => {
-  const { t } = useTranslation();
-  const doors = useMemo(() => (pick.kind === "door" ? pick.ids.map((id) => getDoor(id)).filter((d): d is Door => !!d) : []), [pick]);
+/** What a pick asks: the main question of each topic, the ones around them, and the ones ticked to start. */
+const planOf = (pick: V7Pick) => {
+  const doors = pick.kind === "door" ? pick.ids.map((id) => getDoor(id)).filter((d): d is Door => !!d) : [];
   // one main question per topic (two topics asking the same thing share it), then her own
-  const mains = useMemo<MainQ[]>(() => {
-    const out: MainQ[] = [];
-    if (pick.kind === "simple") out.push({ key: SIMPLE.main, tpl: SIMPLE.main, base: qOf(SIMPLE.main), door: null });
-    for (const d of doors) if (!out.some((m) => m.tpl === d.mainTemplateId)) out.push({ key: d.id, tpl: d.mainTemplateId, base: qOf(d.mainTemplateId), door: d });
-    const own = pick.kind === "own" ? pick.text : pick.kind === "door" ? pick.own : undefined;
-    if (own) out.push({ key: "own", tpl: null, base: own, door: null });
-    return out;
-  }, [pick, doors]);
-  const mainTpls = useMemo(() => mains.flatMap((m) => (m.tpl ? [m.tpl] : [])), [mains]);
-  // the ones around them: every topic's own, in the order picked, no repeats
+  const mains: MainQ[] = [];
+  if (pick.kind === "simple") mains.push({ key: SIMPLE.main, tpl: SIMPLE.main, base: qOf(SIMPLE.main), door: null });
+  for (const d of doors) if (!mains.some((m) => m.tpl === d.mainTemplateId)) mains.push({ key: d.id, tpl: d.mainTemplateId, base: qOf(d.mainTemplateId), door: d });
+  const own = pick.kind === "own" ? pick.text : pick.kind === "door" ? pick.own : undefined;
+  if (own) mains.push({ key: "own", tpl: null, base: own, door: null });
+  const mainTpls = mains.flatMap((m) => (m.tpl ? [m.tpl] : []));
+  // the ones around them: every topic's own, in the order picked, no repeats,
   // taken in turns (each topic's first, then each one's second…), so every topic has its own
-  const turns = useMemo(() => {
-    const out: string[] = [];
-    for (let k = 0; k < 3; k++) for (const d of doors) { const id = d.contextTemplateIds[k]; if (!out.includes(id) && !mainTpls.includes(id)) out.push(id); }
-    return out;
-  }, [doors, mainTpls]);
-  const aroundTpls = useMemo(() => {
-    if (pick.kind === "door") {
-      const extra = doors.flatMap((d) => (EXTRA[d.id] ? [EXTRA[d.id]!] : []));
-      return [...new Set([...turns, ...extra])].filter((id) => !mainTpls.includes(id)).slice(0, 8);
-    }
-    return pick.kind === "simple" ? SIMPLE.around : OWN_AROUND;
-  }, [pick, doors, mainTpls, turns]);
+  const turns: string[] = [];
+  for (let k = 0; k < 3; k++) for (const d of doors) { const id = d.contextTemplateIds[k]; if (!turns.includes(id) && !mainTpls.includes(id)) turns.push(id); }
+  const aroundTpls = pick.kind === "door"
+    ? [...new Set([...turns, ...doors.flatMap((d) => (EXTRA[d.id] ? [EXTRA[d.id]!] : []))])].filter((id) => !mainTpls.includes(id)).slice(0, 8)
+    : pick.kind === "simple" ? SIMPLE.around : OWN_AROUND;
+  // ticked to start: a topic's three (one topic), one more with each topic added
+  const ticked = pick.kind === "door" ? turns.slice(0, 2 + doors.length) : aroundTpls;
+  return { doors, mains, aroundTpls, ticked };
+};
+type Plan = ReturnType<typeof planOf>;
+
+/** Saves the questions: the main ones (in her words where she changed them), the ticked ones around, her own. */
+const saveSetup = async (pick: V7Pick, { doors, mains, aroundTpls }: Plan, texts: string[], on: Set<string>, own: string[], quick = false): Promise<V7Setup> => {
+  const mainIds: string[] = [];
+  for (let i = 0; i < mains.length; i++) {
+    const m = mains[i];
+    mainIds.push(m.tpl ? (await ensureTemplates([m.tpl]))[0] : await addOwnTracker(texts[i].trim() || m.base));
+  }
+  // her own words for a main question (cardQuestion shows hers)
+  const edited = new Map(mains.flatMap((m, i) => (m.tpl && texts[i].trim() && texts[i].trim() !== m.base ? [[mainIds[i], asQuestion(texts[i])] as const] : [])));
+  if (edited.size) {
+    const all = await getTrackers();
+    await saveTrackers(all.map((x) => (edited.has(x.id) ? { ...x, questionText: edited.get(x.id)! } : x)));
+  }
+  const aroundIds = await ensureTemplates(aroundTpls.filter((id) => on.has(id)));
+  const ownIds: string[] = [];
+  for (const q of own) ownIds.push(await addOwnTracker(q));
+  const byDoor = mains.flatMap((m, i) => (m.door ? [{ id: m.door.id, trackerId: mainIds[i] }] : []));
+  const lead = pick.kind === "simple" ? { id: "energy" as DoorId, trackerId: mainIds[0] } : byDoor[0] ?? null;
+  if (lead) saveDoorState({ id: lead.id, trackerId: lead.trackerId, contextTrackerIds: [...aroundIds, ...ownIds], startedAt: isoLocal(new Date()), extra: byDoor.slice(1) });
+  track("onboarding_questions", { topic: doors.map((d) => d.id).join(",") || (pick.kind === "simple" ? "energy" : "own"), topics: mains.length, around: aroundIds.length + ownIds.length, edited: edited.size > 0, quick });
+  return { ids: [...mainIds, ...aroundIds, ...ownIds], mainId: lead?.trackerId ?? mainIds[0], doorId: lead?.id ?? null };
+};
+/** Variant C (Nov 8 2026): no questions screen — the questions a pick starts with are saved straight away. */
+export const quickSetup = (pick: V7Pick) => { const plan = planOf(pick); return saveSetup(pick, plan, plan.mains.map((m) => m.base), new Set(plan.ticked), [], true); };
+
+export const QuestionsV7 = ({ pick, onBack, onDone, progress = [2, 5] }: { pick: V7Pick; onBack: () => void; onDone: (s: V7Setup) => void; progress?: [number, number] }) => {
+  const { t } = useTranslation();
+  const plan = useMemo(() => planOf(pick), [pick]);
+  const { mains, aroundTpls } = plan;
   const [texts, setTexts] = useState<string[]>(() => mains.map((m) => m.base));
   const [editing, setEditing] = useState<number | null>(null);
-  // ticked to start: a topic's three (one topic), one more with each topic added
-  const [on, setOn] = useState<Set<string>>(() => new Set(pick.kind === "door" ? turns.slice(0, 2 + doors.length) : aroundTpls));
+  const [on, setOn] = useState<Set<string>>(() => new Set(plan.ticked));
   const [own, setOwn] = useState<string[]>([]);
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -332,33 +358,13 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
   const save = async () => {
     if (busy) return;
     setBusy(true);
-    try {
-      const mainIds: string[] = [];
-      for (let i = 0; i < mains.length; i++) {
-        const m = mains[i];
-        mainIds.push(m.tpl ? (await ensureTemplates([m.tpl]))[0] : await addOwnTracker(texts[i].trim() || m.base));
-      }
-      // her own words for a main question (cardQuestion shows hers)
-      const edited = new Map(mains.flatMap((m, i) => (m.tpl && texts[i].trim() && texts[i].trim() !== m.base ? [[mainIds[i], asQuestion(texts[i])] as const] : [])));
-      if (edited.size) {
-        const all = await getTrackers();
-        await saveTrackers(all.map((x) => (edited.has(x.id) ? { ...x, questionText: edited.get(x.id)! } : x)));
-      }
-      const aroundIds = await ensureTemplates(aroundTpls.filter((id) => on.has(id)));
-      const ownIds: string[] = [];
-      for (const q of own) ownIds.push(await addOwnTracker(q));
-      const byDoor = mains.flatMap((m, i) => (m.door ? [{ id: m.door.id, trackerId: mainIds[i] }] : []));
-      const lead = pick.kind === "simple" ? { id: "energy" as DoorId, trackerId: mainIds[0] } : byDoor[0] ?? null;
-      if (lead) saveDoorState({ id: lead.id, trackerId: lead.trackerId, contextTrackerIds: [...aroundIds, ...ownIds], startedAt: isoLocal(new Date()), extra: byDoor.slice(1) });
-      track("onboarding_questions", { topic: doors.map((d) => d.id).join(",") || (pick.kind === "simple" ? "energy" : "own"), topics: mains.length, around: aroundIds.length + ownIds.length, edited: edited.size > 0 });
-      onDone({ ids: [...mainIds, ...aroundIds, ...ownIds], mainId: lead?.trackerId ?? mainIds[0], doorId: lead?.id ?? null });
-    } finally { setBusy(false); }
+    try { onDone(await saveSetup(pick, plan, texts, on, own)); } finally { setBusy(false); }
   };
 
   return (
     <Screen
       head={<>
-        <Top onBack={onBack} step={2} steps={5} />
+        <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
         <H1 className="mt-5">{t("onb7.qTitle")}</H1>
         <p className="mt-1.5 pb-3 text-[16px] font-semibold text-muted-foreground">{t("onb7.qSub")}</p>
       </>}
@@ -420,7 +426,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone }: { pick: V7Pick; onBack: ()
 
 // --- 4. what you'll discover over time ------------------------------------------------
 const EXAMPLE_KEYS = new Set(["migraine", "sleep", "energy", "stress", "period", "quit", "move", "fights"]);
-export const ValueV7 = ({ setup, pickKind, onBack, onStart }: { setup: V7Setup; pickKind: V7Pick["kind"]; onBack: () => void; onStart: (day: "today" | "yesterday" | "tonight") => void }) => {
+export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }: { setup: V7Setup; pickKind: V7Pick["kind"]; onBack: () => void; onStart: (day: "today" | "yesterday" | "tonight") => void; progress?: [number, number] }) => {
   const { t } = useTranslation();
   const door = setup.doorId ? getDoor(setup.doorId) : null;
   const exKey = setup.doorId && EXAMPLE_KEYS.has(setup.doorId) && pickKind !== "simple" ? setup.doorId : pickKind === "own" ? "own" : door?.branch ?? "good";
@@ -435,7 +441,7 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart }: { setup: V7Setup; 
   );
   return (
     <Page>
-      <Top onBack={onBack} step={3} steps={5} />
+      <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
       <H1 className="mt-5 text-[27px]">{t("onb7.vTitle")}</H1>
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.vSub")}</p>
       <div className="mt-4 flex flex-col gap-2.5">

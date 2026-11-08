@@ -120,8 +120,10 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, labels, onOpen, onNewIsland, onLink, onInner }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, quietHint = false, labels, onOpen, onNewIsland, onLink, onInner }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
+  /** another tip is on screen: the "turn me" line waits (Nov 8 2026) */
+  quietHint?: boolean;
   /** her topic's island: lit, a teal dot by its name (board 76 A) */
   main?: IslandId | null;
   /** a link inside one island: its sign k/n over the island (board 75) */
@@ -587,7 +589,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           </div>
         ))}
       </div>
-      {hint && !decor && <div className="planet-hint" style={below ? { bottom: "auto", top: "12.4rem" } : undefined}>{t("map.hint")}</div>}
+      {hint && !decor && !quietHint && <div className="planet-hint" style={below ? { bottom: "auto", top: "12.4rem" } : undefined}>{t("map.hint")}</div>}
       {/* zoom in and out by hand too (pinch and the wheel still work) */}
       <div className={`absolute right-4 z-[5] flex flex-col overflow-hidden rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]${decor ? " hidden" : ""}`} style={{ bottom: "calc(11.5rem + env(safe-area-inset-bottom, 0px))" }}>
         <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-11 w-11 items-center justify-center text-foreground"><Plus className="h-5 w-5" strokeWidth={2.6} /></button>

@@ -51,7 +51,7 @@ import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { track } from "@/lib/analytics";
+import { track, onbVariant } from "@/lib/analytics";
 
 const PATH_MAX = 440;
 type Rect = { x: number; y: number; w: number; h: number };
@@ -437,6 +437,8 @@ export const EveningPath = ({
   // the bright step is only a suggestion (her note, Nov 8 2026: "можно скипнуть яркий шар… но это
   // неочевидно"): Malu says so once, beside the boat, in the first days while two or more steps are open
   const [orderTip, setOrderTip] = useState(() => !tipSeen("any-order"));
+  // variant C (no tour): the same tip says what the steps are
+  const shortOnb = onbVariant() === "C";
   const closeOrderTip = () => { haptics.tap(); markTipSeen("any-order"); setOrderTip(false); };
   const nextMaluTip = () => setMaluTip((cur) => {
     if (cur !== null) return cur + 1;
@@ -1005,11 +1007,11 @@ export const EveningPath = ({
                     </span>
                   </button>
                 )}
-                {i === focus && avatar && !tipNow && orderTip && m.totalDays < 5 && openLeft >= 2 && (
+                {i === focus && avatar && !tipNow && orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb) && (
                   <div className="malu-tip surface absolute z-[8] w-[270px] rounded-[18px] px-3.5 py-3 animate-fade-in" role="note"
                     style={{ left: Math.max(8, Math.min(f.x - 135, width - 278)), top: f.y - f.r - 70, transform: "translateY(-100%)" }}>
-                    <p className="text-[16px] font-bold leading-snug">{t("tips.anyOrderTitle")}</p>
-                    <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{t("tips.anyOrderLine")}</p>
+                    <p className="text-[16px] font-bold leading-snug">{t(shortOnb ? "tips.stepsTitle" : "tips.anyOrderTitle")}</p>
+                    <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{t(shortOnb ? "tips.stepsLine" : "tips.anyOrderLine")}</p>
                     <button type="button" onClick={closeOrderTip} className="raised-btn is-small mt-2 px-5">{t("tips.anyOrderOk")}</button>
                   </div>
                 )}

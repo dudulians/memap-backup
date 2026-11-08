@@ -17,7 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { maybeRequestRating } from "@/lib/appRating";
-import { track, setUserProperty, currentScreen, noteActive, registerProps } from "@/lib/analytics";
+import { track, setUserProperty, currentScreen, noteActive, registerProps, onbLabel } from "@/lib/analytics";
 import { getTheme } from "@/lib/theme";
 import { getLanguage } from "@/lib/i18n";
 
@@ -127,6 +127,7 @@ const App = () => {
         setUserProperty("islands", buildIslands(trackers, entries).length);
         setUserProperty("week", pathModel(trackers, entries).week + 1);
         setUserProperty("topic", getDoorState()?.id ?? "none");
+        setUserProperty("onb_variant", onbLabel());
         // on every later event: the path's week and the day since she started (Nov 8 2026)
         const start = localStorage.getItem("memap_path_start") ?? localStorage.getItem("memap_first_open")?.slice(0, 10);
         const day = start ? Math.round((Date.now() - Date.parse(start + "T00:00:00")) / 86_400_000) + 1 : 1;

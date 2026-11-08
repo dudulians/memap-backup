@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Check, ArrowRight, Languages } from "lucide-react";
@@ -10,7 +10,7 @@ import {
   SupportedLanguage,
   EXPLICIT_LANGUAGE_KEY,
 } from "@/lib/i18n";
-import { track, useScreen } from "@/lib/analytics";
+import { onbVariant, track, useScreen } from "@/lib/analytics";
 import {
   requestNotificationPermissionDetailed,
   getNotificationSettings,
@@ -19,9 +19,9 @@ import {
 } from "@/lib/notifications";
 import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door, type DoorId } from "@/lib/doors";
-import { markOnboarded } from "@/lib/pathSteps";
+import { EVENING_AT, markOnboarded } from "@/lib/pathSteps";
 import type { Finish } from "./DoorOnboarding";
-import { OwnV7, QuestionsV7, TopicV7, ValueV7, WelcomeV7, WhyV7, type Tone, type V7Pick, type V7Setup } from "./OnboardingV7";
+import { OwnV7, QuestionsV7, quickSetup, TopicV7, ValueV7, WelcomeV7, WhyV7, type Tone, type V7Pick, type V7Setup } from "./OnboardingV7";
 import { isoLocal } from "@/lib/doors";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
@@ -38,10 +38,23 @@ interface OnboardingTourProps {
 // day's questions (DoorOnboarding) → the first light → who sails with her → Today.
 // v7 (Nov 6 2026, boards 70–75): welcome → one topic (or your own, or start simple) →
 // your daily questions → what you'll discover → the first real check-in on Today.
+// The A/B/C test (her "Yes, build A/B/C", Nov 8 2026; analytics.ts onbVariant): A = all of the above;
+// B = no "What brings you here?", every topic at once; C = welcome → every topic → the first answers on the
+// cards → a reminder (WorldBegun), and Malu's hints on the first taps instead of the tour.
 type Step = "welcome" | "why" | "topic" | "own" | "questions" | "value";
+type Dots = Record<"topic" | "q" | "v", [number, number]>;
+const DOTS: Record<"A" | "B" | "C", Dots> = {
+  A: { topic: [1, 5], q: [2, 5], v: [3, 5] },
+  B: { topic: [0, 4], q: [1, 4], v: [2, 4] },
+  C: { topic: [0, 2], q: [0, 2], v: [0, 2] },
+};
 
 export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   const [step, setStep] = useState<Step>("welcome");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const variant = useMemo(() => onbVariant(), [open]);
+  const dots = DOTS[variant];
+  const busy = useRef(false);
   // where people stop in onboarding (2.0 funnel)
   // only while it's open (Nov 8 2026: "welcome" was counted on every start of the app)
   useEffect(() => { if (open) track("onboarding_screen", { screen: String(step) }); }, [step, open]);
@@ -107,15 +120,31 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   }, [onClose]);
 
   // the first real check-in happens on Today's own cards, right after onboarding closes
-  const start = (day: "today" | "yesterday" | "tonight") => {
-    if (!setup) return;
+  const start = (day: "today" | "yesterday" | "tonight", s: V7Setup | null = setup, p: V7Pick | null = pick) => {
+    if (!s) return;
     try { localStorage.setItem("memap_first_day_pick", day); localStorage.setItem("memap_first_day_at", isoLocal(new Date())); } catch { /* ignore */ }
-    finish({ path: pick?.kind === "own" ? "own" : pick?.kind === "simple" ? "curious" : "door", reminders: false });
+    finish({ path: p?.kind === "own" ? "own" : p?.kind === "simple" ? "curious" : "door", reminders: false });
     window.setTimeout(() => {
       if (day === "tonight") { window.dispatchEvent(new Event("memap-world-waiting")); return; }
       const d = new Date(); if (day === "yesterday") d.setDate(d.getDate() - 1);
-      window.dispatchEvent(new CustomEvent("memap-first-checkin", { detail: { date: isoLocal(d), ids: setup.ids } }));
+      window.dispatchEvent(new CustomEvent("memap-first-checkin", { detail: { date: isoLocal(d), ids: s.ids } }));
     }, 350);
+  };
+  // variant C: the questions are saved as they come, then straight to the first answers (yesterday's in the daytime)
+  const quick = async (p: V7Pick) => {
+    if (busy.current) return;
+    busy.current = true;
+    try {
+      const s = await quickSetup(p);
+      setPick(p); setSetup(s);
+      start(new Date().getHours() < EVENING_AT ? "yesterday" : "today", s, p);
+    } finally { busy.current = false; }
+  };
+  const toTopics = (ids: DoorId[]) => {
+    setTopics(ids);
+    const p = pickOf(ids, own);
+    if (variant === "C") { void quick(p); return; }
+    setPick(p); setStep("questions");
   };
 
   if (!open) return null;
@@ -123,14 +152,16 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   return (
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto overscroll-none">
-        {step === "welcome" && <WelcomeV7 onStart={() => setStep("why")} onSimple={() => { setPick({ kind: "simple" }); setStep("questions"); }} />}
+        {step === "welcome" && <WelcomeV7 onStart={() => setStep(variant === "A" ? "why" : "topic")}
+          onSimple={() => { if (variant === "C") { void quick({ kind: "simple" }); return; } setPick({ kind: "simple" }); setStep("questions"); }} />}
         {step === "why" && <WhyV7 current={tone} onBack={() => setStep("welcome")} onPick={(x) => { if (x !== tone) setTopics([]); setTone(x); setStep("topic"); }} />}
-        {step === "topic" && <TopicV7 key={tone ?? "bother"} tone={tone ?? "bother"} initial={topics} own={own} onBack={() => setStep("why")} onClearOwn={() => setOwn(null)}
-          onOwn={(ids) => { setTopics(ids); setStep("own"); }} onPick={(ids) => { setTopics(ids); setPick(pickOf(ids, own)); setStep("questions"); }} />}
+        {step === "topic" && <TopicV7 key={variant === "A" ? tone ?? "bother" : "all"} tone={variant === "A" ? tone ?? "bother" : "all"} progress={dots.topic} initial={topics} own={own}
+          onBack={() => setStep(variant === "A" ? "why" : "welcome")} onClearOwn={() => setOwn(null)}
+          onOwn={(ids) => { setTopics(ids); setStep("own"); }} onPick={toTopics} />}
         {/* her own question goes back to the topics, ticked there beside them */}
-        {step === "own" && <OwnV7 initial={own ?? ""} onBack={() => setStep("topic")} onDone={(text) => { setOwn(text); setStep("topic"); }} />}
-        {step === "questions" && pick && <QuestionsV7 key={JSON.stringify(pick)} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "welcome" : "topic")} onDone={(s) => { setSetup(s); setStep("value"); }} />}
-        {step === "value" && setup && pick && <ValueV7 setup={setup} pickKind={pick.kind} onBack={() => setStep("questions")} onStart={start} />}
+        {step === "own" && <OwnV7 progress={dots.topic} initial={own ?? ""} onBack={() => setStep("topic")} onDone={(text) => { setOwn(text); setStep("topic"); }} />}
+        {step === "questions" && pick && <QuestionsV7 key={JSON.stringify(pick)} progress={dots.q} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "welcome" : "topic")} onDone={(s) => { setSetup(s); setStep("value"); }} />}
+        {step === "value" && setup && pick && <ValueV7 progress={dots.v} setup={setup} pickKind={pick.kind} onBack={() => setStep("questions")} onStart={start} />}
       </div>
     </div>
   );

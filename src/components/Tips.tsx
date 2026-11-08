@@ -19,11 +19,11 @@ export const tourCompleted = () => { try { return localStorage.getItem(TOUR_DONE
 export const maluPic = () => avatarUrl(getAvatar() ?? DEFAULT_AVATAR);
 
 /** One tip, once: Malu, a title, one line, maybe a button. */
-export const TipCard = ({ id, title, line, action, onAction, className }: { id: string; title: ReactNode; line: ReactNode; action?: string; onAction?: () => void; className?: string }) => {
+export const TipCard = ({ id, title, line, action, onAction, onClose, className }: { id: string; title: ReactNode; line: ReactNode; action?: string; onAction?: () => void; onClose?: () => void; className?: string }) => {
   const { t } = useTranslation();
   const [gone, setGone] = useState(() => tipSeen(id));
   if (gone) return null;
-  const close = () => { haptics.tap(); markTip(id); setGone(true); };
+  const close = () => { haptics.tap(); markTip(id); setGone(true); onClose?.(); };
   const pic = maluPic();
   return (
     <div className={cn("surface relative flex shrink-0 gap-3 rounded-[20px] py-3 pl-3 pr-10 animate-fade-in", className)} role="note">

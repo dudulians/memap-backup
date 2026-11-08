@@ -16,7 +16,7 @@ import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { litTrackers } from "@/lib/lighthouses";
 import { experimentOver, getExperiments, runningExperiments } from "@/lib/experiments";
 import { hunchDoneToday, readyHunch } from "@/lib/hunches";
-import { track } from "@/lib/analytics";
+import { track, onbVariant } from "@/lib/analytics";
 import { tipForToday } from "@/lib/observeTips";
 
 export const DAYS_PER_WEEK = 7;
@@ -592,7 +592,8 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // готово тебе предложить"): right after the questions, until seen; seen today
   // stays as done. On a day with them, no task (day 1 isn't longer).
   const seen = readDiscover();
-  const discover = hasQuestions ? DISCOVER.filter((d) => !seen[d] || seen[d] === today) : [];
+  // variant C (Nov 8 2026) has no tour: the pages explain themselves on the first tap (Tips.tsx)
+  const discover = hasQuestions && onbVariant() !== "C" ? DISCOVER.filter((d) => !seen[d] || seen[d] === today) : [];
   for (const d of discover) steps.push({ id: `discover:${d}`, kind: "discover", discover: d, trackerIds: [], answered: 0, done: seen[d] === today });
   const discovering = discover.length > 0;
   const task = discovering ? null : taskForToday(week, today);
