@@ -12,7 +12,7 @@
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
-import { linkArrow, trackerLookup, type TrackerOf } from "@/lib/linkText";
+import { linkArrow, trackerLookup, type TrackerOf, linkSentence, linkOther } from "@/lib/linkText";
 import { LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -47,9 +47,9 @@ const LinkLine = ({ r, of }: { r: Route; of: TrackerOf }) => {
   return (
     <div className="surface rounded-[20px] px-4 py-3">
       <p className="text-[16px] font-bold leading-snug">
-        {linkArrow(t, r, of)}{r.nextDay ? ` ${t("map.nextDay")}` : ""}
+        {linkSentence(t, r, of)}
       </p>
-      <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{t("map.timesOf", { k: r.k, count: r.n })}</p>
+      <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{linkOther(t, r)}</p>
     </div>
   );
 };
@@ -113,7 +113,7 @@ export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tra
   const early = island.answeredDays < 3;
   const line = early
     ? t("isle.early")
-    : t("isle.hard", { k: island.hardDays, count: island.answeredDays }) + (island.usual ? ` · ${t(`isle.usual.${island.usual}`)}` : "");
+    : t("isle.hard", { k: island.hardDays, count: island.answeredDays }) + (island.usual ? `, ${t(`isle.usual.${island.usual}`)}` : "");
   return (
     <div className="px-1 pb-1">
       <div className="flex items-center gap-3">
@@ -131,7 +131,7 @@ export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tra
               <p key={h.trackerId} className="mt-1.5 flex items-center gap-2 text-[15px] font-medium leading-snug">
                 <span className="min-w-0 flex-1 leading-snug">{title(h.trackerId)}</span>
                 <span className="shrink-0 rounded-full bg-[hsl(var(--data-a)/0.14)] px-2 py-0.5 text-[13px] font-bold text-[hsl(var(--strong))]">
-                  {tr?.problemWhen === "yes" ? t("common.yes") : t("common.no")} · {t("isle.days", { count: h.days })}
+                  {t("isle.ansDays", { ans: tr?.problemWhen === "yes" ? t("common.yes") : t("common.no"), count: h.days })}
                 </span>
               </p>
             );
@@ -201,7 +201,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
           <FlaskConical className="h-6 w-6 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />
           <div className="min-w-0">
             <p className="text-[16px] font-bold leading-snug">{testNameOf(test.change)}</p>
-            <p className="text-[14px] font-medium text-muted-foreground">{t("experiment.dayOf", { k: Math.min(experimentDay(test), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</p>
+            <p className="text-[14px] font-medium text-muted-foreground">{experimentDay(test) > EXPERIMENT_DAYS ? t("experiment.stepSub") : t("experiment.dayOf", { k: experimentDay(test), count: EXPERIMENT_DAYS })}</p>
           </div>
         </div>
       ) : !test && onTest ? (
@@ -283,7 +283,7 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
                   {isNew && <span className="absolute -top-1 right-1 rounded-full bg-foreground px-2 py-0.5 text-[12px] font-bold text-background">{t("items.new")}</span>}
                   <img src={mapPic(it.pic)} alt="" width={52} height={52} className={`h-[52px] w-[52px] object-contain ${got ? "" : "opacity-30 grayscale"}`} />
                   <p className={`mt-1 text-[13px] font-bold leading-tight ${got ? "" : "text-muted-foreground"}`}>{t(`items.${it.id}.name`)}</p>
-                  <p className="text-[12px] font-medium leading-tight text-muted-foreground">{got ? t(`items.${it.id}.how`) : `${t(`items.${it.id}.how`)} · ${k}/${n}`}</p>
+                  <p className="text-[12px] font-medium leading-tight text-muted-foreground">{got ? t(`items.${it.id}.how`) : t("items.toGet", { how: t(`items.${it.id}.how`), k, count: n })}</p>
                 </div>
               );
             })}

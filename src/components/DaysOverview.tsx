@@ -153,14 +153,14 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
       <button type="button" className={card} onClick={() => open("findings")} data-tour="links-card">
         {head("world4.links")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
-          <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links}
+          <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links > 0 ? links : null}
         </span>
         {sub(links > 0 ? t("world4.found") : t("world4.soon"))}
       </button>
       <button type="button" className={card} onClick={() => open("signals")} data-tour="actions">
         {head("world4.whenToAct")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
-          <img src={mapPic("lighthouse")} alt="" width={14} height={18} className={lit > 0 ? "drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" : "opacity-60 grayscale"} />{lit}
+          <img src={mapPic("lighthouse")} alt="" width={14} height={18} className={lit > 0 ? "drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" : "opacity-60 grayscale"} />{lit > 0 || !shaping ? lit : null}
         </span>
         {sub(lit === 0 && shaping ? t("world4.shaping") : t("world4.ofRules", { count: rules }))}
       </button>
@@ -168,7 +168,7 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
         {head("world4.whatHelps")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[15px] font-bold tabular-nums">
           <Sprout className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
-          {test ? `${Math.min(experimentDay(test), EXPERIMENT_DAYS)}/${EXPERIMENT_DAYS}` : tried}
+          {test ? `${Math.min(experimentDay(test), EXPERIMENT_DAYS)}/${EXPERIMENT_DAYS}` : tried > 0 ? tried : null}
         </span>
         {sub(test ? testNameOf(test.change) : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
       </button>

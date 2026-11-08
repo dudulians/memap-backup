@@ -15,7 +15,7 @@ import i18n from "@/lib/i18n";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, type IslandId } from "@/lib/islands";
-import { linkOther, linkSentence, linkShort } from "@/lib/linkText";
+import { linkOther, linkSentence } from "@/lib/linkText";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { getDoorState, isoLocal } from "@/lib/doors";
@@ -91,7 +91,8 @@ const fit = (g: CanvasRenderingContext2D, s: string, max: number) => {
 };
 
 // --- which questions, in which order (the sheet uses these too) -------------------
-const reportable = (x: Tracker) => !x.archived && x.source !== "play" && x.answerType === "boolean";
+// a 2-week test's own question isn't one of her questions for a doctor (QA, Nov 8 2026)
+const reportable = (x: Tracker) => !x.archived && x.source !== "play" && x.answerType === "boolean" && !x.id.endsWith("-test");
 const orderIslands = (audience: Audience, isles: IslandId[]): IslandId[] => {
   const first = AUDIENCE_ORDER[audience].filter((i) => isles.includes(i));
   return [...first, ...isles.filter((i) => !first.includes(i))];
@@ -146,7 +147,10 @@ interface Data {
   pairs: CorrelationResult[];
 }
 const collect = (r: ReportInput): Data => {
-  const days = dayList(r.days), first = days[0], last = days[days.length - 1];
+  // the period starts at her first answer when that's later (QA: "Answered on 59 of 91 days" for 59 days of answers)
+  const all = dayList(r.days);
+  const firstAnswer = r.entries.filter((e) => r.ids.includes(e.trackerId) && e.date >= all[0]).reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
+  const days = firstAnswer ? all.filter((d) => d >= firstAnswer) : all, first = days[0], last = days[days.length - 1];
   const inPeriod = r.entries.filter((e) => e.date >= first && e.date <= last);
   const vals = new Map<string, Map<string, unknown>>();
   for (const e of inPeriod) { if (!vals.has(e.trackerId)) vals.set(e.trackerId, new Map()); vals.get(e.trackerId)!.set(e.date, e.value); }
@@ -165,7 +169,9 @@ const linkLine = (c: CorrelationResult, pro: boolean) => {
   const l = linkOf(c);
   const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
   const of = (id: string) => (id === l.first.id ? l.first : l.second);
-  return { a: l.first, b: l.second, text: `${(pro ? linkShort : linkSentence)(i18n.t, route, of)} ${linkOther(i18n.t, route)}` };
+  // whole sentences for everyone (QA: "Feeling drained → short night" read as a puzzle)
+  void pro;
+  return { a: l.first, b: l.second, text: `${linkSentence(i18n.t, route, of)} ${linkOther(i18n.t, route)}` };
 };
 /** How often, by halves, the last time, the longest run without. */
 const summaryOf = (data: Data, q: Tracker) => {
@@ -175,7 +181,7 @@ const summaryOf = (data: Data, q: Tracker) => {
   const h1 = ans.slice(0, half).filter((d) => v.get(d) === true).length, h2 = ans.slice(half).filter((d) => v.get(d) === true).length;
   let run = 0, best = 0; for (const d of data.days) { if (v.get(d) === false) { run++; best = Math.max(best, run); } else if (v.get(d) === true) run = 0; }
   const perWeek = (Math.round((yesD.length / (data.days.length / 7)) * 10) / 10).toLocaleString(locale());
-  return { v, ans, yesD, h1, h2, best, perWeek, last: yesD.length ? fmt(yesD[yesD.length - 1]) : "—" };
+  return { v, ans, yesD, h1, h2, best, perWeek, last: yesD.length ? fmt(yesD[yesD.length - 1]).replace(/\.$/, "") : "—" };
 };
 
 // --- days as dots ------------------------------------------------------------------
@@ -348,8 +354,8 @@ const proTop = async (p: Pages, r: ReportInput, data: Data) => {
   p.text(t("report.pro.kicker"), 21, 700, SOFT, PX.w - M, "right");
   p.y += 100; p.text(t(`report.pro.title.${r.audience === "me" ? "doctor" : r.audience}`), 50, 800, INK);
   if (r.name?.trim()) { p.y += 52; p.text(t("report.pro.name", { name: r.name.trim() }), 28, 700, INK); }
-  p.y += 48; p.text(t("report.pro.period", { from: fmt(data.first, true), to: fmt(data.last, true), count: r.days }), 26, 600, SOFT);
-  p.y += 38; p.text(t("report.pro.answered", { k: data.answeredDays, count: r.days, date: fmt(isoLocal(new Date()), true) }), 23, 500, SOFT);
+  p.y += 48; p.text(t("report.pro.period", { from: fmt(data.first, true), to: fmt(data.last, true), count: data.days.length }), 26, 600, SOFT);
+  p.y += 38; p.text(t("report.pro.answered", { k: data.answeredDays, count: data.days.length, date: fmt(isoLocal(new Date()), true) }), 23, 500, SOFT);
 };
 /** For herself: her islands on her sea, the counts. Returns nothing; leaves y under it. */
 const meTop = async (p: Pages, r: ReportInput, data: Data, bandH: number) => {
@@ -444,7 +450,8 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
   const icons = new Map<string, HTMLImageElement | null>();
   if (me) for (const it of ITEMS) { const d = kept[it.id]; if (d && d >= data.first && d <= data.last && !icons.has(d)) icons.set(d, await load(mapPicFor(it.pic, false))); }
   for (const [i, q] of data.mains.entries()) {
-    p.heading(me && i === 0 && r.daysLabel && q.id === r.mainIds[0] ? r.daysLabel : t("report.pro.calendar", { q: title(q) }), 360);
+    // a calendar's title never stays alone at the bottom of a page (QA): room for its first row of months
+    p.heading(me && i === 0 && r.daysLabel && q.id === r.mainIds[0] ? r.daysLabel : t("report.pro.calendar", { q: title(q) }), 560);
     answerLegend(p, q); p.y += 34;
     drawCalendar(p, data, q, me && i === 0 ? icons : undefined);
     if (me && i === 0 && icons.size) { p.room(40); p.text(t("report.me.treasureDays"), 21, 500, SOFT); p.y += 10; }

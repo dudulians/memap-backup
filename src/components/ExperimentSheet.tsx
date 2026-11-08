@@ -14,7 +14,7 @@ import { track } from "@/lib/analytics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
-import { EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, setExperimentRemind, smartRemindTime, startExperiment, type Experiment } from "@/lib/experiments";
+import { EXPERIMENT_DAYS, experimentDay, experimentResult, finishExperiment, ideasFor, setExperimentRemind, smartRemindTime, startExperiment, testOnIsland, verdictOf, type Experiment } from "@/lib/experiments";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
 import { countFromToday } from "@/lib/actionPoints";
@@ -75,7 +75,9 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     setRemindAt(smartRemindTime(idea === PLAN ? ideaOf(plan!) : idea, change));
     setStarted(x);
   };
-  const choices = [...(plan ? [PLAN] : []), ...(island ? ideasFor(island) : [])];
+  // a test already running on this island: say so before replacing it, and don't offer it again (QA, Nov 8 2026)
+  const running = island && !started ? testOnIsland(island) : null;
+  const choices = [...(plan ? [PLAN] : []), ...(island ? ideasFor(island).filter((k) => !running || ideaOf(running.change) !== k) : [])];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
@@ -143,8 +145,13 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               ) : (
                 <p className="mb-3 text-center text-[15px] font-medium text-muted-foreground">{t("experiment.how")}</p>
               )}
+              {running && (
+                <p className="mb-3 rounded-2xl bg-foreground/[0.05] px-4 py-3 text-center text-[15px] font-semibold leading-snug text-muted-foreground">
+                  {t("experiment.replaces", { name: testNameOf(running.change), k: Math.min(experimentDay(running), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}
+                </p>
+              )}
               <Pressable tone="teal" haptic="none" onClick={start} disabled={!island || !change} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-                {t("experiment.start")}
+                {t(running ? "experiment.startInstead" : "experiment.start")}
               </Pressable>
             </div>
           </>
@@ -184,7 +191,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>
               <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.withIt", { k: result.withChange[0], count: result.withChange[1] })}</p>
               <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
-              {(result.withChange[1] < 3 || result.without[1] < 2) && <p className="mt-2 text-[14px] font-medium text-muted-foreground">{t("experiment.few")}</p>}
+              <p className="mt-2 text-[16px] font-bold leading-snug text-[hsl(var(--coin-teal))]">{t(`experiment.verdict.${verdictOf(result)}`)}</p>
             </div>
             <div className="mt-5 flex items-center gap-4">
               <img src={mapPic("orange_tree")} alt="" width={64} height={56} className="object-contain" />

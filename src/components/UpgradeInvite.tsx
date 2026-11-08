@@ -35,7 +35,8 @@ export const switchToNew = () => {
   track("ui_switched", { to: "new" });
   try {
     localStorage.setItem("memap_ui", "new");
-    localStorage.setItem("memap_path_start", isoLocal(new Date()));
+    // the path starts today only the first time; coming back keeps her weeks and reports (QA, Nov 8 2026)
+    if (!localStorage.getItem("memap_path_start")) localStorage.setItem("memap_path_start", isoLocal(new Date()));
     localStorage.setItem("memap_open_tab", "patterns");
     localStorage.setItem(KEY, "accepted");
   } catch { /* stays classic; nothing lost */ }

@@ -27,12 +27,12 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, getChests, markActSeen, pastDays, pathModel, skipTask, syncTasks, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, getChests, markActSeen, pastDays, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
-import { currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
+import { currentExperiment, experimentDay, experimentOver, EXPERIMENT_DAYS, runningExperiments } from "@/lib/experiments";
 import { testNameOf } from "@/lib/testWords";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkWorthShowing } from "@/lib/islands";
@@ -228,7 +228,9 @@ export const EveningPath = ({
   // прошлые дни, как у меня было"): the latest of the last 3 days without its
   // answers, on a pill that stays in sight; the evening card then shows all 7 days.
   // Not while yesterday waits on the path itself (day 1 morning).
-  const pastPick = useMemo(() => (m.steps.some((s) => s.onPath) || firstDayTonight() ? null : pastDays(trackers, entries).slice(-3).reverse().find((d) => d.state !== "done") ?? null), [m, trackers, entries]);
+  const firstAnswer = useMemo(() => entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null), [entries]);
+  // never a day before her first answers (QA: it offered the day before she installed)
+  const pastPick = useMemo(() => (m.steps.some((s) => s.onPath) || firstDayTonight() || !firstAnswer ? null : pastDays(trackers, entries).slice(-3).reverse().find((d) => d.state !== "done" && d.date >= firstAnswer) ?? null), [m, trackers, entries, firstAnswer]);
   const nodes: PNode[] = useMemo(() => {
     const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
     for (const step of steps) out.push({ kind: "step", step });
@@ -288,6 +290,7 @@ export const EveningPath = ({
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     if (s.kind === "discover") return t("tour.step");
     if (s.kind === "link") return t("firstLink.step");
+    if (s.kind === "report") return t("path.lastReport");
     if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name;
@@ -320,6 +323,8 @@ export const EveningPath = ({
     }
     if (n.kind === "end") {
       // the day is done: the last light is the bubbles (Nov 8 2026)
+      // after the bubbles the day looks finished (QA: the light stayed lit)
+      if (eveningDone && unloadPlayedToday()) return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: t("path.end.title") };
       if (eveningDone) return { look: current ? "current" : "todo", hue: "198 55% 58%", icon: <Wind className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />, title: t("path.end.playTitle"), action: current ? t("path.end.playAction") : undefined };
       return {
         look: current ? "current" : "todo", icon: <Flag className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />,
@@ -330,7 +335,7 @@ export const EveningPath = ({
     // an island grew today: done already, with a sprout
     if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
-      : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind
+      : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind : s.kind === "report" ? FileBarChart2
       : s.kind === "discover" ? MapIcon : s.kind === "link" ? Link2
       : s.kind === "questions" ? (s.added ? Plus : s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
@@ -579,6 +584,7 @@ export const EveningPath = ({
     else if (s.kind === "unload") setUnloadOpen(true);
     else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
     else if (s.kind === "link") window.dispatchEvent(new CustomEvent("memap-link-moment"));
+    else if (s.kind === "report") setChestOpen({ week: m.week - 1, dates: m.pastWeeks[m.week - 1] ?? [] });
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
   };
@@ -708,7 +714,7 @@ export const EveningPath = ({
     // "Done for today": what's left, all optional (the week's report first when it's ready)
     if (n.kind === "end") {
       // before today is answered: say plainly it comes later, and take her to her step (phone test, Nov 7 2026)
-      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), t("path.end.notYet", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
+      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), t(new Date().getHours() >= 17 ? "path.end.notYetEvening" : "path.end.notYet", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
       const go = (f: () => void, action = "") => () => { setOpen(null); if (action) track("end_card_action", { action }); f(); };
       const ic = "h-5 w-5";
       // Links and the calendar only once there's something on them (her note, Nov 5
@@ -756,6 +762,14 @@ export const EveningPath = ({
         <>
           {head(t("unload.step"), s.done ? t("unload.doneToday") : t("unload.sub"))}
           {button(s.done ? t("unload.again") : t("game.play"), () => startStep(s), s.done ? "plain" : "teal")}
+        </>
+      );
+    }
+    if (s.kind === "report") {
+      return (
+        <>
+          {head(t("path.lastReport"), t("path.lastReportLine"))}
+          {button(t("path.openReport"), () => startStep(s), "gold")}
         </>
       );
     }
@@ -814,7 +828,7 @@ export const EveningPath = ({
           stepName(s),
           s.done
             ? t("path.answers", { count: s.answered })
-            : `${s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left })} · ${t("path.minutes", { count: minutesFor(left) })}`,
+            : t(s.answered > 0 ? "path.leftLong" : "path.howLong", { count: left, min: minutesFor(left) }),
         )}
         {s.answered > 0 && dots(s.trackerIds, isoDay(new Date()))}
         {/* Early in the day: answer what already happened, the rest tonight. */}
@@ -909,7 +923,7 @@ export const EveningPath = ({
           rolled with the path was "уродская плашка"). */}
       <div className="mt-2">
         <div data-wheel data-tour="week" className="mx-auto w-fit max-w-[92%]">
-          <p className="path-week-label">{t("path.weekN", { n: m.week + 1 })} · {title}</p>
+          <p className="path-week-label">{t("path.weekTitle", { n: m.week + 1, title })}</p>
           <button type="button" disabled={!weekNext.open} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: weekNext.open === "world" ? { tab: "patterns" } : { tab: "patterns", open: "all", section: weekNext.open, back: true } })); }}
             className="surface mx-auto mt-2 flex h-9 max-w-full items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold">
             <span className="truncate">{weekNext.text}</span>
@@ -1054,7 +1068,7 @@ export const EveningPath = ({
       {unloadOpen && <UnloadGame onClose={() => { setUnloadOpen(false); setTick((k) => k + 1); }} />}
 
       {testOpen && (
-        <ExperimentSheet mode={testOpen} experiment={currentExperiment()} trackers={trackers} entries={entries}
+        <ExperimentSheet mode={testOpen} experiment={testOpen === "result" ? runningExperiments().find((x) => experimentOver(x)) ?? null : currentExperiment()} trackers={trackers} entries={entries}
           onClose={() => { setTestOpen(null); setTick((k) => k + 1); }} />
       )}
 

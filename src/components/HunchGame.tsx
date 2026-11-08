@@ -87,7 +87,8 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
       const ids: string[] = [];
       const names: string[] = [];
       const added: string[] = [];
-      for (const s of picked) if (s.kind === "tracked") { ids.push(s.tracker.id); names.push(sName(s)); }
+      // the answer that would lead to it ("A short night"), not the question's title ("Slept enough")
+      for (const s of picked) if (s.kind === "tracked") { ids.push(s.tracker.id); names.push(cap(answerPhrase(t, s.tracker, s.tracker.problemWhen === "yes"))); }
       // Ones she doesn't answer yet become questions, so MeMap can check them.
       const fresh = picked.filter((s): s is Extract<Suspect, { kind: "template" }> => s.kind === "template");
       if (fresh.length > 0) {
@@ -144,7 +145,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                 <div key={hunch.id} className="surface rounded-[22px] px-5 py-4">
                   <div className="flex items-center gap-2">
                     <p className="min-w-0 flex-1 text-[19px] font-bold leading-snug">
-                      {cap(answerPhrase(t, tr(hunch.suspect), true))}{result.nextDay ? ` ${t("map.nextDay")}` : ""}
+                      {result.nextDay ? t("hunch.dayBefore", { x: cap(answerPhrase(t, tr(hunch.suspect), true)) }) : cap(answerPhrase(t, tr(hunch.suspect), true))}
                     </p>
                     <span className={cn("shrink-0 rounded-full px-3 py-1 text-[13px] font-bold",
                       result.onto ? "bg-foreground/[0.06] text-[hsl(var(--coin-teal))]" : "bg-foreground/[0.06] text-muted-foreground")}>
@@ -220,7 +221,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                 <span key={n} className="rounded-full bg-foreground/[0.06] px-3.5 py-1.5 text-[15px] font-bold">{n}</span>
               ))}
             </div>
-            <p className="mt-2 text-[17px] font-semibold text-muted-foreground">→ {x}</p>
+            <p className="mt-3 text-[17px] font-semibold leading-snug text-muted-foreground">{t("hunch.notedLine", { x: xc })}</p>
             <p className="mt-4 text-[17px] font-medium leading-snug text-muted-foreground">{t("hunch.afterDays", { count: HUNCH_DAYS })}</p>
             {noted.added.length > 0 && (
               <p className="mt-2 text-[15px] font-medium leading-snug text-muted-foreground">{t("hunch.addedQs", { list: listOf(noted.added, lang) })}</p>

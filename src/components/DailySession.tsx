@@ -1293,6 +1293,10 @@ export const DailySession = ({
             {/* Which day the questions are about (her note, Nov 3 2026: a
                 card says "Felt anxious", and it wasn't clear: today? ever?).
                 A past day is already named in the title. */}
+            {selectedDate !== todayLocal() && (
+              // answering for another day: say which, so "Did you…?" is about that day (QA, Nov 8 2026)
+              <p className="text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("dailySession.aboutDay", { day: format(new Date(selectedDate + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale }) })}</p>
+            )}
             {selectedDate === todayLocal() && (
               <p className="text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("dailySession.aboutToday")}</p>
             )}
@@ -1498,7 +1502,7 @@ export const DailySession = ({
             </button>
           )}
         </div>
-        <RedFlagsSheet open={flags} onClose={() => setFlags(false)} />
+        <RedFlagsSheet open={flags} onClose={() => setFlags(false)} about={currentQuestion ? templateIdOf(currentQuestion.tracker) : null} />
         <SupportSheet open={support} onClose={() => setSupport(false)} />
       </div>
       </div>

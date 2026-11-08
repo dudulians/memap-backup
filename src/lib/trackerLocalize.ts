@@ -5,6 +5,7 @@ import { matchTemplateIdByTitle } from "./relatedQuestions";
 import enLocale from "@/locales/en";
 import ruLocale from "@/locales/ru";
 import { LEGACY_IDEA_NAMES } from "./ideaNames";
+import { RU_TITLE } from "./ruNeutral";
 
 /**
  * Display-time English → Russian mapping for tracker titles & question text.
@@ -483,8 +484,29 @@ const lookupRaw = (m: DirectionalMap, input: string): string => {
   return dir.get(input) ?? input;
 };
 
-export const localizeTrackerTitle = (title: string): string =>
-  lookup(getMap().titles, title);
+// Russian titles without gender brackets, shown in place of the library's bracketed ones (QA, Nov 8 2026)
+let _ruNeutral: Map<string, string> | null = null;
+const ruNeutralTitles = (): Map<string, string> => {
+  if (!_ruNeutral) {
+    const m = new Map<string, string>();
+    LIFE_STREAMS.forEach((s) => s.templates.forEach((t) => { const n = RU_TITLE[t.id]; if (n && t.titleRu) m.set(t.titleRu, n); }));
+    _ruNeutral = m;
+  }
+  return _ruNeutral;
+};
+export const localizeTrackerTitle = (title: string): string => {
+  const out = lookup(getMap().titles, title);
+  if (getLanguage() !== "ru") return out;
+  const raw = lookupRaw(getMap().titles, title);
+  const neutral = ruNeutralTitles().get(raw);
+  if (neutral) return neutral;
+  // an older Russian wording of a library title, still with gender endings: the neutral one by template
+  if (/[а-яё]\((а|ась|ла|ой|на|ы|ая|легла|прошла|одна|довольна)\)/i.test(raw)) {
+    const id = matchTemplateIdByTitle(title);
+    if (id && RU_TITLE[id]) return RU_TITLE[id];
+  }
+  return out;
+};
 
 /**
  * Resolve the localized question text for a tracker.

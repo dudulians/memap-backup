@@ -56,9 +56,10 @@ export const SteadyCard = ({ trackers, entries }: { trackers: Tracker[]; entries
     <div className="surface mb-4 rounded-[20px] px-4 py-3.5">
       <p className="text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("steady.kicker")}</p>
       <p className="mt-1 text-[18px] font-bold leading-snug">{t("steady.when", { q: cap(answerPhrase(t, data.main, true)) })}</p>
+      <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("steady.col")}</p>
       {data.rows.map((r) => (
         <div key={r.c.id} className="mt-2.5">
-          <div className="flex justify-between gap-3 text-[15px] font-bold"><span className="min-w-0 truncate">{label(r.c)}</span><span className="shrink-0 tabular-nums text-muted-foreground">{t("steady.kOf", { k: r.k, count: r.n })}</span></div>
+          <div className="flex justify-between gap-3 text-[15px] font-bold"><span className="min-w-0 truncate">{t("steady.on", { x: label(r.c).toLowerCase() })}</span><span className="shrink-0 tabular-nums text-muted-foreground">{t("steady.kOf", { k: r.k, count: r.n })}</span></div>
           {bar(r.k, r.n, true)}
         </div>
       ))}

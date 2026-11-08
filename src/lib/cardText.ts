@@ -13,6 +13,7 @@ import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { testQuestionOf } from "@/lib/testWords";
+import { RU_CARD } from "@/lib/ruNeutral";
 
 const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   // door questions
@@ -54,7 +55,7 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "screens-before-bed": { en: "Did you use screens in the hour before sleep?", ru: "Был экран за час до сна?" },
   "walked-a-lot": { en: "Did you walk 7,000+ steps?", ru: "Удалось пройти 7000+ шагов?" },
   "ate-vegetables": { en: "Did you eat vegetables or fruit?", ru: "Были овощи или фрукты?" },
-  "felt-stressed": { en: "Was today stressful?", ru: "Сегодня был стресс?" },
+  "felt-stressed": { en: "Was the day stressful?", ru: "Был стресс?" },
   "meditated": { en: "Did you meditate or breathe slowly?", ru: "Удалось помедитировать или подышать?" },
   "felt-grateful": { en: "Did you notice something good?", ru: "Удалось заметить что-то хорошее?" },
   "hobby-time": { en: "Did you spend time on your hobby?", ru: "Было время на хобби?" },
@@ -67,6 +68,8 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
 };
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+/** «сделал(а)», «один(на)»: a library wording with gender endings (her own questions don't have them) */
+const GENDER_BRACKETS = /[а-яё]\((а|ась|ла|ой|на|ы|ая|легла|прошла|одна|довольна)\)/i;
 const TEMPLATES = new Map(LIFE_STREAMS.flatMap((s) => s.templates).map((t) => [t.id, t]));
 
 /** The card's question: the short wording when this tracker is still the
@@ -81,9 +84,19 @@ export const cardQuestion = (tracker: Tracker): string => {
   // Same wording the library would show (in either language, gender
   // forms already applied) = still the library's question.
   if (short && tpl && norm(shown) === norm(localizeTrackerQuestion(tpl.questionText, tpl.title))) {
-    return getLanguage() === "ru" ? short.ru : short.en;
+    return noToday(getLanguage() === "ru" ? short.ru : short.en);
   }
-  return shown;
+  // Russian without gender brackets for the library wording (QA, Nov 8 2026)
+  if (getLanguage() === "ru" && id && RU_CARD[id] && tpl && (norm(shown) === norm(localizeTrackerQuestion(tpl.questionText, tpl.title)) || GENDER_BRACKETS.test(shown))) return noToday(RU_CARD[id]);
+  return noToday(shown);
+};
+/** The card's header names the day; past days use the same card (QA, Nov 8 2026: "Did your back hurt
+ *  today?" on a past day). Only the library's own wording; her own questions stay as she typed them. */
+const noToday = (q: string): string => {
+  const en = q.replace(/\btoday's\b/gi, "the day's").replace(/^Was today a day\b/i, "Was it a day").replace(/\bmake today\b/gi, "make the day")
+    .replace(/,?\s+today or last night/i, " during the day or at night").replace(/\s+today\b/gi, "");
+  const ru = en.replace(/^Сегодня\s+(\S)/, (_m, c: string) => c.toUpperCase()).replace(/\s+сегодня(?=\s*(\(|\?|—|,|$))/, "");
+  return ru;
 };
 
 /** A library question before she adds it, in the same words its card will
@@ -91,8 +104,9 @@ export const cardQuestion = (tracker: Tracker): string => {
  *  statements). */
 export const templateQuestion = (tpl: Pick<LifeStreamTemplate, "id" | "title" | "questionText">): string => {
   const short = CARD_TEXT[tpl.id];
-  if (short) return getLanguage() === "ru" ? short.ru : short.en;
-  return localizeTrackerQuestion(tpl.questionText, tpl.title);
+  if (short) return noToday(getLanguage() === "ru" ? short.ru : short.en);
+  if (getLanguage() === "ru" && RU_CARD[tpl.id]) return noToday(RU_CARD[tpl.id]);
+  return noToday(localizeTrackerQuestion(tpl.questionText, tpl.title));
 };
 
 /** What she typed, as a question: a capital first letter and a "?" at the

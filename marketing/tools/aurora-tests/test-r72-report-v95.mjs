@@ -42,7 +42,7 @@ for (const lang of ["en", "ru"]) {
   const back = p.getByRole("checkbox", { name: lang === "ru" ? /Болела спина|Боль в спине/ : /Back pain/ }).first();
   if (await back.count()) { await back.evaluate((e) => e.click()); await p.waitForTimeout(300); }
   out[`${lang} off`] = await p.evaluate(() => localStorage.getItem("memap_report_off"));
-  out[`${lang} header`] = await p.locator("p", { hasText: /Questions ·|Вопросы ·/ }).first().innerText();
+  out[`${lang} header`] = await p.locator("p", { hasText: /Questions:|Вопросы:/ }).first().innerText();
   await sheet.evaluate((e) => e.scrollTo(0, 99999)); await p.waitForTimeout(1500);
   await p.screenshot({ path: `${D}/${lang}-sheet-3.png` });
   out[`${lang} button`] = await p.getByRole("button", { name: /Make PDF|Сделать PDF/ }).innerText();

@@ -200,7 +200,7 @@ export const WeekChest = ({
       <div className="surface rounded-[22px] px-5 py-4 text-left">
         {kicker(<Lightbulb className="h-4 w-4 text-[hsl(var(--coin-gold))]" strokeWidth={2.4} />, t("path.chest.insight"))}
         <p className="mt-2 text-[20px] font-bold leading-snug">
-          {r.insight ?? r.fact ?? (main ? `${main.label} · ${t("path.chest.kOfN", { k: main.k, count: main.n })}` : t("path.chest.calm"))}
+          {r.insight ?? r.fact ?? (main ? `${main.label}: ${t("path.chest.kOfN", { k: main.k, count: main.n })}` : t("path.chest.calm"))}
         </p>
         {r.insight && r.insightOther && <p className="mt-1 text-[16px] font-medium leading-snug text-muted-foreground">{r.insightOther}</p>}
         {(r.insight ? r.insightEarly : !!r.fact) && early}
@@ -215,7 +215,7 @@ export const WeekChest = ({
           <div key={i} className={i > 0 ? "mt-3 border-t border-foreground/[0.06] pt-3" : "mt-2"}>
             {l.calm && <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[hsl(var(--coin-teal))]">{t("path.chest.calm")}</p>}
             <p className={l.main ? "text-[19px] font-bold leading-tight" : "text-[17px] font-semibold leading-tight"}>
-              {l.label} · <KofN k={l.k} n={l.n} delay={0.3 + i * 0.35} />
+              {l.label}: <KofN k={l.k} n={l.n} delay={0.3 + i * 0.35} />
             </p>
             {l.n <= 14 && <WeekDots k={l.k} n={l.n} calm={l.calm} delay={0.3 + i * 0.35} />}
           </div>
@@ -256,7 +256,8 @@ export const WeekChest = ({
           {rows.length > 0 ? rows.map((x, i) => <div key={i} className="tour-pop" style={{ animationDelay: `${0.25 + i * 0.22}s` }}>{x}</div>) : (r.nextUp ?? []).map((x) => {
             const [id, p] = x.split(":") as [ItemId, string];
             const it = ITEMS.find((y) => y.id === id);
-            return it ? row(it.pic, t(`items.${id}.name`), `${t(`items.${id}.how`)} · ${p}`, false, true) : null;
+            const [pk, pn] = p.split("/");
+            return it ? row(it.pic, t(`items.${id}.name`), pn ? t("items.toGet", { how: t(`items.${id}.how`), k: pk, count: Number(pn) }) : t(`items.${id}.how`), false, true) : null;
           })}
         </div>,
       );

@@ -69,10 +69,13 @@ export const hunchTarget = (trackers: Tracker[], entries: TrackerEntry[]): Track
   const since = isoLocal(new Date(Date.now() - 30 * 86_400_000));
   const yes = new Map<string, number>();
   for (const e of entries) if (e.value === true && e.date >= since) yes.set(e.trackerId, (yes.get(e.trackerId) ?? 0) + 1);
+  // her own topics first (QA, Nov 8 2026: a Migraines person got "…days when you feel lonely?")
+  const door = getDoorState();
+  const mine = [door?.trackerId, ...(door?.extra ?? []).map((x) => x.trackerId)].map((id) => act.find((t) => t.id === id)).find((t) => !!t && (yes.get(t.id) ?? 0) > 0);
+  if (mine) return mine;
   const top = act.filter((t) => t.problemWhen === "yes" && (yes.get(t.id) ?? 0) > 0)
     .sort((a, b) => (yes.get(b.id) ?? 0) - (yes.get(a.id) ?? 0)).slice(0, 3);
   if (top.length > 0) return top[Math.floor(Date.now() / 86_400_000) % top.length];
-  const door = getDoorState();
   return act.find((t) => t.id === door?.trackerId) ?? act.find((t) => t.problemWhen === "yes") ?? act[0];
 };
 

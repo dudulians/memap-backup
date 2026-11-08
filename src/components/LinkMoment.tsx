@@ -144,7 +144,7 @@ export const LinkMoment = () => {
           <p className="mt-1.5 text-[16px] font-semibold leading-snug text-muted-foreground">{sentence}</p>
           <div className="mt-3 flex items-center gap-2.5 rounded-[16px] bg-foreground/[0.035] px-3 py-2">
             <img aria-hidden="true" className="h-9 w-9 object-contain" src={mapPicFor("camera", false)} alt="" />
-            <span className="text-[15px] font-bold">{t("firstLink.treasure")}</span>
+            <span className="text-[15px] font-bold">{t("firstLink.found")}</span>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
             <button type="button" onClick={() => close(false)} className="h-11 px-1 text-[15px] font-semibold text-muted-foreground">{t("firstLink.close")}</button>

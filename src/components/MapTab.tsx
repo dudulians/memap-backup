@@ -66,7 +66,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   useEffect(() => {
     const set = (e: Event) => { const v = (e as CustomEvent).detail; if (v === "map" || v === "globe") setView(v); };
     window.addEventListener("memap-set-map-view", set);
-    return () => window.removeEventListener("memap-set-map-view", set);
+    // a link's "See the days": both questions on the chart (QA: it opened one question's calendar under "Links")
+    const linkDays = (e: Event) => { const ids = (e as CustomEvent).detail as string[]; if (!ids?.length) return; setOnlyIsland(null); setOnlyIds(ids); setOnly("trends"); };
+    window.addEventListener("memap-link-days", linkDays);
+    return () => { window.removeEventListener("memap-set-map-view", set); window.removeEventListener("memap-link-days", linkDays); };
   }, []);
   // Calendar / chart / lighthouses straight away, no tabs inside (her note).
   const [only, setOnly] = useState<Only | null>(initialOpen && initialOpen !== "all" ? initialOpen : null);
@@ -84,7 +87,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     if (!initialOpen) return;
     // her week and treasures live in You now; its close takes her back (Index)
     if (initialOpen === "all") window.dispatchEvent(new CustomEvent("memap-open-you", { detail: { trip: true } }));
-    else { fromOutside.current = true; setOnly(initialOpen); }
+    else { fromOutside.current = true; setOnlyIsland(null); setOnlyIds(null); setOnly(initialOpen); }
     onOpened?.();
   }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {

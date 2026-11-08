@@ -26,7 +26,8 @@ import { islandOf, mapPic, type IslandId } from "@/lib/islands";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, weekDone, type Experiment } from "@/lib/experiments";
+import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, runningExperiments, setExperimentRemind, smartRemindTime, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
+import i18nInstance from "@/lib/i18n";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -60,7 +61,8 @@ const beforeAfter = (tr: Tracker, entries: TrackerEntry[]): { k1: number; n1: nu
 const blockedLine = (t: (k: string, o?: Record<string, unknown>) => string, x: Experiment | null) => {
   if (!x) return null;
   const d = experimentDay(x);
-  return d > EXPERIMENT_DAYS ? t("rules.afterTestDone") : t("rules.afterTest", { count: EXPERIMENT_DAYS - d + 1 });
+  // day 5 of 14 → 9 more days (QA: "day 5 of 14" and "ends in 10 days" didn't add up)
+  return d > EXPERIMENT_DAYS ? t("rules.afterTestDone") : d === EXPERIMENT_DAYS ? t("rules.afterTestToday") : t("rules.afterTest", { count: EXPERIMENT_DAYS - d });
 };
 
 /** How far an action point is: one dot per day her rule needs, the days
@@ -69,7 +71,14 @@ const blockedLine = (t: (k: string, o?: Record<string, unknown>) => string, x: E
  *  then "то кружками, то квадратиками" — a day is always a dot). The same
  *  meter in the list, on the card and in Show; in Show its filled dots are
  *  the dark dots of the last days under it. */
-const RuleMeter = ({ k, n, period, hardYes, className }: { k: number; n: number; period: number; hardYes: boolean; className?: string }) => {
+/** The day the count started again, when it's inside the rule's window (after "I did it"). */
+const countedSince = (tr: Tracker): string | null => {
+  if (!tr.cycleStartDate) return null;
+  const days = Math.round((new Date(isoLocal(new Date()) + "T12:00:00").getTime() - new Date(tr.cycleStartDate + "T12:00:00").getTime()) / 86_400_000);
+  if (days >= tr.periodDays) return null;
+  return new Date(tr.cycleStartDate + "T12:00:00").toLocaleDateString(i18nInstance.language?.startsWith("ru") ? "ru-RU" : "en-GB", { weekday: "short", day: "numeric", month: "short" });
+};
+const RuleMeter = ({ k, n, period, hardYes, since, className }: { k: number; n: number; period: number; hardYes: boolean; since?: string | null; className?: string }) => {
   const { t } = useTranslation();
   const done = k >= n;
   const ans = t(hardYes ? "rules.ansYes" : "rules.ansNo");
@@ -82,7 +91,8 @@ const RuleMeter = ({ k, n, period, hardYes, className }: { k: number; n: number;
       </span>
       {/* the answer that counts, how often, in how many days (Nov 8 2026) */}
       <span className={cn("mt-1.5 block text-[14px] font-bold leading-snug tabular-nums", done ? "text-[hsl(var(--strong))]" : "text-muted-foreground")}>
-        {t(done ? "rules.why" : "rules.whySoFar", { ans, k, n, count: period })}
+        {/* after "I did it" the count starts again: say so, never "0 of the last 30 days" (QA, Nov 8 2026) */}
+        {since && !done ? t("rules.whySince", { ans, k, n, date: since }) : t(done ? "rules.why" : "rules.whySoFar", { ans, k, n, count: period })}
       </span>
     </span>
   );
@@ -113,6 +123,9 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const tests = runningExperiments();
   const lineOf = (x: Experiment) => { const d = experimentDay(x); return d > EXPERIMENT_DAYS ? t("rules.testDone") : t("rules.testing", { k: d, count: EXPERIMENT_DAYS }); };
   const [testOpen, setTestOpen] = useState<Experiment | null>(null);
+  // a finished test opens its result here (QA: "Your test is done: see it on Today" led nowhere)
+  const [resultOf, setResultOf] = useState<Experiment | null>(null);
+  const openTest = (x: Experiment) => { haptics.tap(); if (experimentOver(x)) setResultOf(x); else setTestOpen(x); };
   const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); };
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
@@ -135,7 +148,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     <div className="space-y-2.5 animate-fade-in">
       {/* The tests she is trying now. */}
       {tests.map((test) => (
-        <button key={test.id} type="button" onClick={() => { haptics.tap(); setTestOpen(test); }} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
+        <button key={test.id} type="button" onClick={() => openTest(test)} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
           <span className="icon-dot h-11 w-11">
             <FlaskConical className="h-5 w-5" strokeWidth={2.4} />
           </span>
@@ -178,7 +191,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <div className="min-w-0 flex-1">
                 <p className="text-[20px] font-bold leading-snug">{plan || name(tr)}</p>
                 <p className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{cardQuestion(tr)}</p>
-                <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} className="mt-2" />
+                <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} since={countedSince(tr)} className="mt-2" />
               </div>
             </div>
             {!plan ? (
@@ -186,13 +199,18 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             ) : once ? (
               // a one-off plan: mark it done; then MeMap compares before and after
               <button type="button" onClick={() => void didOnce(tr, k)} className="raised-btn is-small mt-4 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
-            ) : blocked ? (
-              // one test per island: this one waits, and says why
-              <p className="mt-3.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
-                <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />
-                {blocked}
-              </p>
-            ) : (
+            ) : blocked ? (() => {
+              // one test per island: this one waits, and says why; a finished one opens its result
+              const isle = testOnIsland(islandOf(tr));
+              return isle && experimentOver(isle) ? (
+                <button type="button" onClick={() => openTest(isle)} className="raised-btn is-small mt-4 w-full justify-center gap-2"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("rules.seeTest")}</button>
+              ) : (
+                <p className="mt-3.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
+                  <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />
+                  {blocked}
+                </p>
+              );
+            })() : (
               <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.tryDaily")}</button>
             )}
             <div className="mt-2.5 grid grid-cols-2 gap-2">
@@ -219,7 +237,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                     {mineTest ? lineOf(mineTest) : planOf(tr) ? cardQuestion(tr) : ""}
                   </span>
                   {ba && <span className="mt-1 block text-[13px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</span>}
-                  <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} className="mt-2" />
+                  <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} since={countedSince(tr)} className="mt-2" />
                 </button>
               );
             })}
@@ -235,6 +253,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
       )}
       {testOpen && <TestSheet test={testOpen} trackers={trackers} entries={entries} line={lineOf(testOpen)} onClose={() => setTestOpen(null)} />}
+      {resultOf && <ExperimentSheet mode="result" experiment={resultOf} trackers={trackers} entries={entries} onClose={() => setResultOf(null)} />}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
           trackers={trackers} entries={entries} onClose={() => setTrying(null)} />
@@ -437,6 +456,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
                   <p className="mt-0.5 text-[14px] font-semibold leading-snug text-muted-foreground">
                     {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] }) : t("helps.noData")}
                   </p>
+                  {r.withChange[1] > 0 && r.without[1] > 0 && <p className="mt-0.5 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{t(`experiment.verdict.${verdictOf(r)}`)}</p>}
                 </div>
               );
             })}

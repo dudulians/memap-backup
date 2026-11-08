@@ -14,7 +14,7 @@ import { grewToday } from "@/lib/globeArt";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { litTrackers } from "@/lib/lighthouses";
-import { currentExperiment, experimentOver, getExperiments } from "@/lib/experiments";
+import { experimentOver, getExperiments, runningExperiments } from "@/lib/experiments";
 import { hunchDoneToday, readyHunch } from "@/lib/hunches";
 import { track } from "@/lib/analytics";
 
@@ -57,7 +57,7 @@ export interface Step {
   /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
   /** "discover": what the app will show her, with an example (src/components/DiscoverSheet.tsx) */
   /** "link": her first link was found today: see it happen on her map (src/components/LinkMoment.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover" | "link";
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover" | "link" | "report";
   discover?: DiscoverId;
   /** grew: the stage the island reached today */
   stage?: number;
@@ -569,14 +569,17 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   if (task && hasQuestions) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
+  // Last week's report waits (QA, Nov 8 2026: on day 8 the Start bubble skipped it): the first step
+  // of the new week until it's opened.
+  if (week > 0 && !getChests()[week - 1]) steps.unshift({ id: "report", kind: "report", trackerIds: [], answered: 0, done: false });
   // A rule she set was reached (a lit lighthouse): her plan, once a day.
   const lit = litTrackers(trackers, entries);
   if (lit.size > 0) {
     steps.push({ id: "act", kind: "act", trackerIds: [...lit], answered: 0, done: actSeenToday() });
   }
   // Her test week is over: see how it went (it grows a garden).
-  const test = currentExperiment();
-  if (test && experimentOver(test)) steps.push({ id: "test", kind: "test", trackerIds: [test.trackerId], answered: 0, done: false });
+  const test = runningExperiments().find((x) => experimentOver(x));
+  if (test) steps.push({ id: "test", kind: "test", trackerIds: [test.trackerId], answered: 0, done: false });
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.
   if (hasQuestions) {

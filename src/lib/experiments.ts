@@ -166,6 +166,15 @@ export interface ExperimentResult {
   without: [number, number];
 }
 
+/** What the counts say, in one line (QA, Nov 8 2026: "8 of 10 · 3 of 4" said nothing): too few
+ *  days on one side, fewer hard days with it, more, or about the same. Never a promise. */
+export const verdictOf = (r: ExperimentResult): "few" | "better" | "worse" | "same" => {
+  const [a, b] = r.withChange, [c, d] = r.without;
+  if (b < 3 || d < 3) return "few";
+  const diff = a / b - c / d;
+  return diff <= -0.15 ? "better" : diff >= 0.15 ? "worse" : "same";
+};
+
 /** How the island's hard days went on days with the change and without. */
 export const experimentResult = (x: Experiment, trackers: Tracker[], entries: TrackerEntry[]): ExperimentResult => {
   const days = new Set(Array.from({ length: EXPERIMENT_DAYS }, (_, i) => {

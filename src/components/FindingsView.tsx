@@ -158,7 +158,7 @@ const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
             </span>
             <span className="text-[13px] font-medium text-muted-foreground">{t("patterns.findDays", { count: c.sharedDays })}</span>
           </div>
-          <button type="button" onClick={onSeeDays} className="mt-3 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("patterns.findSeeDays")}</button>
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] }))} className="mt-3 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("patterns.findSeeDays")}</button>
         </div>
       )}
     </div>

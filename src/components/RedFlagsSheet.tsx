@@ -1,15 +1,33 @@
 // "Something worrying?" (research round 2, Nov 7 2026): signs that are never counted toward
 // a rule or a link — they mean a doctor tonight, today, or soon. Calm words, the right
 // number for where she is. Sources: marketing/research/body-proposed-additions.md "Red flags".
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Phone } from "lucide-react";
+import { ChevronDown, Phone } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { supportLines } from "@/lib/supportLines";
 
 /** The emergency number where the phone is, by its time zone (no location asked). */
 const numbers = (): { emergency: string; urgent?: string } => { const s = supportLines(); return { emergency: s.emergency, urgent: s.urgent }; };
 
-const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "now" | "today" | "soon" }) => (
+/** What each sign is about, in the order of the lists in the locales (now / today / soon). */
+type Area = "heart" | "gut" | "head" | "bladder" | "period" | "breast" | "general";
+const AREAS: Record<"now" | "today" | "soon", Area[]> = {
+  now: ["heart", "gut", "gut", "gut", "heart", "head", "head"],
+  today: ["gut", "gut", "gut", "bladder", "bladder", "period", "head", "breast", "heart"],
+  soon: ["gut", "gut", "gut", "general", "bladder", "period", "breast", "general", "heart"],
+};
+/** The areas a question is about. */
+const AREAS_OF: Record<string, Area[]> = {
+  headache: ["head"], migraine: ["head"], "eye-strain": ["head"], dizzy: ["head", "heart"], "tinnitus-louder": ["head"], "jaw-sore-morning": ["head"],
+  "stomach-issues": ["gut"], "felt-nauseous": ["gut"], heartburn: ["gut", "heart"], bloated: ["gut"], "hard-to-poop": ["gut"], "loose-stool": ["gut"], "pooped-today": ["gut"], "piles-bothered": ["gut"],
+  "heart-palpitations": ["heart"], "back-or-neck-pain": ["heart", "bladder"], "neck-pain": ["heart"],
+  "period-symptoms": ["period"], "period-day": ["period"], "heavy-flow-day": ["period"], "pms-signs": ["period", "breast"], "hot-flushes": ["period"], "night-sweats": ["period", "general"], "pill-free-day": ["period"],
+  "bladder-urgency": ["bladder"], "bladder-leak": ["bladder"], "night-pee-2-plus": ["bladder"], "pee-burning": ["bladder"], "pelvic-floor-exercises": ["bladder"],
+  "breast-tender": ["breast"],
+};
+
+const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "now" | "today" | "soon" }) => items.length === 0 ? null : (
   <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">
     <p className={`text-[17px] font-bold ${tone === "now" ? "text-[hsl(var(--strong))]" : ""}`}>{title}</p>
     <ul className="mt-1.5 space-y-1.5">
@@ -18,10 +36,17 @@ const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "
   </div>
 );
 
-export const RedFlagsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
   const { t } = useTranslation();
   const n = numbers();
-  const list = (k: string) => t(`redFlags.${k}`, { returnObjects: true }) as unknown as string[];
+  const [more, setMore] = useState(false);
+  const all = (k: "now" | "today" | "soon") => t(`redFlags.${k}`, { returnObjects: true }) as unknown as string[];
+  // the question's own signs first; with nothing to match, everything
+  const want = about ? AREAS_OF[about] : undefined;
+  const mine = (k: "now" | "today" | "soon", x: string, i: number) => !want || want.includes(AREAS[k][i] ?? "general") || AREAS[k][i] === "general";
+  const list = (k: "now" | "today" | "soon") => all(k).filter((x, i) => mine(k, x, i));
+  const rest = (k: "now" | "today" | "soon") => (want ? all(k).filter((x, i) => !mine(k, x, i)) : []);
+  const hasRest = !!want && (["now", "today", "soon"] as const).some((k) => rest(k).length > 0);
   return (
     <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(); }} className="h-[88vh]" ariaTitle={t("redFlags.title")}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-10">
@@ -33,6 +58,18 @@ export const RedFlagsSheet = ({ open, onClose }: { open: boolean; onClose: () =>
         <Group tone="now" title={t("redFlags.nowTitle", { n: n.emergency })} items={list("now")} />
         <Group tone="today" title={n.urgent ? t("redFlags.todayTitleN", { n: n.urgent }) : t("redFlags.todayTitle")} items={list("today")} />
         <Group tone="soon" title={t("redFlags.soonTitle")} items={list("soon")} />
+        {hasRest && (
+          <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} className="mt-4 flex items-center gap-1.5 self-start text-[16px] font-bold text-[hsl(var(--coin-teal))]">
+            {t("redFlags.other")}<ChevronDown className={`h-5 w-5 transition-transform ${more ? "rotate-180" : ""}`} strokeWidth={2.4} />
+          </button>
+        )}
+        {hasRest && more && (
+          <>
+            <Group tone="now" title={t("redFlags.nowTitle", { n: n.emergency })} items={rest("now")} />
+            <Group tone="today" title={n.urgent ? t("redFlags.todayTitleN", { n: n.urgent }) : t("redFlags.todayTitle")} items={rest("today")} />
+            <Group tone="soon" title={t("redFlags.soonTitle")} items={rest("soon")} />
+          </>
+        )}
         <p className="mt-4 text-[13px] font-semibold text-muted-foreground">{t("redFlags.source")}</p>
       </div>
     </BottomSheet>

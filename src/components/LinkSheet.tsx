@@ -45,7 +45,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
               <svg aria-hidden="true" width="96" height="28" className="-mb-1">
                 {Array.from({ length: 9 }, (_, i) => { const u = 0.1 + (i / 8) * 0.8, x = 6 + u * 84, y = 26 - Math.sin(u * Math.PI) * 22; return <circle key={i} className="planet-route" cx={x} cy={y} r={2.6} />; })}
               </svg>
-              {pic(r.a)}<span className="mt-1 text-[14px] font-bold">{islandName(t, r.a)} · {t("link.onIsland")}</span>
+              {pic(r.a)}<span className="mt-1 text-[14px] font-bold">{t("link.onIslandOf", { island: islandName(t, r.a) })}</span>
             </div>
           ) : (
           <div className="flex items-end justify-center gap-1">
