@@ -164,7 +164,6 @@ export const DoctorReport = () => {
                       <button key={q.id} type="button" role="checkbox" aria-checked={yes} onClick={() => { haptics.tap(); toggleQ(q.id); }}
                         className="flex min-h-[48px] w-full items-center gap-3 py-1.5 pl-4 pr-[22px] text-left">
                         <span className={cn("min-w-0 flex-1 text-[16px] font-bold leading-snug", !yes && "text-muted-foreground")}>{localizeTrackerTitle(q.title)}</span>
-                        {mainIds.includes(q.id) && <span className="shrink-0 rounded-full bg-foreground/[0.06] px-2.5 py-1 text-[12px] font-extrabold uppercase tracking-[0.04em] text-muted-foreground">{t("report.mainTag")}</span>}
                         <span className={cn("tick", yes && "is-on")} aria-hidden="true">{yes && <Check className="h-4 w-4" strokeWidth={3} />}</span>
                       </button>
                     );

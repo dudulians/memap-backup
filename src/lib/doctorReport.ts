@@ -16,6 +16,7 @@ import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, type IslandId } from "@/lib/islands";
 import { linkOther, linkSentence } from "@/lib/linkText";
+import { answerPhrase } from "@/lib/answerPhrases";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { getDoorState, isoLocal } from "@/lib/doors";
@@ -42,8 +43,8 @@ export interface ReportInput {
   kind: ReportKind;
   /** the questions that go in (ticked in the sheet) */
   ids: string[];
-  /** her topics' main questions, in order (up to 3) */
-  mainIds: string[];
+  /** no longer used (Nov 8 2026: no main questions in the report) */
+  mainIds?: string[];
   days: number;
   withNotes: boolean;
   /** her name on a specialist's report (optional, kept nowhere) */
@@ -141,7 +142,7 @@ class Pages {
 // --- what every version counts ----------------------------------------------------
 interface Data {
   days: string[]; first: string; last: string;
-  qs: Tracker[]; mains: Tracker[]; others: Tracker[];
+  qs: Tracker[];
   vals: Map<string, Map<string, unknown>>;
   answeredDays: number;
   pairs: CorrelationResult[];
@@ -157,13 +158,10 @@ const collect = (r: ReportInput): Data => {
   const ids = new Set(r.ids);
   const groups = reportQuestions(r.trackers, r.entries, r.days, r.audience);
   const qs = groups.flatMap((gr) => gr.qs.map((x) => x.q)).filter((q) => ids.has(q.id));
-  let mains = r.mainIds.map((id) => qs.find((q) => q.id === id)).filter((q): q is Tracker => !!q).slice(0, 3);
-  // no topic of hers in the report: the question answered most often leads
-  if (!mains.length && qs.length) mains = [[...qs].sort((a, b) => (vals.get(b.id)?.size ?? 0) - (vals.get(a.id)?.size ?? 0))[0]];
   const answeredDays = new Set(inPeriod.filter((e) => ids.has(e.trackerId)).map((e) => e.date)).size;
   // links only between the questions that go in
   const pairs = computeCorrelations(qs, inPeriod.filter((e) => ids.has(e.trackerId)), 6).filter(linkWorthShowing);
-  return { days, first, last, qs, mains, others: qs.filter((q) => !mains.includes(q)), vals, answeredDays, pairs };
+  return { days, first, last, qs, vals, answeredDays, pairs };
 };
 const linkLine = (c: CorrelationResult, pro: boolean) => {
   const l = linkOf(c);
@@ -173,15 +171,67 @@ const linkLine = (c: CorrelationResult, pro: boolean) => {
   void pro;
   return { a: l.first, b: l.second, text: `${linkSentence(i18n.t, route, of)} ${linkOther(i18n.t, route)}` };
 };
-/** How often, by halves, the last time, the longest run without. */
-const summaryOf = (data: Data, q: Tracker) => {
-  const v = data.vals.get(q.id) ?? new Map();
-  const ans = data.days.filter((d) => v.has(d)), yesD = data.days.filter((d) => v.get(d) === true);
-  const half = Math.floor(ans.length / 2);
-  const h1 = ans.slice(0, half).filter((d) => v.get(d) === true).length, h2 = ans.slice(half).filter((d) => v.get(d) === true).length;
-  let run = 0, best = 0; for (const d of data.days) { if (v.get(d) === false) { run++; best = Math.max(best, run); } else if (v.get(d) === true) run = 0; }
-  const perWeek = (Math.round((yesD.length / (data.days.length / 7)) * 10) / 10).toLocaleString(locale());
-  return { v, ans, yesD, h1, h2, best, perWeek, last: yesD.length ? fmt(yesD[yesD.length - 1]).replace(/\.$/, "") : "—" };
+/** How often, in words. Too few answered days: nothing (a week is the least to say "a week"). */
+const freqOf = (k: number, n: number): string => {
+  if (n < 7) return "";
+  const t = i18n.t.bind(i18n);
+  if (k === 0) return t("report.freq.never");
+  const r = k / n;
+  return t(`report.freq.${r >= 0.8 ? "almostDaily" : r >= 0.6 ? "mostDays" : r >= 0.4 ? "everySecond" : r >= 0.25 ? "twiceWeek" : r >= 0.12 ? "onceWeek" : r >= 0.05 ? "fewMonth" : "rarely"}`);
+};
+/** One question in the period: its answers, "yes" days, hard days. */
+const countsOf = (data: Data, q: Tracker) => {
+  const v = data.vals.get(q.id) ?? new Map<string, unknown>();
+  const ans = data.days.filter((d) => v.has(d));
+  return { v, ans, yes: ans.filter((d) => v.get(d) === true).length, hard: neutralQ(q) ? 0 : ans.filter((d) => isHardAnswer(q, v.get(d))).length };
+};
+const capFirst = (x: string) => x.charAt(0).toLocaleUpperCase() + x.slice(1);
+/** "In short": what the numbers say, in plain sentences — the most frequent hard things, whether they
+ *  came more or less often later, the longest stretch without the first one, and something good. */
+const findings = (data: Data, max: number): string[] => {
+  const t = i18n.t.bind(i18n), out: string[] = [];
+  const rows = data.qs.filter((q) => !neutralQ(q)).map((q) => ({ q, ...countsOf(data, q) }));
+  // what hurt or bothered first (a doctor reads symptoms first), then the good things that were missing
+  const byHard = (x: typeof rows[number], y: typeof rows[number]) => y.hard - x.hard || y.hard / y.ans.length - x.hard / x.ans.length;
+  const bad = rows.filter((r) => r.hard > 0 && r.q.problemWhen === "yes").sort(byHard);
+  const missed = rows.filter((r) => r.hard > 0 && r.q.problemWhen !== "yes").sort(byHard);
+  const tops = [...bad, ...missed].slice(0, 3);
+  if (!tops.length && rows.length) out.push(t("report.find.none"));
+  const whatOf = (r: typeof rows[number]) => answerPhrase(t, r.q, r.q.problemWhen === "yes");
+  for (const r of tops) {
+    const freq = freqOf(r.hard, r.ans.length);
+    out.push(t(freq ? "report.find.top" : "report.find.topShort", { what: capFirst(whatOf(r)), k: r.hard, count: r.ans.length, freq }));
+  }
+  // the longest stretch without the first one, and something good
+  const top = tops[0];
+  if (top) {
+    let run = 0, best = 0;
+    for (const d of top.ans) { if (isHardAnswer(top.q, top.v.get(d))) run = 0; else { run++; best = Math.max(best, run); } }
+    if (best >= 5) out.push(t("report.find.calm", { what: whatOf(top), count: best }));
+  }
+  const goods = rows.filter((r) => r.q.problemWhen === "no" && r.yes >= 3 && r.yes / r.ans.length >= 0.5).sort((x, y) => y.yes / y.ans.length - x.yes / x.ans.length);
+  if (goods[0]) out.push(t("report.find.good", { what: answerPhrase(t, goods[0].q, true), k: goods[0].yes, count: goods[0].ans.length }));
+  // more or less often in the second half, for what hurt or bothered
+  for (const r of bad.slice(0, 3)) {
+    const half = Math.floor(r.ans.length / 2);
+    const h1 = r.ans.slice(0, half).filter((d) => isHardAnswer(r.q, r.v.get(d))).length;
+    const h2 = r.ans.slice(half).filter((d) => isHardAnswer(r.q, r.v.get(d))).length;
+    if (r.ans.length >= 10 && Math.abs(h1 - h2) >= 2) out.push(t(h2 < h1 ? "report.find.less" : "report.find.more", { what: capFirst(whatOf(r)), h1, h2 }));
+  }
+  return out.slice(0, max);
+};
+const findingsBlock = (p: Pages, data: Data, max: number) => {
+  const list = findings(data, max);
+  if (!list.length) return;
+  const g = p.g;
+  p.y += 64; p.label(i18n.t("report.inShort")); p.y += 4;
+  for (const line of list) {
+    g.font = `600 25px ${FONT}`;
+    const lines = wrap(g, line, SPAN - 34);
+    p.room(lines.length * 35 + 16); p.y += 44;
+    const pg = p.g; pg.fillStyle = INK; pg.beginPath(); pg.arc(M + 7, p.y - 9, 5, 0, Math.PI * 2); pg.fill();
+    lines.forEach((l, i) => { if (i) p.y += 35; p.text(l, 25, 600, INK, M + 28); });
+  }
 };
 
 // --- days as dots ------------------------------------------------------------------
@@ -209,37 +259,31 @@ const toneLegend = (p: Pages, qs: Tracker[]) => {
   const t = i18n.t.bind(i18n);
   legend(p, [[HARD, t("report.legend.hard")], [GOOD, t("report.legend.good")], ...(qs.some(neutralQ) ? [[NEUTRAL, t("report.legend.neutral")] as [string, string]] : []), [NONE, t("report.none")]]);
 };
-/** One question's legend: its real answers in their colours. */
-const answerLegend = (p: Pages, q: Tracker) => {
+/** "Statistics": a question in one row — its colour, its name, "yes" of answered days, how often in words;
+ *  in the full report the dates of "yes" under it. */
+const COL_N = M + SPAN * 0.5, COL_F = M + SPAN * 0.69;
+const statsHeader = (p: Pages) => {
   const t = i18n.t.bind(i18n);
-  legend(p, [[tone(q, true), t("report.yes")], [tone(q, false), t("report.no")], [NONE, t("report.none")]]);
+  p.y += 40; p.text(t("report.pro.colQ"), 18, 700, SOFT, M); p.text(t("report.pro.colN"), 18, 700, SOFT, COL_N); p.text(t("report.colHow"), 18, 700, SOFT, COL_F);
 };
-
-/** A main question in a few lines: its name, how often, its days as dots, the trend. */
-const mainBlock = (p: Pages, data: Data, q: Tracker, full = true) => {
-  const t = i18n.t.bind(i18n), g = p.g, s = summaryOf(data, q);
-  p.room(230);
-  p.y += 46;
-  const big = t("report.kOfN", { k: s.yesD.length, count: s.ans.length });
-  g.font = `800 32px ${FONT}`; const bw = g.measureText(big).width;
-  p.text(fit(g, title(q), SPAN - bw - 40), 32, 800, INK);
-  p.text(big, 32, 800, tone(q, true) === GOOD ? "#3f9d68" : tone(q, true) === HARD ? "#d4566f" : NEUTRAL, M + SPAN, "right");
-  p.y += 40; strip(p, data, q, M, SPAN);
-  p.y += 40; ticks(p, data);
-  p.y += 40;
-  const line = t(full ? "report.statsLineFull" : "report.statsLine", { pw: s.perWeek, h1: s.h1, h2: s.h2, last: s.last, best: s.best });
-  g.font = `600 21px ${FONT}`; wrap(g, line, SPAN).slice(0, 2).forEach((l, i) => { if (i) p.y += 28; p.text(l, 21, 600, SOFT); });
-  p.y += 8;
-};
-/** A question in one row: its name, its days as small dots, how many. */
-const rowLine = (p: Pages, data: Data, q: Tracker) => {
-  const g = p.g, v = data.vals.get(q.id) ?? new Map();
-  const yes = data.days.filter((d) => v.get(d) === true).length, ans = data.days.filter((d) => v.has(d)).length;
-  const cN = M + SPAN, sx = M + SPAN * 0.42, sw = SPAN * 0.46;
+const statRow = (p: Pages, data: Data, q: Tracker, withDates: boolean) => {
+  const g = p.g, c = countsOf(data, q);
+  let dl: string[] = [];
+  if (withDates && c.yes) {
+    const byM = new Map<string, number[]>();
+    c.ans.filter((d) => c.v.get(d) === true).forEach((d) => { const k = date(d).toLocaleDateString(locale(), { month: "short" }).replace(".", ""); byM.set(k, [...(byM.get(k) ?? []), date(d).getDate()]); });
+    g.font = `500 19px ${FONT}`;
+    dl = wrap(g, `${i18n.t("report.yesOn")} ${[...byM].map(([mo, ds]) => `${mo} ${ds.join(", ")}`).join("; ")}`, SPAN - 26);
+  }
+  p.room(50 + dl.length * 27);
+  const pg = p.g;
+  pg.fillStyle = LINE; pg.fillRect(M, p.y + 10, SPAN, 1.5);
   p.y += 44;
-  g.font = `700 22px ${FONT}`; p.text(fit(g, title(q), sx - M - 24), 22, 700, INK);
-  const y = p.y; p.y -= 8; strip(p, data, q, sx, sw, 7); p.y = y;
-  p.text(`${yes} / ${ans}`, 22, 700, INK, cN, "right");
+  pg.fillStyle = tone(q, true); pg.beginPath(); pg.arc(M + 8, p.y - 8, 7, 0, Math.PI * 2); pg.fill();
+  pg.font = `700 22px ${FONT}`; p.text(fit(pg, title(q), COL_N - M - 46), 22, 700, INK, M + 26);
+  p.text(`${c.yes} / ${c.ans.length}`, 22, 700, INK, COL_N);
+  pg.font = `600 21px ${FONT}`; p.text(fit(pg, freqOf(c.yes, c.ans.length), M + SPAN - COL_F), 21, 600, SOFT, COL_F);
+  dl.forEach((l) => { p.y += 27; p.text(l, 19, 500, SOFT, M + 26); });
 };
 const linksList = (p: Pages, data: Data, max: number, pro: boolean) => {
   const t = i18n.t.bind(i18n), g = p.g;
@@ -255,73 +299,6 @@ const linksList = (p: Pages, data: Data, max: number, pro: boolean) => {
   p.room(50); p.text(t("link.honest"), 20, 500, SOFT); p.y += 10;
 };
 
-// --- a month calendar ------------------------------------------------------------
-type Mark = { fill: string | null; out?: boolean; icon?: HTMLImageElement | null };
-const monthsOf = (days: string[]) => [...new Set(days.map((d) => d.slice(0, 7)))].map((k) => ({ y: +k.slice(0, 4), m: +k.slice(5, 7) - 1 }));
-/** One month, Monday first, at (x, y), w wide. Returns its height. */
-const drawMonth = (g: CanvasRenderingContext2D, x: number, y: number, w: number, ym: { y: number; m: number }, mark: (iso: string) => Mark): number => {
-  const cell = w / 7;
-  const name = new Date(ym.y, ym.m, 1).toLocaleDateString(locale(), { month: "long", year: "numeric" }).replace(" г.", "");
-  g.font = `800 ${Math.round(Math.min(32, cell * 0.5))}px ${FONT}`; g.fillStyle = INK; g.textAlign = "left";
-  g.fillText(name.charAt(0).toUpperCase() + name.slice(1), x, y + cell * 0.45);
-  g.font = `600 ${Math.round(Math.min(21, cell * 0.32))}px ${FONT}`; g.fillStyle = SOFT; g.textAlign = "center";
-  for (let i = 0; i < 7; i++) {
-    const wd = new Date(2024, 0, 1 + i).toLocaleDateString(locale(), { weekday: "short" }).replace(".", "");
-    g.fillText(wd.slice(0, 2), x + cell * i + cell / 2, y + cell * 1.05);
-  }
-  const startDow = (new Date(ym.y, ym.m, 1).getDay() + 6) % 7;
-  const daysIn = new Date(ym.y, ym.m + 1, 0).getDate();
-  const top = y + cell * 1.3;
-  let rows = 0;
-  for (let d = 1; d <= daysIn; d++) {
-    const idx = startDow + d - 1, row = Math.floor(idx / 7), col = idx % 7;
-    rows = Math.max(rows, row + 1);
-    const cx = x + col * cell + cell / 2, cy = top + row * cell + cell / 2;
-    const mk = mark(isoLocal(new Date(ym.y, ym.m, d))), r = cell * 0.38;
-    const num = Math.round(Math.min(23, cell * 0.34));
-    g.textAlign = "center"; g.textBaseline = "middle";
-    if (mk.fill) {
-      g.fillStyle = mk.fill; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
-      g.font = `700 ${num}px ${FONT}`; g.fillStyle = toneInk(mk.fill); g.fillText(String(d), cx, cy + 1);
-    } else {
-      g.font = `500 ${num}px ${FONT}`; g.fillStyle = mk.out ? "#dfe1e8" : FAINT; g.fillText(String(d), cx, cy + 1);
-    }
-    if (mk.icon) { const s = cell * 0.6; g.drawImage(mk.icon, cx + r * 0.2, cy - r - s * 0.45, s, s * (mk.icon.height / mk.icon.width)); }
-    g.textBaseline = "alphabetic";
-  }
-  g.textAlign = "left";
-  return cell * 1.3 + rows * cell;
-};
-/** All months of the period, up to three across, wrapping. */
-const drawCalendar = (p: Pages, data: Data, q: Tracker, icons?: Map<string, HTMLImageElement | null>) => {
-  const v = data.vals.get(q.id) ?? new Map();
-  const mark = (iso: string): Mark => iso < data.first || iso > data.last ? { fill: null, out: true } : { fill: v.has(iso) ? tone(q, v.get(iso)) : null, icon: icons?.get(iso) };
-  const months = monthsOf(data.days);
-  const cols = Math.min(3, months.length), gap = 50;
-  const w = Math.min(cols === 1 ? 620 : 9999, (SPAN - gap * (cols - 1)) / cols);
-  for (let i = 0; i < months.length; i += cols) {
-    p.room((w / 7) * 7.6 + 20);
-    let h = 0;
-    months.slice(i, i + cols).forEach((ym, j) => { h = Math.max(h, drawMonth(p.g, M + j * (w + gap), p.y, w, ym, mark)); });
-    p.y += h + 30;
-  }
-};
-const weeksChart = (p: Pages, data: Data, q: Tracker) => {
-  const v = data.vals.get(q.id) ?? new Map(), color = tone(q, true);
-  const weeks: { from: string; yes: number; ans: number }[] = [];
-  for (let i = 0; i < data.days.length; i += 7) { const w = data.days.slice(i, i + 7); weeks.push({ from: w[0], yes: w.filter((d) => v.get(d) === true).length, ans: w.filter((d) => v.has(d)).length }); }
-  p.room(270);
-  const g = p.g, col = SPAN / weeks.length, bw = Math.min(100, col - 14), h0 = 170;
-  weeks.forEach((w, i) => {
-    const x = M + i * col + (col - bw) / 2, h = (w.yes / 7) * h0;
-    g.fillStyle = NONE; g.beginPath(); g.roundRect(x, p.y, bw, h0, 12); g.fill();
-    if (h > 0) { g.fillStyle = color; g.beginPath(); g.roundRect(x, p.y + h0 - h, bw, h, 12); g.fill(); }
-    g.font = `800 25px ${FONT}`; g.fillStyle = w.ans ? INK : SOFT; g.textAlign = "center"; g.fillText(w.ans ? String(w.yes) : "–", x + bw / 2, p.y + h0 - h - 12);
-    g.font = `500 ${weeks.length > 9 ? 17 : 20}px ${FONT}`; g.fillStyle = SOFT; g.fillText(fmt(w.from), x + bw / 2, p.y + h0 + 30); g.textAlign = "left";
-  });
-  p.y += h0 + 74;
-  p.text(i18n.t("report.weeksNote"), 21, 500, SOFT);
-};
 const footers = (p: Pages, text: string) => {
   p.pages.forEach((c, i) => {
     const g = c.getContext("2d")!;
@@ -407,20 +384,17 @@ const drawShort = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[
   // the links' real height: label, each link's lines, the honest line
   p.g.font = `600 23px ${FONT}`;
   const linksH = 64 + 46 + (LINKS ? data.pairs.slice(0, LINKS).reduce((h, c) => h + (wrap(p.g, linkLine(c, !me).text, SPAN - 40).length - 1) * 33 + 42, 0) + 50 : 40) + 10;
-  // the main questions, as many as fit with room for the links
-  p.y += 64; p.label(t(data.mains.length > 1 ? "report.mainsLabel" : "report.mainLabel"));
-  p.y += 44; toneLegend(p, data.qs);
-  let shown = 0;
-  for (const q of data.mains) { if (p.y + 210 + linksH > BOTTOM) break; mainBlock(p, data, q, false); shown++; }
-  // the other questions, one row each, as many as fit
-  const rest = [...data.mains.slice(shown), ...data.others];
+  // what the numbers say, in plain words; then every question, as many as fit
+  findingsBlock(p, data, 5);
+  // one page has room for a few: the ones with the most hard days first
+  const rest = [...data.qs].sort((x, y) => countsOf(data, y).hard - countsOf(data, x).hard);
   if (rest.length) {
-    const avail = BOTTOM - linksH - (p.y + 74);
+    p.y += 70; p.label(t("report.stats")); p.y += 40; toneLegend(p, data.qs); statsHeader(p);
+    const avail = BOTTOM - linksH - p.y;
     let n = Math.floor(avail / 44);
     if (n < rest.length) n = Math.floor((avail - 44) / 44);
     n = Math.max(0, Math.min(n, rest.length));
-    { p.y += 70; p.label(t("report.others")); p.text(t("report.pro.colN"), 18, 700, SOFT, M + SPAN, "right"); p.y += 4; }
-    rest.slice(0, n).forEach((q) => rowLine(p, data, q));
+    rest.slice(0, n).forEach((q) => statRow(p, data, q, false));
     if (rest.length > n) { p.y += 44; p.text(t("report.more", { count: rest.length - n }), 21, 600, SOFT); }
   }
   // what came together, the strongest few
@@ -437,25 +411,18 @@ const drawShort = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[
 const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]> => {
   const t = i18n.t.bind(i18n), me = r.audience === "me", g = () => p.g;
   const p = new Pages();
-  let kept: Record<string, string | undefined> = {};
   let evenings = new Map<IslandId, number>(), isles: IslandId[] = [];
-  if (me) ({ evenings, isles, kept } = await meTop(p, r, data, 720)); else await proTop(p, r, data);
+  if (me) ({ evenings, isles } = await meTop(p, r, data, 720)); else await proTop(p, r, data);
 
-  // the main questions in a few lines each
-  p.y += 64; p.label(t(data.mains.length > 1 ? "report.mainsLabel" : "report.mainLabel"));
-  p.y += 44; toneLegend(p, data.qs);
-  for (const q of data.mains) mainBlock(p, data, q);
-
-  // each main question: its calendar and its weeks (treasures on the first one, in hers)
-  const icons = new Map<string, HTMLImageElement | null>();
-  if (me) for (const it of ITEMS) { const d = kept[it.id]; if (d && d >= data.first && d <= data.last && !icons.has(d)) icons.set(d, await load(mapPicFor(it.pic, false))); }
-  for (const [i, q] of data.mains.entries()) {
-    // a calendar's title never stays alone at the bottom of a page (QA): room for its first row of months
-    p.heading(me && i === 0 && r.daysLabel && q.id === r.mainIds[0] ? r.daysLabel : t("report.pro.calendar", { q: title(q) }), 560);
-    answerLegend(p, q); p.y += 34;
-    drawCalendar(p, data, q, me && i === 0 ? icons : undefined);
-    if (me && i === 0 && icons.size) { p.room(40); p.text(t("report.me.treasureDays"), 21, 500, SOFT); p.y += 10; }
-    p.heading(t("report.weeks", { q: title(q) }), 300); weeksChart(p, data, q);
+  // what the numbers say, in plain words
+  findingsBlock(p, data, 7);
+  // every question, island by island: how many days, how often, the dates of "yes"
+  p.heading(t("report.stats"), 130);
+  toneLegend(p, data.qs); statsHeader(p);
+  let isle: IslandId | null = null;
+  for (const q of data.qs) {
+    if (islandOf(q) !== isle) { isle = islandOf(q); p.room(130); p.y += 58; p.text(islandName(t, isle), 24, 800, INK); p.y += 2; }
+    statRow(p, data, q, true);
   }
 
   // her islands (hers only)
@@ -480,33 +447,6 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
       }
       p.y += 210;
     }
-  }
-
-  // every question: how often, and every date of "yes", island by island
-  p.heading(t("report.pro.all"), 130);
-  const cQ = M, cN = M + SPAN * 0.44, cD = M + SPAN * 0.6;
-  p.text(t("report.pro.colQ"), 18, 700, SOFT, cQ); p.text(t("report.pro.colN"), 18, 700, SOFT, cN); p.text(t("report.pro.colD"), 18, 700, SOFT, cD);
-  let isle: IslandId | null = null;
-  for (const q of data.qs) {
-    if (islandOf(q) !== isle) { isle = islandOf(q); p.room(130); p.y += 58; p.text(islandName(t, isle), 24, 800, INK); p.y += 2; }
-    const v = data.vals.get(q.id) ?? new Map();
-    const yesD = data.days.filter((d) => v.get(d) === true), ans = data.days.filter((d) => v.has(d)).length;
-    const byM = new Map<string, number[]>();
-    yesD.forEach((d) => { const k = date(d).toLocaleDateString(locale(), { month: "short" }).replace(".", ""); byM.set(k, [...(byM.get(k) ?? []), date(d).getDate()]); });
-    const dates = [...byM].map(([mo, ds]) => `${mo}: ${ds.join(", ")}`).join("  ·  ");
-    g().font = `500 20px ${FONT}`;
-    const dl = dates ? wrap(g(), dates, PX.w - M - cD) : [];
-    const extra = Math.max(0, dl.length - 1) * 27;
-    p.room(60 + extra);
-    g().fillStyle = LINE; g().fillRect(M, p.y + 6, SPAN, 1.5);
-    p.y += 44;
-    g().font = `700 22px ${FONT}`;
-    const fill = tone(q, true); g().fillStyle = fill; g().beginPath(); g().arc(M + 8, p.y - 8, 7, 0, Math.PI * 2); g().fill();
-    p.text(fit(g(), title(q), cN - cQ - 46), 22, 700, INK, cQ + 26);
-    p.text(`${yesD.length} / ${ans}`, 22, 700, INK, cN);
-    const y0 = p.y;
-    dl.forEach((l, i) => { p.y = y0 + i * 27; p.text(l, 20, 500, SOFT, cD); });
-    p.y = y0 + extra + 6;
   }
 
   // the days as dots, island by island, dates under each island
