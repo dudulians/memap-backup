@@ -5,7 +5,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
 import { runningExperiments, EXPERIMENT_DAYS, fixDefaultReminders, smartRemindTime, type Experiment } from "@/lib/experiments";
-import { ideaOf, testNameOf } from "@/lib/testWords";
+import { ideaOf, testNameOf, testTodayOf } from "@/lib/testWords";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { progressLines } from "@/lib/reminderLines";
@@ -323,8 +323,13 @@ export const scheduleNotification = async (
 const tryWords = (x: Experiment, k: number): { title: string; body: string } => {
   const key = k === 1 ? "start" : k === EXPERIMENT_DAYS ? "last" : k === EXPERIMENT_DAYS - 1 ? "twoLeft" : k === 8 ? "half"
     : x.perWeek && k % 2 === 0 ? "goal" : `mid${(k % 4) + 1}`;
-  const o = { change: testNameOf(x.change), k, count: EXPERIMENT_DAYS, left: EXPERIMENT_DAYS + 1 - k };
-  return { title: i18n.t(`notifications.try.${key}.title`, o), body: i18n.t(`notifications.try.${key}.body`, o) };
+  const o = { k, count: EXPERIMENT_DAYS, left: EXPERIMENT_DAYS + 1 - k, n: x.perWeek ?? 0 };
+  const day = i18n.t(`notifications.try.${key}`, o);
+  // today's step on top ("Не забудь потренироваться сегодня"); her own plan in her words under a kind title
+  const today = testTodayOf(x.change);
+  return today
+    ? { title: today, body: day }
+    : { title: i18n.t("notifications.try.ownTitle"), body: `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${day}` };
 };
 
 /** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */

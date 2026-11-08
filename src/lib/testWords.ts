@@ -12,7 +12,9 @@ import type { Tracker } from "@/types/tracker";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { localizeTrackerAdvice } from "@/lib/trackerLocalize";
-import { IDEAS } from "@/lib/experiments";
+import { IDEAS, getExperiments, replaceExperiments, type Experiment } from "@/lib/experiments";
+import { getTrackers, saveTrackers } from "@/lib/storage";
+import { templateQuestion } from "@/lib/cardText";
 import { LEGACY_IDEA_NAMES } from "@/lib/ideaNames";
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/[.?!？]+$/, "").replace(/\s+/g, " ");
@@ -30,22 +32,76 @@ export const ideaOf = (text: string): string | null => {
   return null;
 };
 
-/** A test's name (her plan) in today's language; her own words stay hers. */
+/** A test's name (her plan) in today's language; her own words stay hers. A weekly goal, also in
+ *  its old words ("Внести 3 тренировки в календарь на эту неделю"), is "3 workouts a week". */
 export const testNameOf = (change: string): string => {
   const k = ideaOf(change);
-  return k ? i18n.t(`experiment.idea.${k}.change`) : localizeTrackerAdvice(change.trim());
+  if (k) return i18n.t(`experiment.idea.${k}.change`);
+  const g = goalTemplateOf(change), tpl = g ? TEMPLATES.get(g) : undefined;
+  if (tpl) return i18n.language?.startsWith("ru") ? tpl.adviceAboveThresholdRu ?? tpl.adviceAboveThreshold : tpl.adviceAboveThreshold;
+  return localizeTrackerAdvice(change.trim());
 };
 
-/** The evening question for a plan: the idea's own question, else "Did you do this: “…”?" */
+/** The evening question for a plan: the idea's own question; a weekly goal asks its own question
+ *  ("Did you do a real workout?"); else "Did you do this: “…”?" */
 export const testQuestionOf = (change: string): string => {
   const k = ideaOf(change);
-  return k ? i18n.t(`experiment.idea.${k}.q`) : i18n.t("experiment.planQ", { plan: testNameOf(change) });
+  if (k) return i18n.t(`experiment.idea.${k}.q`);
+  const g = goalTemplateOf(change), tpl = g ? TEMPLATES.get(g) : undefined;
+  if (tpl) return templateQuestion(tpl);
+  return i18n.t("experiment.planQ", { plan: testNameOf(change) });
+};
+
+/** Today's step for a test's push (her note, Nov 8 2026: not the plan, but "не забудь
+ *  потренироваться сегодня"): an idea's or a goal's own line, else null (her own words go in the body). */
+export const testTodayOf = (change: string): string | null => {
+  const k = ideaOf(change);
+  if (k) return i18n.t(`experiment.idea.${k}.today`);
+  const g = goalTemplateOf(change);
+  return g ? i18n.t(`experiment.goalToday.${g}`) : null;
 };
 
 /** Plans that are a weekly goal for the question itself: how many a week. The rule of
  *  the question matches the goal (fewer than that in 7 days → time to act). */
 export const GOALS: Record<string, number> = { exercised: 3, "strength-training": 2, "time-in-nature": 2 };
 const TEMPLATES = new Map(LIFE_STREAMS.flatMap((s) => s.templates).map((t) => [t.id, t]));
+/** The weekly goals' words, now and before Nov 8 2026, in both languages. */
+const OLD_GOAL_WORDS: Record<string, string[]> = {
+  exercised: ["Book 3 workout slots in calendar this week", "Внести 3 тренировки в календарь на эту неделю"],
+  "strength-training": ["Put 2 strength sessions in the calendar this week", "Внести в календарь 2 силовые тренировки на эту неделю"],
+  "time-in-nature": ["Plan two nature walks this week", "Запланировать на неделе две прогулки на природе"],
+};
+/** The library question a weekly-goal plan is about, from its words (new or old, either language). */
+export const goalTemplateOf = (change: string): string | null => {
+  const n = norm(change || "");
+  if (!n) return null;
+  for (const id of Object.keys(GOALS)) {
+    const tpl = TEMPLATES.get(id);
+    const words = [tpl?.adviceAboveThreshold, tpl?.adviceAboveThresholdRu, ...(OLD_GOAL_WORDS[id] ?? [])].filter((x): x is string => !!x);
+    if (words.some((w) => norm(w) === n)) return id;
+  }
+  return null;
+};
+/** Once (Nov 8 2026): a test started from an old weekly-goal plan asked its own copy of the
+ *  question ("Внести 3 тренировки…?") next to hers. It moves onto her question with the goal,
+ *  and the copy is put away. */
+export const migrateGoalTests = async (): Promise<void> => {
+  const list = getExperiments();
+  if (!list.some((x) => !x.reviewed && !x.same && goalTemplateOf(x.change))) return;
+  const trackers = await getTrackers();
+  const away = new Set<string>();
+  const next: Experiment[] = list.map((x) => {
+    if (x.reviewed || x.same) return x;
+    const g = goalTemplateOf(x.change);
+    const own = g ? trackers.find((t) => !t.archived && !t.id.endsWith("-test") && matchTemplateIdByTitle(t.title) === g) : undefined;
+    if (!g || !own) return x;
+    if (x.trackerId.endsWith("-test")) away.add(x.trackerId);
+    return { ...x, same: true, trackerId: own.id, perWeek: GOALS[g] };
+  });
+  replaceExperiments(next);
+  if (away.size) await saveTrackers(trackers.map((t) => (away.has(t.id) ? { ...t, archived: true } : t)));
+  window.dispatchEvent(new Event("memap-settings-changed"));
+};
 /** The goal a week, while the question still has the library's goal as its plan. */
 export const goalOf = (tr: Tracker): number | null => {
   const id = matchTemplateIdByTitle(tr.title);

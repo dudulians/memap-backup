@@ -158,6 +158,8 @@ export const runStartupMigrations = async (): Promise<void> => {
   try {
     await migrateLegacyAdvice();
     await migrateGoalRules();
+    // a running old-style weekly-goal test moves onto her own question (Nov 8 2026)
+    await (await import("@/lib/testWords")).migrateGoalTests();
   } catch (e) {
     console.error("startup migrations failed:", e);
   }

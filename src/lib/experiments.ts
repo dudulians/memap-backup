@@ -97,6 +97,8 @@ export const getExperiments = (): Experiment[] => {
     return [];
   }
 };
+/** Replace the list (a one-time move, src/lib/testWords.ts migrateGoalTests). */
+export const replaceExperiments = (list: Experiment[]) => save(list);
 const save = (list: Experiment[]) => {
   try {
     localStorage.setItem(KEY, JSON.stringify(list));
