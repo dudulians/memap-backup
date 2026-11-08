@@ -17,6 +17,7 @@ import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
 import { Pressable } from "@/components/ui/pressable";
 import { track } from "@/lib/analytics";
+import { startOldTour } from "@/components/OldUserTour";
 
 const KEY = "memap_upgrade_invite";
 /** Whoever said no (or went back to the old look) is asked again two weeks
@@ -37,8 +38,9 @@ export const switchToNew = () => {
     localStorage.setItem("memap_ui", "new");
     // the path starts today only the first time; coming back keeps her weeks and reports (QA, Nov 8 2026)
     if (!localStorage.getItem("memap_path_start")) localStorage.setItem("memap_path_start", isoLocal(new Date()));
-    localStorage.setItem("memap_open_tab", "patterns");
     localStorage.setItem(KEY, "accepted");
+    // the first time: the old users' onboarding opens in the new look (Nov 8 2026)
+    startOldTour();
   } catch { /* stays classic; nothing lost */ }
   window.location.reload();
 };
@@ -54,7 +56,7 @@ export const switchToOld = () => {
 
 export const UpgradeInvite = () => {
   const { t } = useTranslation();
-  const [stage, setStage] = useState<"hidden" | "invite" | "building">("hidden");
+  const [stage, setStage] = useState<"hidden" | "invite">("hidden");
   const [data, setData] = useState<{ trackers: Tracker[]; islands: Island[]; routes: Route[]; days: number } | null>(null);
 
   useEffect(() => {
@@ -76,56 +78,30 @@ export const UpgradeInvite = () => {
     try { localStorage.setItem(KEY, declined()); } catch { /* shows again next launch */ }
     setStage("hidden");
   };
-  const of = trackerLookup(data.trackers);
-  const route = data.routes[0];
-  const rules = data.trackers.filter((tr) => !tr.archived && tr.threshold > 0).length;
-  const active = data.trackers.filter((tr) => !tr.archived && tr.source !== "play").length;
 
   return createPortal(
-    stage === "invite" ? (
-      <div className="fixed inset-0 z-[80] flex items-end bg-[rgba(12,38,50,0.32)] backdrop-blur-[2px] animate-fade-in" role="dialog" aria-modal="true">
-        <div className="w-full rounded-t-[28px] bg-[hsl(200_40%_96%)] px-6 pb-[max(env(safe-area-inset-bottom),24px)] pt-6 text-center text-[hsl(205_40%_18%)]">
-          <div className="flex justify-center gap-1">
-            {data.islands.slice(0, 4).map((i) => <img key={i.id} src={mapPic("icon_" + i.def.icon)} alt="" width={44} height={44} />)}
-          </div>
-          <p className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{t("upgrade.title")}</p>
-          <p className="mt-2 text-[17px] font-medium text-[hsl(205_20%_40%)]">{t("upgrade.line")}</p>
-          <Pressable tone="teal" haptic="medium" onClick={() => setStage("building")} className="mt-6 h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-            {t("upgrade.try")}
-          </Pressable>
-          <button type="button" onClick={later} className="mt-2 h-12 w-full text-[16px] font-semibold text-[hsl(205_20%_40%)]">{t("upgrade.notNow")}</button>
+    <div className="fixed inset-0 z-[80] flex items-end bg-[rgba(12,38,50,0.32)] backdrop-blur-[2px] animate-fade-in" role="dialog" aria-modal="true">
+      <div className="w-full rounded-t-[28px] bg-[hsl(200_40%_96%)] px-6 pb-[max(env(safe-area-inset-bottom),24px)] pt-6 text-center text-[hsl(205_40%_18%)]">
+        <div className="flex justify-center gap-1">
+          {data.islands.slice(0, 5).map((i) => <img key={i.id} src={mapPic("icon_" + i.def.icon)} alt="" width={44} height={44} />)}
         </div>
-      </div>
-    ) : (
-      <div className="fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-[hsl(200_40%_96%)] px-6 pb-8 pt-[max(env(safe-area-inset-top),24px)] text-[hsl(205_40%_18%)] animate-fade-in" role="dialog" aria-modal="true">
-        <p className="mt-6 text-[28px] font-bold leading-tight tracking-tight">{t("upgrade.building")}</p>
-        <p className="mt-1 text-[17px] font-medium text-[hsl(205_20%_40%)]">{t("upgrade.fromDays", { count: data.days })}</p>
-        <div className="mt-6 space-y-3">
-          <div className="rounded-[20px] bg-white px-5 py-4 shadow-[0_10px_24px_-14px_rgba(16,42,56,0.25)] animate-fade-in">
-            <div className="flex flex-wrap gap-1">
-              {data.islands.slice(0, 6).map((i) => <img key={i.id} src={mapPic("icon_" + i.def.icon)} alt="" width={36} height={36} />)}
+        <p className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{t("upgrade.worldTitle")}</p>
+        {/* their own numbers (board 45: "ask, not force") */}
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {([[data.days, "upgrade.tileDays"], [data.islands.length, "upgrade.tileIslands"], [data.routes.length, "upgrade.tileLinks"]] as const).map(([n, k]) => (
+            <div key={k} className="rounded-[18px] bg-white px-2 py-3 shadow-[0_8px_20px_-14px_rgba(16,42,56,0.3)]">
+              <p className="text-[28px] font-bold leading-none tabular-nums">{n}</p>
+              <p className="mt-1.5 text-[14px] font-semibold text-[hsl(205_20%_40%)]">{t(k, { count: n })}</p>
             </div>
-            <p className="mt-2 text-[18px] font-bold">{t("upgrade.islands", { count: active, k: data.islands.length })}</p>
-          </div>
-          <div className="rounded-[20px] bg-white px-5 py-4 shadow-[0_10px_24px_-14px_rgba(16,42,56,0.25)] animate-fade-in [animation-delay:250ms]">
-            <img src={mapPic("sailboat")} alt="" width={40} height={40} />
-            <p className="mt-2 text-[18px] font-bold">
-              {route ? `${t("upgrade.firstLink")}: ${linkSentence(t, route, of)}` : t("upgrade.linksLater")}
-            </p>
-          </div>
-          <div className="rounded-[20px] bg-white px-5 py-4 shadow-[0_10px_24px_-14px_rgba(16,42,56,0.25)] animate-fade-in [animation-delay:500ms]">
-            <img src={mapPic("lighthouse")} alt="" width={40} height={40} />
-            <p className="mt-2 text-[18px] font-bold">{t("upgrade.lighthouses", { count: rules })}</p>
-          </div>
+          ))}
         </div>
-        <div className="mt-auto pt-8">
-          <Pressable tone="teal" haptic="none" onClick={() => { haptics.success(); switchToNew(); }} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
-            {t("upgrade.open")}
-          </Pressable>
-          <p className="mt-3 text-center text-[15px] font-medium text-[hsl(205_20%_40%)]">{t("upgrade.back")}</p>
-        </div>
+        <p className="mt-4 text-[16px] font-medium text-[hsl(205_20%_40%)]">{t("upgrade.nothingLost")}</p>
+        <Pressable tone="teal" haptic="none" onClick={() => { haptics.success(); switchToNew(); }} className="mt-5 h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+          {t("upgrade.showMe")}
+        </Pressable>
+        <button type="button" onClick={later} className="mt-2 h-12 w-full text-[16px] font-semibold text-[hsl(205_20%_40%)]">{t("upgrade.notNow")}</button>
       </div>
-    ),
+    </div>,
     document.body,
   );
 };

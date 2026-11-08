@@ -9,6 +9,7 @@ import { AddTrackerModal } from "@/components/AddTrackerModal";
 import { SettingsModal } from "@/components/SettingsModal";
 import { YouSheet } from "@/components/YouSheet";
 import { OnboardingTour, shouldShowTour } from "@/components/OnboardingTour";
+import { OldUserTour } from "@/components/OldUserTour";
 import { applyTheme, getTheme, isNight, toggleNight } from "@/lib/theme";
 import { haptics } from "@/lib/haptics";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -451,6 +452,9 @@ const Index = () => {
           setTourOpen(true);
         }}
       />
+
+      {/* the old users' onboarding, once, right after "Show me" (Nov 8 2026) */}
+      <OldUserTour onDone={() => { setActiveTab("cards"); setRefreshKey((k) => k + 1); }} />
 
       {/* Onboarding Tour */}
       <OnboardingTour
