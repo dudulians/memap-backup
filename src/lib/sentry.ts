@@ -25,6 +25,7 @@
  * pipeline (post-launch task).
  */
 import * as Sentry from "@sentry/capacitor";
+import { Capacitor } from "@capacitor/core";
 import * as SentryReact from "@sentry/react";
 
 /**
@@ -37,6 +38,8 @@ import * as SentryReact from "@sentry/react";
  */
 export const initSentry = (): void => {
   if (import.meta.env.DEV) return;
+  // only the real app on a phone, not test builds opened on the computer (Nov 8 2026)
+  if (!Capacitor.isNativePlatform()) return;
 
   try {
     Sentry.init(

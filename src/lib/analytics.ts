@@ -29,6 +29,7 @@
  * logs. Keeps the production event feed clean from HMR-driven noise.
  */
 import mixpanel from "mixpanel-browser";
+import { Capacitor } from "@capacitor/core";
 
 const MIXPANEL_TOKEN = "60e2fb1904bc6c57d3438b0336c0f5c4";
 
@@ -36,6 +37,9 @@ let initialised = false;
 
 export const initAnalytics = (): void => {
   if (import.meta.env.DEV) return;
+  // Only the real app on a phone (Nov 8 2026: our own test builds opened on the computer,
+  // http://127.0.0.1:4180 and file:///…, showed up in Mixpanel as dozens of users "(not set)")
+  if (!Capacitor.isNativePlatform()) return;
   if (initialised) return;
 
   try {
