@@ -201,7 +201,9 @@ export const rankLinks = (cs: CorrelationResult[]): CorrelationResult[] => {
   // "after a fight you sleep under 7 hours" over "on stressful days you fight"; migraine links over
   // "the child slept badly → you slept less")
   const door = getDoorState(), main = door?.trackerId, extra = new Set((door?.extra ?? []).map((x) => x.trackerId));
-  const score = (c: CorrelationResult) => { const l = linkOf(c); return (l.second.id === main ? 8 : 0) + (l.first.id === main ? 6 : 0) + (extra.has(l.second.id) ? 3 : 0) + (extra.has(l.first.id) ? 2 : 0) + (l.nextDay ? 2 : 0); };
+  // a link whose result comes on most other days too says little ("anxious → 4+ hours on screens, other days
+  // 3 of 5"): it goes down the list
+  const score = (c: CorrelationResult) => { const l = linkOf(c); const flat = l.other.n > 0 && l.other.k / l.other.n > 0.5; return (l.second.id === main ? 8 : 0) + (l.first.id === main ? 6 : 0) + (extra.has(l.second.id) ? 3 : 0) + (extra.has(l.first.id) ? 2 : 0) + (l.nextDay ? 2 : 0) - (flat ? 9 : 0); };
   return cs.map((c, i) => ({ c, i, s: score(c) })).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.c);
 };
 

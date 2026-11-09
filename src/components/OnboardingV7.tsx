@@ -171,7 +171,7 @@ export const ISLAND_TOPICS: Record<Tone, { island: IslandId; ids: DoorId[] }[]> 
   // Nov 8 2026 (her note: "почему так мало вариантов"): 4–8 topics on every island
   bother: [
     { island: "health", ids: ["sleep", "migraine", "period", "headache", "backPain", "stomach", "fatigue"] },
-    { island: "me", ids: ["stress", "mood", "energy", "anxiety", "loneliness", "anger", "procrastination", "move"] },
+    { island: "me", ids: ["stress", "mood", "energy", "anxiety", "comparing", "loneliness", "anger", "procrastination", "move"] },
     { island: "love", ids: ["fights", "irritation", "aloneTogether", "phones", "chores"] },
     { island: "kids", ids: ["kid", "bedtime", "meltdowns", "overwhelmed", "childSleep"] },
     { island: "work", ids: ["quit", "overtime", "burnout", "boss", "noWork"] },

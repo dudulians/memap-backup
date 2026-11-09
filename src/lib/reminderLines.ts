@@ -35,9 +35,11 @@ export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], note
     out.push({ left, text: t("notifications.grows", { island: name, count: left }) });
   }
   // the first links
+  // no countdown once it has passed: links need clear days, not a date (persona walk, Nov 9 2026: "first links in
+  // about 1 evening" on day 21 with nothing to show)
   if (routes.length === 0) {
     const days = countedDays(trackers, entries).length;
-    out.push({ left: Math.max(1, LINKS_AT - days), text: t("notifications.firstLinks", { count: Math.max(1, LINKS_AT - days) }) });
+    if (days < LINKS_AT) out.push({ left: LINKS_AT - days, text: t("notifications.firstLinks", { count: LINKS_AT - days }) });
   }
   // links found: how many, never what (her note, Nov 6 2026: reminders can be beautiful too)
   else out.push({ left: 2, text: t("notifications.links", { count: routes.length }) });

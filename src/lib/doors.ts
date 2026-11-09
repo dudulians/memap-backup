@@ -26,7 +26,7 @@ export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid" | "slee
   // onboarding v7 (Nov 6 2026): health first; "a thought keeps coming back"
   | "period" | "stress" | "quit" | "move"
   // Nov 8 2026 (her note: "почему так мало вариантов"): more topics on every island
-  | "headache" | "backPain" | "stomach" | "fatigue" | "anxiety" | "loneliness" | "anger" | "procrastination" | "irritation" | "aloneTogether" | "phones" | "chores" | "bedtime" | "meltdowns" | "overwhelmed" | "childSleep" | "overtime" | "burnout" | "boss" | "noWork" | "sweets" | "screens" | "lateEating" | "smoking" | "spending" | "water" | "daylight" | "wakeTime" | "nature" | "selfTime" | "gratitude" | "creative" | "reading" | "together" | "friends" | "kidTime" | "brightMoment" | "focusHour" | "fulfilled" | "steps" | "veggies" | "cooking" | "phoneFree";
+  | "headache" | "backPain" | "stomach" | "fatigue" | "anxiety" | "comparing" | "loneliness" | "anger" | "procrastination" | "irritation" | "aloneTogether" | "phones" | "chores" | "bedtime" | "meltdowns" | "overwhelmed" | "childSleep" | "overtime" | "burnout" | "boss" | "noWork" | "sweets" | "screens" | "lateEating" | "smoking" | "spending" | "water" | "daylight" | "wakeTime" | "nature" | "selfTime" | "gratitude" | "creative" | "reading" | "together" | "friends" | "kidTime" | "brightMoment" | "focusHour" | "fulfilled" | "steps" | "veggies" | "cooking" | "phoneFree";
 
 export interface Door {
   id: DoorId;
@@ -163,6 +163,8 @@ export const DOORS: Door[] = [
     ["stomach", "pain", "stomach-issues", ["ate-late", "felt-stressed", "ate-fast-food"]],
     ["fatigue", "pain", "felt-fatigued", ["slept-enough", "outside-30min", "skipped-meal"]],
     ["anxiety", "pain", "felt-anxious", ["slept-enough", "caffeine-4-plus", "doomscrolled-news"]],
+    // persona walk (Nov 9 2026): someone who compares herself online had no topic and typed it in
+    ["comparing", "pain", "compared-on-social", ["social-media-hour", "screens-before-bed", "felt-anxious"]],
     ["loneliness", "pain", "felt-lonely", ["saw-friends", "isolated-at-home", "social-media-hour"]],
     ["anger", "pain", "felt-angry", ["slept-enough", "felt-stressed", "skipped-meal"]],
     ["procrastination", "pain", "procrastinated", ["slept-enough", "social-media-hour", "many-interruptions"]],

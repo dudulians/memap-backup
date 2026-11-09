@@ -15,7 +15,7 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 import { eveningDates, eveningStreak } from "@/lib/eveningPath";
 import { litTrackers } from "@/lib/lighthouses";
 import { experimentOver, getExperiments, runningExperiments } from "@/lib/experiments";
-import { hunchDoneToday, readyHunch } from "@/lib/hunches";
+import { getHunches, hunchDoneToday, readyHunch } from "@/lib/hunches";
 import { track, onbVariant } from "@/lib/analytics";
 import { tipForToday } from "@/lib/observeTips";
 
@@ -619,7 +619,11 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // back for during the day). Shown only when there is a round to play.
   if (hasQuestions) {
     // The day's hunch: done once made (or "not now"), unless a checked one waits.
-    steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: hunchDoneToday() && !readyHunch(trackers, entries) });
+    // not while her guesses are still being checked and none is ready (persona walks, Nov 9 2026: the hunch
+    // light came back every evening for 3 weeks with "Already checking")
+    const ready = !!readyHunch(trackers, entries);
+    const waiting = getHunches().some((h) => !h.seen) && !ready;
+    if (!waiting || hunchDoneToday()) steps.push({ id: "game", kind: "game", trackerIds: [], answered: 0, done: hunchDoneToday() && !ready });
     // One thing worth watching (Nov 8 2026), from day 2; the last of the day's extras.
     if (!(door && door.startedAt === today)) {
       const tip = tipForToday(trackers, today);

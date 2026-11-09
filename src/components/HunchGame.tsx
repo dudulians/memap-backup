@@ -110,7 +110,9 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
       }
       if (ownText) {
         const label = ownText.replace(/[?？]+$/, "");
-        ids.push(await addQuestionToIsland(ownText, islandOf(target), false));
+        // what she typed is something that happens: "yes" is the hard answer (persona walk, Nov 9 2026: her
+        // "comparing myself on Instagram" was saved hard-when-no and shown green for 3 weeks)
+        ids.push(await addQuestionToIsland(ownText, islandOf(target), true));
         names.push(label);
         added.push(label);
       }
@@ -158,7 +160,8 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                 <div key={hunch.id} className="surface rounded-[22px] px-5 py-4">
                   <div className="flex items-center gap-2">
                     <p className="min-w-0 flex-1 text-[19px] font-bold leading-snug">
-                      {result.nextDay ? t("hunch.dayBefore", { x: cap(answerPhrase(t, tr(hunch.suspect), true)) }) : cap(answerPhrase(t, tr(hunch.suspect), true))}
+                      {/* the side she ticked (persona walk, Nov 9 2026: "7+ hours of sleep — goes with it" for her "short night") */}
+                      {(() => { const q = tr(hunch.suspect); const w = cap(answerPhrase(t, q, q?.problemWhen !== "no")); return result.nextDay ? t("hunch.dayBefore", { x: w }) : w; })()}
                     </p>
                     <span className={cn("shrink-0 rounded-full px-3 py-1 text-[13px] font-bold",
                       result.onto ? "bg-foreground/[0.06] text-[hsl(var(--coin-teal))]" : "bg-foreground/[0.06] text-muted-foreground")}>

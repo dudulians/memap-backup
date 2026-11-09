@@ -584,7 +584,7 @@ export const EveningPath = ({
     if (part === 0) return { text: t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo }), open: "overview" as null | "overview" | "findings" | "signals" | "world" };
     if (part === 1) {
       const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length;
-      return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: t("path.next4.linksSoon", { count: Math.max(1, 10 - evenings) }), open: null };
+      return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: evenings < 10 ? t("path.next4.linksSoon", { count: 10 - evenings }) : t("path.next4.linksWait"), open: null };
     }
     if (part === 2) { const lit = litTrackers(trackers, entries).size; return { text: lit > 0 ? t("path.next4.lit", { count: lit }) : t("path.next4.rule"), open: "signals" as const }; }
     const x = currentExperiment();

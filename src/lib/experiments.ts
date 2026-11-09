@@ -453,7 +453,9 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
   const by = comparedBy(r);
   if (by) {
     const [setA, setB] = by === "with" ? [new Set(withDays.length ? [...did.entries()].filter(([, v]) => v).map(([d]) => d) : []), new Set([...did.entries()].filter(([, v]) => !v).map(([d]) => d))] : [days, beforeDays];
-    const all = trackers.filter((t) => !t.archived && t.source !== "play" && !isTestQuestion(t) && !isNeutralQuestion(t) && t.id !== x.trackerId);
+    // only the test's own island (persona walk, Nov 9 2026: a phone-away test for sleep and anxiety "found" its
+    // biggest difference in news she never reads)
+    const all = trackers.filter((t) => !t.archived && t.source !== "play" && !isTestQuestion(t) && !isNeutralQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island);
     let best: ExperimentResult["most"] | undefined, bestDiff = 0.2;
     for (const t of all) {
       const es = entries.filter((e) => e.trackerId === t.id);
