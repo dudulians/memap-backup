@@ -11,8 +11,10 @@ import { NoteSheet, newDraft, useQuestionName, type NoteDraft } from "@/componen
 import { Plus, X, ArrowLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Note, getNotes } from "@/lib/notes";
-import { Tracker } from "@/types/tracker";
-import { getTrackers } from "@/lib/storage";
+import { Tracker, TrackerEntry } from "@/types/tracker";
+import { getEntries, getTrackers } from "@/lib/storage";
+import { ReasonSheet, useReasonDay, type ReasonItem } from "@/components/ReasonSheet";
+import { reasonEntries, reasonKey, reasonLabel, reasonName } from "@/lib/reasons";
 import { format, parseISO } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
@@ -39,6 +41,11 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   const [draft, setDraft] = useState<NoteDraft | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedDate, setHighlightedDate] = useState<string | undefined>(targetDate);
+  // "Reasons" (the "Why?" step, Nov 10 2026): the answers with reasons, newest first; tap one to change it
+  const [entries, setEntries] = useState<TrackerEntry[]>([]);
+  const [reasonEdit, setReasonEdit] = useState<ReasonItem[] | null>(null);
+  const [allReasons, setAllReasons] = useState(false);
+  const reasonDay = useReasonDay();
 
   const today = daysAgoIso(0);
   const yesterday = daysAgoIso(1);
@@ -59,9 +66,10 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
   const loadData = async () => {
     setLoading(true);
-    const [notesData, trackersData] = await Promise.all([getNotes(), getTrackers()]);
+    const [notesData, trackersData, entriesData] = await Promise.all([getNotes(), getTrackers(), getEntries()]);
     setNotes(notesData.sort((a, b) => b.date.localeCompare(a.date)));
     setTrackers(trackersData.filter((tr) => !tr.archived));
+    setEntries(entriesData);
     setLoading(false);
   };
 
@@ -78,15 +86,25 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   };
 
   const q = searchQuery.trim().toLowerCase();
+  // a reason's words are a note of that day, shown with their reason (not twice)
+  const plainNotes = notes.filter((n) => !n.reasonFor);
+  const reasonWords = new Map(notes.filter((n) => n.reasonFor).map((n) => [n.reasonFor!, n.text]));
+  const reasons = reasonEntries(trackers, entries, notes).map((e) => {
+    const tr = trackers.find((x) => x.id === e.trackerId);
+    return { e, key: reasonKey(e), head: `${reasonDay(e.date)} · ${reasonName(t, tr)}`, labels: (e.tags ?? []).map((x) => reasonLabel(t, x)), words: reasonWords.get(reasonKey(e)) };
+  }).filter((r) => !q || [r.head, ...r.labels, r.words ?? ""].some((x) => x.toLowerCase().includes(q)));
+  const REASONS_SHOWN = 3;
+  const shownReasons = allReasons || q ? reasons : reasons.slice(0, REASONS_SHOWN);
   const filteredNotes = q
-    ? notes.filter((note) => {
+    ? plainNotes.filter((note) => {
         if (note.text.toLowerCase().includes(q)) return true;
         // 1.7.9 searched note.trackerId, which never existed, so a
         // question name never matched.
         const name = trackerName(note.linkedPatternId);
         return !!name && name.toLowerCase().includes(q);
       })
-    : notes;
+    : plainNotes;
+  const hasReasons = reasonEntries(trackers, entries, notes).length > 0;
 
   const groupedNotes = filteredNotes.reduce((acc, note) => {
     (acc[note.date] ??= []).push(note);
@@ -109,7 +127,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
         <div className="flex items-center justify-between gap-3 pb-2 animate-fade-in">
           <h1 className="text-[28px] font-bold tracking-tight">{t("notesTab.title")}</h1>
-          {notes.length > 0 && (
+          {(plainNotes.length > 0 || hasReasons) && (
             <button
               type="button"
               onClick={() => setDraft(newDraft(today))}
@@ -142,7 +160,25 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
           </div>
         )}
 
-        {loading ? null : notes.length === 0 ? (
+        {/* "Reasons": why a fight or a headache came, as saved on the path ("Why?"), newest first; tap to change */}
+        {!loading && reasons.length > 0 && (
+          <div data-reasons className="space-y-2 animate-fade-in">
+            <p className="px-1 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("why.reasons")}</p>
+            {shownReasons.map((r) => (
+              <button key={r.key} type="button" data-reason-row={r.key} onClick={() => setReasonEdit([{ trackerId: r.e.trackerId, date: r.e.date }])}
+                className="surface block w-full text-left rounded-[22px] px-[18px] py-3.5 active:scale-[0.99] transition-transform">
+                <p className="text-[14px] font-semibold text-muted-foreground">{r.head}</p>
+                {r.labels.length > 0 && <p className="mt-0.5 text-[17px] font-bold leading-snug">{r.labels.join(" · ")}</p>}
+                {r.words && <p className="mt-1 text-[16px] leading-snug whitespace-pre-line line-clamp-3">{r.words}</p>}
+              </button>
+            ))}
+            {shownReasons.length < reasons.length && (
+              <button type="button" onClick={() => setAllReasons(true)} className="h-11 w-full text-[15px] font-semibold text-[hsl(var(--coin-teal))]">{t("why.showAll", { n: reasons.length })}</button>
+            )}
+          </div>
+        )}
+
+        {loading ? null : plainNotes.length === 0 && hasReasons ? null : plainNotes.length === 0 ? (
           <div className="flex flex-col items-center text-center pt-10 animate-fade-in">
             {SHOW_MASCOT && <img src={maluWave} alt="" className="h-32 w-32" />}
             <p className="mt-2 text-[22px] font-bold">{t("notesTab.empty")}</p>
@@ -150,7 +186,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
               {t("notesTab.write")}
             </button>
           </div>
-        ) : filteredNotes.length === 0 ? (
+        ) : filteredNotes.length === 0 ? (reasons.length > 0 ? null :
           <p className="pt-10 text-center text-[17px] text-muted-foreground animate-fade-in">{t("addTracker.nothingFound")}</p>
         ) : (
           <div className="space-y-5 animate-fade-in">
@@ -184,6 +220,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
 
       {/* Write / edit sheet (shared with Today's note step). */}
       <NoteSheet draft={draft} setDraft={setDraft} trackers={trackers} onSaved={loadData} />
+      <ReasonSheet items={reasonEdit} mode="edit" trackers={trackers} entries={entries} onClose={() => { setReasonEdit(null); loadData(); }} />
     </>
   );
 };

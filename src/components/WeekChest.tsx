@@ -30,6 +30,7 @@ import { chestContent, type ChestStat } from "@/lib/weekChest";
 import { getChests, rewardFor, saveChest, titleFor, type ChestRecord } from "@/lib/pathSteps";
 import { isoLocal } from "@/lib/doors";
 import { useCount } from "@/lib/spotlight";
+import { reasonLines } from "@/lib/reasons";
 
 // The report fills in live as each card lands (Nov 6 2026, from the hooks list:
 // "a live week report"): the numbers count up, the week's days pop in as dots, what
@@ -164,6 +165,8 @@ export const WeekChest = ({
       insight,
       insightOther: route ? linkCount(t, route) : undefined,
       insightEarly: !!c.insight && c.insight.n < 6,
+      // what the fights or headaches came with, by her own reasons (the "Why?" step, Nov 10 2026)
+      reasons: reasonLines(t, trackers, entries, weekDates),
       title: titleFor(week),
       world,
       mission,
@@ -252,6 +255,10 @@ export const WeekChest = ({
             {l.days && l.days.length === dates.length ? <DayDots days={l.days} hardWhen={l.hardWhen ?? null} dates={dates} delay={0.3 + i * 0.35} />
               : l.n <= 14 && <WeekDots k={l.k} n={l.n} calm={l.calm} delay={0.3 + i * 0.35} />}
           </div>
+        ))}
+        {/* her own reasons, one line a question: "Fights — most often: money (4 of 7)" */}
+        {(r.reasons ?? []).map((line) => (
+          <p key={line} data-reason-line className="mt-3 border-t border-foreground/[0.06] pt-3 text-[17px] font-semibold leading-snug">{line}</p>
         ))}
       </div>,
     );

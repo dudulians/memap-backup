@@ -19,6 +19,7 @@ import { getHunches, hunchDoneToday, readyHunch } from "@/lib/hunches";
 import { track, onbVariant } from "@/lib/analytics";
 import { tipForToday } from "@/lib/observeTips";
 import { isPlayful } from "@/lib/playful";
+import { askedToday, pendingReasons } from "@/lib/reasons";
 
 export const DAYS_PER_WEEK = 7;
 /** A week's report needs this many answered evenings in its calendar week; with fewer it's "A quiet week."
@@ -33,7 +34,7 @@ const MAX_PER_STEP = 7;
 const ONE_STEP_UP_TO = 10;
 /** Steps besides the questions, a day, most important first (Nov 8 2026). */
 const MAX_EXTRAS = 3;
-const EXTRA_ORDER: Step["kind"][] = ["report", "test", "act", "link", "task", "game", "tip"];
+const EXTRA_ORDER: Step["kind"][] = ["report", "test", "act", "link", "why", "task", "game", "tip"];
 /** From this hour today's questions are for now; before it they wait for the evening. */
 export const EVENING_AT = 17;
 /** A topic with fewer questions joins the mixed step: no one-question steps. */
@@ -73,7 +74,8 @@ export interface Step {
   /** "unload": the calm bubble game, any time (src/components/UnloadGame.tsx) */
   /** "discover": what the app will show her, with an example (src/components/DiscoverSheet.tsx) */
   /** "link": her first link was found today: see it happen on her map (src/components/LinkMoment.tsx) */
-  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover" | "link" | "report" | "tip";
+  /** "why": add reasons to the last days' fights or headaches, skippable (src/lib/reasons.ts, src/components/ReasonSheet.tsx) */
+  kind: "auto" | "fill" | "questions" | "task" | "game" | "act" | "test" | "unload" | "grew" | "discover" | "link" | "report" | "tip" | "why";
   /** today's questions before the evening: they wait at the end of the path (Nov 8 2026) */
   tonight?: boolean;
   /** "Worth watching": today's tip */
@@ -494,6 +496,8 @@ export interface ChestRecord {
   dates?: string[];
   /** the week's insight, said in words when opened */
   insight?: string; insightOther?: string; insightEarly?: boolean;
+  /** "Fights — most often: money (4 of 7)" (src/lib/reasons.ts reasonLines), said in words when opened */
+  reasons?: string[];
   /** "Predict" this week: guessed k of n */
   guesses?: { hit: number; n: number };
   /** a new title for her (CHEST_TITLES) */
@@ -677,6 +681,13 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // Her test week is over: see how it went (it grows a garden).
   const test = runningExperiments().find((x) => experimentOver(x));
   if (test) steps.push({ id: "test", kind: "test", trackerIds: [test.trackerId], answered: 0, done: false });
+  // "Why?" (her answer, Nov 9 2026: "отдельно шагом … можно скипать"): yes-answers of the last days to a fight or a
+  // headache without reasons; one of the day's extras. Saved or skipped today, it stays as done (skipped: its icon).
+  const why = pendingReasons(trackers, entries, today);
+  const whyToday = askedToday(today);
+  if (why.length > 0 || whyToday) {
+    steps.push({ id: "why", kind: "why", trackerIds: [...new Set(why.map((e) => e.trackerId))], answered: 0, done: why.length === 0, skipped: why.length === 0 && whyToday === "skipped" ? true : undefined });
+  }
   // One short game a day, after the questions (her ask: something to come
   // back for during the day). Shown only when there is a round to play.
   if (hasQuestions) {

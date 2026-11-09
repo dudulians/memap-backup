@@ -94,7 +94,10 @@ export const PatternsTab = ({ focusIds, only, onTry, pair = false }: { focusIds?
   useEffect(() => {
     const sync = () => { loadData(); };
     window.addEventListener("memap-settings-changed", sync);
-    return () => window.removeEventListener("memap-settings-changed", sync);
+    // the calendar day's "Why?" chips write the answer's tags straight to storage (Nov 10 2026): keep them,
+    // or the next Yes/No here would save the old copy without them
+    window.addEventListener("memap-entries-changed", sync);
+    return () => { window.removeEventListener("memap-settings-changed", sync); window.removeEventListener("memap-entries-changed", sync); };
   }, []);
 
   // Listen for external section-switch requests (e.g. from the

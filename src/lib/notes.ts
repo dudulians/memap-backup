@@ -6,6 +6,9 @@ export interface Note {
   date: string; // YYYY-MM-DD
   text: string;
   linkedPatternId?: string;
+  /** the words of a "Why?" reason: the answer they belong to ("trackerId|date", src/lib/reasons.ts); Notes shows
+   *  them under "Reasons", not again in the list */
+  reasonFor?: string;
   createdAt: string;
   updatedAt: string;
 }

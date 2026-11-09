@@ -13,6 +13,10 @@ import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { cardQuestion } from "@/lib/cardText";
 import { haptics } from "@/lib/haptics";
+import { getEntries } from "@/lib/storage";
+import { isoLocal } from "@/lib/doors";
+import { track } from "@/lib/analytics";
+import { chipsFor, markAsked, reasonChips, reasonKey, reasonLabel, saveReasons } from "@/lib/reasons";
 
 interface CalendarAnswerEditorProps {
   open: boolean;
@@ -54,6 +58,10 @@ export const CalendarAnswerEditor = ({
   const [savingNote, setSavingNote] = useState(false);
   const [showNoteInput, setShowNoteInput] = useState(false);
 
+  // "Why?" on a fight or a headache (Nov 10 2026): the reasons of a "yes" day, changed right here
+  const chipIds = reasonChips(tracker);
+  const [reasonTags, setReasonTags] = useState<string[]>([]);
+
   useEffect(() => {
     if (open) {
       setSelectedValue(existingEntry?.value ?? null);
@@ -61,8 +69,19 @@ export const CalendarAnswerEditor = ({
       setNewNoteText("");
       setShowNoteInput(false);
       getNotes().then(all => setNotes(all.filter(n => n.date === date)));
+      // from storage, not the calendar's copy (the chips save straight there)
+      getEntries().then((all) => setReasonTags(all.find((e) => e.trackerId === tracker.id && e.date === date)?.tags ?? [])).catch(() => setReasonTags([]));
     }
-  }, [open, existingEntry, date]);
+  }, [open, existingEntry, date, tracker.id]);
+
+  const toggleReason = async (chip: string) => {
+    haptics.tap();
+    const next = reasonTags.includes(chip) ? reasonTags.filter((x) => x !== chip) : [...reasonTags, chip];
+    setReasonTags(next);
+    await saveReasons([{ trackerId: tracker.id, date, tags: next }]);
+    markAsked([reasonKey({ trackerId: tracker.id, date })], "saved", isoLocal(new Date()));
+    track("reasons_saved", { answers: 1, chips: next.length, words: false, from: "calendar" });
+  };
 
   const categoryColor = getCategoryColor(tracker.category);
   const formattedDate = format(new Date(date + "T00:00:00"), "MMMM d, yyyy", { locale: dateLocale });
@@ -229,6 +248,20 @@ export const CalendarAnswerEditor = ({
             >
               {t("calendarEditor.clearAnswer")}
             </button>
+          )}
+
+          {/* "Why?": a fight or a headache on this day, its reasons as chips (saved on tap) */}
+          {selectedValue === true && chipIds.length > 0 && (
+            <div data-reason-inline>
+              <p className="text-[15px] font-semibold text-muted-foreground">{t("why.step")}</p>
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={t("why.step")}>
+                {chipsFor(tracker, reasonTags).map((c) => (
+                  <button key={c} type="button" aria-pressed={reasonTags.includes(c)} onClick={() => toggleReason(c)} className={cn("chip", reasonTags.includes(c) && "is-on")}>
+                    {reasonLabel(t, c)}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Divider */}

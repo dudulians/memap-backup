@@ -264,7 +264,11 @@ export type AnalyticsEvent =
   // calendar weeks (Nov 9 2026): a missed day opened from the "Missed a few days?" card (how many days ago),
   // and the card put away with "Not now" (how many days it showed)
   | "fill_day_opened"
-  | "fill_card_hidden";
+  | "fill_card_hidden"
+  // "Why?" (Nov 10 2026): reasons saved (how many answers and chips, any words, from the path or Notes or the
+  // calendar), or the step skipped (how many answers, from the sheet or the path's card)
+  | "reasons_saved"
+  | "reasons_skipped";
 
 /** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
 export const setSource = (source: string) => {

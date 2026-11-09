@@ -60,6 +60,9 @@ const seedDemo = async (p, { lang, playful, done }) => {
     if (done) {
       for (const k of ["memap_hunch_day", "memap_act_seen"]) localStorage.setItem(k, iso(0));
       for (const s of ps.pathModel(T, E).steps) if (s.kind === "task") ps.markTaskDone(s.task);
+      // the demo's headaches and fights of the last days: their "Why?" step done too (r98, Nov 10 2026)
+      const rs = await import("/src/lib/reasons.ts");
+      rs.markAsked(rs.pendingReasons(T, E, iso(0)).map(rs.reasonKey), "saved", iso(0), true);
     } else {
       // an open day: no rule, task or tip in the way of the hunch
       localStorage.setItem("memap_act_seen", JSON.stringify({ date: iso(1), ids: T.map((t) => t.id) }));

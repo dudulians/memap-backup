@@ -26,6 +26,9 @@ const setup = async (p, lang, theme, played) => {
     localStorage.setItem("memap_week_chests", JSON.stringify(Object.fromEntries(Array.from({ length: 20 }, (_, w) => [w, { openedAt: iso(1), lines: [], reward: "balloon" }])))); // past reports opened
     const ps = await import("/src/lib/pathSteps.ts");
     for (const s of ps.pathModel(T, E).steps) if (s.kind === "task") ps.markTaskDone(s.task);
+    // the demo's headaches and fights of the last days: their "Why?" step done too (r98, Nov 10 2026)
+    const rs = await import("/src/lib/reasons.ts");
+    rs.markAsked(rs.pendingReasons(T, E, iso(0)).map(rs.reasonKey), "saved", iso(0), true);
   }, { lang, theme, played });
   await p.reload(); await p.waitForTimeout(2500);
 };

@@ -25,7 +25,9 @@ import { templateIdOf as moodTemplateOf } from "@/lib/answerPhrases";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, Flag, FlaskConical, Flame, Layers, Lightbulb, Link2, Wind, Map as MapIcon, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon, BookOpen } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, Check, ChevronDown, ChevronRight, ChevronUp, Compass, FileBarChart2, Flag, FlaskConical, Flame, Layers, Lightbulb, Link2, Wind, Map as MapIcon, MessageCircleQuestion, MoonStar, PenLine, Plus, Sparkles, Sprout, type LucideIcon, BookOpen } from "lucide-react";
+import { ReasonSheet, type ReasonItem } from "@/components/ReasonSheet";
+import { markAsked, pendingReasons, reasonKey, reasonName } from "@/lib/reasons";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
@@ -255,6 +257,10 @@ export const EveningPath = ({
   // Nov 5 2026): the path holds only today's steps.
   // the bubbles step is a game: not with "Games and rewards" off
   const steps = useMemo(() => m.steps.filter((s) => (s.kind !== "fill" || s.onPath) && (playful || s.kind !== "unload")), [m, playful]);
+  // "Why?": the last days' fights or headaches with no reasons yet, and the sheet that asks about them
+  const whyPending = useMemo(() => pendingReasons(trackers, entries, isoDay(new Date())), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  const whySub = useMemo(() => [...new Set(whyPending.map((e) => reasonName(t, trackers.find((x) => x.id === e.trackerId))))].join(" · "), [whyPending, trackers, t]);
+  const [whyItems, setWhyItems] = useState<ReasonItem[] | null>(null);
   // Days to fill in (her notes: Nov 6 2026 "дать возможность заполнять за прошлые дни", Nov 9 2026
   // "если чего-то не хватает, можно попросить их дозаполнить"): a calm card with a chip per missed day
   // of the last week (it replaced the "Answer for Thursday" pill, which covered the path's names).
@@ -340,6 +346,7 @@ export const EveningPath = ({
     if (s.kind === "link") return t("firstLink.step");
     if (s.kind === "report") return t("path.lastReport");
     if (s.kind === "tip") return t("tipDay.step");
+    if (s.kind === "why") return t("why.step");
     if (s.added) return t("path.newQuestionsTitle");
     const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
     return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name;
@@ -358,6 +365,8 @@ export const EveningPath = ({
     if (s.kind === "fill") return "205 46% 58%";
     if (s.kind === "link") return "174 52% 42%";
     if (s.kind === "tip") return "215 55% 60%";
+    // "Why?": a quiet slate blue, not rose (rose means a hard day)
+    if (s.kind === "why") return "228 36% 60%";
     return "var(--coin-teal)";
   };
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
@@ -388,7 +397,7 @@ export const EveningPath = ({
     if (s.kind === "grew") return { look: "done", icon: <Sprout className="h-6 w-6" strokeWidth={2.6} />, hue: hueOf(s), title: stepName(s) };
     const Icon = s.kind === "task" ? TASK_ICON[s.task!] : s.kind === "game" ? Lightbulb : s.kind === "fill" ? CalendarDays
       : s.kind === "act" ? Lightbulb : s.kind === "test" ? FlaskConical : s.kind === "unload" ? Wind : s.kind === "report" ? FileBarChart2
-      : s.kind === "discover" ? MapIcon : s.kind === "link" ? Link2 : s.kind === "tip" ? BookOpen
+      : s.kind === "discover" ? MapIcon : s.kind === "link" ? Link2 : s.kind === "tip" ? BookOpen : s.kind === "why" ? MessageCircleQuestion
       : s.kind === "questions" ? (s.added ? Plus : s.island ? islandIcon(islandDef(s.island).icon) : Layers) : s.auto === "topic" ? Compass : Sparkles;
     // A skipped task can still be done today (her note), so it shows its icon, not a check.
     const replay = s.kind === "unload";
@@ -399,7 +408,7 @@ export const EveningPath = ({
       const moon = <MoonStar className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
       return { look, icon: moon, hue, title: stepName(s), sub: t("path.tonightSub"), action: current ? t("path.answerNow") : undefined };
     }
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "why" && !s.done ? whySub : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
     if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : playWord };
@@ -408,6 +417,7 @@ export const EveningPath = ({
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: playWord };
     if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
     if (s.kind === "tip") return { look, icon, hue, title: stepName(s), sub: tipTitle(s.tipId), action: t("tipDay.open") };
+    if (s.kind === "why") return { look, icon, hue, title: stepName(s), sub: whySub, action: t("why.add") };
     if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t("firstLink.sub"), action: t("firstLink.see") };
     return {
       look, icon, hue, title: stepName(s),
@@ -683,6 +693,7 @@ export const EveningPath = ({
     else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
     else if (s.kind === "link") window.dispatchEvent(new CustomEvent("memap-link-moment"));
     else if (s.kind === "tip") setTipOpen(s.tipId ?? null);
+    else if (s.kind === "why") setWhyItems(whyPending.map((e) => ({ trackerId: e.trackerId, date: e.date })));
     else if (s.kind === "report") setChestOpen({ week: m.week - 1, dates: m.pastWeeks[m.week - 1]?.dates ?? [] });
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
@@ -920,6 +931,31 @@ export const EveningPath = ({
         <>
           {head(stepName(s), tipTitle(s.tipId))}
           {button(t("tipDay.open"), () => startStep(s), s.done ? "plain" : "teal")}
+        </>
+      );
+    }
+    // "Why?": the answers it asks about, Add, and Skip (never asked about again); once done, where they're kept
+    if (s.kind === "why") {
+      if (s.done) {
+        return (
+          <>
+            {head(stepName(s), s.skipped ? t("path.skipped") : t("path.done"))}
+            {button(t("why.inNotes"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-open-notes", { detail: {} })); }, "plain")}
+          </>
+        );
+      }
+      return (
+        <>
+          {head(stepName(s), whySub)}
+          {button(t("why.add"), () => startStep(s))}
+          <button type="button" onClick={() => {
+            setOpen(null);
+            markAsked(whyPending.map(reasonKey), "skipped", isoDay(new Date()), true);
+            track("reasons_skipped", { answers: whyPending.length, from: "path" });
+            setTick((k) => k + 1);
+          }} className="mt-1 h-10 w-full text-[15px] font-semibold text-muted-foreground">
+            {t("common.skip")}
+          </button>
         </>
       );
     }
@@ -1266,6 +1302,8 @@ export const EveningPath = ({
       )}
 
       <ObserveTipSheet id={tipOpen} onClose={() => { setTipOpen(null); setTick((k) => k + 1); }} />
+
+      <ReasonSheet items={whyItems} mode="ask" trackers={trackers} entries={entries} onClose={() => { setWhyItems(null); setTick((k) => k + 1); }} />
 
       {gameOpen && (
         <HunchGame trackers={trackers} entries={entries} onClose={() => { setGameOpen(false); setTick((k) => k + 1); }} />
