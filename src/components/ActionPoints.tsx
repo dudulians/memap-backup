@@ -122,10 +122,15 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const links = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).map(linkOf), [trackers, entries]);
   const of = useMemo(() => trackerLookup(trackers), [trackers]);
   const linksInto = (tr: Tracker) => links.filter((l) => l.second.id === tr.id && l.secondHard === true && !isTestQuestion(l.first)).slice(0, 2);
-  /** a link's first question, when it's that question's hard answer and it has a plan: a cause to test */
+  /** a link's first question, when it's that question's hard answer and it has a plan: a cause to test.
+   *  Only an everyday habit to try for 2 weeks (persona walks, Nov 9 2026: "Possible cause: anxiety — Talk to a
+   *  therapist — I did it" read like a therapy checkbox, "feeling drained — See a GP" sat on a sleep card), and
+   *  never one whose test she already finished and dropped ("it told me this isn't mine, and offers it again"). */
+  const dropped = new Set(finishedExperiments().filter((x) => !x.kept && x.from).map((x) => x.from as string));
   const causeOf = (tr: Tracker) => linksInto(tr).map((l) => l.first).find((c, i) => {
     const l = linksInto(tr)[i];
-    return !isNeutralQuestion(c) && !c.archived && !!c.adviceAboveThreshold && l.firstYes === (c.problemWhen === "yes");
+    return !isNeutralQuestion(c) && !c.archived && !!c.adviceAboveThreshold && l.firstYes === (c.problemWhen === "yes")
+      && planKindOf(c) === "daily" && !dropped.has(c.id);
   }) ?? null;
   const [trying, setTrying] = useState<TryAction | null>(null);
   const door = getDoorState();
@@ -160,10 +165,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     const d = Math.round((Date.parse(todayIso + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1;
     return d < tr.periodDays ? { n: d, soFar: true } : { n: tr.periodDays, soFar: false };
   };
-  const ansOf = (tr: Tracker) => t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo");
-  /** One number for one fact, the same on the card and in the list: "“No” on 6 of the last 14 days." */
-  const evidence = (tr: Tracker, k: number) => { const s = span(tr); return t(s.soFar ? "rules.evidenceSoFar" : "rules.evidence", { ans: ansOf(tr), k, count: s.n }); };
-  const watchLine = (tr: Tracker, k: number) => `${evidence(tr, k)} ${t("rules.actAt", { n: tr.threshold, count: tr.periodDays })}`;
+  /** One number for one fact, the same on the card and in the list: "6 of the last 14 days." The headline or
+   *  the row's name says what (persona walks, Nov 9 2026: "“No” on 8 of 14" under "You often sleep under 7 hours"
+   *  was a No that meant yes; "of your first 22 days" — first since when?). */
+  const evidence = (tr: Tracker, k: number) => { const s = span(tr); return t(s.soFar ? "rules.evidenceSoFar" : "rules.evidence", { k, count: s.n }); };
+  // a question onboarding added (not hers) never says "time to act at…" over a count it has passed
+  const watchLine = (tr: Tracker, k: number) => `${evidence(tr, k)} ${quietContext(tr) ? t("rules.notYourTopic") : t("rules.actAt", { n: tr.threshold, count: tr.periodDays })}`;
   /** the question under the plan; a good one is counted when it's missing */
   // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
@@ -232,8 +239,14 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         const opened = openCards.includes(tr.id);
         const hardYes = tr.problemWhen === "yes";
         return (
-          <div key={tr.id} className="surface rounded-[22px]">
-            <button type="button" aria-expanded={opened} onClick={() => { haptics.tap(); setOpenCards((l) => (l.includes(tr.id) ? [] : [tr.id])); }}
+          <div key={tr.id} className="surface scroll-mt-4 rounded-[22px]">
+            <button type="button" aria-expanded={opened} onClick={(e) => {
+              haptics.tap();
+              const card = e.currentTarget.parentElement;
+              setOpenCards((l) => (l.includes(tr.id) ? [] : [tr.id]));
+              // the opened card comes into view (persona walk: opening the migraine card left it below the fold)
+              if (!opened) window.setTimeout(() => card?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80);
+            }}
               className="flex w-full items-start gap-3 px-4 py-3.5 text-left">
               <img src={mapPic("lighthouse")} alt="" width={30} height={36} className="mt-0.5 h-9 w-[30px] shrink-0 object-contain drop-shadow-[0_0_6px_hsl(44_96%_60%/0.7)]" />
               <span className="min-w-0 flex-1">
@@ -295,8 +308,6 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                         <p className="mt-2 flex items-center gap-2 text-[14px] font-semibold leading-snug text-muted-foreground">
                           <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />{t("rules.testing", { k: experimentDay(causeTest), count: EXPERIMENT_DAYS })}
                         </p>
-                      ) : planKindOf(cause) === "once" ? (
-                        <button type="button" onClick={() => void didOnce(cause, ruleCount(cause, entries))} className={cn(quietBtn, "mt-2.5 w-full")}><Check className="h-4 w-4" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
                       ) : (
                         <button type="button" onClick={() => tryIt(cause, ruleCount(cause, entries))} className={cn(quietBtn, "mt-2.5 w-full")}>{t("rules.tryDaily")}</button>
                       )}
@@ -350,7 +361,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               const ba = beforeAfter(tr, entries);
               return (
                 <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="block w-full px-4 py-3 text-left">
-                  <span className="line-clamp-2 block text-[16px] font-semibold leading-snug">{planOf(tr) || name(tr)}</span>
+                  <span className="line-clamp-2 block text-[16px] font-semibold leading-snug">{label(tr)}</span>
                   {mineTest ? (
                     <span className="mt-0.5 flex items-center gap-1 text-[14px] font-medium leading-snug" style={{ color: TEAL }}>
                       <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />{lineOf(mineTest)}

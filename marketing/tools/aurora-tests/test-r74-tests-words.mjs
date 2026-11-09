@@ -32,11 +32,14 @@ await p.evaluate(async () => {
 await p.reload(); await p.waitForTimeout(2500);
 const openAct = async () => { await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }))); await p.waitForTimeout(2200); };
 await openAct(); await shot("act-lit");
-out.workoutCard = await p.evaluate(() => { const c = [...document.querySelectorAll("[role=dialog] .surface")].find((x) => /3 workouts a week/.test(x.textContent)); return c ? c.innerText.replace(/\s+/g, " ") : null; });
 // Try it for 2 weeks on "3 workouts a week": the question she has, with a goal
-// since v103 the card opens its details first (Nov 9 2026)
-{ const card = p.locator("[role=dialog] .surface", { hasText: "3 workouts a week" }).last();
-  await card.getByRole("button", { name: /Details/ }).first().click(); await p.waitForTimeout(800);
+// since v114 the cards are folded: the headline says what MeMap noticed, the plan shows once opened
+{ const more = p.locator("[role=dialog] button", { hasText: /more rules? (is|are) reached/ });
+  if (await more.count()) { await more.first().click(); await p.waitForTimeout(500); }
+  out.litText = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ").slice(0, 700);
+  const card = p.locator("[role=dialog] .surface", { hasText: /don.t work out/ }).last();
+  await card.locator("button[aria-expanded]").first().click(); await p.waitForTimeout(800);
+  out.workoutCard = (await card.innerText()).replace(/\s+/g, " ");
   await card.getByRole("button", { name: /Try it for 2 weeks/ }).first().click(); }
 await p.waitForTimeout(1500); await shot("goal-start");
 out.goalStart = await p.evaluate(() => document.querySelector("[role=dialog][aria-modal=true]")?.innerText.replace(/\s+/g, " ").slice(0, 400));

@@ -553,6 +553,8 @@ export const DailySession = ({
   // which question the support sheet speaks to, and the calm line after a hurtful "yes"
   const [supportAbout, setSupportAbout] = useState<string | null>(null);
   const [care, setCare] = useState<string | null>(null);
+  // after such a "yes" the evening doesn't celebrate (persona walk, Nov 9 2026: the calm line came up under falling confetti)
+  const hurtTonight = useRef(false);
 
   const handleAnswer = (value: boolean) => {
     if (isAnimatingRef.current || !currentQuestion) return;
@@ -560,7 +562,7 @@ export const DailySession = ({
     // a partner shouted or said something hurtful: one calm line before the next card (persona walk, Nov 9 2026:
     // the deck went straight on to "Great work today!")
     const tid = templateIdOf(currentQuestion.tracker) ?? "";
-    if (value && HOME_HARM_IDS.has(tid)) setCare(tid);
+    if (value && HOME_HARM_IDS.has(tid)) { setCare(tid); hurtTonight.current = true; confetti.reset(); }
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -684,6 +686,7 @@ export const DailySession = ({
   };
 
   const triggerConfetti = () => {
+    if (hurtTonight.current) return;
     confetti({
       particleCount: 150,
       spread: 100,
@@ -1541,7 +1544,8 @@ export const DailySession = ({
             </button>
           )}
           {/* mood questions: a free line to talk to someone (safety round, Nov 7 2026) */}
-          {MOOD_SUPPORT_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
+          {/* not twice: the calm line above already has it */}
+          {!care && MOOD_SUPPORT_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
             <button type="button" onClick={() => { setSupportAbout(templateIdOf(currentQuestion.tracker)); setSupport(true); }} className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground">
               {t("support.chip")}
             </button>

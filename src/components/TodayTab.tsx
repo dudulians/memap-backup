@@ -441,7 +441,10 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
 
       if (isViewingToday) {
         const streak = calculateStreak(trackerId, updatedEntries);
-        if (isStreakMilestone(streak.currentStreak)) {
+        // never over a hard answer (persona walk, Nov 9 2026: confetti fell as "my partner shouted at me" got its "yes")
+        const tr = trackers.find((x) => x.id === trackerId);
+        const hard = !!tr && value === (tr.problemWhen === "yes");
+        if (isStreakMilestone(streak.currentStreak) && !hard) {
           triggerConfetti();
         }
       }

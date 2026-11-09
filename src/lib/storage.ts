@@ -302,10 +302,11 @@ const migrateLegacyAdvice = async (): Promise<void> => {
  *  the new one, once per question; a rule she set herself is never touched, and neither is one she
  *  sets back to the old numbers later. Threshold 0 = no rule (no action point). */
 const RULE_CHANGES: { id: string; was: [number, number]; now: [number, number]; /** false: not for questions she had before the new look */ oldUsers?: false }[] = [
-  // the weekly goals (Nov 8 2026): "12 days without a workout in 30" didn't match "3 workouts a week"
-  { id: "exercised", was: [12, 30], now: [5, 7] },
-  { id: "strength-training", was: [23, 30], now: [6, 7] },
-  { id: "time-in-nature", was: [12, 14], now: [6, 7] },
+  // the weekly goals (Nov 8 2026): "12 days without a workout in 30" didn't match "3 workouts a week";
+  // they light sooner, so not for a question she had before the new look (persona walk, Nov 9 2026)
+  { id: "exercised", was: [12, 30], now: [5, 7], oldUsers: false },
+  { id: "strength-training", was: [23, 30], now: [6, 7], oldUsers: false },
+  { id: "time-in-nature", was: [12, 14], now: [6, 7], oldUsers: false },
   // content review (Nov 9 2026). Harm: a fall, missed medicines, a pet that stops eating or limps
   // can't wait for a month of answers
   { id: "parent-stumbled", was: [2, 30], now: [1, 30] },
