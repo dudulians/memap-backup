@@ -26,12 +26,15 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "ate-by-2pm": { en: "Did you eat a real meal before 2 pm?", ru: "Была нормальная еда до 14:00?" },
   "drank-alcohol": { en: "Did you drink any alcohol?", ru: "Был алкоголь?" },
   "felt-anxious": { en: "Did you feel anxious?", ru: "Было тревожно?" },
-  "felt-depressed": { en: "Did you feel low most of the day?", ru: "Было подавленное настроение?" },
+  // RU says "most of the day" like EN (content review, Nov 9 2026: any low moment counted in RU)
+  "felt-depressed": { en: "Did you feel low most of the day?", ru: "Было подавленное настроение почти весь день?" },
   "felt-lonely": { en: "Did you feel lonely?", ru: "Было одиноко?" },
   // featured
   "felt-close-to-partner": { en: "Did you have a warm moment with your partner?", ru: "Был тёплый момент вдвоём?" },
-  "saw-friends": { en: "Did you spend time with friends?", ru: "Было общение с друзьями?" },
-  "quality-time-kid": { en: "Did you have a real moment with your child?", ru: "Был настоящий момент с ребёнком?" },
+  // "in person", as the title and the tip say (content review, Nov 9 2026)
+  "saw-friends": { en: "Did you see friends in person?", ru: "Была встреча с друзьями вживую?" },
+  // «настоящий момент» reads as "the present moment" (content review, Nov 9 2026)
+  "quality-time-kid": { en: "Did you have a real moment with your child?", ru: "Удалось по-настоящему побыть с ребёнком?" },
   "felt-overwhelmed-parenting": { en: "Did parenting feel like too much?", ru: "Было тяжело с детьми?" },
   headache: { en: "Did you have a headache?", ru: "Болела голова?" },
   exercised: { en: "Did you do a real workout?", ru: "Была тренировка?" },
@@ -43,12 +46,13 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   // onboarding v2 (Nov 5 2026)
   "felt-calm": { en: "Did you feel calm?", ru: "Был спокойный день?" },
   "time-for-myself": { en: "Did you have time for yourself?", ru: "Было время для себя?" },
-  "main-thing-done": { en: "Did you finish your most important task?", ru: "Успели сделать самое важное дело?" },
+  "main-thing-done": { en: "Did you finish your most important task?", ru: "Самое важное дело сделано?" },
   "focus-hour": { en: "Did you work an hour without your phone?", ru: "Был час без телефона?" },
   "woke-at-night": { en: "Did you wake up at night?", ru: "Были ночные пробуждения?" },
-  "ate-late": { en: "Did you eat late in the evening?", ru: "Был поздний плотный ужин?" },
+  // a big meal late, as the question and the tip mean (content review, Nov 9 2026)
+  "ate-late": { en: "Did you have a big dinner late in the evening?", ru: "Был поздний плотный ужин?" },
   "wanted-child": { en: "Did you wish for a child?", ru: "Хотелось ребёнка?" },
-  "thought-about-emigrating": { en: "Did you think about moving abroad?", ru: "Была мысль уехать?" },
+  "thought-about-emigrating": { en: "Did you think about moving abroad?", ru: "Была мысль уехать из страны?" },
   "read-book": { en: "Did you read 10+ pages of a book?", ru: "Удалось прочитать 10+ страниц?" },
   "took-meds": { en: "Did you take your medication?", ru: "Удалось принять лекарства как нужно?" },
   "napped": { en: "Did you nap during the day?", ru: "Был дневной сон?" },
@@ -61,10 +65,27 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "hobby-time": { en: "Did you spend time on your hobby?", ru: "Было время на хобби?" },
   "noisy-neighbors": { en: "Were the neighbors noisy?", ru: "Шумели соседи?" },
   "internet-down": { en: "Did you have internet problems?", ru: "Были проблемы с интернетом?" },
-  "criticized-by-close": { en: "Did someone close hurt you?", ru: "Кто-то близкий задел?" },
+  // criticism too, as the title and the answer words say (content review, Nov 9 2026)
+  "criticized-by-close": { en: "Did someone close criticize or hurt you?", ru: "Кто-то близкий критиковал или задел?" },
   "spoke-local-language": { en: "Did you speak the local language?", ru: "Был разговор на местном языке?" },
   "missed-home-country": { en: "Did you miss home?", ru: "Была тоска по дому?" },
   "felt-foreigner": { en: "Did you feel like you don't belong?", ru: "Было чувство отчуждения?" },
+  // content review (Nov 9 2026): no slashes, brackets, «нём/ней», slang or stiff words; same meaning
+  "partner-irritated-me": { en: "Did your partner annoy you?", ru: "Партнёр раздражал?" },
+  "procrastinated": { en: "Did you put things off most of the day?", ru: "Дела в основном откладывались?" },
+  "boss-was-difficult": { en: "Did your boss put pressure on you or treat you badly?", ru: "Начальник давил или вёл себя неприятно?" },
+  "impulse-spending": { en: "Did you buy something on impulse?", ru: "Была спонтанная покупка?" },
+  "same-wake-time": { en: "Did you get up at about your usual time?", ru: "Подъём был примерно в обычное время?" },
+  "felt-fulfilled-at-work": { en: "Did work feel meaningful or energising?", ru: "Работа радовала или давала силы?" },
+  "cooked-myself": { en: "Did you cook at home instead of ordering or eating out?", ru: "Еда была домашняя, не доставка и не кафе?" },
+  "did-creative-work": { en: "Did you write, draw, play music or make something?", ru: "Было что-то творческое — текст, рисунок, музыка, поделка?" },
+  "stretched": { en: "Did you stretch or do a warm-up?", ru: "Была растяжка или разминка?" },
+  "doomscrolled-news": { en: "Did you spend too long in news or sports feeds?", ru: "Было слишком много новостей или спортивных лент?" },
+  "skipped-meal": { en: "Did you skip a meal or go 5+ hours without food in the day?", ru: "Был пропуск еды или больше 5 часов без еды днём?" },
+  "felt-nauseous": { en: "Did you feel nauseous, not from something you ate?", ru: "Тошнило, но не из-за еды?" },
+  "ate-fast-food": { en: "Did you eat fast food, pastries or white bread?", ru: "Был фастфуд, выпечка или быстрые углеводы?" },
+  "parent-pressured": { en: "Did a parent push their opinion, criticize or hurt you?", ru: "Родитель давил мнением, критиковал или обижал?" },
+  "child-physical-activity": { en: "Did your child run, play or walk outside a lot?", ru: "Ребёнок много двигался — бегал, играл, гулял?" },
 };
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");

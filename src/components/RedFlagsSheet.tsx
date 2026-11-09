@@ -3,7 +3,7 @@
 // number for where she is. Sources: marketing/research/body-proposed-additions.md "Red flags".
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Phone } from "lucide-react";
+import { ChevronDown, ExternalLink, Phone } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { supportLines } from "@/lib/supportLines";
 
@@ -17,15 +17,25 @@ const AREAS: Record<"now" | "today" | "soon", Area[]> = {
   today: ["gut", "gut", "gut", "bladder", "bladder", "period", "head", "breast", "heart"],
   soon: ["gut", "gut", "gut", "general", "bladder", "period", "breast", "general", "heart"],
 };
-/** The areas a question is about. */
+/** The areas a question is about. ("general" signs always show; a question with only
+ *  "general" gets those first and the rest under "Other signs".) The parent questions use
+ *  the same signs: stroke and chest-pain signs read the same for an older parent. */
 const AREAS_OF: Record<string, Area[]> = {
   headache: ["head"], migraine: ["head"], "eye-strain": ["head"], dizzy: ["head", "heart"], "tinnitus-louder": ["head"], "jaw-sore-morning": ["head"],
+  "headache-stopped-me": ["head"], "took-painkiller": ["head"],
   "stomach-issues": ["gut"], "felt-nauseous": ["gut"], heartburn: ["gut", "heart"], bloated: ["gut"], "hard-to-poop": ["gut"], "loose-stool": ["gut"], "pooped-today": ["gut"], "piles-bothered": ["gut"],
-  "heart-palpitations": ["heart"], "back-or-neck-pain": ["heart", "bladder"], "neck-pain": ["heart"],
+  "heart-palpitations": ["heart"], "back-or-neck-pain": ["heart", "bladder"], "neck-pain": ["heart", "head"],
+  "panic-attack": ["heart", "head"], "snored-or-gasped": ["heart"], "felt-fatigued": ["general"],
   "period-symptoms": ["period"], "period-day": ["period"], "heavy-flow-day": ["period"], "pms-signs": ["period", "breast"], "hot-flushes": ["period"], "night-sweats": ["period", "general"], "pill-free-day": ["period"],
-  "bladder-urgency": ["bladder"], "bladder-leak": ["bladder"], "night-pee-2-plus": ["bladder"], "pee-burning": ["bladder"], "pelvic-floor-exercises": ["bladder"],
+  "bladder-urgency": ["bladder"], "bladder-leak": ["bladder"], "night-pee-2-plus": ["bladder"], "pee-burning": ["bladder"],
   "breast-tender": ["breast"],
+  "parent-confused": ["head"], "parent-stumbled": ["head"], "parent-pain": ["heart", "gut"],
 };
+
+/** A card with one chip only (the chip row has no room for two): the free line to talk
+ *  to someone is in this sheet too (content review, Nov 9 2026: a panic attack can also
+ *  be the heart, and it still needs someone to talk to). */
+const TALK_TOO = new Set(["panic-attack"]);
 
 const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "now" | "today" | "soon" }) => items.length === 0 ? null : (
   <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">
@@ -37,8 +47,10 @@ const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "
 );
 
 export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const n = numbers();
+  const lines = supportLines();
+  const talk = !!about && TALK_TOO.has(about);
   const [more, setMore] = useState(false);
   const all = (k: "now" | "today" | "soon") => t(`redFlags.${k}`, { returnObjects: true }) as unknown as string[];
   // the question's own signs first; with nothing to match, everything
@@ -55,6 +67,22 @@ export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose
         <a href={`tel:${n.emergency.split(" ")[0]}`} className="raised-btn mt-4 flex h-[52px] w-full items-center justify-center gap-2">
           <Phone className="h-5 w-5" strokeWidth={2.6} />{t("redFlags.call", { n: n.emergency })}
         </a>
+        {talk && (
+          <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">
+            <p className="text-[17px] font-bold">{t("support.title")}</p>
+            <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.line")}</p>
+            {lines.talk ? (
+              <a href={`tel:${lines.talk.tel}`} className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
+                <Phone className="h-4 w-4" strokeWidth={2.6} />{t("support.callLine", { n: lines.talk.number })}
+              </a>
+            ) : (
+              <a href={lines.web} target="_blank" rel="noreferrer" className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
+                <ExternalLink className="h-4 w-4" strokeWidth={2.6} />{t("support.findLine")}
+              </a>
+            )}
+            {lines.talk && <p className="mt-2 text-center text-[14px] font-semibold text-muted-foreground">{i18n.language?.startsWith("ru") ? lines.talk.nameRu : lines.talk.name}</p>}
+          </div>
+        )}
         <Group tone="now" title={t("redFlags.nowTitle", { n: n.emergency })} items={list("now")} />
         <Group tone="today" title={n.urgent ? t("redFlags.todayTitleN", { n: n.urgent }) : t("redFlags.todayTitle")} items={list("today")} />
         <Group tone="soon" title={t("redFlags.soonTitle")} items={list("soon")} />

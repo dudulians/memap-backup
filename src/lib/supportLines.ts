@@ -46,7 +46,19 @@ export const supportLines = (): SupportLines => {
   return { emergency: "112", web };
 };
 
-/** Mood questions whose card offers "Need to talk?". */
-export const MOOD_SUPPORT_IDS = new Set(["felt-depressed", "lost-interest", "felt-anxious", "panic-attack", "felt-lonely"]);
+/** Mood questions whose card offers "Need to talk?". Content review (Nov 9 2026): also the
+ *  hard partner, parenting, self-worth, homesick and drinking questions; a partner shouting or
+ *  saying hurtful things gets this one too (someone to talk to, the emergency number), since
+ *  the red-flag list is about the body. A card has room for one chip: "panic-attack" moved to
+ *  "Something worrying?" (bodyTemplates RED_FLAG_IDS), whose sheet shows this free line too.
+ *  Never put an id in both sets. */
+export const MOOD_SUPPORT_IDS = new Set([
+  "felt-depressed", "lost-interest", "felt-anxious", "felt-lonely",
+  "partner-raised-voice", "partner-said-hurtful", "thought-about-leaving", "felt-lonely-with-partner", "thought-divorce",
+  "felt-bad-parent", "felt-overwhelmed-parenting",
+  "isolated-at-home", "felt-useless", "felt-not-like-others", "cried-today",
+  "missed-home-country", "felt-foreigner",
+  "drank-alcohol", "alcohol-3-plus",
+]);
 /** Hard on 12 of the last 14 days → suggest a doctor or therapist (when-to-act.md: PHQ "nearly every day"). */
 export const HEAVY_MOOD_IDS = new Set(["felt-depressed", "lost-interest"]);

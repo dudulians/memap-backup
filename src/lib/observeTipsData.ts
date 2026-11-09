@@ -60,7 +60,7 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     },
     "ru": {
       "title": "Дневной свет утром",
-      "line": "Чем больше дневного света в первой половине дня, тем лучше обычно сон ночью. Короткая прогулка поможет это проверить."
+      "line": "У тех, кто получал больше дневного света в первой половине дня, сон ночью обычно был лучше. Короткая прогулка поможет это проверить."
     },
     "source": {
       "name": "Wams et al., Sleep 2017",
@@ -248,11 +248,11 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "walked-a-lot",
     "en": {
       "title": "Around 7,000 steps",
-      "line": "In a large review, about 7,000 steps a day already went with big health gains. Ten thousand isn't a must."
+      "line": "In a large review, about 7,000 steps a day already went with clearly lower health risks. Ten thousand isn't a must."
     },
     "ru": {
       "title": "Около 7000 шагов",
-      "line": "По большому обзору, уже около 7000 шагов в день связаны с заметной пользой для здоровья. Десять тысяч не обязательны."
+      "line": "По большому обзору, уже около 7000 шагов в день связаны с заметно меньшим риском для здоровья. Десять тысяч не обязательны."
     },
     "source": {
       "name": "Ding et al., Lancet Public Health 2025",
@@ -444,7 +444,7 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     },
     "ru": {
       "title": "Ссоры после плохой ночи",
-      "line": "После плохой ночи пары обычно ссорятся чаще и мирятся труднее. Сложный разговор лучше оставить на день после хорошего сна."
+      "line": "После плохой ночи пары обычно ссорятся чаще и мирятся труднее. Сложный разговор может пройти лучше после хорошей ночи."
     },
     "source": {
       "name": "Gordon & Chen, Soc Psychol Personal Sci 2014",
@@ -456,11 +456,11 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "got-help-with-kids",
     "en": {
       "title": "Help with the kids",
-      "line": "Little help with childcare is one of the main roads to parent burnout. See how days with help compare."
+      "line": "Parents who get little help with the kids burn out more often. See how days with help compare."
     },
     "ru": {
       "title": "Помощь с детьми",
-      "line": "Когда с детьми почти никто не помогает, это один из главных путей к родительскому выгоранию. Сравни дни с помощью и без."
+      "line": "Родители, которым почти не помогают с детьми, выгорают чаще. Сравни дни с помощью и без."
     },
     "source": {
       "name": "Mikolajczak et al., Curr Dir Psychol Sci 2023",
@@ -492,7 +492,7 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     },
     "ru": {
       "title": "Шея и мигрень",
-      "line": "Рядом с приступами мигрени люди чаще всего отмечают боль в шее. Она может быть ранним признаком, а не только причиной."
+      "line": "Боль в шее — среди того, что люди чаще всего отмечают рядом с мигренью. Она может быть ранним признаком, а не только причиной."
     },
     "source": {
       "name": "Goadsby et al., Eur J Neurol 2021 (Migraine Buddy data)",
