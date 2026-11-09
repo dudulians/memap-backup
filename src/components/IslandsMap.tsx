@@ -19,7 +19,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
 import { playBloop, playSparkle, preloadSounds } from "@/lib/feedback";
 import { bridgesOf, islandName, isNightMap, mapPic, type Island, type IslandId, type Route, type Weather } from "@/lib/islands";
-import { linkArrow, trackerLookup, linkSentence } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { type GrowthKind, type ItemId } from "@/lib/growth";
 import { IslandPicture } from "@/components/IslandPicture";
 import { islandHsl } from "@/lib/islandColors";
@@ -301,9 +301,9 @@ export const IslandsMap = ({
             <div ref={bubbleRef} role="dialog" className="path-bubble surface absolute z-20 rounded-[20px] px-4 py-3"
               style={{ left: Math.max(8, Math.min(l.bridge.left + l.bridge.w / 2 - 140, width - 288)), top: l.bridge.top + l.bridge.h + 8, width: 280 }}>
               <p className="text-[17px] font-bold leading-snug">
-                {linkSentence(t, l.r, of)}
+                {linkHead(t, l.r, of)}
               </p>
-              <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{t("map.timesOf", { k: l.r.k, count: l.r.n })}</p>
+              <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{linkCount(t, l.r)}</p>
             </div>
           )}
         </div>

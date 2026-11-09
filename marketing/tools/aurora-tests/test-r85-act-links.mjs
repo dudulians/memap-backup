@@ -42,9 +42,10 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.open`] = await p.evaluate(() => { const b = [...document.querySelectorAll("[role=dialog] button[aria-expanded=true]")][0]; return b?.parentElement?.innerText.replace(/\s+/g, " ") ?? "NONE"; });
 }
 const check = {
-  linkShown: /Not for me FINDING When your partner says something hurtful/.test(out["en.open"]),
-  causeOffered: /Possible cause: Hurtful words from partner TASK Talk to your partner and say which words hurt you/.test(out["en.open"]),
-  linkShownRu: /Не моё ВЫВОД Если партнёр говорит что-то обидное/.test(out["ru.open"]) && /Возможная причина: Обидные слова партнёра ЗАДАНИЕ Поговорить с партнёром/.test(out["ru.open"]),
+  // v116: the link in two parts (headline, then the count); v115: no possible cause from a partner's words
+  linkShown: /COMES WITH IT IN YOUR DAYS Hurtful words from partner → nausea the next day (every time — \d+ of \d+|\d+ of \d+ times) · on other days/.test(out["en.open"]),
+  noPartnerCause: !/Possible cause: Hurtful words from partner/.test(out["en.open"]),
+  linkShownRu: /БЫВАЕТ ВМЕСТЕ С ЭТИМ Обидные слова партнёра → тошнота на следующий день (каждый раз — \d+ из \d+|\d+ из \d+ раза?) · в другие дни/.test(out["ru.open"]) && !/Возможная причина: Обидные слова партнёра/.test(out["ru.open"]),
 };
 console.log(JSON.stringify({ check, out, errs }, null, 1));
 await b.close();

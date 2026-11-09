@@ -10,7 +10,7 @@
 // dates, 8 weeks or 6 months, and a finger to read any week.
 import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { linkOf, linkWorthShowing } from "@/lib/islands";
-import { linkArrow, trackerLookup, linkSentence } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
@@ -207,7 +207,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
       .map((c) => {
         const l = linkOf(c);
         const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
-        return { a: l.first, b: l.second, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkSentence(t, route, of) };
+        return { a: l.first, b: l.second, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkHead(t, route, of), count: linkCount(t, route) };
       })
       .slice(0, 5);
   }, [live, mine, entries, focusIds, pair, t]);
@@ -223,7 +223,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
   const [detail, setDetail] = useState<{ ids: string[]; title: string; sub?: string } | null>(() => {
     if (!pair || focusIds?.length !== 2) return null;
     const l = links[0];
-    return l ? { ids: [l.a.id, l.b.id], title: l.arrow } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
+    return l ? { ids: [l.a.id, l.b.id], title: l.arrow, sub: l.count } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
   });
   const [long, setLong] = useState(false);
 
@@ -277,10 +277,9 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
         <div className="mt-3 space-y-3">
           {links.length === 0 && <p className="surface rounded-[22px] px-4 py-4 text-[16px] font-semibold">{t("charts.noLinks")}</p>}
           {links.map((l, i) => {
-            const title = l.arrow;
-            // the count is already in the sentence; the lines are named by the answer they count (QA, Nov 8 2026:
+            // the headline, its count under it; the lines are named by the answer they count (QA, Nov 8 2026:
             // "Slept enough (7+ hours)" under "you usually sleep under 7 hours")
-            const sub = undefined;
+            const title = l.arrow, sub = l.count;
             const series = [
               { color: PAIR_A, values: weekly(l.a, entries), label: hardWord(l.a) },
               { color: PAIR_B, values: weekly(l.b, entries), label: hardWord(l.b) },
@@ -288,6 +287,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
             return (
               <button key={i} type="button" className={card} onClick={() => { haptics.tap(); setDetail({ ids: [l.a.id, l.b.id], title, sub }); }}>
                 <p className="text-[17px] font-bold leading-snug">{title}</p>
+                <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{sub}</p>
                 <Chart series={series} height={96} />
                 <Legend series={series} />
               </button>

@@ -29,11 +29,11 @@ const out = await p.evaluate(async ({ lang, seed }) => {
   }));
   const lt = await import("/src/lib/linkText.ts").catch(() => null);
   const title = (id) => T.find((x) => x.id === id); // linkText takes the question itself (answer phrases, v80)
-  const routes = isl.buildRoutes(T, E, islands).map((r) => ({ a: r.a, b: r.b, k: r.k, n: r.n, other: r.other, text: lt ? lt.linkSentence(i18n.t, r, title) : `${r.first} → ${r.second}`, otherText: lt?.linkOther ? lt.linkOther(i18n.t, r) : "" }));
+  const routes = isl.buildRoutes(T, E, islands).map((r) => ({ a: r.a, b: r.b, k: r.k, n: r.n, other: r.other, text: lt ? lt.linkHead(i18n.t, r, title) : `${r.first} → ${r.second}`, otherText: lt?.linkCount ? lt.linkCount(i18n.t, r) : "" }));
   // every link that may show, in words (the "without" ones too)
   const words = c.computeCorrelations(T.filter((t) => !t.archived), E, 40).filter(isl.linkWorthShowing).map((r) => {
     const l = isl.linkOf(r), rt = { ...l, first: l.first.id, second: l.second.id };
-    return `${lt.linkArrow(i18n.t, rt, title)}  ·  ${lt.linkSentence(i18n.t, rt, title)} ${lt.linkOther(i18n.t, rt)}`;
+    return `${lt.linkHead(i18n.t, rt, title)}  ·  ${lt.linkCount(i18n.t, rt)}`;
   });
   return { all, routes, words };
 }, { lang, seed });

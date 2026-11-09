@@ -9,7 +9,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, rankLinks, type Route } from "@/lib/islands";
 import { ChevronDown } from "lucide-react";
-import { linkOther, linkSentence, trackerLookup } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { markCorrelationSeen } from "@/lib/appRating";
 import { track } from "@/lib/analytics";
@@ -22,7 +22,7 @@ const STRIP_DAYS = 14;
 
 // A finding is a link told in its real answers (linkOf; her note, Nov 6 2026: the old
 // «В дни с «Приступ мигрени» реже было «Спал(а) достаточно (7+ часов)»» "выглядит
-// жутко"): "Short night → migraine the same day — 4 of 5 times", the other days beside it.
+// жутко"): "Short night → migraine the next day", and under it "4 of 5 times · on other days 3 of 24".
 const routeOf = (c: CorrelationResult): Route => { const l = linkOf(c); return { ...l, a: "other", b: "other", first: l.first.id, second: l.second.id }; };
 
 /** A day is a dot, coloured by what the answer means (the one look, Nov 6 2026; her note Nov 8:
@@ -71,7 +71,7 @@ export const FindingsView = ({
   }, [findings.length]);
 
   const of = trackerLookup(trackers);
-  const sentence = (c: CorrelationResult) => linkSentence(t, routeOf(c), of);
+  const sentence = (c: CorrelationResult) => linkHead(t, routeOf(c), of);
 
   if (findings.length === 0) {
     // answered evenings, the same count as the push and the week-2 chip (persona walk, Nov 9 2026)
@@ -143,7 +143,7 @@ const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
         <span className="min-w-0 flex-1">
           {first && <span className="mb-1.5 block text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{t("patterns.findStrongest")}</span>}
           <span className={cn("block font-bold leading-snug tracking-tight", first ? "text-[21px]" : "text-[17px]")}>{sentence}</span>
-          <span className="mt-1 block text-[15px] font-semibold text-muted-foreground">{linkOther(t, r)}</span>
+          <span className="mt-1 block text-[15px] font-semibold text-muted-foreground">{linkCount(t, r)}</span>
         </span>
         <ChevronDown className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} strokeWidth={2.4} />
       </button>

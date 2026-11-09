@@ -15,7 +15,7 @@ import i18n from "@/lib/i18n";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
-import { linkOther, linkSentence } from "@/lib/linkText";
+import { linkCount, linkHead } from "@/lib/linkText";
 import { answerPhrase } from "@/lib/answerPhrases";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -172,14 +172,16 @@ const collect = (r: ReportInput): Data => {
   const pairs = rankLinks(computeCorrelations(qs, inPeriod.filter((e) => ids.has(e.trackerId)), 6).filter(linkWorthShowing));
   return { days, first, last, qs, vals, answeredDays, pairs };
 };
-const linkLine = (c: CorrelationResult, pro: boolean) => {
+/** A link as the app says it (her note, Nov 9 2026: no "When you…" sentences): the headline, and its
+ *  count drawn under it in grey. */
+const linkLine = (c: CorrelationResult) => {
   const l = linkOf(c);
   const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
   const of = (id: string) => (id === l.first.id ? l.first : l.second);
-  // whole sentences for everyone (QA: "Feeling drained → short night" read as a puzzle)
-  void pro;
-  return { a: l.first, b: l.second, text: `${linkSentence(i18n.t, route, of)} ${linkOther(i18n.t, route)}` };
+  return { a: l.first, b: l.second, head: linkHead(i18n.t, route, of), count: linkCount(i18n.t, route) };
 };
+/** The height of the count line under a link's headline. */
+const COUNT_H = 30;
 /** How often, in words. Too few answered days: nothing (a week is the least to say "a week"). */
 const freqOf = (k: number, n: number): string => {
   if (n < 7) return "";
@@ -302,15 +304,17 @@ const statRow = (p: Pages, data: Data, q: Tracker, withDates: boolean) => {
   pg.font = `600 21px ${FONT}`; p.text(fit(pg, freqOf(c.yes, c.ans.length), M + SPAN - COL_F), 21, 600, SOFT, COL_F);
   dl.forEach((l) => { p.y += 27; p.text(l, 19, 500, SOFT, M + 26); });
 };
-const linksList = (p: Pages, data: Data, max: number, pro: boolean) => {
+const linksList = (p: Pages, data: Data, max: number) => {
   const t = i18n.t.bind(i18n), g = p.g;
   if (data.pairs.length === 0) { p.room(60); p.text(t("report.togetherNone"), 23, 600, SOFT); p.y += 20; return; }
   for (const c of data.pairs.slice(0, max)) {
+    const L = linkLine(c);
     g.font = `600 23px ${FONT}`;
-    const lines = wrap(g, linkLine(c, pro).text, SPAN - 40);
-    p.room(lines.length * 33 + 20);
+    const lines = wrap(g, L.head, SPAN - 40);
+    p.room(lines.length * 33 + COUNT_H + 20);
     g.fillStyle = NEUTRAL; g.beginPath(); g.arc(M + 9, p.y - 8, 7, 0, Math.PI * 2); g.fill();
     lines.forEach((l, i) => { p.text(l, 23, 600, INK, M + 32); if (i < lines.length - 1) p.y += 33; });
+    p.y += COUNT_H; p.text(L.count, 20, 500, SOFT, M + 32);
     p.y += 42;
   }
   p.room(50); p.text(t("link.honest"), 20, 500, SOFT); p.y += 10;
@@ -458,7 +462,7 @@ const drawShort = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[
   const LINKS = Math.min(3, data.pairs.length);
   // the links' real height: label, each link's lines, the honest line
   p.g.font = `600 23px ${FONT}`;
-  const linksH = 64 + 46 + (LINKS ? data.pairs.slice(0, LINKS).reduce((h, c) => h + (wrap(p.g, linkLine(c, !me).text, SPAN - 40).length - 1) * 33 + 42, 0) + 50 : 40) + 10;
+  const linksH = 64 + 46 + (LINKS ? data.pairs.slice(0, LINKS).reduce((h, c) => h + (wrap(p.g, linkLine(c).head, SPAN - 40).length - 1) * 33 + COUNT_H + 42, 0) + 50 : 40) + 10;
   // what the numbers say, in plain words; then every question, as many as fit
   findingsBlock(p, data, 5);
   // one page has room for a few: the ones with the most hard days first
@@ -475,7 +479,7 @@ const drawShort = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[
   // what came together, the strongest few
   p.y += 64; p.label(t("report.together")); p.y += 46;
   const keep = p.pages.length;
-  linksList(p, { ...data, pairs: data.pairs.slice(0, LINKS) }, LINKS, !me);
+  linksList(p, { ...data, pairs: data.pairs.slice(0, LINKS) }, LINKS);
   // one page, always: anything that spilled over is dropped
   p.pages.length = keep;
   footers(p, t(me ? "report.me.footer" : "report.pro.footer"));
@@ -558,10 +562,10 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
     const all = data.pairs.slice(0, 12);
     if (all.length === 0) { p.room(60); p.text(t("report.togetherNone"), 23, 600, SOFT); p.y += 20; }
     for (const c of all) {
-      const L = linkLine(c, false);
+      const L = linkLine(c);
       g().font = `600 23px ${FONT}`;
-      const lines = wrap(g(), L.text, SPAN - 150);
-      p.room(Math.max(96, lines.length * 33 + 34));
+      const lines = wrap(g(), L.head, SPAN - 150);
+      p.room(Math.max(96, lines.length * 33 + COUNT_H + 34));
       const top = p.y - 32;
       for (const [k, tr] of [[0, L.a], [1, L.b]] as const) {
         const id = islandOf(tr), im = await load(art(artOf(id, evenings.get(id) ?? 0), false));
@@ -569,10 +573,11 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
       }
       const y0 = p.y;
       lines.forEach((l, i) => { p.y = y0 + i * 33; p.text(l, 23, 600, INK, M + 140); });
-      p.y = Math.max(y0 + (lines.length - 1) * 33 + 46, y0 + 70);
+      p.y += COUNT_H; p.text(L.count, 20, 500, SOFT, M + 140);
+      p.y = Math.max(p.y + 46, y0 + 70);
     }
     p.room(50); p.text(t("link.honest"), 20, 500, SOFT); p.y += 10;
-  } else linksList(p, data, 12, true);
+  } else linksList(p, data, 12);
   notesSection(p, r, data);
   footers(p, t(me ? "report.me.footer" : "report.pro.footer"));
   return p.pages;

@@ -27,7 +27,7 @@ import { ruleCount, ruleState, quietContext, type RuleState } from "@/lib/lighth
 import { ruleKeyOf } from "@/lib/rules";
 import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
-import { linkSentence, trackerLookup } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { toast } from "@/hooks/use-toast";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
@@ -376,11 +376,15 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               return (
                 <div className="mt-4 border-t border-foreground/[0.07] pt-3.5">
                   <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.comesWith")}</p>
-                  {linksInto(tr).map((l) => (
-                    <p key={l.first.id} className="mt-1 text-[15px] font-semibold leading-snug">
-                      {linkSentence(t, { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n }, of)}
-                    </p>
-                  ))}
+                  {linksInto(tr).map((l) => {
+                    const r = { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, other: l.other };
+                    return (
+                      <div key={l.first.id} className="mt-1.5">
+                        <p className="text-[15px] font-semibold leading-snug">{linkHead(t, r, of)}</p>
+                        <p className="text-[13px] font-medium text-muted-foreground">{linkCount(t, r)}</p>
+                      </div>
+                    );
+                  })}
                   {cause && (
                     <>
                       <p className="mt-3 text-[14px] font-semibold text-muted-foreground">{t("rules.causeHead")} <span className="font-bold text-foreground">{answerPhrase(t, cause, cause.problemWhen === "yes")}</span></p>

@@ -10,7 +10,6 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, mapPic, type Island, type Route } from "@/lib/islands";
-import { linkArrow, trackerLookup, linkSentence } from "@/lib/linkText";
 import { countedDays } from "@/lib/pathSteps";
 import { isoLocal } from "@/lib/doors";
 import { haptics } from "@/lib/haptics";

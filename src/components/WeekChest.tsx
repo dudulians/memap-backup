@@ -9,7 +9,7 @@
 // numbers — then what grew in her world since the
 // last chest (a house, a bridge, a special item…), next week's mission and
 // a new title.
-import { linkSentence, trackerLookup } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -149,16 +149,16 @@ export const WeekChest = ({
       ...c.rows.map((r) => ({ label: label(r), k: r.k, n: r.n, days: r.days, hardWhen: r.hardWhen })),
     ];
     const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
-    const insight = c.insight
-      ? linkSentence(t, { first: c.insight.a, second: c.insight.b, firstYes: c.insight.firstYes ?? true, secondYes: c.insight.secondYes ?? true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n }, trackerLookup(trackers))
-      : undefined;
+    // the strongest link as a headline, its count under it (her note, Nov 9 2026: no "When you…" sentences)
+    const route = c.insight ? { first: c.insight.a, second: c.insight.b, firstYes: c.insight.firstYes ?? true, secondYes: c.insight.secondYes ?? true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n, other: { k: c.insight.otherK, n: c.insight.otherN } } : null;
+    const insight = route ? linkHead(t, route, trackerLookup(trackers)) : undefined;
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),
       lines,
       fact: c.fact ? factLine(t, c.fact, c.main ? label(c.main) : undefined) : undefined,
       reward: rewardFor(week),
       insight,
-      insightOther: c.insight ? t("game.withoutA", { k: c.insight.otherK, count: c.insight.otherN }) : undefined,
+      insightOther: route ? linkCount(t, route) : undefined,
       insightEarly: !!c.insight && c.insight.n < 6,
       title: titleFor(week),
       world,

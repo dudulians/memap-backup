@@ -25,7 +25,7 @@ for (const lang of ["en", "ru"]) {
     const R = (f, fy, s, sy, nextDay) => ({ first: `1793-${f}-0`, second: `1793-${s}-0`, firstYes: fy, secondYes: sy, nextDay, k: 4, n: 5, other: { k: 3, n: 24 } });
     const routes = [R("slept-enough", false, "migraine", true, false), R("coffee-late", true, "slept-enough", false, true), R("outside-30min", false, "felt-fatigued", true, true), R("felt-anxious", true, "slept-enough", false, false), R("argued-with-partner", true, "wanted-leave-job", true, false), { ...R("argued-with-partner", true, "slept-enough", true, false), k: 6, n: 10 }, { ...R("coffee-late", true, "migraine", true, true), k: 9, n: 10 }];
     routes.push({ ...R("x", false, "migraine", true, false), first: own.id });
-    return { missing, total: all.length, lines: routes.map((r) => `${T.linkArrow(t, r, of)}  |  ${T.linkSentence(t, r, of)} ${T.linkOther(t, r)}`) };
+    return { missing, total: all.length, lines: routes.map((r) => `${T.linkHead(t, r, of)}  |  ${T.linkCount(t, r)}`) };
   });
   await ctx.close();
 }

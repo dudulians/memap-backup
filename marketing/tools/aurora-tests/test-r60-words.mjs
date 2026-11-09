@@ -20,7 +20,7 @@ for (const lang of ["en", "ru"]) {
     const mig = { id: "1793-migraine-0", title: "Migraine attack", problemWhen: "yes" };
     const of = T.trackerLookup([dog, mig]);
     const r = { first: "x-own", second: "1793-migraine-0", firstYes: false, secondYes: true, nextDay: false, k: 9, n: 10, other: { k: 2, n: 20 } };
-    return [T.linkArrow(t, r, of), T.linkSentence(t, r, of)];
+    return [T.linkHead(t, r, of), T.linkCount(t, r)];
   });
   // the form
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } })));

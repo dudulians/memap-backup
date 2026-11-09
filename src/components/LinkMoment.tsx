@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { buildIslands, buildRoutes, mapPicFor, type Route } from "@/lib/islands";
-import { linkArrow, linkSentence } from "@/lib/linkText";
+import { linkCount, linkHead } from "@/lib/linkText";
 import { firstLinkState, markFirstLinkSeen } from "@/lib/firstLink";
 import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import { track } from "@/lib/analytics";
@@ -79,7 +79,7 @@ export const LinkMoment = () => {
       // stands on the island (the first-link treasure) glows instead of a second one
       document.documentElement.classList.add("link-moment-on");
       ea.querySelector(".it-camera")?.classList.add("link-moment-new");
-      setShown({ route, titles: [linkArrow(t, route, of), linkSentence(t, route, of)], rect: r, a: centre(ea), b: centre(eb), aRect: ea.getBoundingClientRect() });
+      setShown({ route, titles: [linkHead(t, route, of), linkCount(t, route)], rect: r, a: centre(ea), b: centre(eb), aRect: ea.getBoundingClientRect() });
       await frames(2);
       setLit(true);
       haptics.success();
@@ -115,7 +115,7 @@ export const LinkMoment = () => {
   const place: React.CSSProperties = below >= cardH ? { top: hole.y + hole.h + GAP }
     : above >= cardH ? { bottom: vh - hole.y + GAP }
     : below >= above ? { bottom: BOTTOM } : { top: TOP };
-  const sentence = shown.titles[1];
+  const [head, count] = shown.titles;
 
   return createPortal(
     <div className="tour fixed inset-0 z-[90]" role="dialog" aria-modal="true" aria-label={t("firstLink.title")}>
@@ -141,7 +141,8 @@ export const LinkMoment = () => {
       <div className="fixed left-4 right-4 mx-auto max-w-[380px]" style={place}>
         <div ref={cardRef} className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", !cardOn && "is-moving")}>
           <p className="text-[24px] font-bold leading-tight tracking-tight">{t("firstLink.title")}</p>
-          <p className="mt-1.5 text-[16px] font-semibold leading-snug text-muted-foreground">{sentence}</p>
+          <p className="mt-1.5 text-[17px] font-bold leading-snug">{head}</p>
+          <p className="mt-0.5 text-[15px] font-medium leading-snug text-muted-foreground">{count}</p>
           <div className="mt-3 flex items-center gap-2.5 rounded-[16px] bg-foreground/[0.035] px-3 py-2">
             <img aria-hidden="true" className="h-9 w-9 object-contain" src={mapPicFor("camera", false)} alt="" />
             <span className="text-[15px] font-bold">{t("firstLink.found")}</span>

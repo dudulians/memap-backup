@@ -12,7 +12,7 @@
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
-import { linkArrow, trackerLookup, type TrackerOf, linkSentence, linkOther } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup, type TrackerOf } from "@/lib/linkText";
 import { LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
@@ -50,8 +50,8 @@ const LinkLine = ({ r, of }: { r: Route; of: TrackerOf }) => {
     <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-link", { detail: { a: r.a, b: r.b } })); }}
       className="surface flex w-full items-center gap-2 rounded-[20px] px-4 py-3 text-left active:scale-[0.99] transition-transform">
       <span className="min-w-0 flex-1">
-        <span className="block text-[16px] font-bold leading-snug">{linkSentence(t, r, of)}</span>
-        <span className="mt-0.5 block text-[14px] font-medium text-muted-foreground">{linkOther(t, r)}</span>
+        <span className="block text-[16px] font-bold leading-snug">{linkHead(t, r, of)}</span>
+        <span className="mt-0.5 block text-[14px] font-medium text-muted-foreground">{linkCount(t, r)}</span>
       </span>
       <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
     </button>

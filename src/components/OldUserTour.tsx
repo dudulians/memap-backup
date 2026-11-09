@@ -14,7 +14,7 @@ import { buildIslands, buildRoutes, islandName, mapPic, mapPicFor, type Island, 
 import { islandEvenings } from "@/lib/globeArt";
 import { countedDays } from "@/lib/pathSteps";
 import { litTrackers } from "@/lib/lighthouses";
-import { linkSentence, trackerLookup } from "@/lib/linkText";
+import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { AVATARS, DEFAULT_AVATAR, avatarUrl, getAvatar, setAvatar } from "@/lib/avatar";
 import { PlanetGlobe } from "./PlanetGlobe";
 import type { Tracker } from "@/types/tracker";
@@ -115,7 +115,8 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
               {route && (
                 <div className="surface mt-3 rounded-[18px] px-4 py-3">
                   <p className="text-[14px] font-semibold text-muted-foreground">{t("upgrade.linkHead")}</p>
-                  <p className="mt-0.5 text-[16px] font-bold leading-snug">{linkSentence(t, route, trackerLookup(data.trackers))}</p>
+                  <p className="mt-0.5 text-[16px] font-bold leading-snug">{linkHead(t, route, trackerLookup(data.trackers))}</p>
+                  <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{linkCount(t, route)}</p>
                 </div>
               )}
               <div className="min-h-6 flex-1" />
