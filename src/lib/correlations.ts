@@ -111,6 +111,8 @@ const NEUTRAL_TEMPLATE_IDS = new Set<string>([
   "missed-ex",
   "thought-about-going-back",
   "thought-third-country",
+  // a bank, a doctor or an office is an errand, not a hard day (content review, Nov 9 2026)
+  "local-institution-contact",
 ]);
 
 export type TrackerPolarity = "good" | "bad" | "neutral";
