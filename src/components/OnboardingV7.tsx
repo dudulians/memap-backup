@@ -286,8 +286,14 @@ export const OwnV7 = ({ onBack, onDone, initial = "", progress = [1, 5] }: { onB
 };
 
 // --- 3. your daily questions --------------------------------------------------------
-/** A few more ideas beside a door's own three (unticked). */
-const EXTRA: Partial<Record<DoorId, string>> = { migraine: "screens-before-bed", sleep: "felt-stressed", energy: "coffee-late", stress: "meditated", period: "coffee-late", quit: "felt-stressed", move: "felt-stressed" };
+/** A few more ideas beside a door's own three (unticked). Stress: 4+ coffees, not "a pause to
+ *  breathe" — breathing is mixed evidence (no better than placebo breathing in 2 trials) and on
+ *  day one it read as advice; high caffeine is the clear one (research §5, review Nov 9 2026). */
+const EXTRA: Partial<Record<DoorId, string>> = { migraine: "screens-before-bed", sleep: "felt-stressed", energy: "coffee-late", stress: "caffeine-4-plus", period: "coffee-late", quit: "felt-stressed", move: "felt-stressed" };
+/** Two topics that ask the same thing in other words. When both are picked, the first one keeps
+ *  its main question and the other's is dropped, so the evening never asks it twice (review Nov 9 2026). */
+const TWINS: [DoorId, DoorId][] = [["closeness", "together"], ["kidTime", "brightMoment"], ["energy", "fatigue"]];
+const isTwin = (a: DoorId, b: DoorId) => TWINS.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
 const SIMPLE = { main: "had-energy", around: ["slept-enough", "outside-30min", "felt-stressed"] };
 const OWN_AROUND = ["slept-enough", "felt-stressed", "outside-30min"];
 const islandOfTpl = (id: string): IslandId => { const f = findTemplate(id); return f ? islandOf({ id: "x", title: f.template.title, category: f.template.category, cluster: f.clusterId } as Tracker) : "other"; };
@@ -301,16 +307,23 @@ const planOf = (pick: V7Pick) => {
   // one main question per topic (two topics asking the same thing share it), then her own
   const mains: MainQ[] = [];
   if (pick.kind === "simple") mains.push({ key: SIMPLE.main, tpl: SIMPLE.main, base: qOf(SIMPLE.main), door: null });
-  for (const d of doors) if (!mains.some((m) => m.tpl === d.mainTemplateId)) mains.push({ key: d.id, tpl: d.mainTemplateId, base: qOf(d.mainTemplateId), door: d });
+  // a twin's main question (closeness + together …) is dropped and never comes back as one around
+  const dropped: string[] = [];
+  for (const d of doors) {
+    if (mains.some((m) => m.tpl === d.mainTemplateId)) continue;
+    if (mains.some((m) => m.door && isTwin(m.door.id, d.id))) { dropped.push(d.mainTemplateId); continue; }
+    mains.push({ key: d.id, tpl: d.mainTemplateId, base: qOf(d.mainTemplateId), door: d });
+  }
   const own = pick.kind === "own" ? pick.text : pick.kind === "door" ? pick.own : undefined;
   if (own) mains.push({ key: "own", tpl: null, base: own, door: null });
   const mainTpls = mains.flatMap((m) => (m.tpl ? [m.tpl] : []));
+  const notAround = [...mainTpls, ...dropped];
   // the ones around them: every topic's own, in the order picked, no repeats,
   // taken in turns (each topic's first, then each one's second…), so every topic has its own
   const turns: string[] = [];
-  for (let k = 0; k < 3; k++) for (const d of doors) { const id = d.contextTemplateIds[k]; if (!turns.includes(id) && !mainTpls.includes(id)) turns.push(id); }
+  for (let k = 0; k < 3; k++) for (const d of doors) { const id = d.contextTemplateIds[k]; if (!turns.includes(id) && !notAround.includes(id)) turns.push(id); }
   const aroundTpls = pick.kind === "door"
-    ? [...new Set([...turns, ...doors.flatMap((d) => (EXTRA[d.id] ? [EXTRA[d.id]!] : []))])].filter((id) => !mainTpls.includes(id)).slice(0, 8)
+    ? [...new Set([...turns, ...doors.flatMap((d) => (EXTRA[d.id] ? [EXTRA[d.id]!] : []))])].filter((id) => !notAround.includes(id)).slice(0, 8)
     : pick.kind === "simple" ? SIMPLE.around : OWN_AROUND;
   // ticked to start: a topic's three (one topic), one more with each topic added
   const ticked = pick.kind === "door" ? turns.slice(0, 2 + doors.length) : aroundTpls;
