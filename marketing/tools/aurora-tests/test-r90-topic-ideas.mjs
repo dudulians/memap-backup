@@ -70,10 +70,14 @@ for (const lang of ["en", "ru"]) {
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   // the praise card: a daily task → Try it for 2 weeks → the test sheet
   await p.locator("button[aria-expanded]").filter({ hasText: /compare|сравнива/i }).first().click(); await p.waitForTimeout(500);
-  await p.locator("button[aria-expanded]").filter({ hasText: /praise|похвал|признан/i }).first().click(); await p.waitForTimeout(700);
-  await p.getByRole("button", { name: /Try it for 2 weeks|Попробовать 2 недели/ }).first().click(); await p.waitForTimeout(1300);
-  await shot("test-pick");
-  out[`${lang} testPick`] = (await p.locator("[aria-modal=true]").last().innerText()).replace(/\s+/g, " ").slice(0, 700);
+  // since the content review (Nov 9 2026) "no praise" lights only at 25 of 30: the card may not be lit
+  const praise = p.locator("button[aria-expanded]").filter({ hasText: /praise|похвал|признан/i });
+  if (await praise.count()) {
+    await praise.first().click(); await p.waitForTimeout(700);
+    await p.getByRole("button", { name: /Try it for 2 weeks|Попробовать 2 недели/ }).first().click(); await p.waitForTimeout(1300);
+    await shot("test-pick");
+    out[`${lang} testPick`] = (await p.locator("[aria-modal=true]").last().innerText()).replace(/\s+/g, " ").slice(0, 700);
+  } else out[`${lang} testPick`] = "praise card not lit (rule 25 of 30)";
   await ctx.close();
 }
 console.log(JSON.stringify({ out, errs }, null, 1));
