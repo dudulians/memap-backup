@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { talkNoteKey } from "@/lib/supportLines";
 
 /** What each sign is about, in the order of the lists in the locales (now / today / soon). */
 type Area = "heart" | "gut" | "head" | "bladder" | "period" | "breast" | "general" | "sleep" | "fall" | "confusion";
@@ -65,7 +64,7 @@ export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose
           <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">
             <p className="text-[17px] font-bold">{t("support.title")}</p>
             <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.line")}</p>
-            <p className="mt-2 text-[14px] font-semibold leading-snug text-muted-foreground">{t(talkNoteKey() ?? "support.findTalk")}</p>
+            <p className="mt-2 text-[14px] font-semibold leading-snug text-muted-foreground">{t("support.findTalk")}</p>
           </div>
         )}
         <Group tone="now" title={t("redFlags.nowTitle")} items={list("now")} />

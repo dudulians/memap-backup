@@ -91,7 +91,7 @@ for (let i = 0; i < 12; i++) {
   if (hurt) {
     await shot("hurt-care");
     out.careLine = await p.locator("[role=status]").first().innerText().catch(() => null);
-    out.talkButtons = await p.locator("[role=dialog] button", { hasText: /Need to talk\?/ }).count();
+    out.talkButtons = await p.locator("[role=dialog] button", { hasText: /^Talk to someone$/ }).count();
   }
 }
 await p.waitForTimeout(1500); await shot("evening-end");

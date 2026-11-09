@@ -28,7 +28,7 @@ for (const [tz, lang] of [["Asia/Dubai", "en"], ["Europe/Berlin", "en"], ["Europ
   await p.locator(".path-start").first().click(); await p.waitForTimeout(1500);
   const tag = tz.split("/")[1];
   for (let k = 0; k < 3; k++) {
-    const chip = p.getByRole("button", { name: /Need to talk\?|Хочется поговорить\?/ });
+    const chip = p.getByRole("button", { name: /Talk to someone|Поговорить с кем-то/ });
     if (await chip.count()) {
       out[`${tag} chip`] = true;
       await chip.first().click(); await p.waitForTimeout(1200);

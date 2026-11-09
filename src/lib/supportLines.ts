@@ -44,10 +44,6 @@ export const phoneCountry = (): string | null => {
 
 /** NO MORE directory pages (checked Nov 9 2026); other countries get the directory's start page. */
 const NO_MORE: Record<string, string> = { ru: "russia", ae: "united-arab-emirates", gb: "united-kingdom", us: "usa", de: "germany", ca: "canada", ie: "ireland", au: "australia" };
-/** Where the directory has no general line for adults (review, Nov 9 2026: Find A Helpline lists only a women's and
- *  a children's line for the UAE): a line named in words, no number (Gulf News, The National, ExpatWoman: the UAE
- *  National Mental Support Line, run by the National Programme for Happiness and Wellbeing). */
-export const talkNoteKey = (): string | null => (phoneCountry() === "ae" ? "support.noteAe" : null);
 
 export const helpLinks = (lang?: string): HelpLinks => {
   const c = phoneCountry();

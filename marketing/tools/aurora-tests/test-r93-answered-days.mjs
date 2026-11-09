@@ -58,7 +58,7 @@ if (out.voiceCardFound) {
   out.voiceNoCause = !/Possible cause|Comes with it/i.test(v);
   out.voiceNoTest = !/Try it for 2 weeks/.test(v);
   // Need to talk?
-  await voiceCard.getByRole("button", { name: /Need to talk\?/ }).click(); await p.waitForTimeout(1000);
+  await voiceCard.getByRole("button", { name: /^Talk to someone$/ }).click(); await p.waitForTimeout(1000);
   await shot("voice-support");
   const sheet = p.locator("[role=dialog]").last();
   out.supportText = (await sheet.innerText()).replace(/\s+/g, " ").slice(0, 700);

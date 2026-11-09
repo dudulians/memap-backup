@@ -9,13 +9,12 @@
 import { useTranslation } from "react-i18next";
 import { ExternalLink, FileText } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { HOME_HARM_IDS, helpLinks, talkNoteKey } from "@/lib/supportLines";
+import { HOME_HARM_IDS, helpLinks } from "@/lib/supportLines";
 
 export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
   const { t, i18n } = useTranslation();
   const links = helpLinks(i18n.language);
   const home = !!about && HOME_HARM_IDS.has(about);
-  const note = talkNoteKey();
   const report = () => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent("memap-doctor-report")), 320); };
   return (
     <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(); }} className="h-[80vh]" ariaTitle={t("support.title")}>
@@ -37,7 +36,7 @@ export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose:
         {/* someone to talk to, in words, on both versions: no directory link (Nov 9 2026) */}
         <div className={(home ? "mt-3" : "mt-4") + " surface shrink-0 rounded-[20px] px-4 py-3.5"}>
           {/* the afraid-at-home card above already says a helpline can help: here only the people close by */}
-          {!home && <p className="mb-1.5 text-[15px] font-semibold leading-snug">{t(note ?? "support.findTalk")}</p>}
+          {!home && <p className="mb-1.5 text-[15px] font-semibold leading-snug">{t("support.findTalk")}</p>}
           <p className={home ? "text-[15px] font-semibold leading-snug" : "text-[14px] font-semibold leading-snug text-muted-foreground"}>{t("support.talkLine")}</p>
         </div>
 

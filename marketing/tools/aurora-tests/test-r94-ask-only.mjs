@@ -69,7 +69,7 @@ await p.evaluate(async () => {
 });
 await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-session"))); await p.waitForTimeout(1500);
 for (let k = 0; k < 4; k++) {
-  const chip = p.getByRole("button", { name: /Need to talk\?/ });
+  const chip = p.getByRole("button", { name: /^Talk to someone$/ });
   if (await chip.count()) { await chip.first().click(); await p.waitForTimeout(1000); break; }
   const no = p.getByRole("button", { name: /^No$/ }).last(); if (!(await no.count())) break;
   await no.click(); await p.waitForTimeout(800);

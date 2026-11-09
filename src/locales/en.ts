@@ -909,7 +909,7 @@ const en = {
   },
   // "Talk to someone" (safety round, Nov 7 2026)
   support: {
-    chip: "Need to talk?",
+    chip: "Talk to someone",
     title: "Talk to someone",
     line: "Hard most days? You don't have to carry it alone.",
     talkTitle: "Someone to talk to",
@@ -923,7 +923,6 @@ const en = {
     careLine: "That sounds hard. It's not your fault, and you don't have to carry it alone.",
     homeFind: "A free, confidential helpline can listen and help you think about what to do. You can call even if it seems small.",
     homePrivate: "Call when you're on your own. After, you can delete the call from your call list and this page from your browser history.",
-    noteAe: "In the UAE there is a free National Mental Support Line. Search for it by name.",
     doctorTitle: "A doctor or therapist can help",
     doctorLine: "Show them your days. It makes the first talk easier.",
     report: "Make a report",
