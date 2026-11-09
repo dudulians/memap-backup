@@ -39,7 +39,8 @@ export interface Door {
   /** Three library templates asked about the same day. Each must have
    *  a `doors.context.<id>` entry in the locales. */
   contextTemplateIds: [string, string, string];
-  /** Reason chip ids, labels under `doors.reasons.<id>`. */
+  /** Reason chip ids, labels under `doors.reasons.<id>`. Empty = no chip row
+   *  (a row with a lone "Don't know" looked broken, review Nov 9 2026). */
   reasons: string[];
   icon: LucideIcon;
   /** Tailwind text colour class for the door icon. */
@@ -50,6 +51,21 @@ export interface Door {
    *  to "Slept enough", so the Bad nights door logs no. */
   mainValue?: boolean;
 }
+
+/** Reason chips for "more good days" topics. A topic never offers the chip that only
+ *  repeats itself (review Nov 9 2026: "What helped you sleep well? — Slept well"). */
+const GOOD_REASONS = ["sleptWell", "moved", "outside", "ateWell", "goodPeople", "rest", "sun", "dontKnow"];
+const SAME_AS_TOPIC: Partial<Record<DoorId, string[]>> = {
+  goodSleep: ["sleptWell"],
+  movement: ["moved"],
+  steps: ["moved"],
+  nature: ["outside"],
+  daylight: ["outside", "sun"],
+  veggies: ["ateWell"],
+  cooking: ["ateWell"],
+  friends: ["goodPeople"],
+};
+const goodReasons = (id: DoorId): string[] => GOOD_REASONS.filter((r) => !SAME_AS_TOPIC[id]?.includes(r));
 
 export const DOORS: Door[] = [
   {
@@ -121,11 +137,12 @@ export const DOORS: Door[] = [
     iconClass: "text-[hsl(232_62%_62%)]",
   },
   // onboarding v7 (Nov 6 2026): cycle and stress among the first five; a thought
-  // that keeps coming back (her original idea: "правда ли я этого хочу?") — no right answer
-  { id: "period", branch: "pain", kind: "event", mainTemplateId: "period-symptoms", contextTemplateIds: ["period-day", "felt-stressed", "slept-enough"], reasons: ["dontKnow"], icon: Droplet, iconClass: "text-[hsl(340_62%_60%)]" },
-  { id: "stress", branch: "pain", kind: "event", mainTemplateId: "felt-stressed", contextTemplateIds: ["slept-enough", "worked-overtime", "exercised"], reasons: ["dontKnow"], icon: Wind, iconClass: "text-[hsl(262_48%_62%)]" },
-  { id: "quit", branch: "thought", kind: "event", mainTemplateId: "wanted-leave-job", contextTemplateIds: ["slept-enough", "burned-out-after-work", "boss-was-difficult"], reasons: ["dontKnow"], icon: Briefcase, iconClass: "text-[hsl(212_60%_56%)]" },
-  { id: "move", branch: "thought", kind: "event", mainTemplateId: "thought-about-emigrating", contextTemplateIds: ["slept-enough", "felt-lonely", "burned-out-after-work"], reasons: ["dontKnow"], icon: Plane, iconClass: "text-[hsl(36_86%_52%)]" },
+  // that keeps coming back (her original idea: "правда ли я этого хочу?") — no right answer.
+  // No reason chips here (only "Don't know" was there).
+  { id: "period", branch: "pain", kind: "event", mainTemplateId: "period-symptoms", contextTemplateIds: ["period-day", "felt-stressed", "slept-enough"], reasons: [], icon: Droplet, iconClass: "text-[hsl(340_62%_60%)]" },
+  { id: "stress", branch: "pain", kind: "event", mainTemplateId: "felt-stressed", contextTemplateIds: ["slept-enough", "worked-overtime", "exercised"], reasons: [], icon: Wind, iconClass: "text-[hsl(262_48%_62%)]" },
+  { id: "quit", branch: "thought", kind: "event", mainTemplateId: "wanted-leave-job", contextTemplateIds: ["slept-enough", "burned-out-after-work", "boss-was-difficult"], reasons: [], icon: Briefcase, iconClass: "text-[hsl(212_60%_56%)]" },
+  { id: "move", branch: "thought", kind: "event", mainTemplateId: "thought-about-emigrating", contextTemplateIds: ["slept-enough", "felt-lonely", "burned-out-after-work"], reasons: [], icon: Plane, iconClass: "text-[hsl(36_86%_52%)]" },
   // "I want more good days" (onboarding v2): the good question is the main one
   ...([
     ["energy", "had-energy", ["slept-enough", "outside-30min", "exercised"], Zap, "text-[hsl(36_86%_52%)]"],
@@ -137,7 +154,7 @@ export const DOORS: Door[] = [
     ["joy", "felt-happy", ["saw-friends", "outside-30min", "did-creative-work"], Sparkles, "text-[hsl(290_40%_60%)]"],
   ] as const).map(([id, main, ctx, icon, iconClass]): Door => ({
     id, branch: "good", kind: "event", mainTemplateId: main, contextTemplateIds: [...ctx] as [string, string, string],
-    reasons: ["sleptWell", "moved", "outside", "ateWell", "goodPeople", "rest", "sun", "dontKnow"], icon, iconClass,
+    reasons: goodReasons(id), icon, iconClass,
   })),
   // Nov 8 2026: more topics, each a library question and three asked around it
   ...([
@@ -186,7 +203,8 @@ export const DOORS: Door[] = [
     ["phoneFree", "good", "phone-free-morning", ["felt-calm", "main-thing-done", "slept-enough"]],
   ] as const).map(([id, branch, main, ctx]): Door => ({
     id, branch, kind: "event", mainTemplateId: main, contextTemplateIds: [...ctx] as [string, string, string],
-    reasons: branch === "good" ? ["sleptWell", "moved", "outside", "ateWell", "goodPeople", "rest", "sun", "dontKnow"] : ["dontKnow"],
+    // good topics: the shared chips minus their own; the rest had only "Don't know" — no chip row
+    reasons: branch === "good" ? goodReasons(id) : [],
     icon: branch === "good" ? Sparkles : Activity, iconClass: "text-[hsl(var(--coin-teal))]",
   })),
 ];
