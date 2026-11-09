@@ -46,7 +46,7 @@ for (const lang of ["en", "ru"]) {
   await p.waitForTimeout(2200); await shot("links");
   const links = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.links`] = links.slice(0, 900);
-  ok(`${lang}.links: forced yes → headache`, lang === "en" ? /Forced yes → headache the next day \d+ of \d+ times · on other days \d+ of \d+/.test(links) : /Согласие через силу → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни \d+ из \d+/.test(links), links.slice(0, 300));
+  ok(`${lang}.links: forced yes → headache`, lang === "en" ? /Unwanted yes → headache the next day \d+ of \d+ times · on other days \d+ of \d+/.test(links) : /Согласие против желания → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни \d+ из \d+/.test(links), links.slice(0, 300));
   ok(`${lang}.links: same day, every time`, lang === "en" ? /Short night and headache often come together every time — (\d+) of \1/.test(links) : /Короткая ночь и головная боль часто бывают вместе каждый раз — (\d+) из \1/.test(links));
   ok(`${lang}.links: no sentence`, !SENTENCE[lang].test(links));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
@@ -80,7 +80,7 @@ for (const lang of ["en", "ru"]) {
   const comes = await p.evaluate(() => { const h = [...document.querySelectorAll("[role=dialog] p")].find((x) => /Comes with it|Бывает вместе с этим/.test(x.textContent)); h?.scrollIntoView({ block: "center" }); return h ? h.parentElement.innerText.replace(/\s+/g, " ") : ""; });
   await shot("act-comes-with");
   out[`${lang}.act`] = comes.slice(0, 600);
-  ok(`${lang}.act: comes with, in two parts`, lang === "en" ? /Forced yes → headache the next day \d+ of \d+ times · on other days/.test(comes) : /Согласие через силу → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни/.test(comes), comes.slice(0, 300));
+  ok(`${lang}.act: comes with, in two parts`, lang === "en" ? /Unwanted yes → headache the next day \d+ of \d+ times · on other days/.test(comes) : /Согласие против желания → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни/.test(comes), comes.slice(0, 300));
   ok(`${lang}.act: no sentence`, comes.length > 0 && !SENTENCE[lang].test(comes));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
 
