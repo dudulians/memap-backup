@@ -9,7 +9,7 @@
 // something. Counts only, never a cause. Stored on the phone.
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, isoLocal } from "@/lib/doors";
-import { getRelatedTemplateIds, getTemplatesByIds, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
+import { getSuspectTemplateIds, getTemplatesByIds, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import type { LifeStreamTemplate } from "@/lib/lifeStreams";
 import { track } from "@/lib/analytics";
 
@@ -89,7 +89,9 @@ export const suspectsFor = (target: Tracker, trackers: Tracker[]): Suspect[] => 
   const tid = matchTemplateIdByTitle(target.title);
   if (!tid) return act.slice(0, 5).map((tracker) => ({ kind: "tracked" as const, tracker }));
   const byTemplate = new Map(act.map((t) => [matchTemplateIdByTitle(t.title), t]));
-  const tpls = getTemplatesByIds(getRelatedTemplateIds([tid])).filter((tpl) => !tpl.sensitive && tpl.id !== tid);
+  // what may lead to THIS question, in its own order (content review, Nov 9 2026: lists mixed in
+  // questions that only follow it, e.g. a short night as a suspect for itself)
+  const tpls = getTemplatesByIds(getSuspectTemplateIds(tid)).filter((tpl) => !tpl.sensitive && tpl.id !== tid);
   const tracked = tpls.filter((tpl) => byTemplate.has(tpl.id)).map((tpl) => ({ kind: "tracked" as const, tracker: byTemplate.get(tpl.id)! }));
   const fresh = tpls.filter((tpl) => !byTemplate.has(tpl.id)).map((template) => ({ kind: "template" as const, template }));
   return [...tracked.slice(0, 3), ...fresh].slice(0, 6);

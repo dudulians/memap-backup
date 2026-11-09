@@ -11,11 +11,11 @@ import { supportLines } from "@/lib/supportLines";
 const numbers = (): { emergency: string; urgent?: string } => { const s = supportLines(); return { emergency: s.emergency, urgent: s.urgent }; };
 
 /** What each sign is about, in the order of the lists in the locales (now / today / soon). */
-type Area = "heart" | "gut" | "head" | "bladder" | "period" | "breast" | "general";
+type Area = "heart" | "gut" | "head" | "bladder" | "period" | "breast" | "general" | "sleep" | "fall" | "confusion";
 const AREAS: Record<"now" | "today" | "soon", Area[]> = {
-  now: ["heart", "gut", "gut", "gut", "heart", "head", "head"],
-  today: ["gut", "gut", "gut", "bladder", "bladder", "period", "head", "breast", "heart"],
-  soon: ["gut", "gut", "gut", "general", "bladder", "period", "breast", "general", "heart"],
+  now: ["heart", "gut", "gut", "gut", "heart", "head", "head", "confusion", "fall"],
+  today: ["gut", "gut", "gut", "bladder", "bladder", "period", "head", "breast", "heart", "fall"],
+  soon: ["gut", "gut", "gut", "general", "bladder", "period", "breast", "general", "heart", "sleep", "fall"],
 };
 /** The areas a question is about. ("general" signs always show; a question with only
  *  "general" gets those first and the rest under "Other signs".) The parent questions use
@@ -25,11 +25,11 @@ const AREAS_OF: Record<string, Area[]> = {
   "headache-stopped-me": ["head"], "took-painkiller": ["head"],
   "stomach-issues": ["gut"], "felt-nauseous": ["gut"], heartburn: ["gut", "heart"], bloated: ["gut"], "hard-to-poop": ["gut"], "loose-stool": ["gut"], "pooped-today": ["gut"], "piles-bothered": ["gut"],
   "heart-palpitations": ["heart"], "back-or-neck-pain": ["heart", "bladder"], "neck-pain": ["heart", "head"],
-  "panic-attack": ["heart", "head"], "snored-or-gasped": ["heart"], "felt-fatigued": ["general"],
+  "panic-attack": ["heart", "head"], "snored-or-gasped": ["sleep", "heart"], "felt-fatigued": ["general"],
   "period-symptoms": ["period"], "period-day": ["period"], "heavy-flow-day": ["period"], "pms-signs": ["period", "breast"], "hot-flushes": ["period"], "night-sweats": ["period", "general"], "pill-free-day": ["period"],
   "bladder-urgency": ["bladder"], "bladder-leak": ["bladder"], "night-pee-2-plus": ["bladder"], "pee-burning": ["bladder"],
   "breast-tender": ["breast"],
-  "parent-confused": ["head"], "parent-stumbled": ["head"], "parent-pain": ["heart", "gut"],
+  "parent-confused": ["confusion", "head"], "parent-stumbled": ["fall", "head"], "parent-pain": ["heart", "gut"],
 };
 
 /** A card with one chip only (the chip row has no room for two): the free line to talk

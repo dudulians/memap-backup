@@ -48,7 +48,8 @@ const problems = await page.evaluate(async () => {
     const topic = topicOf(tr);
     if (!topic && !NO_TOPIC_OK.has(tpl.id)) bad("question has no topic", tpl.id, tpl.title);
     if (topic) {
-      const ideas = ideasForQuestion(tr), own = ex.TOPIC_IDEAS[topic] ?? [];
+      // its own list (QUESTION_IDEAS) wins; else the topic's
+      const ideas = ideasForQuestion(tr), own = ex.QUESTION_IDEAS?.[tpl.id] ?? ex.TOPIC_IDEAS[topic] ?? [];
       for (const k of ideas) if (!own.includes(k)) bad("test idea from another topic", tpl.id, k);
     }
     for (const lng of ["en", "ru"]) {
@@ -74,7 +75,7 @@ const problems = await page.evaluate(async () => {
   }
 
   // 2. Every test idea has its name, evening question and today's line in both languages
-  const ideaKeys = [...new Set([...Object.values(ex.IDEAS).flat(), ...ex.PLAN_IDEAS, ...Object.values(ex.TOPIC_IDEAS).flat()])];
+  const ideaKeys = [...new Set([...Object.values(ex.IDEAS).flat(), ...ex.PLAN_IDEAS, ...Object.values(ex.TOPIC_IDEAS).flat(), ...Object.values(ex.QUESTION_IDEAS ?? {}).flat(), ...(ex.OLD_IDEAS ?? [])])];
   for (const k of ideaKeys) for (const lng of ["en", "ru"]) {
     setLanguage(lng);
     for (const part of ["change", "q", "today"]) {
