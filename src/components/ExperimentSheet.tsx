@@ -4,7 +4,7 @@
 // full-screen frame as the games. From an action point ("I'll try", Nov 5
 // 2026) her plan is the first choice, the island is the question's own, and
 // starting the test counts that action point again from today.
-import { ideasForIsland, ideasForQuestion } from "@/lib/topicIdeas";
+import { ideasForIsland, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
 import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -16,8 +16,9 @@ import { track, useScreen  } from "@/lib/analytics";
 import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
-import { answerPhrase } from "@/lib/answerPhrases";
+import { answerPhrase, templateIdOf } from "@/lib/answerPhrases";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
 import { countFromToday } from "@/lib/actionPoints";
@@ -82,13 +83,15 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   // what already runs on this island keeps running (Nov 8 2026), and isn't offered twice
   const runningHere = island && !started ? runningExperiments().filter((x) => x.island === island) : [];
   // the changes on the question's own topic (from a plan), or for what is hardest on the island lately (Nov 9 2026)
-  const pool = plan ? (source ? ideasForQuestion(source) : island ? ideasFor(island) : []) : island ? ideasForIsland(island, trackers, entries) : [];
+  // ideas two people do together are off while a partner-harm card is lit (Nov 9 2026)
+  const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : []) : island ? ideasForIsland(island, trackers, entries) : [];
   const planIdea = plan ? ideaOf(plan) : null;
   const busy = busyIdeas();
   const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !busy.has(k))];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
+  const fromHome = (() => { const fr = trackers.find((x) => x.id === experiment?.from); return !!fr && HOME_HARM_IDS.has(templateIdOf(fr) ?? ""); })();
   // The result screen: a garden grew.
   useEffect(() => { if (result) { haptics.sparkle(); playSparkle(); } }, [result]);
   const finish = async (keep: boolean) => {
@@ -223,7 +226,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                   <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
                 </>
               )}
-              <p className="mt-2 text-[16px] font-bold leading-snug text-[hsl(var(--coin-teal))]">{t(`experiment.verdict.${verdictOf(result)}`)}</p>
+              {/* never "better / worse with it" about a partner shouting (Nov 9 2026) */}
+              {!fromHome && <p className="mt-2 text-[16px] font-bold leading-snug text-[hsl(var(--coin-teal))]">{t(`experiment.verdict.${verdictOf(result)}`)}</p>}
               {/* the biggest difference on any island, in plain words (Nov 8 2026) */}
               {result.most && (() => {
                 const m = result.most, tr = trackers.find((x) => x.id === m.trackerId);

@@ -15,6 +15,7 @@ import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
 import { getDoorState, isoLocal } from "@/lib/doors";
+import { isLit, ruleState } from "@/lib/lighthouses";
 
 interface TrackerDetailsProps {
   tracker: Tracker;
@@ -91,9 +92,12 @@ export const TrackerDetails = ({
   const windowStart = tracker.cycleStartDate && tracker.cycleStartDate > isoLocal(rollingStart)
     ? tracker.cycleStartDate
     : isoLocal(rollingStart);
-  const limitCount = [...mine.values()].filter((e) => e.date >= windowStart && e.date <= today && isBad(e)).length;
-  const crossed = limitCount >= tracker.threshold;
-  const pct = Math.min(100, Math.round((limitCount / Math.max(1, tracker.threshold)) * 100));
+  // the same rule as When to act, the map and the push: days with no answer don't count (Nov 9 2026)
+  void windowStart;
+  const st = ruleState(tracker, entries);
+  const limitCount = st.k;
+  const crossed = isLit(tracker, entries);
+  const pct = Math.min(100, Math.round((limitCount / Math.max(1, st.need)) * 100));
 
   // Door questions go by their door name and count in their own words.
   const door = getDoorState();
@@ -140,7 +144,7 @@ export const TrackerDetails = ({
           <span className="text-lg font-semibold">{t("addTracker.limit")}</span>
           <span className="tabular-nums">
             <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{limitCount}</span>
-            <span className="text-[17px] text-muted-foreground"> / {tracker.threshold}</span>
+            <span className="text-[17px] text-muted-foreground"> / {st.need || tracker.threshold}</span>
           </span>
         </div>
         <div className="mt-3 h-2 rounded-full bg-foreground/10 overflow-hidden">

@@ -3,6 +3,7 @@ import { safeParse } from "@/lib/safeParse";
 import { checkThresholdAlerts } from "@/lib/notifications";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
 import {
   isKnownLibraryTitle,
   isKnownAdvice,
@@ -40,7 +41,22 @@ const ENTRIES_KEY = "memap_entries";
 // current map → isKnownAdvice returns true → no-op.
 /** Library advice that was retired (Nov 7 2026: no tests, drugs or therapies by name). Only these
  *  are refreshed to the current text; a plan she wrote herself is never touched. */
+/** Couple ideas (EN + RU) that a partner-harm question may still have as its plan from before Nov 9 2026. */
+const HOME_COUPLE_PLANS = new Set<string>([
+  "Say right away, in one calm sentence, when a word hurts", "When a talk heats up, take a 20-minute break and come back",
+  "Talk for 10 minutes without phones",
+  "Сразу говорить одной спокойной фразой, когда слово ранит", "Когда разговор накаляется, брать паузу 20 минут и возвращаться",
+  "Говорить 10 минут без телефонов",
+]);
 const RETIRED_ADVICE = new Set<string>([
+    // a partner shouting or saying hurtful things: a step for the person, not a talk with the partner (Nov 9 2026)
+    "Talk calmly about how the shouting affects you. If you feel afraid at home, tell someone you trust.",
+    "Спокойно поговорить о том, как крик на тебя влияет. Если дома страшно, рассказать человеку, которому доверяешь.",
+    "Talk to your partner and say which words hurt you. If you feel afraid at home, tell someone you trust.",
+    "Поговорить с партнёром и сказать, какие именно слова тебя ранят. Если дома страшно, рассказать человеку, которому доверяешь.",
+    // no quoted words on a task (Nov 9 2026)
+    "Set a 'bedtime' alarm 8 hours before wake-up",
+    "Поставить будильник «спать» за 8 часов до подъёма",
     // "Got recognition" counts days without praise (Nov 9 2026)
     "Save what was said — for days I doubt myself",
     "Сохранить что сказали — для дней когда сомневаюсь в себе",
@@ -266,7 +282,9 @@ const migrateLegacyAdvice = async (): Promise<void> => {
     // her own plan stays: only retired library advice is refreshed (found Nov 7 2026). A retired plan
     // can share its words with a ready idea ("Write down 3 things you did today…"), so a known one is
     // refreshed too when it is retired (Nov 9 2026); one that is still its question's plan stays as is.
-    const retired = RETIRED_ADVICE.has(tr.adviceAboveThreshold.trim());
+    const retired = RETIRED_ADVICE.has(tr.adviceAboveThreshold.trim())
+      // a couple idea she picked as the plan for a partner shouting or saying hurtful things (review, Nov 9 2026)
+      || (HOME_HARM_IDS.has(matchTemplateIdByTitle(tr.title) ?? "") && HOME_COUPLE_PLANS.has(tr.adviceAboveThreshold.trim()));
     if (!retired && isKnownAdvice(tr.adviceAboveThreshold)) return tr;
     if (!retired) return tr;
     const tplId = matchTemplateIdByTitle(tr.title);

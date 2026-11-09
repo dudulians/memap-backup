@@ -20,6 +20,10 @@ import { track, onbVariant } from "@/lib/analytics";
 import { tipForToday } from "@/lib/observeTips";
 
 export const DAYS_PER_WEEK = 7;
+/** Answered evenings (countedDays) before the first links can show: 5 days with and 5 without
+ *  (linkWorthShowing). One number for the push, the week-2 chip and the Links screen (persona walk,
+ *  Nov 9 2026: "10 of 14 days with answers" on Links while the push said "first links in about 1 evening"). */
+export const LINKS_AT = 10;
 const MAX_PER_STEP = 7;
 /** Up to this many questions stay one step on the path (Nov 8 2026). */
 const ONE_STEP_UP_TO = 10;

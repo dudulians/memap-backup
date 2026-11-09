@@ -432,6 +432,9 @@ const buildMap = (): LookupMaps => {
 
   // 2-week tests (Nov 8 2026, "не всё трансформируется с англ на рус"): a ready idea's name and
   // question, and a library plan used as a test's name, follow the language.
+  // the steps for a partner shouting or saying hurtful things (Nov 9 2026)
+  const enHome = enLocale.rules.home as Record<string, string>, ruHome = ruLocale.rules.home as Record<string, string>;
+  for (const k of Object.keys(enHome)) if (ruHome[k]) addPair(advices, enHome[k], ruHome[k]);
   type Idea = { change: string; q: string };
   const enIdeas = enLocale.experiment.idea as Record<string, Idea>, ruIdeas = ruLocale.experiment.idea as Record<string, Idea>;
   for (const k of Object.keys(enIdeas)) {

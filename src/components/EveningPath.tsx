@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, getChests, markActSeen, pastDays, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pastDays, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -38,7 +38,7 @@ import { currentExperiment, experimentDay, experimentOver, EXPERIMENT_DAYS, runn
 import { testNameOf } from "@/lib/testWords";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkWorthShowing } from "@/lib/islands";
-import { litTrackers } from "@/lib/lighthouses";
+import { litTrackers, needOf } from "@/lib/lighthouses";
 import { isHardAnswer, isNeutralQuestion, islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
 import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
@@ -151,14 +151,28 @@ export const EveningPath = ({
   }, [trackers, entries, noteDays, tick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
-  // low mood or no interest on 12 of the last 14 days: a doctor or therapist (when-to-act.md)
+  // low mood or no interest on 12 of the last 14 days: a doctor or therapist (when-to-act.md). Days she
+  // answered are what count (answered-days rule, Nov 9 2026: at 3–4 evenings a week this card never came;
+  // now 6 of 6 or 7 of 8 answers, the same share)
   const heavyMood = useMemo(() => {
     const now = new Date();
     const start = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13)), end = isoLocal(now);
-    return active.some((tr) => HEAVY_MOOD_IDS.has(moodTemplateOf(tr) ?? "")
-      && new Set(entries.filter((e) => e.trackerId === tr.id && e.date >= start && e.date <= end && e.value === (tr.problemWhen === "yes")).map((e) => e.date)).size >= 12);
+    return active.some((tr) => {
+      if (!HEAVY_MOOD_IDS.has(moodTemplateOf(tr) ?? "")) return false;
+      const all = entries.filter((e) => e.trackerId === tr.id && e.date <= end);
+      const mine = all.filter((e) => e.date >= start);
+      if (!mine.length) return false;
+      // the window, or since her first answer to it when that's later
+      const first = all.reduce((m, e) => (e.date < m ? e.date : m), end) > start ? all.reduce((m, e) => (e.date < m ? e.date : m), end) : start;
+      // today counts once answered (as in ruleState)
+      const last = mine.some((e) => e.date === end) ? end : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+      const days = Math.max(1, Math.round((Date.parse(last + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1);
+      const k = new Set(mine.filter((e) => e.value === (tr.problemWhen === "yes")).map((e) => e.date)).size;
+      return k >= needOf(12, 13, new Set(mine.map((e) => e.date)).size, days);
+    });
   }, [active, entries]);
-  const [support, setSupport] = useState(false);
+  // which "Need to talk?" sheet: low mood, or a partner who shouted or said hurtful things tonight
+  const [support, setSupport] = useState<null | "mood" | "home">(null);
   // came from the old look: the first week, a card says how to go back (her ask, Nov 7 2026)
   const fromOld = useMemo(() => {
     try {
@@ -579,12 +593,13 @@ export const EveningPath = ({
   // what this week's part gives now, and where it lives (board 68)
   const part = m.week % WEEK_TITLES;
   const weekNext = (() => {
-    const evenings = m.week * DAYS_PER_WEEK + daysDone;
+    // answered evenings, the same count as the push and the Links screen
+    const evenings = countedDays(trackers, entries).length;
     // week 1's chip opens My days (a chip that looks tappable is tappable)
     if (part === 0) return { text: t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo }), open: "overview" as null | "overview" | "findings" | "signals" | "world" };
     if (part === 1) {
       const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length;
-      return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: evenings < 10 ? t("path.next4.linksSoon", { count: 10 - evenings }) : t("path.next4.linksWait"), open: null };
+      return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: evenings < LINKS_AT ? t("path.next4.linksSoon", { count: LINKS_AT - evenings }) : t("path.next4.linksWait"), open: null };
     }
     if (part === 2) { const lit = litTrackers(trackers, entries).size; return { text: lit > 0 ? t("path.next4.lit", { count: lit }) : t("path.next4.rule"), open: "signals" as const }; }
     const x = currentExperiment();
@@ -767,7 +782,7 @@ export const EveningPath = ({
         <>
           {/* a hurtful evening with a partner ends gently, no "Great work!" and no game (persona walk, Nov 9 2026) */}
           {hardHome ? head(t("path.eveningSoft"), t("path.eveningSoftSub")) : head(t("path.eveningDone"), t("path.eveningDoneSub"))}
-          {hardHome && button(t("support.chip"), go(() => setSupport(true), "support"), "teal")}
+          {hardHome && button(t("support.chip"), go(() => setSupport("home"), "support"), "teal")}
           {!hardHome && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
           {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"), "gold")}
@@ -987,10 +1002,11 @@ export const EveningPath = ({
         {heavyMood && (
           <div className="mx-auto mt-3 w-[92%] max-w-[420px]">
             <TipCard id={`mood14-${Math.floor(Date.now() / 6048e5)}`} title={t("tips.moodTitle")} line={t("tips.moodLine")} action={t("tips.moodGo")}
-              onAction={() => setSupport(true)} />
+              onAction={() => setSupport("mood")} />
           </div>
         )}
-        <SupportSheet open={support} onClose={() => setSupport(false)} />
+        {/* a hurt evening opens the afraid-at-home version (review, Nov 9 2026) */}
+        <SupportSheet open={!!support} onClose={() => setSupport(null)} about={support === "home" ? "partner-raised-voice" : null} />
         {/* came from the old look: the way back stays in sight above the tabs (the path
             scrolls to today, so a card in the path would be out of view); at the top, solid,
             away from the "grew" toasts at the bottom */}

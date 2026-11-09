@@ -1,14 +1,12 @@
 // "Something worrying?" (research round 2, Nov 7 2026): signs that are never counted toward
-// a rule or a link — they mean a doctor tonight, today, or soon. Calm words, the right
-// number for where she is. Sources: marketing/research/body-proposed-additions.md "Red flags".
+// a rule or a link — they mean a doctor tonight, today, or soon. Calm words; "your local emergency number" in
+// words, no number typed in (her note, Nov 9 2026: a wrong number is worse than none; supportLines.ts).
+// Sources: marketing/research/body-proposed-additions.md "Red flags".
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ExternalLink, Phone } from "lucide-react";
+import { ChevronDown, ExternalLink } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { supportLines } from "@/lib/supportLines";
-
-/** The emergency number where the phone is, by its time zone (no location asked). */
-const numbers = (): { emergency: string; urgent?: string } => { const s = supportLines(); return { emergency: s.emergency, urgent: s.urgent }; };
+import { helpLinks } from "@/lib/supportLines";
 
 /** What each sign is about, in the order of the lists in the locales (now / today / soon). */
 type Area = "heart" | "gut" | "head" | "bladder" | "period" | "breast" | "general" | "sleep" | "fall" | "confusion";
@@ -48,8 +46,7 @@ const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "
 
 export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
   const { t, i18n } = useTranslation();
-  const n = numbers();
-  const lines = supportLines();
+  const links = helpLinks(i18n.language);
   const talk = !!about && TALK_TOO.has(about);
   const [more, setMore] = useState(false);
   const all = (k: "now" | "today" | "soon") => t(`redFlags.${k}`, { returnObjects: true }) as unknown as string[];
@@ -64,27 +61,18 @@ export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-10">
         <h2 className="pt-1 text-[24px] font-bold leading-tight">{t("redFlags.title")}</h2>
         <p className="mt-1 text-[15px] font-semibold text-muted-foreground">{t("redFlags.line")}</p>
-        <a href={`tel:${n.emergency.split(" ")[0]}`} className="raised-btn mt-4 flex h-[52px] w-full items-center justify-center gap-2">
-          <Phone className="h-5 w-5" strokeWidth={2.6} />{t("redFlags.call", { n: n.emergency })}
-        </a>
+        <p className="surface mt-4 rounded-[20px] px-4 py-3.5 text-[16px] font-bold leading-snug text-[hsl(var(--strong))]">{t("redFlags.call")}</p>
         {talk && (
           <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">
             <p className="text-[17px] font-bold">{t("support.title")}</p>
             <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.line")}</p>
-            {lines.talk ? (
-              <a href={`tel:${lines.talk.tel}`} className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
-                <Phone className="h-4 w-4" strokeWidth={2.6} />{t("support.callLine", { n: lines.talk.number })}
-              </a>
-            ) : (
-              <a href={lines.web} target="_blank" rel="noreferrer" className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
-                <ExternalLink className="h-4 w-4" strokeWidth={2.6} />{t("support.findLine")}
-              </a>
-            )}
-            {lines.talk && <p className="mt-2 text-center text-[14px] font-semibold text-muted-foreground">{i18n.language?.startsWith("ru") ? lines.talk.nameRu : lines.talk.name}</p>}
+            <a href={links.talk} target="_blank" rel="noreferrer" className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
+              <ExternalLink className="h-4 w-4" strokeWidth={2.6} />{t("support.findLine")}
+            </a>
           </div>
         )}
-        <Group tone="now" title={t("redFlags.nowTitle", { n: n.emergency })} items={list("now")} />
-        <Group tone="today" title={n.urgent ? t("redFlags.todayTitleN", { n: n.urgent }) : t("redFlags.todayTitle")} items={list("today")} />
+        <Group tone="now" title={t("redFlags.nowTitle")} items={list("now")} />
+        <Group tone="today" title={t("redFlags.todayTitle")} items={list("today")} />
         <Group tone="soon" title={t("redFlags.soonTitle")} items={list("soon")} />
         {hasRest && (
           <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} className="mt-4 flex items-center gap-1.5 self-start text-[16px] font-bold text-[hsl(var(--coin-teal))]">
@@ -93,8 +81,8 @@ export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose
         )}
         {hasRest && more && (
           <>
-            <Group tone="now" title={t("redFlags.nowTitle", { n: n.emergency })} items={rest("now")} />
-            <Group tone="today" title={n.urgent ? t("redFlags.todayTitleN", { n: n.urgent }) : t("redFlags.todayTitle")} items={rest("today")} />
+            <Group tone="now" title={t("redFlags.nowTitle")} items={rest("now")} />
+            <Group tone="today" title={t("redFlags.todayTitle")} items={rest("today")} />
             <Group tone="soon" title={t("redFlags.soonTitle")} items={rest("soon")} />
           </>
         )}

@@ -10,6 +10,7 @@ import { adviceVariants } from "@/lib/trackerLocalize";
 import { uuid } from "@/lib/uuid";
 import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
 
 /** Before a week of evenings nothing is called calm: "Your world is still taking shape". */
 export const SHAPING_EVENINGS = 7;
@@ -55,4 +56,4 @@ const libraryKind = (tr: Tracker): "once" | "daily" | undefined => {
 };
 // the same answer in both languages (Nov 8 2026: "Book 3 workout slots" was "once" in English, "every day" in Russian)
 export const planKindOf = (tr: Tracker): "once" | "daily" =>
-  tr.planKind ?? libraryKind(tr) ?? (adviceVariants(tr.adviceAboveThreshold || "").some((a) => ONCE_WORDS.test(a)) ? "once" : "daily");
+  HOME_HARM_IDS.has(matchTemplateIdByTitle(tr.title) ?? "") ? "once" : tr.planKind ?? libraryKind(tr) ?? (adviceVariants(tr.adviceAboveThreshold || "").some((a) => ONCE_WORDS.test(a)) ? "once" : "daily");

@@ -10,7 +10,7 @@
 //                 or turn it off.
 // No "all calm" before there is data: "Your world is still taking shape"
 // until a week of evenings. Gold, never red; no alarms.
-import { ideasForQuestion } from "@/lib/topicIdeas";
+import { homeHarmLit, ideasForQuestion } from "@/lib/topicIdeas";
 import { KindTag } from "./KindTag";
 import { track } from "@/lib/analytics";
 import { answerClause, answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
@@ -23,7 +23,7 @@ import { getNotificationSettings, requestNotificationPermissionDetailed, schedul
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { ruleCount, quietContext } from "@/lib/lighthouses";
+import { ruleCount, ruleState, quietContext, type RuleState } from "@/lib/lighthouses";
 import { ruleKeyOf } from "@/lib/rules";
 import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
@@ -39,6 +39,7 @@ import i18nInstance from "@/lib/i18n";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
+import { SupportSheet } from "@/components/SupportSheet";
 
 /** "I'll try": the week's test to start, for the screen that holds the sheets. */
 export interface TryAction { island: IslandId; plan: string; trackerId: string; k: number }
@@ -58,13 +59,41 @@ const useName = () => {
 };
 const planOf = (tr: Tracker) => (tr.adviceAboveThreshold ? testNameOf(tr.adviceAboveThreshold) : "");
 
+/** A partner shouting or saying hurtful things (her question, Nov 9 2026: "что безопасно, но при этом разумно?";
+ *  workflow with 19 sources): steps for the person, never a 2-week test, no before/after, the count doesn't
+ *  start again (a step done is not "it got better"). The next step comes after one is done; telling the
+ *  partner stays the last choice under "Not for me" (loveisrespect: it may not be safe). */
+const HOME_STEPS: Record<string, string[]> = {
+  "partner-raised-voice": ["rules.home.voicePlace", "rules.home.voiceTell"],
+  "partner-said-hurtful": ["rules.home.hurtTell", "rules.home.hurtPartner"],
+};
+/** The step key of a plan text in either language (her plan text when it isn't one of the steps). */
+const homeStepOf = (tid: string, plan: string): string =>
+  (HOME_STEPS[tid] ?? []).find((key) => ["en", "ru"].some((lng) => i18nInstance.t(key, { lng }) === plan)) ?? plan;
+/** Opens the afraid-at-home help sheet from a paused partner card. */
+const HOME_STEPS_FIRST = "partner-raised-voice";
+const HOME_DONE_KEY = "memap_home_steps";
+const homeDone = (): Record<string, string[]> => { try { return JSON.parse(localStorage.getItem(HOME_DONE_KEY) ?? "{}"); } catch { return {}; } };
+const markHomeDone = (id: string, plan: string) => {
+  const all = homeDone();
+  all[id] = [...new Set([...(all[id] ?? []), plan])];
+  try { localStorage.setItem(HOME_DONE_KEY, JSON.stringify(all)); } catch { /* the card just won't say "done" */ }
+};
+
 /** After "I did it": the window before it and the days since (from 7 days on). */
 const beforeAfter = (tr: Tracker, entries: TrackerEntry[]): { k1: number; n1: number; k2: number; n2: number } | null => {
   const last = tr.cycles?.[tr.cycles.length - 1];
   if (!last || !tr.cycleStartDate) return null;
   const since = Math.round((new Date(isoLocal(new Date()) + "T12:00:00").getTime() - new Date(tr.cycleStartDate + "T12:00:00").getTime()) / 86_400_000) + 1;
   if (since < 7) return null;
-  return { k1: last.significantDays, n1: last.periodDays, k2: ruleCount(tr, entries), n2: Math.min(since, tr.periodDays) };
+  // a partner's shouting is not "better or worse since you did it" (Nov 9 2026)
+  if (HOME_HARM_IDS.has(templateIdOf(tr) ?? "")) return null;
+  // both sides in her answers, not the calendar (review, Nov 9 2026: "before: 4 of 30 days, since then: 2 of your
+  // 10 answers" read as worse when it was better)
+  const s = ruleState(tr, entries);
+  const b = ruleState({ ...tr, cycleStartDate: last.startDate }, entries, new Date(last.endDate + "T12:00:00"));
+  if (s.n === 0 || b.n === 0) return null;
+  return { k1: b.k, n1: b.n, k2: s.k, n2: s.n };
 };
 /** A test on this question's island blocks a second one there; it says why. */
 const blockedLine = (t: (k: string, o?: Record<string, unknown>) => string, x: Experiment | null) => {
@@ -133,16 +162,21 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       && planKindOf(c) === "daily" && !dropped.has(c.id);
   }) ?? null;
   const [trying, setTrying] = useState<TryAction | null>(null);
+  // "Need to talk?" from a partner-harm card
+  const [supportFor, setSupportFor] = useState<string | null>(null);
+  const [homeTick, setHomeTick] = useState(0);
+  const couplesOff = homeHarmLit(trackers, entries);
   const door = getDoorState();
   const rows = trackers
     .filter((tr) => !tr.archived && tr.threshold > 0)
-    .map((tr) => ({ tr, k: ruleCount(tr, entries) }))
-    .map((r) => ({ ...r, lit: r.k >= r.tr.threshold && !quietContext(r.tr) }));
+    .map((tr) => { const st = ruleState(tr, entries); return { tr, k: st.k, st }; })
+    .map((r) => ({ ...r, lit: r.k >= r.st.need && !quietContext(r.tr) }));
+  const stateOf = new Map<string, RuleState>(rows.map((r) => [r.tr.id, r.st]));
   // her topics first, then the most crossed (persona walks, Nov 9 2026)
   const leadRank = (id: string) => (id === door?.trackerId ? 0 : (door?.extra ?? []).some((x) => x.trackerId === id) ? 1 : 2);
-  const lit = rows.filter((r) => r.lit).sort((a, b) => leadRank(a.tr.id) - leadRank(b.tr.id) || b.k / b.tr.threshold - a.k / a.tr.threshold);
+  const lit = rows.filter((r) => r.lit).sort((a, b) => leadRank(a.tr.id) - leadRank(b.tr.id) || b.k / b.st.need - a.k / a.st.need);
   const evenings = answeredEvenings(trackers, entries);
-  const allWatching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
+  const allWatching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.st.need - a.k / a.st.need);
   // the first week: only her topic's rules, not a wall of "0 of the last 30 days" (QA, Nov 8 2026)
   const mainIds = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((x) => x.trackerId)] : []);
   const watching = evenings < SHAPING_EVENINGS && allWatching.length > 1
@@ -156,25 +190,33 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const [calmOpen, setCalmOpen] = useState(false);
   const litShown = allLit ? lit : lit.slice(0, 3);
   const litMore = Math.max(0, lit.length - 3);
-  /** The days a rule can look at: its window, or her days so far when she began later (persona walk,
-   *  Nov 9 2026: "1 of the last 14 days" on day 1 counted days before she had the app). */
-  const todayIso = isoLocal(new Date());
-  const span = (tr: Tracker) => {
-    const first = entries.filter((e) => e.trackerId === tr.id).reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
-    if (!first) return { n: tr.periodDays, soFar: false };
-    const d = Math.round((Date.parse(todayIso + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1;
-    return d < tr.periodDays ? { n: d, soFar: true } : { n: tr.periodDays, soFar: false };
-  };
   /** One number for one fact, the same on the card and in the list: "6 of the last 14 days." The headline or
    *  the row's name says what (persona walks, Nov 9 2026: "“No” on 8 of 14" under "You often sleep under 7 hours"
-   *  was a No that meant yes; "of your first 22 days" — first since when?). */
-  const evidence = (tr: Tracker, k: number) => { const s = span(tr); return t(s.soFar ? "rules.evidenceSoFar" : "rules.evidence", { k, count: s.n }); };
+   *  was a No that meant yes; "of your first 22 days" — first since when?). Her days so far when she began
+   *  later or after "I did it"; with days not answered, her answers ("4 of your 6 answers in the last 14 days"):
+   *  the days she answered are what count (answered-days rule, lighthouses.ts). */
+  const evidence = (tr: Tracker, k: number) => {
+    const s = stateOf.get(tr.id) ?? ruleState(tr, entries);
+    if (!s.gaps) return t(s.soFar ? "rules.evidenceSoFar" : "rules.evidence", { k, count: s.soFar ? s.days : tr.periodDays });
+    return s.soFar ? t("rules.answersSoFar", { k, count: s.n }) : `${t("rules.answersOf", { k, count: s.n })} ${t("rules.inLast", { count: tr.periodDays })}.`;
+  };
   // a question onboarding added (not hers) never says "time to act at…" over a count it has passed
-  const watchLine = (tr: Tracker, k: number) => `${evidence(tr, k)} ${quietContext(tr) ? t("rules.notYourTopic") : t("rules.actAt", { n: tr.threshold, count: tr.periodDays })}`;
+  const watchLine = (tr: Tracker, k: number) => {
+    const s = stateOf.get(tr.id) ?? ruleState(tr, entries);
+    const at = quietContext(tr) ? t("rules.notYourTopic")
+      : s.gaps && s.byAnswers && s.need <= s.n ? t("rules.actAtAnswers", { n: s.need, count: s.n })
+      : t("rules.actAt", { n: tr.threshold, count: tr.periodDays });
+    return `${evidence(tr, k)} ${at}`;
+  };
   /** the question under the plan; a good one is counted when it's missing */
   // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
-  const why = (tr: Tracker, k: number) => t("rules.why", { ans: t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo"), k, n: tr.threshold, count: tr.periodDays });
+  const why = (tr: Tracker, k: number) => {
+    const s = stateOf.get(tr.id);
+    // with days not answered: the card's own words (review, Nov 9 2026)
+    if (s?.gaps) return `${evidence(tr, k)} ${k >= s.need ? t("rules.whyEnough") : ""}`.trim();
+    return t("rules.why", { ans: t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo"), k, n: tr.threshold, count: tr.periodDays });
+  };
   // The tests running now, side by side (Nov 7 2026); with one island picked, only that island's
   // (QA, Nov 8 2026: tests from other islands stayed on top of the Health filter)
   const islandsHere = new Set(trackers.map((tr) => islandOf(tr) as string));
@@ -186,6 +228,18 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const openTest = (x: Experiment) => { haptics.tap(); if (experimentOver(x)) setResultOf(x); else setTestOpen(x); };
   // a word that it worked, and what happens next (QA, Nov 8 2026: the card just moved away)
   const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); toast({ title: t("rules.didToast"), description: t("rules.didToastLine") }); };
+  // a partner-harm step: noted, no praise; on "partner raised their voice" the next step becomes the task
+  // (telling the partner, the last choice on "hurtful words", is never offered as a next step)
+  const didHome = async (tr: Tracker, tid: string) => {
+    haptics.tap();
+    const step = homeStepOf(tid, planOf(tr));
+    markHomeDone(tr.id, step);
+    const done = homeDone()[tr.id] ?? [];
+    const nextKey = tid === "partner-raised-voice" ? (HOME_STEPS[tid] ?? []).find((key) => key !== step && !done.includes(key)) : undefined;
+    if (nextKey) await patchTracker(tr.id, (x) => ({ ...x, adviceAboveThreshold: t(nextKey), planKind: "once" }));
+    setHomeTick((n) => n + 1);
+    toast({ title: t("rules.homeToast") });
+  };
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
   const tryIt = (tr: Tracker, k: number) => {
@@ -238,6 +292,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         const once = planKindOf(tr) === "once";
         const opened = openCards.includes(tr.id);
         const hardYes = tr.problemWhen === "yes";
+        const tid = templateIdOf(tr) ?? "";
+        const home = HOME_HARM_IDS.has(tid);
+        const homeDid = home && homeTick >= 0 && (homeDone()[tr.id] ?? []).includes(homeStepOf(tid, plan));
+        // while a partner shouts or says hurtful things, no partner card asks for something together (review, Nov 9
+        // 2026: "Book a couples therapist" stayed on; the Hotline and Gottman: not where there may be abuse)
+        const partnerPaused = couplesOff && !home && tr.subcategory === "Partner";
         return (
           <div key={tr.id} className="surface scroll-mt-4 rounded-[22px]">
             <button type="button" aria-expanded={opened} onClick={(e) => {
@@ -257,14 +317,31 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                 {/* what MeMap noticed, in her answer's words, then the days behind it (one number for one fact) */}
                 <span className="mt-0.5 block text-[18px] font-bold leading-snug">{cap(answerClause(t, tr, hardYes, "result", t("rules.often")))}</span>
                 <span className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{evidence(tr, k)}</span>
+                {/* the task is seen without opening the card (her answer + Lena's walk, Nov 9 2026) */}
+                {plan && !partnerPaused && (
+                  <span className="mt-2.5 block">
+                    <KindTag kind="task" />
+                    <span className="mt-0.5 block text-[17px] font-bold leading-snug">{plan}</span>
+                  </span>
+                )}
               </span>
             </button>
             {opened && (
             <div className="px-4 pb-4 animate-fade-in">
-            {/* what she can try, how it goes, one main button */}
-            {plan && <><KindTag kind="task" /><p className="mt-0.5 text-[19px] font-bold leading-snug">{plan}</p></>}
-            {plan && <p className="mt-1.5 text-[15px] font-semibold leading-snug text-muted-foreground">{once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
-            {!plan ? (
+            {/* how it goes, one main button (the task itself is in the card's head) */}
+            {partnerPaused && <p className="pl-[42px] text-[15px] font-semibold leading-snug text-muted-foreground">{t("rules.partnerPaused")}</p>}
+            {plan && !partnerPaused && <p className="pl-[42px] text-[15px] font-semibold leading-snug text-muted-foreground">{home ? t("rules.suggestHome") : once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
+            {partnerPaused ? (
+              <button type="button" onClick={() => { haptics.tap(); setSupportFor(HOME_STEPS_FIRST); }} className="raised-btn is-small mt-3.5 w-full justify-center">{t("support.chip")}</button>
+            ) : home && plan ? (
+              homeDid ? (
+                <p className="mt-3 flex items-center justify-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[15px] font-bold text-muted-foreground">
+                  <Check className="h-5 w-5" strokeWidth={2.6} />{t("rules.homeDone")}
+                </p>
+              ) : (
+                <button type="button" onClick={() => void didHome(tr, tid)} className="raised-btn is-small mt-3.5 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+              )
+            ) : !plan ? (
               <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.noPlan")}</button>
             ) : once ? (
               // a one-off plan: mark it done; then MeMap compares before and after
@@ -283,13 +360,16 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             })() : (
               <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.tryDaily")}</button>
             )}
+            {/* a free helpline and the emergency words, one tap away on these two cards */}
+            {home && <button type="button" onClick={() => { haptics.tap(); setSupportFor(tid); }} className={cn(quietBtn, "mt-2")}>{t("support.chip")}</button>}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
             </div>
             {/* what comes with it in her days, and the possible cause (Nov 8 2026): one quiet block, its button
-                plain so it doesn't compete with the main one */}
-            {linksInto(tr).length > 0 && (() => {
+                plain so it doesn't compete with the main one. Never on a partner-harm card: her own habits are
+                not the cause of being shouted at (Refuge; Nov 9 2026) */}
+            {!home && linksInto(tr).length > 0 && (() => {
               const cause = causeOf(tr);
               const causeTest = cause ? tests.find((x) => x.from === cause.id) : undefined;
               return (
@@ -369,7 +449,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                   ) : (
                     <span className="mt-0.5 block text-[14px] font-medium leading-snug text-muted-foreground">{watchLine(tr, k)}</span>
                   )}
-                  {ba && <span className="mt-1 block text-[13px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</span>}
+                  {ba && <span className="mt-1 block text-[13px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", { ...ba, count: ba.n2 })}</span>}
                 </button>
               );
             })}
@@ -379,13 +459,14 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       )}
 
       {current && sheet?.mode === "show" && (
-        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} entries={entries} name={cardQuestion(current.tr)} onClose={() => setSheet(null)}
+        <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} st={current.st} entries={entries} name={cardQuestion(current.tr)} onClose={() => setSheet(null)}
           onTry={() => tryIt(current.tr, current.k)} blocked={(() => { const o = tests.find((x) => x.from === current.tr.id && !experimentOver(x)); return o ? t("rules.testing", { k: experimentDay(o), count: EXPERIMENT_DAYS }) : null; })()} />
       )}
       {current && sheet?.mode === "change" && (
-        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
+        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} couplesOff={couplesOff} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
       )}
       {testOpen && <TestSheet test={testOpen} trackers={trackers} entries={entries} line={lineOf(testOpen)} onClose={() => setTestOpen(null)} />}
+      <SupportSheet open={!!supportFor} onClose={() => setSupportFor(null)} about={supportFor} />
       {resultOf && <ExperimentSheet mode="result" experiment={resultOf} trackers={trackers} entries={entries} onClose={() => setResultOf(null)} />}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
@@ -396,7 +477,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 };
 
 /** "Show": the days behind an action point, then her plan and rule to change. */
-const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tracker: Tracker; k: number; entries: TrackerEntry[]; name: string; onClose: () => void; onTry: () => void; blocked: string | null }) => {
+const ShowSheet = ({ tracker, k, st, entries, name, onClose, onTry, blocked }: { tracker: Tracker; k: number; st: RuleState; entries: TrackerEntry[]; name: string; onClose: () => void; onTry: () => void; blocked: string | null }) => {
   const { t } = useTranslation();
   const [plan, setPlan] = useState(planOf(tracker));
   const [kind, setKind] = useState<"once" | "daily">(planKindOf(tracker));
@@ -429,7 +510,10 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
     await countFromToday(tracker.id, k, keep(tracker));
     onClose();
   };
-  const lit = tracker.threshold > 0 && k >= tracker.threshold;
+  const lit = tracker.threshold > 0 && k >= st.need;
+  // a partner shouting or saying hurtful things: the card's own "I did it" (review, Nov 9 2026: this sheet still
+  // offered "Try it for 2 weeks" and a count restart)
+  const home = HOME_HARM_IDS.has(templateIdOf(tracker) ?? "");
   return (
     <BottomSheet open onOpenChange={(o) => { if (!o) close(); }} className="h-auto max-h-[88vh]" ariaTitle={t("rules.title")}>
       <div className="flex min-h-0 flex-1 flex-col space-y-5 overflow-y-auto px-5 pb-8">
@@ -439,12 +523,16 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
           <p className="mt-0.5 text-[24px] font-bold leading-tight tracking-tight">{name}</p>
           <KindTag kind="finding" className="mt-3" />
           <p className="mt-0.5 text-[19px] font-bold tabular-nums">
-            {k >= tracker.threshold
+            {lit
               ? t("rules.bigDone", { k, count: tracker.periodDays, ans: t(tracker.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo") })
-              : t("rules.bigOf", { k, count: tracker.threshold, ans: t(tracker.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo") })}
+              : t("rules.bigOf", { k, count: st.need, ans: t(tracker.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo") })}
           </p>
           <p className="mt-1 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.ruleLine", { n: tracker.threshold, count: tracker.periodDays })}</p>
-          {ba && <p className="mt-2 text-[15px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</p>}
+          {/* days with no answer don't count: what it takes now (answered-days rule, Nov 9 2026) */}
+          {st.gaps && st.byAnswers && st.need < tracker.threshold && st.need <= st.n && (
+            <p className="mt-1 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.gapsLine", { n: st.need, count: st.n })}</p>
+          )}
+          {ba && <p className="mt-2 text-[15px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", { ...ba, count: ba.n2 })}</p>}
           {/* one row of days, the colours in words */}
           <p className="mt-5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("rules.lastDays", { count: tracker.periodDays })}</p>
           <div className="mt-2 flex flex-wrap gap-1.5" aria-hidden="true">
@@ -469,6 +557,7 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
           <textarea value={plan} onChange={(e) => setPlan(e.target.value)} rows={2} maxLength={120} placeholder={t("rules.planPh")}
             className="w-full resize-none rounded-2xl border border-foreground/[0.12] bg-foreground/[0.04] px-4 py-3 text-[18px] font-semibold leading-snug outline-none focus:ring-2 focus:ring-[hsl(var(--coin-teal))]" />
           {/* once (then before and after) or every day (a 2-week test) */}
+          {!home && <>
           <div className="grid grid-cols-2 gap-2">
             {(["once", "daily"] as const).map((kd) => (
               <button key={kd} type="button" onClick={() => { haptics.tap(); setKind(kd); }} aria-pressed={kind === kd}
@@ -478,6 +567,7 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
             ))}
           </div>
           <p className="text-[13px] font-semibold leading-snug text-muted-foreground">{t(kind === "once" ? "rules.kindOnceLine" : "rules.kindDailyLine")}</p>
+          </>}
         </div>
         {limitOpen ? (
           <RuleChips hard={tracker.problemWhen !== "no"} value={ruleKeyOf(rule)} customLabel={t("rules.custom", { n: rule.threshold, count: rule.periodDays })}
@@ -485,10 +575,10 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
         ) : (
           <button type="button" onClick={() => { haptics.tap(); setLimitOpen(true); }} className="quiet-btn h-11 w-full text-[15px]">{t("rules.changeLimit")}</button>
         )}
-        {lit && kind === "once" && (
+        {lit && !home && kind === "once" && (
           <button type="button" onClick={did} className="raised-btn w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
         )}
-        {lit && kind === "daily" && (blocked
+        {lit && !home && kind === "daily" && (blocked
           ? <p className="flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground"><FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />{blocked}</p>
           : <button type="button" onClick={() => void tryNow()} className="raised-btn w-full justify-center"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("rules.tryDaily")}</button>)}
         <button type="button" onClick={close} className={lit ? "quiet-btn h-12 w-full text-[16px]" : "raised-btn w-full justify-center"}>{t("common.close")}</button>
@@ -626,19 +716,21 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
 };
 
 /** "Not for me" (or no plan yet): another plan, or turn it off. */
-const ChangeSheet = ({ tracker, name, why, onClose }: { tracker: Tracker; k: number; name: string; why: string; onClose: () => void }) => {
+const ChangeSheet = ({ tracker, name, why, onClose, couplesOff }: { tracker: Tracker; k: number; name: string; why: string; onClose: () => void; couplesOff?: boolean }) => {
   const { t } = useTranslation();
   const had = planOf(tracker);
-  // changes on this question's own topic (her note, Nov 9 2026: the island's ones were about other things)
+  // changes on this question's own topic (her note, Nov 9 2026: the island's ones were about other things);
+  // a partner shouting or saying hurtful things: its own steps, telling the partner last
   const busy = busyIdeas();
-  const ideas = ideasForQuestion(tracker).filter((id) => !busy.has(id)).map((id) => t(`experiment.idea.${id}.change`)).filter((s) => s !== had);
+  const homeSteps = HOME_STEPS[templateIdOf(tracker) ?? ""];
+  const ideas = (homeSteps ? homeSteps.map((key) => t(key)) : ideasForQuestion(tracker, couplesOff).filter((id) => !busy.has(id)).map((id) => t(`experiment.idea.${id}.change`))).filter((s) => s !== had);
   const [pick, setPick] = useState<string | null>(null);
   const [own, setOwn] = useState("");
   const next = pick ?? own.trim();
   const save = async () => {
     if (!next) return;
     haptics.success();
-    await patchTracker(tracker.id, (x) => ({ ...x, adviceAboveThreshold: next }));
+    await patchTracker(tracker.id, (x) => ({ ...x, adviceAboveThreshold: next, ...(homeSteps ? { planKind: "once" as const } : {}) }));
     onClose();
   };
   const off = async () => {

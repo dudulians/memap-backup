@@ -10,12 +10,10 @@ import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, buildRoutes, islandName, type IslandId } from "@/lib/islands";
 import { islandEvenings, toNextStage } from "@/lib/globeArt";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
-import { DAYS_PER_WEEK, countedDays, pathModel } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, LINKS_AT, countedDays, pathModel } from "@/lib/pathSteps";
 
 /** Treasures that come with evenings (the others need something else done). */
 const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
-/** Evenings of answers before the first links can show (honest: "about"). */
-const LINKS_AT = 10;
 
 /** Progress lines, closest first (at most five). */
 export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], notes: number): string[] => {

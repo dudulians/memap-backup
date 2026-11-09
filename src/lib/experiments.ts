@@ -9,6 +9,8 @@ import { getTrackers, saveTrackers } from "@/lib/storage";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf } from "@/lib/islands";
 import { track } from "@/lib/analytics";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 
 /** Two weeks (Nov 6 2026, board 68: week 4 "what helps" compares before and during). */
 export const EXPERIMENT_DAYS = 14;
@@ -108,7 +110,7 @@ export const PLAN_IDEAS = ["nauseaLog"];
  *  name, question and reminder: "No alcohol for two weeks" (a sudden stop is unsafe for someone who
  *  drinks every day → drinkFreeDays), "No more than 2 coffees" (halving at once gives withdrawal
  *  headaches → coffeeLess), "Note how you feel" (the evening answers already are that diary). */
-export const OLD_IDEAS = ["noAlcohol", "coffeeTwo", "symptomNote"];
+export const OLD_IDEAS = ["noAlcohol", "coffeeTwo", "symptomNote", "sayHurt"];
 /** Changes on a question's own topic (her note, Nov 9 2026: "Not for me" on comparing oneself online
  *  offered sweets and stretching). Which question has which topic: src/lib/topicIdeas.ts. A question
  *  with its own list in QUESTION_IDEAS uses that instead. */
@@ -165,8 +167,9 @@ export const QUESTION_IDEAS: Record<string, string[]> = {
   // love: partner
   "argued-with-partner": ["pauseHeated", "talkNoPhones", "thankYou", "walkTogether"],
   "felt-lonely-with-partner": ["askPartnerDay", "talkNoPhones", "walkTogether", "noPhoneMeal"],
-  "partner-raised-voice": ["pauseHeated", "talkNoPhones"],
-  "partner-said-hurtful": ["sayHurt", "pauseHeated", "talkNoPhones"],
+  // none on purpose (Nov 9 2026): a test here would compare the partner's days with the person's habit
+  "partner-raised-voice": [],
+  "partner-said-hurtful": [],
   "unfair-chores": ["handTask", "talkNoPhones"],
   flirted: ["talkNoPhones"],
   "thought-about-someone-else": ["talkNoPhones"],
@@ -455,7 +458,8 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
     const [setA, setB] = by === "with" ? [new Set(withDays.length ? [...did.entries()].filter(([, v]) => v).map(([d]) => d) : []), new Set([...did.entries()].filter(([, v]) => !v).map(([d]) => d))] : [days, beforeDays];
     // only the test's own island (persona walk, Nov 9 2026: a phone-away test for sleep and anxiety "found" its
     // biggest difference in news she never reads)
-    const all = trackers.filter((t) => !t.archived && t.source !== "play" && !isTestQuestion(t) && !isNeutralQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island);
+    const all = trackers.filter((t) => !t.archived && t.source !== "play" && !isTestQuestion(t) && !isNeutralQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island
+      && !HOME_HARM_IDS.has(matchTemplateIdByTitle(t.title) ?? ""));
     let best: ExperimentResult["most"] | undefined, bestDiff = 0.2;
     for (const t of all) {
       const es = entries.filter((e) => e.trackerId === t.id);

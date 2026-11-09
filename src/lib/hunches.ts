@@ -12,6 +12,7 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 import { getSuspectTemplateIds, getTemplatesByIds, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import type { LifeStreamTemplate } from "@/lib/lifeStreams";
 import { track } from "@/lib/analytics";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
 
 const KEY = "memap_hunches";
 const DAY_KEY = "memap_hunch_day";
@@ -64,7 +65,9 @@ const live = (trackers: Tracker[]) => trackers.filter((t) => !t.archived && t.so
  *  last 30 days, a different one of the top three each day; else her
  *  topic's question; else any. */
 export const hunchTarget = (trackers: Tracker[], entries: TrackerEntry[]): Tracker | null => {
-  const act = live(trackers);
+  // never "what leads to your partner shouting?": the answer would be her own habits (Refuge: only the abuser is
+  // to blame; Nov 9 2026)
+  const act = live(trackers).filter((t) => !HOME_HARM_IDS.has(matchTemplateIdByTitle(t.title) ?? ""));
   if (act.length < 2) return null;
   const since = isoLocal(new Date(Date.now() - 30 * 86_400_000));
   // how often each question's HARD answer came (persona walks, Nov 9 2026: a "Slept 7+" question was
@@ -150,12 +153,17 @@ export const hunchResult = (h: Hunch, trackers: Tracker[], entries: TrackerEntry
   return { ...c, nextDay: useNext, ready, onto: ready && c.k >= 3 && gap(c) >= 0.25 };
 };
 
+/** A hunch made before Nov 9 2026 about a partner shouting or saying hurtful things: never shown. */
+const homeTarget = (h: { target: string }, trackers: Tracker[]) => {
+  const tg = trackers.find((t) => t.id === h.target);
+  return !!tg && HOME_HARM_IDS.has(matchTemplateIdByTitle(tg.title) ?? "");
+};
 /** Hunches whose results are ready and not yet seen, about one question
  *  (the first that has any), so they're shown together. */
 export const readyHunches = (trackers: Tracker[], entries: TrackerEntry[]): { hunch: Hunch; result: HunchResult }[] => {
   const ready: { hunch: Hunch; result: HunchResult }[] = [];
   for (const h of getHunches()) {
-    if (h.seen) continue;
+    if (h.seen || homeTarget(h, trackers)) continue;
     const result = hunchResult(h, trackers, entries);
     if (result?.ready) ready.push({ hunch: h, result });
   }
@@ -166,7 +174,7 @@ export const readyHunch = (trackers: Tracker[], entries: TrackerEntry[]) => read
 
 /** Hunches still being checked: days with both answered so far. */
 export const checking = (trackers: Tracker[], entries: TrackerEntry[]) =>
-  getHunches().filter((h) => !h.seen).map((h) => {
+  getHunches().filter((h) => !h.seen && !homeTarget(h, trackers)).map((h) => {
     const r = hunchResult(h, trackers, entries);
     return { hunch: h, days: r ? r.n + r.n0 : 0 };
   });

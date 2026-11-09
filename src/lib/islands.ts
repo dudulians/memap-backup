@@ -9,6 +9,7 @@ import type { TFunction } from "i18next";
 import { computeCorrelations, correlationFrame, isHighlySignificant, trackerPolarity, type CorrelationResult } from "@/lib/correlations";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { getOwnIslands, LOOKS } from "@/lib/ownIslands";
 
@@ -217,6 +218,10 @@ export const linkWorthShowing = (c: CorrelationResult): boolean => {
   if (isTestQuestion(c.trackerA) || isTestQuestion(c.trackerB)) return false;
   const l = linkOf(c);
   if (l.n < LINK_MIN_SIDE || l.other.n < LINK_MIN_SIDE) return false;
+  // never her own drinking, stress or sleep before a partner shouting or saying hurtful things (Refuge: only the
+  // abuser is to blame; Nov 9 2026). What it does to her after is still shown.
+  const home = (t: Tracker) => HOME_HARM_IDS.has(matchTemplateIdByTitle(t.title) ?? "");
+  if (home(l.second) && !home(l.first)) return false;
   // against intuition: only strong, and over twice the usual days (persona walk, Nov 9 2026: "when you're NOT
   // lonely with your partner, you always fight the next day — 6 of 6")
   if (correlationFrame(trackerPolarity(c.trackerA), trackerPolarity(c.trackerB), c.phi) === "unexpected") return c.stage === "stable" && isHighlySignificant(c.chiSquare) && l.n >= LINK_MIN_SIDE * 2;

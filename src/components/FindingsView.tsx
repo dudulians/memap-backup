@@ -16,9 +16,9 @@ import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { daysAgoIso, doorCounts, getDoor, getDoorState, strongestContextFact } from "@/lib/doors";
 import { factLine } from "@/lib/echo";
+import { LINKS_AT, countedDays } from "@/lib/pathSteps";
 
 const STRIP_DAYS = 14;
-const FIRST_FINDINGS_AT = 14;
 
 // A finding is a link told in its real answers (linkOf; her note, Nov 6 2026: the old
 // «В дни с «Приступ мигрени» реже было «Спал(а) достаточно (7+ часов)»» "выглядит
@@ -74,7 +74,9 @@ export const FindingsView = ({
   const sentence = (c: CorrelationResult) => linkSentence(t, routeOf(c), of);
 
   if (findings.length === 0) {
-    const daysWithAnswers = new Set(entries.map((e) => e.date)).size;
+    // answered evenings, the same count as the push and the week-2 chip (persona walk, Nov 9 2026)
+    const daysWithAnswers = countedDays(trackers, entries).length;
+    const past = daysWithAnswers >= LINKS_AT;
     const door = getDoorState();
     const doorDef = door ? getDoor(door.id) : undefined;
     const fact = door && trackers.some((tr) => tr.id === door.trackerId) ? strongestContextFact(door, trackers, entries) : null;
@@ -85,16 +87,18 @@ export const FindingsView = ({
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">{t("patterns.findEmptyLabel")}</p>
           <p className="mt-2.5 text-[21px] font-bold leading-tight tracking-tight">{t("patterns.findEmptyTitle")}</p>
           <p className="mt-2 text-[15px] leading-snug text-muted-foreground">
-            {t("patterns.findEmptyBody", { count: FIRST_FINDINGS_AT })}
+            {past ? t("path.next4.linksWait") : t("patterns.findEmptyBody", { count: LINKS_AT })}
           </p>
+          {!past && <>
           <div className="mt-4 flex gap-1" aria-hidden="true">
-            {Array.from({ length: FIRST_FINDINGS_AT }, (_, i) => (
+            {Array.from({ length: LINKS_AT }, (_, i) => (
               <span key={i} className={cn("h-1.5 flex-1 rounded-full", i < daysWithAnswers ? "bg-primary" : "bg-foreground/15")} />
             ))}
           </div>
           <p className="mt-2 text-[13px] text-muted-foreground">
-            {t("patterns.findEmptyProgress", { count: Math.min(daysWithAnswers, FIRST_FINDINGS_AT), total: FIRST_FINDINGS_AT })}
+            {t("patterns.findEmptyProgress", { count: daysWithAnswers, total: LINKS_AT })}
           </p>
+          </>}
         </div>
         {fact && counts && (
           <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] p-[18px]">

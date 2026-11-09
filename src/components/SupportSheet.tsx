@@ -1,19 +1,21 @@
-// "Talk to someone" (safety round, Nov 7 2026): a free line for where the phone is, the
-// emergency number for "not safe right now", and a report to show a doctor or therapist.
-// Opened from mood question cards ("Need to talk?") and from the two-weeks card on Today.
-// From a partner shouting or saying hurtful things (persona walk, Nov 9 2026: the sheet asked
-// "Hard most days?" like a low-mood card, with no line for being afraid at home): its own words,
-// that it isn't her fault, and a free line for when someone is afraid at home where we know one.
+// "Talk to someone" (safety round, Nov 7 2026): a free helpline, "your local emergency number" for "not safe
+// right now", and a report to show a doctor or therapist. Opened from mood question cards ("Need to talk?"),
+// the two-weeks card on Today and the two partner cards in When to act.
+// From a partner shouting or saying hurtful things (persona walk, Nov 9 2026: the sheet asked "Hard most days?"
+// like a low-mood card, with no line for being afraid at home): its own words, that it isn't their fault, and
+// free lines for when someone is afraid at home.
+// No phone numbers typed into MeMap (her note, Nov 9 2026): links to directories the helplines keep up to date
+// (supportLines.ts says which and why).
 import { useTranslation } from "react-i18next";
-import { ExternalLink, FileText, Phone } from "lucide-react";
+import { ExternalLink, FileText } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { HOME_HARM_IDS, supportLines } from "@/lib/supportLines";
+import { HOME_HARM_IDS, helpLinks, talkNoteKey } from "@/lib/supportLines";
 
 export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
   const { t, i18n } = useTranslation();
-  const n = supportLines();
-  const ru = i18n.language?.startsWith("ru");
+  const links = helpLinks(i18n.language);
   const home = !!about && HOME_HARM_IDS.has(about);
+  const note = talkNoteKey();
   const report = () => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent("memap-doctor-report")), 320); };
   return (
     <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(); }} className="h-[80vh]" ariaTitle={t("support.title")}>
@@ -21,42 +23,30 @@ export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose:
         <h2 className="pt-1 text-[24px] font-bold leading-tight">{t("support.title")}</h2>
         <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{t(home ? "support.homeLine" : "support.line")}</p>
 
-        {home && (
+        {home ? (
           <div className="surface mt-4 shrink-0 rounded-[20px] px-4 py-3.5">
             <p className="text-[17px] font-bold">{t("support.homeTitle")}</p>
-            <p className="mt-1 text-[15px] font-semibold leading-snug">{t(n.safe ? "support.homeSafe" : "support.homeFind")}</p>
-            {n.safe ? (
-              <>
-                <a href={`tel:${n.safe.tel}`} className="raised-btn mt-3 flex h-[52px] w-full items-center justify-center gap-2">
-                  <Phone className="h-5 w-5" strokeWidth={2.6} />{t("support.callLine", { n: n.safe.number })}
-                </a>
-                <p className="mt-2 text-center text-[14px] font-semibold text-muted-foreground">{ru ? n.safe.nameRu : n.safe.name}</p>
-              </>
-            ) : (
-              <a href={n.web} target="_blank" rel="noreferrer" className="raised-btn mt-3 flex h-[52px] w-full items-center justify-center gap-2">
-                <ExternalLink className="h-5 w-5" strokeWidth={2.6} />{t("support.findLine")}
-              </a>
-            )}
+            <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.homeFind")}</p>
+            <a href={links.safe} target="_blank" rel="noreferrer" className="raised-btn mt-3 flex h-[52px] w-full items-center justify-center gap-2">
+              <ExternalLink className="h-5 w-5" strokeWidth={2.6} />{t("support.findHome")}
+            </a>
+            {/* a partner may look at the phone (NNEDV Safety Net; the Hotline: call when your partner isn't around) */}
+            <p className="mt-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">{t("support.homePrivate")}</p>
+            {/* someone to talk to as well (the sheet's danger line speaks of hurting yourself too) */}
+            <a href={links.talk} target="_blank" rel="noreferrer" className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
+              <ExternalLink className="h-4 w-4" strokeWidth={2.6} />{t("support.findLine")}
+            </a>
           </div>
-        )}
-
-        {n.talk ? (
-          <a href={`tel:${n.talk.tel}`} className={home ? "surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold" : "raised-btn mt-4 flex h-[52px] w-full items-center justify-center gap-2"}>
-            <Phone className="h-5 w-5" strokeWidth={2.6} />{t("support.callLine", { n: n.talk.number })}
-          </a>
-        ) : !home && (
-          <a href={n.web} target="_blank" rel="noreferrer" className="raised-btn mt-4 flex h-[52px] w-full items-center justify-center gap-2">
+        ) : (
+          <a href={links.talk} target="_blank" rel="noreferrer" className="raised-btn mt-4 flex h-[52px] w-full items-center justify-center gap-2">
             <ExternalLink className="h-5 w-5" strokeWidth={2.6} />{t("support.findLine")}
           </a>
         )}
-        {n.talk && <p className="mt-2 text-center text-[14px] font-semibold text-muted-foreground">{ru ? n.talk.nameRu : n.talk.name}</p>}
+        {note && <p className="mt-2 text-[14px] font-semibold leading-snug text-muted-foreground">{t(note)}</p>}
 
         <div className="surface mt-4 shrink-0 rounded-[20px] px-4 py-3.5">
           <p className="text-[17px] font-bold text-[hsl(var(--strong))]">{t("support.dangerTitle")}</p>
-          <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.dangerLine", { n: n.emergency })}</p>
-          <a href={`tel:${n.emergency.split(" ")[0]}`} className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
-            <Phone className="h-4 w-4" strokeWidth={2.6} />{t("redFlags.call", { n: n.emergency })}
-          </a>
+          <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.dangerLine")}</p>
         </div>
 
         {!home && (
@@ -69,7 +59,7 @@ export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose:
           </div>
         )}
 
-        <p className="mt-4 text-[13px] font-semibold text-muted-foreground">{t("support.source")}</p>
+        <p className="mt-4 text-[13px] font-semibold text-muted-foreground">{t(home ? "support.sourceHome" : "support.source")}</p>
       </div>
     </BottomSheet>
   );

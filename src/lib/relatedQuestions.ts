@@ -1076,20 +1076,10 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "phones-together",
     "argued-with-partner",
   ],
-  "partner-raised-voice": [
-    "argued-with-partner",
-    "drank-alcohol",
-    "alcohol-3-plus",
-    "felt-stressed",
-    "slept-enough",
-  ],
-  "partner-said-hurtful": [
-    "argued-with-partner",
-    "drank-alcohol",
-    "alcohol-3-plus",
-    "felt-stressed",
-    "slept-enough",
-  ],
+  // none (Nov 9 2026): the person's own drinking, stress or sleep is never offered as what leads to a partner
+  // shouting or saying hurtful things (Refuge: "only the abuser is to blame")
+  "partner-raised-voice": [],
+  "partner-said-hurtful": [],
   "phones-together": [
     "screen-time-long",
     "social-media-hour",

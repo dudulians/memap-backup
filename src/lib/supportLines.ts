@@ -1,27 +1,24 @@
-// Where to get help, by the phone's time zone (no location asked). Numbers checked Nov 7 2026:
-// - UAE National Mental Support Line 800 4673 (hope.hw.gov.ae; free, Arabic + English; not
-//   24/7 and not an emergency service);
-// - UK and Ireland: Samaritans 116 123 (free, 24/7);
-// - US and Canada: 988 Suicide & Crisis Lifeline (call or text, 24/7);
-// - Australia: Lifeline 13 11 14 (24/7);
-// - Russia: no federal adult line found; Moscow psychological help 051 (+7 495 051 from a mobile).
-// Everywhere else: findahelpline.com lists free lines by country.
-// Afraid at home (persona walk, Nov 9 2026; checked Nov 9 2026, 2+ sources each):
-// - Russia: Center ANNA all-Russia line 8 800 7000 600 (free; hours given as 9–21 or 24/7);
-// - UK: National Domestic Abuse Helpline (Refuge) 0808 2000 247 (free, 24/7);
-// - UAE: Dubai Foundation for Women and Children 800 111 (free, 24/7);
-// - US: National Domestic Violence Hotline 1-800-799-7233, or text START to 88788 (24/7).
+// Where to get help, with no phone numbers typed into MeMap (her note, Nov 9 2026: "я бы не давала точные
+// номера… боюсь ошибиться"). Checked Nov 9 2026 (workflow, 4 researchers + a skeptic who re-opened the sources):
+// - no store rule or law asks a self-tracking app for helpline numbers: Apple App Store Review Guidelines (Oct 16
+//   2026: no "helpline", "crisis" or "suicide" anywhere), Google Play Health apps policy, UK Online Safety Act s.3
+//   (user-to-user services only), MHRA software guidance, EU MDCG 2019-11, FDA General Wellness (Jan 2026); for
+//   Russia and the UAE nothing was found (searched, not proven);
+// - a wrong number is a known risk: 6 of 69 mental-health apps showed a wrong crisis number (Martinengo et al.,
+//   BMC Medicine 2019); Samaritans' guidance asks to recheck numbers regularly;
+// - so: links to directories the helplines keep up to date, by the phone's time zone (no location asked), and
+//   "your local emergency number" in words.
+//   talk: Find A Helpline (ThroughLine; the helplines confirm their own details, refreshed at least every 9 months;
+//         used by Google and IASP). OPEN: its terms ask for written permission for commercial use — ask first.
+//   safe: the NO MORE Global Directory (domestic and sexual violence; made with the UN and the World Bank, checked
+//         every quarter, invites sites to add it).
 // Plan: marketing/research/when-to-act.md ("thoughts of self-harm → country-specific numbers").
 
-export type SupportLines = {
-  emergency: string;
-  /** a non-emergency medical line (UK 111) */
-  urgent?: string;
-  /** a free line to talk to someone */
-  talk?: { name: string; nameRu: string; number: string; tel: string };
-  /** a free line when someone is afraid at home */
-  safe?: { name: string; nameRu: string; number: string; tel: string };
-  web: string;
+export type HelpLinks = {
+  /** a free helpline to talk to someone, in her country when we can tell */
+  talk: string;
+  /** free lines for when someone is afraid at home */
+  safe: string;
 };
 
 const zone = () => {
@@ -29,33 +26,37 @@ const zone = () => {
 };
 
 const RUSSIA = /^Europe\/(Moscow|Kaliningrad|Samara|Volgograd|Kirov|Astrakhan|Saratov|Ulyanovsk)|^Asia\/(Yekaterinburg|Omsk|Novosibirsk|Barnaul|Tomsk|Novokuznetsk|Krasnoyarsk|Irkutsk|Chita|Yakutsk|Khandyga|Vladivostok|Ust-Nera|Magadan|Sakhalin|Srednekolymsk|Kamchatka|Anadyr)/;
-const US_CANADA = /^America\/(New_York|Chicago|Denver|Phoenix|Los_Angeles|Anchorage|Detroit|Boise|Juneau|Sitka|Metlakatla|Yakutat|Nome|Adak|Menominee|Indiana|Kentucky|North_Dakota|Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson|Iqaluit|Yellowknife|Swift_Current|Creston|Fort_Nelson|Rankin_Inlet|Resolute|Cambridge_Bay|Inuvik|Atikokan|Blanc-Sablon|Dawson_Creek)|^Pacific\/Honolulu/;
+const CANADA = /^America\/(Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson|Iqaluit|Yellowknife|Swift_Current|Creston|Fort_Nelson|Rankin_Inlet|Resolute|Cambridge_Bay|Inuvik|Atikokan|Blanc-Sablon|Dawson_Creek)$/;
+const US = /^America\/(New_York|Chicago|Denver|Phoenix|Los_Angeles|Anchorage|Detroit|Boise|Juneau|Sitka|Metlakatla|Yakutat|Nome|Adak|Menominee|Indiana|Kentucky|North_Dakota)|^Pacific\/Honolulu/;
 
-export const supportLines = (): SupportLines => {
+/** The phone's country by its time zone, when it is clear (ISO code, lower case). */
+export const phoneCountry = (): string | null => {
   const tz = zone();
-  const web = "https://findahelpline.com";
-  if (/^Asia\/(Dubai|Muscat)/.test(tz)) {
-    return { emergency: "998 / 999", web, talk: { name: "National Mental Support Line", nameRu: "Национальная линия психологической поддержки", number: "800 4673", tel: "8004673" },
-      ...(tz.startsWith("Asia/Dubai") ? { safe: { name: "Dubai Foundation for Women and Children", nameRu: "Фонд защиты женщин и детей, Дубай", number: "800 111", tel: "800111" } } : {}) };
-  }
-  if (RUSSIA.test(tz)) {
-    return { emergency: "112 / 103", web, talk: { name: "Psychological help, Moscow", nameRu: "Психологическая помощь, Москва", number: "+7 495 051", tel: "+7495051" },
-      safe: { name: "Center ANNA, all of Russia", nameRu: "Центр «АННА», вся Россия", number: "8 800 7000 600", tel: "88007000600" } };
-  }
-  if (/^Europe\/(London|Dublin|Belfast)/.test(tz)) {
-    return { emergency: "999", urgent: tz.endsWith("Dublin") ? undefined : "111", web, talk: { name: "Samaritans", nameRu: "Samaritans", number: "116 123", tel: "116123" },
-      ...(tz.endsWith("Dublin") ? {} : { safe: { name: "National Domestic Abuse Helpline", nameRu: "National Domestic Abuse Helpline", number: "0808 2000 247", tel: "08082000247" } }) };
-  }
-  if (US_CANADA.test(tz)) {
-    const canada = /Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson|Iqaluit|Yellowknife|Swift_Current|Creston|Fort_Nelson|Rankin_Inlet|Resolute|Cambridge_Bay|Inuvik|Atikokan|Blanc-Sablon/.test(tz);
-    return { emergency: "911", web, talk: { name: "988 Suicide & Crisis Lifeline", nameRu: "Линия 988", number: "988", tel: "988" },
-      ...(canada ? {} : { safe: { name: "National Domestic Violence Hotline", nameRu: "National Domestic Violence Hotline", number: "1-800-799-7233", tel: "18007997233" } }) };
-  }
-  if (/^America\//.test(tz)) return { emergency: "911", web };
-  if (/^Australia\//.test(tz)) {
-    return { emergency: "000", web, talk: { name: "Lifeline", nameRu: "Lifeline", number: "13 11 14", tel: "131114" } };
-  }
-  return { emergency: "112", web };
+  if (RUSSIA.test(tz)) return "ru";
+  if (CANADA.test(tz)) return "ca";
+  if (US.test(tz)) return "us";
+  if (/^Europe\/(London|Belfast)$/.test(tz)) return "gb";
+  if (tz === "Europe/Dublin") return "ie";
+  if (tz === "Asia/Dubai") return "ae";
+  if (tz === "Europe/Berlin") return "de";
+  if (/^Australia\//.test(tz)) return "au";
+  return null;
+};
+
+/** NO MORE directory pages (checked Nov 9 2026); other countries get the directory's start page. */
+const NO_MORE: Record<string, string> = { ru: "russia", ae: "united-arab-emirates", gb: "united-kingdom", us: "usa", de: "germany", ca: "canada", ie: "ireland", au: "australia" };
+/** Where the directory has no general line for adults (review, Nov 9 2026: Find A Helpline lists only a women's and
+ *  a children's line for the UAE): a line named in words, no number (Gulf News, The National, ExpatWoman: the UAE
+ *  National Mental Support Line, run by the National Programme for Happiness and Wellbeing). */
+export const talkNoteKey = (): string | null => (phoneCountry() === "ae" ? "support.noteAe" : null);
+
+export const helpLinks = (lang?: string): HelpLinks => {
+  const c = phoneCountry();
+  const ru = !!lang?.startsWith("ru");
+  return {
+    talk: c ? `https://findahelpline.com/${ru ? "ru-RU/" : ""}countries/${c}` : `https://findahelpline.com/${ru ? "ru-RU" : ""}`,
+    safe: c && NO_MORE[c] ? `https://nomoredirectory.org/${NO_MORE[c]}/` : "https://nomoredirectory.org/",
+  };
 };
 
 /** Mood questions whose card offers "Need to talk?". Content review (Nov 9 2026): also the

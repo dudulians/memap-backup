@@ -203,8 +203,13 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 30,
         threshold: 3,
         problemWhen: "yes",
-        adviceAboveThreshold: "Talk calmly about how the shouting affects you. If you feel afraid at home, tell someone you trust.",
-        adviceAboveThresholdRu: "Спокойно поговорить о том, как крик на тебя влияет. Если дома страшно, рассказать человеку, которому доверяешь.",
+        // her question, Nov 9 2026 ("что безопасно, но при этом разумно?"); workflow with 19 sources re-opened
+        // (thehotline.org, loveisrespect.org, NHS, Refuge, Gottman): a step for the person, nothing asked of the
+        // partner ("having a conversation with your partner may not be a safe option", loveisrespect). For a couple
+        // that just argues it is the break couples advice recommends; for someone afraid, a first safety step.
+        adviceAboveThreshold: "Decide where you can go when it gets loud.",
+        adviceAboveThresholdRu: "Заранее решить, куда можно отойти, когда становится громко.",
+        planKind: "once",
       },
       {
         id: "partner-said-hurtful",
@@ -218,9 +223,12 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 30,
         threshold: 3,
         problemWhen: "yes",
-        // her note, Nov 8 2026: the exact words, said to the partner (a talk: "once")
-        adviceAboveThreshold: "Talk to your partner and say which words hurt you. If you feel afraid at home, tell someone you trust.",
-        adviceAboveThresholdRu: "Поговорить с партнёром и сказать, какие именно слова тебя ранят. Если дома страшно, рассказать человеку, которому доверяешь.",
+        // her note, Nov 8 2026 was a talk with the partner; Nov 9 (persona walk: "my job again", and the Hotline /
+        // loveisrespect: talking to the partner may not be safe): tell someone you trust. The talk with the
+        // partner stays as the last choice under "Not for me".
+        adviceAboveThreshold: "Tell someone you trust about the hurtful words.",
+        adviceAboveThresholdRu: "Рассказать про обидные слова человеку, которому доверяешь.",
+        planKind: "once",
       },
       {
         id: "called-parent",
@@ -608,8 +616,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 14,
         threshold: 6,
         problemWhen: "no",
-        adviceAboveThreshold: "Set a 'bedtime' alarm 8 hours before wake-up",
-        adviceAboveThresholdRu: "Поставить будильник «спать» за 8 часов до подъёма",
+        // no quoted words on a task (persona walks, Nov 9 2026: "Set a 'bedtime' alarm")
+        adviceAboveThreshold: "Set a reminder to go to bed 8 hours before you get up",
+        adviceAboveThresholdRu: "Поставить напоминание лечь спать за 8 часов до подъёма",
         featured: true,
         shortLabel: "good sleep",
         shortLabelRu: "хороший сон",

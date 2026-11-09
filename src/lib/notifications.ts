@@ -11,6 +11,9 @@ import { getNotes } from "@/lib/notes";
 import { progressLines } from "@/lib/reminderLines";
 import { localizeTrackerTitle, localizeTrackerAdvice, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { track } from "@/lib/analytics";
+import { isLit } from "@/lib/lighthouses";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 
 const NOTIFICATION_ENABLED_KEY = "memap_notification_enabled";
 const NOTIFICATION_TIME_KEY = "memap_notification_time";
@@ -197,11 +200,13 @@ export const reminderPlan = async (
   // scheduleNotification() call (cold start, session complete, or a
   // settings change). Acceptable tradeoff for keeping the pipeline
   // simple — the queue is rebuilt often enough in practice.
-  const activeTrackers = (await getTrackers()).filter((t) => !t.archived);
+  // the two partner-harm questions never rotate onto the lock screen (Nov 9 2026)
+  const allActive = (await getTrackers()).filter((t) => !t.archived);
+  const activeTrackers = allActive.filter((t) => !HOME_HARM_IDS.has(matchTemplateIdByTitle(t.title) ?? ""));
   // how many the evening really asks: no follow-ups (they come only after a "yes") and no Play cards
   const { FOLLOW_UPS } = await import("@/lib/bodyTemplates");
   const { templateIdOf } = await import("@/lib/answerPhrases");
-  const askedCount = activeTrackers.filter((t) => t.source !== "play" && !FOLLOW_UPS[templateIdOf(t) ?? ""]).length || activeTrackers.length;
+  const askedCount = allActive.filter((t) => t.source !== "play" && !FOLLOW_UPS[templateIdOf(t) ?? ""]).length || allActive.length;
   // how close she is to the next things, for the new screens' reminders
   const progress = getUiMode() === "new"
     ? await (async () => {
@@ -309,7 +314,7 @@ export const scheduleNotification = async (
   await cancelNotification();
 
   // a try with its own reminder counts even when the evening one is off
-  const tries = tryPlan(await getEntries().catch(() => []));
+  const tries = tryPlan(await getEntries().catch(() => []), new Set((await getTrackers().catch(() => [] as Tracker[])).filter((t) => HOME_HARM_IDS.has(matchTemplateIdByTitle(t.title) ?? "")).map((t) => t.id)));
   if (!settings.enabled && tries.length === 0) return;
 
   const granted = await requestNotificationPermission();
@@ -344,8 +349,11 @@ const tryWords = (x: Experiment, k: number): { title: string; body: string; key:
 };
 
 /** The try's reminders (board 65): one a day at its time, until the last day; kind words only. */
-export const tryPlan = (entries: TrackerEntry[] = []): Push[] => {
+export const tryPlan = (entries: TrackerEntry[] = [], homeIds: Set<string> = new Set()): Push[] => {
   const out: Push[] = [];
+  // a test started from a partner shouting or saying hurtful things (before Nov 9 2026): a neutral line only
+  const homeTest = (x: Experiment) => (!!x.from && homeIds.has(x.from)) || ideaOf(x.change) === "sayHurt";
+  const neutral = () => ({ title: i18n.t("notifications.try.homeTitle"), body: i18n.t("notifications.try.homeBody") });
   // no push on a day already done ("yes" today), nor for the rest of a week whose goal is met (Nov 8 2026)
   const now = new Date(), todayIso = localISODate(now);
   const monday = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)));
@@ -365,7 +373,7 @@ export const tryPlan = (entries: TrackerEntry[] = []): Push[] => {
     for (let k = 1; k <= EXPERIMENT_DAYS; k++) {
       const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now() || skip(x, at)) continue;
-      const w = tryWords(x, k);
+      const w = homeTest(x) ? { ...tryWords(x, k), ...neutral() } : tryWords(x, k);
       out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, title: w.title, body: w.body, schedule: { at, allowWhileIdle: true }, extra: { kind: x.same ? "goal" : "test", variant: w.key } });
     }
   });
@@ -378,10 +386,11 @@ export const tryPlan = (entries: TrackerEntry[] = []): Push[] => {
       if (at.getTime() <= Date.now() || skip(x, at)) continue;
       const body = i18n.t(`notifications.try.keep${(at.getDate() % 4) + 1}`);
       const today = testTodayOf(x.change);
+      const quiet = homeTest(x) ? neutral() : null;
       out.push({
         id: dateToNotificationId(at) + TRY_ID_OFFSET + (8 + i) * 50_000_000,
-        title: today ?? i18n.t("notifications.try.ownTitle"),
-        body: today ? body : `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${body}`,
+        title: quiet ? quiet.title : today ?? i18n.t("notifications.try.ownTitle"),
+        body: quiet ? quiet.body : today ? body : `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${body}`,
         schedule: { at, allowWhileIdle: true },
         extra: { kind: "test_kept", variant: `keep${(at.getDate() % 4) + 1}` },
       });
@@ -422,7 +431,12 @@ const fireThresholdNotification = async (tracker: Tracker) => {
   // surface it directly in the notification body — that's the whole point
   // of asking the user to write one. Without an action, fall back to the
   // generic "time to act" wording.
-  const body = action
+  // a partner shouting or saying hurtful things: no question and no plan on the lock screen (NNEDV Safety Net:
+  // a partner may look at the phone; Nov 9 2026)
+  const privateRule = HOME_HARM_IDS.has(matchTemplateIdByTitle(tracker.title) ?? "");
+  const body = privateRule
+    ? i18n.t("notifications.thresholdBodyPrivate")
+    : action
     ? i18n.t("notifications.thresholdBodyWithAction", {
         title: localizedTitle,
         threshold: tracker.threshold,
@@ -468,30 +482,14 @@ export const checkThresholdAlerts = async (
   const settings = getNotificationSettings();
   if (!settings.thresholdAlerts) return;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const notified = getNotifiedCycles();
   let dirty = false;
 
   for (const tracker of trackers) {
     if (tracker.archived) continue;
-
-    const rollingStart = new Date(today);
-    rollingStart.setDate(today.getDate() - tracker.periodDays);
-    const cycleStart = tracker.cycleStartDate
-      ? new Date(tracker.cycleStartDate + "T00:00:00")
-      : null;
-    const windowStart = cycleStart && cycleStart > rollingStart ? cycleStart : rollingStart;
-
-    const significantDays = entries.filter((e) => {
-      if (e.trackerId !== tracker.id) return false;
-      const d = new Date(e.date + "T00:00:00");
-      if (d < windowStart || d > today) return false;
-      return tracker.problemWhen === "yes" ? e.value : !e.value;
-    }).length;
-
-    if (significantDays < tracker.threshold) continue;
+    // the same rule as the lighthouses: answered days, never "no rule" (threshold 0 fired here before),
+    // never a question onboarding added (Nov 9 2026)
+    if (!isLit(tracker, entries)) continue;
 
     const cycleKey = tracker.cycleStartDate ?? "initial";
     if (notified[tracker.id] === cycleKey) continue;

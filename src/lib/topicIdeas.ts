@@ -11,6 +11,15 @@ import { IDEAS, QUESTION_IDEAS, TOPIC_IDEAS, ideasFor } from "@/lib/experiments"
 import { templateIdOf } from "@/lib/answerPhrases";
 import { islandOf, type IslandId } from "@/lib/islands";
 import { isoLocal } from "@/lib/doors";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { isLit } from "@/lib/lighthouses";
+
+/** Changes two people do together. Not offered while a partner-harm card is lit (the Hotline: couples work isn't
+ *  advised where there may be abuse; Gottman: couples therapy is wrong with violence; Nov 9 2026). */
+export const COUPLE_IDEAS = new Set(["pauseHeated", "talkNoPhones", "thankYou", "walkTogether", "noPhoneMeal", "askPartnerDay", "sayHurt"]);
+/** A partner shouting or saying hurtful things has reached its rule. */
+export const homeHarmLit = (trackers: Tracker[], entries: TrackerEntry[]): boolean =>
+  trackers.some((tr) => !tr.archived && HOME_HARM_IDS.has(templateIdOf(tr) ?? "") && isLit(tr, entries));
 
 /** topic → its library questions (template ids) */
 const SPEC: Record<string, string> = {
@@ -72,12 +81,12 @@ const ideasOfTemplate = (id: string): string[] | null => {
 };
 
 /** Small changes that fit this question (keys into experiment.idea.*). */
-export const ideasForQuestion = (tr: Tracker): string[] => {
+export const ideasForQuestion = (tr: Tracker, couplesOff = false): string[] => {
   const id = templateIdOf(tr);
-  // a library question: its own changes or its topic's; with neither (paperwork…), nothing unrelated
-  if (id) return ideasOfTemplate(id) ?? [];
+  // a library question: its own changes or its topic's; with neither (paperwork…), nothing unrelated;
   // her own question: the island's everyday ideas
-  return ideasFor(islandOf(tr));
+  const list = id ? ideasOfTemplate(id) ?? [] : ideasFor(islandOf(tr));
+  return couplesOff ? list.filter((x) => !COUPLE_IDEAS.has(x)) : list;
 };
 
 /** "Test one change" on an island: the changes for what is hardest there lately, a few questions in
@@ -90,7 +99,9 @@ export const ideasForIsland = (island: IslandId, trackers: Tracker[], entries: T
   const lists = [...new Set(here.map((tr) => ({ tr, n: hard(tr) })).sort((a, b) => b.n - a.n)
     .map(({ tr }) => { const id = templateIdOf(tr); return id ? ideasOfTemplate(id) : null; })
     .filter((x): x is string[] => !!x && x.length > 0))];
+  const off = homeHarmLit(trackers, entries);
+  const ok = (id: string) => !off || !COUPLE_IDEAS.has(id);
   const out: string[] = [];
-  for (let k = 0; k < 4 && out.length < 4; k++) for (const l of lists) { const id = l[k]; if (id && !out.includes(id) && out.length < 4) out.push(id); }
-  return out.length ? out : IDEAS[island] ?? ideasFor(island);
+  for (let k = 0; k < 4 && out.length < 4; k++) for (const l of lists.map((x) => x.filter(ok))) { const id = l[k]; if (id && !out.includes(id) && out.length < 4) out.push(id); }
+  return out.length ? out : (IDEAS[island] ?? ideasFor(island)).filter(ok);
 };

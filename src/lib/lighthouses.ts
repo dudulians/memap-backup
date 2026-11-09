@@ -39,7 +39,59 @@ export const quietContext = (tracker: Tracker, now = new Date()): boolean => {
   return !ALWAYS_LIGHT.has(tpl);
 };
 
-export const isLit = (tracker: Tracker, entries: TrackerEntry[]) => tracker.threshold > 0 && !quietContext(tracker) && ruleCount(tracker, entries) >= tracker.threshold;
+/** Days she answered are what count (persona walk, Nov 9 2026: someone who answers 3–4 evenings a week never
+ *  reached "5 of 7" or "8 of 30", since a day with no answer counted as an easy day). A rule needs its usual
+ *  share of the answered days, at least half its usual count (and 2), and enough answers to say anything:
+ *  max(3, a quarter of the window). Every evening answered → exactly the old rule; it never lights later
+ *  than before. Simulation over all 233 library rules and 9 answer patterns (scratchpad
+ *  answered-days-sim.mjs, Nov 9 2026): 3 evenings a week missed 29% of rules it should reach, now 1%; false
+ *  alarms 1% → 7% (every evening: 6%). Known cost: answering mostly on bad days lights more (4% → 26%). */
+export type RuleState = {
+  /** days with the hard answer */ k: number;
+  /** days with any answer to this question */ n: number;
+  /** calendar days looked at: the window, or since the first answer / "I did it" when later */ days: number;
+  /** hard days it takes now (the threshold, or less when days went unanswered) */ need: number;
+  /** some days in the window have no answer */ gaps: boolean;
+  /** the window started later than its full length (first answer or "I did it") */ soFar: boolean;
+  /** enough answers for the answered-days rule to apply */ byAnswers: boolean;
+};
+export const ruleState = (tracker: Tracker, entries: TrackerEntry[], now = new Date()): RuleState => {
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  from.setDate(from.getDate() - tracker.periodDays); // the same window as ruleCount
+  const windowStart = isoLocal(from);
+  let start = windowStart;
+  if (tracker.cycleStartDate && tracker.cycleStartDate > start) start = tracker.cycleStartDate;
+  const today = isoLocal(now);
+  const mine = entries.filter((e) => e.trackerId === tracker.id && e.date <= today);
+  const first = mine.reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
+  if (first && first > start) start = first;
+  const inWindow = mine.filter((e) => e.date >= start);
+  const hit = tracker.problemWhen === "yes";
+  const k = new Set(inWindow.filter((e) => e.value === hit).map((e) => e.date)).size;
+  const n = new Set(inWindow.map((e) => e.date)).size;
+  // today counts once it's answered: an evening answer isn't a gap all day (review, Nov 9 2026: an every-evening
+  // answerer read "7 of your 14 answers" until the evening, and a 5-of-7 rule lit a day early)
+  const end = inWindow.some((e) => e.date === today) ? today : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const days = Math.max(1, Math.round((Date.parse(end + "T12:00:00") - Date.parse(start + "T12:00:00")) / 86_400_000) + 1);
+  const T = tracker.threshold;
+  const byAnswers = n >= Math.max(3, Math.ceil((tracker.periodDays + 1) / 4));
+  const need = T <= 0 ? 0 : !byAnswers ? T : Math.min(T, Math.max(2, Math.ceil(T / 2), Math.ceil((T * n) / days)));
+  // no answers at all is not "0 of your 0 answers"
+  return { k, n, days, need, gaps: n > 0 && n < days, soFar: start > windowStart, byAnswers };
+};
+
+/** The same answered-days rule for any count over a window (the "Need to talk?" card: 12 of 14). */
+export const needOf = (threshold: number, periodDays: number, n: number, days: number): number => {
+  if (threshold <= 0) return 0;
+  if (n < Math.max(3, Math.ceil((periodDays + 1) / 4))) return threshold;
+  return Math.min(threshold, Math.max(2, Math.ceil(threshold / 2), Math.ceil((threshold * n) / Math.max(1, days))));
+};
+
+export const isLit = (tracker: Tracker, entries: TrackerEntry[]) => {
+  if (tracker.threshold <= 0 || quietContext(tracker)) return false;
+  const s = ruleState(tracker, entries);
+  return s.k >= s.need;
+};
 
 /** Ids of questions whose lighthouse is lit. */
 export const litTrackers = (trackers: Tracker[], entries: TrackerEntry[]): Set<string> =>
