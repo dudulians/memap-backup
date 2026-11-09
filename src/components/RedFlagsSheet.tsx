@@ -4,9 +4,9 @@
 // Sources: marketing/research/body-proposed-additions.md "Red flags".
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { helpLinks } from "@/lib/supportLines";
+import { talkNoteKey } from "@/lib/supportLines";
 
 /** What each sign is about, in the order of the lists in the locales (now / today / soon). */
 type Area = "heart" | "gut" | "head" | "bladder" | "period" | "breast" | "general" | "sleep" | "fall" | "confusion";
@@ -45,8 +45,7 @@ const Group = ({ title, items, tone }: { title: string; items: string[]; tone: "
 );
 
 export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
-  const { t, i18n } = useTranslation();
-  const links = helpLinks(i18n.language);
+  const { t } = useTranslation();
   const talk = !!about && TALK_TOO.has(about);
   const [more, setMore] = useState(false);
   const all = (k: "now" | "today" | "soon") => t(`redFlags.${k}`, { returnObjects: true }) as unknown as string[];
@@ -66,9 +65,7 @@ export const RedFlagsSheet = ({ open, onClose, about }: { open: boolean; onClose
           <div className="surface mt-3 shrink-0 rounded-[20px] px-4 py-3.5">
             <p className="text-[17px] font-bold">{t("support.title")}</p>
             <p className="mt-1 text-[15px] font-semibold leading-snug">{t("support.line")}</p>
-            <a href={links.talk} target="_blank" rel="noreferrer" className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
-              <ExternalLink className="h-4 w-4" strokeWidth={2.6} />{t("support.findLine")}
-            </a>
+            <p className="mt-2 text-[14px] font-semibold leading-snug text-muted-foreground">{t(talkNoteKey() ?? "support.findTalk")}</p>
           </div>
         )}
         <Group tone="now" title={t("redFlags.nowTitle")} items={list("now")} />

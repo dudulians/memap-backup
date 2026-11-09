@@ -8,15 +8,14 @@
 //   BMC Medicine 2019); Samaritans' guidance asks to recheck numbers regularly;
 // - so: links to directories the helplines keep up to date, by the phone's time zone (no location asked), and
 //   "your local emergency number" in words.
-//   talk: Find A Helpline (ThroughLine; the helplines confirm their own details, refreshed at least every 9 months;
-//         used by Google and IASP). OPEN: its terms ask for written permission for commercial use — ask first.
+//   talk: no link (her note, Nov 9 2026: "мы можем без него обойтись?"): Find A Helpline's terms forbid
+//         referencing it for commercial purposes without written permission, so the sheet says in words that most
+//         countries have a free helpline and to talk to someone trusted or a doctor;
 //   safe: the NO MORE Global Directory (domestic and sexual violence; made with the UN and the World Bank, checked
 //         every quarter, invites sites to add it).
 // Plan: marketing/research/when-to-act.md ("thoughts of self-harm → country-specific numbers").
 
 export type HelpLinks = {
-  /** a free helpline to talk to someone, in her country when we can tell */
-  talk: string;
   /** free lines for when someone is afraid at home */
   safe: string;
 };
@@ -52,9 +51,8 @@ export const talkNoteKey = (): string | null => (phoneCountry() === "ae" ? "supp
 
 export const helpLinks = (lang?: string): HelpLinks => {
   const c = phoneCountry();
-  const ru = !!lang?.startsWith("ru");
+  void lang;
   return {
-    talk: c ? `https://findahelpline.com/${ru ? "ru-RU/" : ""}countries/${c}` : `https://findahelpline.com/${ru ? "ru-RU" : ""}`,
     safe: c && NO_MORE[c] ? `https://nomoredirectory.org/${NO_MORE[c]}/` : "https://nomoredirectory.org/",
   };
 };
@@ -68,6 +66,13 @@ export const helpLinks = (lang?: string): HelpLinks => {
 /** A partner shouting or saying hurtful things: the sheet speaks to that, with a line for when someone
  *  is afraid at home, and the evening doesn't end on "Great work today!" (persona walk, Nov 9 2026). */
 export const HOME_HARM_IDS = new Set(["partner-raised-voice", "partner-said-hurtful"]);
+
+/** Someone writes their own question about being shouted at or hurt by someone close (her note, Nov 9 2026: the two
+ *  partner-harm questions are never offered, "только если человек начнёт сам вписывать похожее"). Both a harm
+ *  word and a "me / partner" word, so "my child screams at bedtime" doesn't count. */
+const HARM_WORDS = /(кри[кч]|(?:^|[^а-яё])(?:на|за|по)?ор(?:[её]т|ал)|повы[сш]\S*\s+(?:на\s+\S+\s+)?голос|голос\S*\s+(?:на\s+\S+\s+)?повы[сш]|оскорб|униж|униз|обзыва|обозв|оби[дж]|гадост|руга|груб|shout|yell(?!ow)|scream|rais\S*\s+(?:\S+\s+)?voice|insult|humiliat|belittl|abus|put\S*\s+me\s+down|call\S*\s+me\s+names|hurtful|hurt\s+me\b|hurt\s+my\s+feelings|mean\s+to\s+me)/i;
+const ME_OR_PARTNER = /(меня|мне|партн|муж|(?:^|[^а-яё])жен[аеуыо]|парн|девушк|\bme\b|partner|husband|wife|boyfriend|girlfriend|spouse)/i;
+export const writesAboutHomeHarm = (text: string): boolean => HARM_WORDS.test(text) && ME_OR_PARTNER.test(text);
 
 export const MOOD_SUPPORT_IDS = new Set([
   "felt-depressed", "lost-interest", "felt-anxious", "felt-lonely",

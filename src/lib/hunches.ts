@@ -99,7 +99,8 @@ export const suspectsFor = (target: Tracker, trackers: Tracker[]): Suspect[] => 
   // questions that only follow it, e.g. a short night as a suspect for itself)
   const tpls = getTemplatesByIds(getSuspectTemplateIds(tid)).filter((tpl) => !tpl.sensitive && tpl.id !== tid);
   const tracked = tpls.filter((tpl) => byTemplate.has(tpl.id)).map((tpl) => ({ kind: "tracked" as const, tracker: byTemplate.get(tpl.id)! }));
-  const fresh = tpls.filter((tpl) => !byTemplate.has(tpl.id)).map((template) => ({ kind: "template" as const, template }));
+  // a partner-harm question is never offered as a new one (one she already has stays above)
+  const fresh = tpls.filter((tpl) => !byTemplate.has(tpl.id) && !tpl.askOnly).map((template) => ({ kind: "template" as const, template }));
   return [...tracked.slice(0, 3), ...fresh].slice(0, 6);
 };
 

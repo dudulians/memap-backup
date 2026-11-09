@@ -32,17 +32,14 @@ export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose:
             </a>
             {/* a partner may look at the phone (NNEDV Safety Net; the Hotline: call when your partner isn't around) */}
             <p className="mt-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">{t("support.homePrivate")}</p>
-            {/* someone to talk to as well (the sheet's danger line speaks of hurting yourself too) */}
-            <a href={links.talk} target="_blank" rel="noreferrer" className="surface mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full text-[16px] font-bold">
-              <ExternalLink className="h-4 w-4" strokeWidth={2.6} />{t("support.findLine")}
-            </a>
           </div>
-        ) : (
-          <a href={links.talk} target="_blank" rel="noreferrer" className="raised-btn mt-4 flex h-[52px] w-full items-center justify-center gap-2">
-            <ExternalLink className="h-5 w-5" strokeWidth={2.6} />{t("support.findLine")}
-          </a>
-        )}
-        {note && <p className="mt-2 text-[14px] font-semibold leading-snug text-muted-foreground">{t(note)}</p>}
+        ) : null}
+        {/* someone to talk to, in words, on both versions: no directory link (Nov 9 2026) */}
+        <div className={(home ? "mt-3" : "mt-4") + " surface shrink-0 rounded-[20px] px-4 py-3.5"}>
+          {/* the afraid-at-home card above already says a helpline can help: here only the people close by */}
+          {!home && <p className="mb-1.5 text-[15px] font-semibold leading-snug">{t(note ?? "support.findTalk")}</p>}
+          <p className={home ? "text-[15px] font-semibold leading-snug" : "text-[14px] font-semibold leading-snug text-muted-foreground"}>{t("support.talkLine")}</p>
+        </div>
 
         <div className="surface mt-4 shrink-0 rounded-[20px] px-4 py-3.5">
           <p className="text-[17px] font-bold text-[hsl(var(--strong))]">{t("support.dangerTitle")}</p>

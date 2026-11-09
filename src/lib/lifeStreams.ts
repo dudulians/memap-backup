@@ -39,6 +39,10 @@ export interface LifeStreamTemplate {
   /** The words it had before (Nov 7 2026 rewordings): new questions get the new ones, a
    *  question someone already has keeps its text and is still known by these. */
   legacy?: { title?: string; titleRu?: string; questionText?: string; questionTextRu?: string };
+  /** Never offered in lists, ideas, hunches or starters; suggested only when someone writes their own question
+   *  about it (her note, Nov 9 2026: "никогда не показывать… и только если человек начнёт сам вписывать
+   *  похожее"). People who already have it keep it, with all its support. */
+  askOnly?: boolean;
   /** Bowel, bladder, piles, sweating: not hidden like the sexual ones, but never in ideas,
    *  share cards or a recap (research round 2). */
   private?: boolean;
@@ -193,6 +197,7 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "partner-raised-voice",
+        askOnly: true,
         title: "Partner raised their voice at me",
         titleRu: "Партнёр повысил на меня голос",
         questionText: "Did your partner raise their voice at you today?",
@@ -213,6 +218,7 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "partner-said-hurtful",
+        askOnly: true,
         title: "Partner said something hurtful",
         titleRu: "Партнёр сказал что-то обидное",
         questionText: "Did your partner say something that genuinely hurt today?",
@@ -3293,6 +3299,7 @@ export interface LocalizedTemplate {
   threshold: number;
   problemWhen: ProblemWhen;
   adviceAboveThreshold: string;
+  askOnly?: boolean;
   sensitive?: boolean;
 }
 
@@ -3310,6 +3317,7 @@ export const localizeTemplate = (tpl: LifeStreamTemplate): LocalizedTemplate => 
     problemWhen: tpl.problemWhen,
     adviceAboveThreshold: isRu ? tpl.adviceAboveThresholdRu : tpl.adviceAboveThreshold,
     sensitive: tpl.sensitive,
+    askOnly: tpl.askOnly,
   };
 };
 
@@ -3331,7 +3339,7 @@ export const getRandomIdeas = (count: number = 4): (LocalizedTemplate & { stream
     .filter((stream) => !stream.gatedBy) // exclude expat cluster from random ideas
     .flatMap(stream =>
       stream.templates
-        .filter((t) => !t.sensitive && !t.private)
+        .filter((t) => !t.sensitive && !t.private && !t.askOnly)
         .map(t => ({
           ...localizeTemplate(t),
           streamIcon: stream.icon,

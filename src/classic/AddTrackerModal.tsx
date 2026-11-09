@@ -347,7 +347,8 @@ export const AddTrackerModal = ({
   // keep the catalog safe-for-work; user opts in via Settings →
   // "Show sensitive topics".
   // Never offered since Nov 7 2026 (her decision), whatever the old switch says.
-  const filterSensitive = <T extends { sensitive?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive);
+  // and a partner shouting or saying hurtful things is never offered either (Nov 9 2026)
+  const filterSensitive = <T extends { sensitive?: boolean; askOnly?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive && !t.askOnly);
 
   // Get all templates for autocomplete dropdown
   const getAllTemplatesForDropdown = () => {

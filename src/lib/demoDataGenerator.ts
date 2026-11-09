@@ -409,8 +409,9 @@ const packRelationshipReality: DemoPack = {
   id: "relationship-reality",
   templateIds: [
     "partner-complimented-me",
-    "partner-raised-voice",
-    "partner-said-hurtful",
+    // the two partner-harm questions are never offered, a demo included (Nov 9 2026)
+    "argued-with-partner",
+    "partner-irritated-me",
     "felt-happy",
     "slept-enough",
     "felt-nauseous",
@@ -490,8 +491,8 @@ const packRelationshipReality: DemoPack = {
 
     return new Map<string, boolean[]>([
       ["partner-complimented-me", compliment],
-      ["partner-raised-voice", raisedVoice],
-      ["partner-said-hurtful", hurtful],
+      ["argued-with-partner", raisedVoice],
+      ["partner-irritated-me", hurtful],
       ["felt-happy", happy],
       ["slept-enough", slept],
       ["felt-nauseous", nauseous],

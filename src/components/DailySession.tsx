@@ -249,7 +249,7 @@ export const DailySession = ({
         }
         return stream.templates.filter((tpl) => {
           // Intimacy questions are never offered (Nov 7 2026).
-          if (tpl.sensitive || tpl.private) return false;
+          if (tpl.sensitive || tpl.private || tpl.askOnly) return false;
           const hay = haystack(tpl);
           if (interviewAnswers.hasKids === false && matchesAny(hay, KIDS_HAY))
             return false;

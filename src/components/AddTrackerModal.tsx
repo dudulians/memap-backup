@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { writesAboutHomeHarm } from "@/lib/supportLines";
 import { AnswerWordsFields, cleanWords, type AnswerWords } from "./AnswerWordsFields";
 import { createPortal } from "react-dom";
 import { Tracker, ProblemWhen } from "@/types/tracker";
@@ -263,7 +264,10 @@ export const AddTrackerModal = ({
   });
 
   // Intimacy questions are never offered (Nov 7 2026), even if the old switch is on.
-  const filterSensitive = <T extends { sensitive?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive);
+  // A partner shouting or saying hurtful things: never in the lists, only when the typed words are about it (Nov 9 2026)
+  const filterSensitive = <T extends { sensitive?: boolean; askOnly?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive && !t.askOnly);
+  const withAsked = <T extends { sensitive?: boolean; askOnly?: boolean }>(arr: T[], typed: string): T[] =>
+    arr.filter((t) => !t.sensitive && (!t.askOnly || writesAboutHomeHarm(typed)));
 
   // Get all templates for autocomplete dropdown
   const getAllTemplatesForDropdown = () => {
@@ -310,7 +314,7 @@ export const AddTrackerModal = ({
     const q = query.trim().toLowerCase();
     if (q.length < 2) return [];
     const allTemplates = visibleGroups.flatMap((group) =>
-      filterSensitive(group.templates).map((template) => ({
+      withAsked(group.templates, q).map((template) => ({
         ...template,
         groupTitle: group.title,
       })),
@@ -318,6 +322,7 @@ export const AddTrackerModal = ({
     return allTemplates
       .filter(
         (t) =>
+          t.askOnly ||
           t.title.toLowerCase().includes(q) ||
           t.questionText.toLowerCase().includes(q) ||
           localizeTrackerTitle(t.title).toLowerCase().includes(q) ||
@@ -605,10 +610,11 @@ export const AddTrackerModal = ({
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const allTemplates = filteredGroups.flatMap(group =>
-        filterSensitive(group.templates).map(template => ({ ...template, groupTitle: group.title }))
+        withAsked(group.templates, query).map(template => ({ ...template, groupTitle: group.title }))
       );
 
       return allTemplates.filter(template =>
+        template.askOnly ||
         template.title.toLowerCase().includes(query) ||
         template.questionText.toLowerCase().includes(query) ||
         template.category.toLowerCase().includes(query) ||
