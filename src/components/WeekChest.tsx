@@ -119,7 +119,7 @@ export const WeekChest = ({
     const islands = buildIslands(trackers, entries);
     const routes = buildRoutes(trackers, entries, islands);
     const days = islandDays(trackers, entries);
-    const notes = await getNotes().then((n) => n.length).catch(() => 0);
+    const notes = await getNotes().then((n) => n.filter((x) => !x.reasonFor).length).catch(() => 0); // "Why?" words aren't notes written
     const facts = worldFacts(trackers, entries, islands, routes, notes);
     syncTreasures(facts);
     // where each treasure stands (so the report can say which island)
@@ -241,7 +241,7 @@ export const WeekChest = ({
     );
     // 2. The week in numbers, with the days it counted when opened (a report opened before calendar weeks,
     // Nov 9 2026, counted other days: it reopens with plain dots and no dates rather than wrong ones).
-    const dates = r.dates ?? [];
+    const dates = r.legacy ? [] : r.dates ?? [];
     out.push(
       <div className="surface rounded-[22px] px-5 py-4 text-left">
         {kicker(null, dates.length ? `${t("path.chest.inNumbers")} · ${dateRange(i18n.language ?? "en", new Date(dates[0] + "T12:00:00"), new Date(dates[dates.length - 1] + "T12:00:00"))}` : t("path.chest.inNumbers"))}

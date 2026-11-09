@@ -12,12 +12,15 @@ import { HOME_HARM_IDS } from "@/lib/supportLines";
  *  an older parent's falls or medicines, a pet that stops eating or limps. */
 const ALWAYS_LIGHT = new Set([...RED_FLAG_IDS, ...HOME_HARM_IDS, "parent-took-meds", "pet-skipped-food", "pet-limped"]);
 
+/** The day a window of `days` calendar days ending on `end` begins: 7 days ending Tuesday begin on Wednesday
+ *  (Nov 10 2026: the window began a day earlier, so "3 of the last 7 days" counted a day 8 days back). */
+const windowFrom = (end: string, days: number): string =>
+  isoLocal(new Date(Number(end.slice(0, 4)), Number(end.slice(5, 7)) - 1, Number(end.slice(8, 10)) - Math.max(1, days) + 1));
+
 /** Days in the rule's window that count (YES for a problem question, NO
- *  for a "good" one), from the cycle start or the last periodDays days. */
+ *  for a "good" one), from the cycle start or the last periodDays days (today the last of them). */
 export const ruleCount = (tracker: Tracker, entries: TrackerEntry[], now = new Date()): number => {
-  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  from.setDate(from.getDate() - tracker.periodDays); // same window as the Limits tab
-  let start = isoLocal(from);
+  let start = windowFrom(isoLocal(now), tracker.periodDays); // same window as the Limits tab
   if (tracker.cycleStartDate && tracker.cycleStartDate > start) start = tracker.cycleStartDate;
   const today = isoLocal(now);
   const hit = tracker.problemWhen === "yes";
@@ -56,28 +59,37 @@ export type RuleState = {
   /** enough answers for the answered-days rule to apply */ byAnswers: boolean;
 };
 export const ruleState = (tracker: Tracker, entries: TrackerEntry[], now = new Date()): RuleState => {
-  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  from.setDate(from.getDate() - tracker.periodDays); // the same window as ruleCount
-  const windowStart = isoLocal(from);
-  let start = windowStart;
-  if (tracker.cycleStartDate && tracker.cycleStartDate > start) start = tracker.cycleStartDate;
   const today = isoLocal(now);
   const mine = entries.filter((e) => e.trackerId === tracker.id && e.date <= today);
+  // today counts once it's answered: an evening answer isn't a gap all day (review, Nov 9 2026: an every-evening
+  // answerer read "7 of your 14 answers" until the evening, and a 5-of-7 rule lit a day early)
+  const end = mine.some((e) => e.date === today) ? today : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  // exactly periodDays calendar days, ending there (Nov 10 2026: one more day was counted before)
+  const windowStart = windowFrom(end, tracker.periodDays);
+  let start = windowStart;
+  if (tracker.cycleStartDate && tracker.cycleStartDate > start) start = tracker.cycleStartDate;
   const first = mine.reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
   if (first && first > start) start = first;
-  const inWindow = mine.filter((e) => e.date >= start);
+  const inWindow = mine.filter((e) => e.date >= start && e.date <= end);
   const hit = tracker.problemWhen === "yes";
   const k = new Set(inWindow.filter((e) => e.value === hit).map((e) => e.date)).size;
   const n = new Set(inWindow.map((e) => e.date)).size;
-  // today counts once it's answered: an evening answer isn't a gap all day (review, Nov 9 2026: an every-evening
-  // answerer read "7 of your 14 answers" until the evening, and a 5-of-7 rule lit a day early)
-  const end = inWindow.some((e) => e.date === today) ? today : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
   const days = Math.max(1, Math.round((Date.parse(end + "T12:00:00") - Date.parse(start + "T12:00:00")) / 86_400_000) + 1);
   const T = tracker.threshold;
   const byAnswers = n >= Math.max(3, Math.ceil((tracker.periodDays + 1) / 4));
   const need = T <= 0 ? 0 : !byAnswers ? T : Math.min(T, Math.max(2, Math.ceil(T / 2), Math.ceil((T * n) / days)));
   // no answers at all is not "0 of your 0 answers"
   return { k, n, days, need, gaps: n > 0 && n < days, soFar: start > windowStart, byAnswers };
+};
+
+/** The rule's window as days, oldest first (the dots under a rule): the same periodDays days ruleState counts,
+ *  ending today once today is answered, else yesterday. */
+export const ruleWindowDates = (tracker: Tracker, entries: TrackerEntry[], now = new Date()): string[] => {
+  const today = isoLocal(now);
+  const end = entries.some((e) => e.trackerId === tracker.id && e.date === today) ? today : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  const from = windowFrom(end, tracker.periodDays);
+  return Array.from({ length: Math.max(1, tracker.periodDays) }, (_, i) =>
+    isoLocal(new Date(Number(from.slice(0, 4)), Number(from.slice(5, 7)) - 1, Number(from.slice(8, 10)) + i)));
 };
 
 /** The same answered-days rule for any count over a window (the "Need to talk?" card: 12 of 14). */

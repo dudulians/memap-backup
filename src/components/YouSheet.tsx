@@ -53,7 +53,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
     setData(null);
     let live = true;
     Promise.all([getTrackers(), getEntries(), getNotes().catch(() => [])])
-      .then(([trackers, entries, notes]) => { if (live) { setData({ trackers, entries, notes: notes.length }); setVisit((v) => v + 1); } })
+      .then(([trackers, entries, notes]) => { if (live) { setData({ trackers, entries, notes: notes.filter((n) => !n.reasonFor).length }); setVisit((v) => v + 1); } })
       .catch(() => undefined);
     return () => { live = false; };
   }, [open]);

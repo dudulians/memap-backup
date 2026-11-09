@@ -6,7 +6,7 @@ import { getUiMode } from "@/lib/uiMode";
 import { RedFlagsSheet } from "./RedFlagsSheet";
 import { SupportSheet } from "./SupportSheet";
 import { HOME_HARM_IDS, MOOD_SUPPORT_IDS } from "@/lib/supportLines";
-import { reasonTemplate } from "@/lib/reasons";
+import { reasonAskedLater, reasonTemplate } from "@/lib/reasons";
 import { createPortal } from "react-dom";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { cardQuestion } from "@/lib/cardText";
 import { Flame, Clock } from "lucide-react";
 import { maybeRequestRating } from "@/lib/appRating";
-import { getDoorState, getDoor, doorCounts, strongestContextFact } from "@/lib/doors";
+import { getDoorState, getDoor, doorCounts, strongestContextFact, isoLocal } from "@/lib/doors";
 import { echoLine, factLine } from "@/lib/echo";
 import maluCheer from "@/assets/malu/malu-cheer.webp";
 import maluHeart from "@/assets/malu/malu-heart.webp";
@@ -559,22 +559,25 @@ export const DailySession = ({
   const hurtTonight = useRef(false);
   // "Why?" (her answer, Nov 9 2026: "чтоб это было очевидно при ответе — типа сможешь добавить причину позже"):
   // a "yes" to a fight or a headache gets one quiet line under the buttons, nothing to tap; the path asks later.
-  // It stays a few seconds (it stands under the next card by then) and never under a partner-harm card or its
-  // calm line, where "why" would read as being about that one. The Done card says it again.
-  const [whyLater, setWhyLater] = useState(0);
+  // It stays a few seconds (it stands under the next card by then, so it names its answer: "Fight: you can add
+  // the reason later.", Nov 10 2026) and never under a partner-harm card or its calm line, where "why" would read
+  // as being about that one. Only for a day the "Why?" step will still ask about (reasonAskedLater). The Done
+  // card says it again, unless a partner-harm "yes" came this sitting.
+  const [whyLater, setWhyLater] = useState<{ at: number; id: string } | null>(null);
   const whyAsked = useRef(false);
   useEffect(() => {
     if (!whyLater) return;
-    const id = window.setTimeout(() => setWhyLater(0), 5000);
+    const id = window.setTimeout(() => setWhyLater(null), 5000);
     return () => window.clearTimeout(id);
   }, [whyLater]);
 
   const handleAnswer = (value: boolean) => {
     if (isAnimatingRef.current || !currentQuestion) return;
     sessionVals.current.set(currentQuestion.tracker.id, value);
-    const why = value && !!reasonTemplate(currentQuestion.tracker);
-    setWhyLater(why ? Date.now() : 0);
-    if (why) whyAsked.current = true;
+    const why = value && !playMode && reasonAskedLater(currentQuestion.tracker, selectedDate, isoLocal(new Date()));
+    const whyId = why ? reasonTemplate(currentQuestion.tracker) : null;
+    setWhyLater(whyId ? { at: Date.now(), id: whyId } : null);
+    if (whyId) whyAsked.current = true;
     // a partner shouted or said something hurtful: one calm line before the next card (persona walk, Nov 9 2026:
     // the deck went straight on to "Great work today!")
     const tid = templateIdOf(currentQuestion.tracker) ?? "";
@@ -663,7 +666,7 @@ export const DailySession = ({
 
   const handleSkip = () => {
     if (isAnimatingRef.current || !currentQuestion) return;
-    setWhyLater(0);
+    setWhyLater(null);
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -854,7 +857,7 @@ export const DailySession = ({
           {weekDone !== null ? t(weekDone.first ? "path.weekSaved" : "path.weekSavedN", { n: weekDone.week + 1 }) : t("path.stepSaved", { count: answeredCount })}
         </p>
         {/* a fight or a headache this sitting: the reasons can come later, on the path ("Why?") */}
-        {whyAsked.current && <p data-why-later className="mt-3 text-[16px] font-semibold text-muted-foreground">{t("why.later")}</p>}
+        {whyAsked.current && !hurtTonight.current && <p data-why-later className="mt-3 text-[16px] font-semibold text-muted-foreground">{t("why.later")}</p>}
         <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("path.continue")}
         </Pressable>
@@ -1301,7 +1304,7 @@ export const DailySession = ({
                 disabled={isAnimating}
                 onClick={() => {
                   const last = answeredHistory.current.pop();
-                  setWhyLater(0);
+                  setWhyLater(null);
                   if (last?.saved && onClearAnswer) {
                     // Fire-and-forget like handleAnswer — never block
                     // the UI on a save/delete round-trip.
@@ -1540,8 +1543,8 @@ export const DailySession = ({
             <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
           </button>
         </div>
-        {whyLater > 0 && !care && !HOME_HARM_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
-          <p data-why-later role="status" className="mt-2.5 text-center text-[15px] font-semibold leading-snug text-muted-foreground animate-fade-in">{t("why.later")}</p>
+        {whyLater && !care && !HOME_HARM_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
+          <p key={whyLater.at} data-why-later role="status" className="mt-2.5 text-center text-[15px] font-semibold leading-snug text-muted-foreground animate-fade-in">{t("why.laterOne", { name: t(`why.one.${whyLater.id}`) })}</p>
         )}
         {care && (
           <div className="surface mt-3 rounded-[18px] px-4 py-3 animate-fade-in" role="status">

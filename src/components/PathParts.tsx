@@ -182,7 +182,7 @@ export const WeekStrip = ({
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
         {stops.map((p, i) => {
-          if (i === DAYS_PER_WEEK && kind === "past" && quiet) {
+          if (i === DAYS_PER_WEEK && kind === "past" && quiet && !chest) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                 <QuietLine stop={p} text={t("path.quietWeek")} />

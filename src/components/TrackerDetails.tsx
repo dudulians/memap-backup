@@ -85,10 +85,10 @@ export const TrackerDetails = ({
     return s.charAt(0).toUpperCase() + s.slice(1);
   })();
 
-  // The limit window: last periodDays, or since the cycle started.
+  // The limit window: last periodDays (today the last of them), or since the cycle started.
   const rollingStart = new Date(now);
   rollingStart.setHours(0, 0, 0, 0);
-  rollingStart.setDate(rollingStart.getDate() - tracker.periodDays);
+  rollingStart.setDate(rollingStart.getDate() - tracker.periodDays + 1);
   const windowStart = tracker.cycleStartDate && tracker.cycleStartDate > isoLocal(rollingStart)
     ? tracker.cycleStartDate
     : isoLocal(rollingStart);

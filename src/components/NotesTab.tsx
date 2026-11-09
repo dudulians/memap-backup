@@ -86,10 +86,13 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
   };
 
   const q = searchQuery.trim().toLowerCase();
-  // a reason's words are a note of that day, shown with their reason (not twice)
-  const plainNotes = notes.filter((n) => !n.reasonFor);
+  // a reason's words are a note of that day, shown with their reason (not twice); when that answer isn't
+  // listed under Reasons (changed to No, cleared, its question archived) they stay a plain note, never lost
+  const reasonList = reasonEntries(trackers, entries, notes);
+  const listed = new Set(reasonList.map(reasonKey));
+  const plainNotes = notes.filter((n) => !n.reasonFor || !listed.has(n.reasonFor));
   const reasonWords = new Map(notes.filter((n) => n.reasonFor).map((n) => [n.reasonFor!, n.text]));
-  const reasons = reasonEntries(trackers, entries, notes).map((e) => {
+  const reasons = reasonList.map((e) => {
     const tr = trackers.find((x) => x.id === e.trackerId);
     return { e, key: reasonKey(e), head: `${reasonDay(e.date)} · ${reasonName(t, tr)}`, labels: (e.tags ?? []).map((x) => reasonLabel(t, x)), words: reasonWords.get(reasonKey(e)) };
   }).filter((r) => !q || [r.head, ...r.labels, r.words ?? ""].some((x) => x.toLowerCase().includes(q)));
@@ -104,7 +107,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
         return !!name && name.toLowerCase().includes(q);
       })
     : plainNotes;
-  const hasReasons = reasonEntries(trackers, entries, notes).length > 0;
+  const hasReasons = reasonList.length > 0;
 
   const groupedNotes = filteredNotes.reduce((acc, note) => {
     (acc[note.date] ??= []).push(note);

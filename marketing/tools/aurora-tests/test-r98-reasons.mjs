@@ -2,8 +2,8 @@
 // шагом сделать? … сможешь добавить причину позже … и чтоб это где-то ещё хранилось, как заметки"): "Why?" reasons.
 // A. Path start Mon Nov 2; week 1 answered Mon, Tue, Wed, Thu, Sat; fights on Tue (money), Thu (money, chores) and Sat
 //    (no reasons); a headache on Mon Nov 9 (no reasons); the partner raised their voice on Sat. Today Tue Nov 10, 20:00:
-//    - the deck: "Yes" to the fight card → "You can add why later." under the buttons; "Yes" to the partner card →
-//      no such line (no reasons for the partner-harm questions); the Done card says it too;
+//    - the deck: "Yes" to the fight card → "Fight: you can add the reason later." under the buttons; "Yes" to the partner card →
+//      no such line (no reasons for the partner-harm questions); after that partner "yes" the Done card doesn't say it (C: it does);
 //    - the path: a "Why?" step (Fight · Headache) → its sheet lists Today · Fight, Yesterday · Headache, Saturday ·
 //      Fight (never the partner card); the headache chips are the research ones (no screens, alcohol, weather);
 //      chips + a few words → Save: tags on the answers, the words a note on that day, the step done;
@@ -88,11 +88,11 @@ const WEEK1 = {
 for (const lang of ["en", "ru"]) {
   const RU = lang === "ru";
   const W = RU
-    ? { yes: /^Да$/, no: /^Нет$/, later: "Почему — можно добавить потом.", step: "Почему?", add: /^Добавить$/, skip: /^Пропустить$/, save: /^Сохранить$/, fightQ: /ссор/i, voiceQ: /голос/i, cont: /^Дальше$/,
+    ? { yes: /^Да$/, no: /^Нет$/, later: "Ссора: причину можно добавить потом.", doneLater: "Причину можно добавить потом.", step: "Почему?", add: /^Добавить$/, skip: /^Пропустить$/, save: /^Сохранить$/, fightQ: /ссор/i, voiceQ: /голос/i, cont: /^Дальше$/,
       sub: "Ссора · Головная боль", heads: ["Сегодня · Ссора", "Вчера · Головная боль", "Суббота · Ссора"], money: "Деньги", together: "Время вместе", stress: "Стресс", chores: "Быт", kids: "Дети",
       headChips: "Плохой сон|Стресс|Пропуск еды|Месячные|Другое|Не знаю", words: "Из-за праздников", reasons: "ПРИЧИНЫ", report: "Отчёт прошлой недели", openReport: /^Открыть$/, seeReport: /Смотреть отчёт/i, next: /^Дальше$/,
       line: "Ссоры — чаще всего: деньги (3 из 3)", skipped: "Пропущено" }
-    : { yes: /^Yes$/, no: /^No$/, later: "You can add why later.", step: "Why?", add: /^Add$/, skip: /^Skip$/, save: /^Save$/, fightQ: /fight|argument/i, voiceQ: /voice/i, cont: /^Continue$/,
+    : { yes: /^Yes$/, no: /^No$/, later: "Fight: you can add the reason later.", doneLater: "You can add the reason later.", step: "Why?", add: /^Add$/, skip: /^Skip$/, save: /^Save$/, fightQ: /fight|argument/i, voiceQ: /voice/i, cont: /^Continue$/,
       sub: "Fight · Headache", heads: ["Today · Fight", "Yesterday · Headache", "Saturday · Fight"], money: "Money", together: "Time together", stress: "Stress", chores: "Chores", kids: "Kids",
       headChips: "Poor sleep|Stress|Skipped a meal|Period|Other|Don't know", words: "About the holidays", reasons: "REASONS", report: "Last week's report", openReport: /^Open$/, seeReport: /See the report/i, next: /^Next$/,
       line: "Fights — most often: money (3 of 3)", skipped: "Skipped" };
@@ -138,9 +138,11 @@ for (const lang of ["en", "ru"]) {
     }
     ok(`${lang}.A deck had both cards`, sawFight && sawVoice, { sawFight, sawVoice });
     await p.waitForTimeout(800);
-    const done = await text(p.locator("div.fixed.inset-0", { has: p.locator("[data-why-later]") }).last());
+    // a partner-harm "yes" came this sitting: the Done card doesn't say the reason line (Nov 10 2026)
+    const doneCard = p.locator("div.fixed.inset-0", { has: p.getByRole("button", { name: W.cont }) }).last();
+    const done = await text(doneCard);
     out[`${lang}.A.doneCard`] = done.slice(0, 200);
-    ok(`${lang}.A Done card says it too`, done.includes(W.later), done);
+    ok(`${lang}.A Done card: no reason line after a partner-harm yes`, done.length > 0 && !done.includes(W.doneLater) && (await doneCard.locator("[data-why-later]").count()) === 0, done);
     await p.screenshot({ path: `${D}/${lang}-A3-done-card.png` });
     await p.getByRole("button", { name: W.cont }).last().click(); await p.waitForTimeout(2200);
 
@@ -219,7 +221,9 @@ for (const lang of ["en", "ru"]) {
     await p.locator("[data-reason-line]").first().evaluate((el) => el.scrollIntoView({ block: "center" })).catch(() => {}); await p.waitForTimeout(500);
     await p.screenshot({ path: `${D}/${lang}-A12-report-line.png` });
     const saved = await p.evaluate(() => JSON.parse(localStorage.getItem("memap_week_chests") || "{}")[0]?.reasons ?? null);
-    ok(`${lang}.A report keeps the line`, Array.isArray(saved) && saved[0] === W.line, saved);
+    ok(`${lang}.A report keeps the line`, Array.isArray(saved) && saved[0]?.replace(/ /g, " ") === W.line, saved);
+    // "(3 of 3)" never breaks before "3)"
+    ok(`${lang}.A report line: k of n kept together`, /\d+ (of|из) \d+\)/.test(saved?.[0] ?? ""), saved);
 
     // 5. the calendar day: the chips right there
     await p.reload(); await p.waitForTimeout(2600);
@@ -306,7 +310,43 @@ for (const lang of ["en", "ru"]) {
     }
     await p.waitForTimeout(600);
     const done = await text(p.locator("div.fixed.inset-0", { has: p.locator("[data-why-later]") }).last());
-    ok(`${lang}.C the Done card says it`, done.includes(W.later), done);
+    ok(`${lang}.C the Done card says it`, done.includes(W.doneLater), done);
+    await p.screenshot({ path: `${D}/${lang}-C2-done-card.png` });
+    await ctx.close();
+  }
+  // --- D: the rules behind the line and the step (Nov 10 2026) ------------------------------------------------------
+  // the line only for a day the step still asks about (today and 3 days back); after 3 skips in a row for a question
+  // the step stops asking about it (and the deck stops promising), until a reason is saved for it elsewhere
+  {
+    const { ctx, p } = await open(lang, new Date(2026, 10, 10, 20, 0, 0));
+    const ids = await seed(p, lang, { ...WEEK1, "2026-11-08": { head: true }, "2026-11-10": { head: true, fight: true } });
+    const r = await p.evaluate(async (ids) => {
+      const rs = await import("/src/lib/reasons.ts"), st = await import("/src/lib/storage.ts");
+      const T = await st.getTrackers(), E = await st.getEntries();
+      const head = T.find((x) => x.id === ids.head), fight = T.find((x) => x.id === ids.fight);
+      const today = "2026-11-10";
+      const out = { lineToday: rs.reasonAskedLater(head, today, today), line3: rs.reasonAskedLater(head, "2026-11-07", today), line5: rs.reasonAskedLater(head, "2026-11-05", today) };
+      const pend = () => rs.pendingReasons(T, E, today).map((e) => `${e.trackerId === ids.head ? "head" : "fight"}|${e.date}`).join();
+      out.before = pend();
+      // three evenings skipped for the headache (Nov 5, 6, 7), the fight saved once in between
+      rs.markAsked([`${ids.head}|2026-11-04`], "skipped", "2026-11-05", true);
+      rs.markAsked([`${ids.head}|2026-11-06`], "skipped", "2026-11-06", true);
+      rs.markAsked([`${ids.fight}|2026-11-07`], "saved", "2026-11-07", true);
+      out.twoSkips = pend();
+      rs.markAsked([`${ids.head}|2026-11-07`], "skipped", "2026-11-07", true);
+      out.threeSkips = pend();
+      out.lineResting = rs.reasonAskedLater(head, today, today);
+      out.fightStill = rs.reasonAskedLater(fight, today, today);
+      // a reason saved for it from the calendar day: back
+      rs.markAsked([`${ids.head}|2026-11-02`], "saved", "2026-11-09");
+      out.back = pend();
+      return out;
+    }, ids);
+    out[`${lang}.D`] = r;
+    ok(`${lang}.D line: today and 3 days back, not older`, r.lineToday && r.line3 && !r.line5, r);
+    ok(`${lang}.D two skips: still asked`, r.before.includes("head|2026-11-10") && r.twoSkips.includes("head|2026-11-10"), r);
+    ok(`${lang}.D three skips: the headache rests`, !r.threeSkips.includes("head") && r.threeSkips.includes("fight|2026-11-10") && !r.lineResting && r.fightStill, r);
+    ok(`${lang}.D a saved reason brings it back`, r.back.includes("head|2026-11-10") && r.back.includes("head|2026-11-08"), r);
     await ctx.close();
   }
 }

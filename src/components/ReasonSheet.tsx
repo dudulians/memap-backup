@@ -88,7 +88,12 @@ export const ReasonSheet = ({ items, mode, trackers, entries, onClose }: {
     setBusy(true);
     try {
       await saveReasons(items.map((it) => ({ ...it, tags: picked[reasonKey(it)] ?? [], text: words[reasonKey(it)] ?? "" })));
-      markAsked(keys, "saved", today, mode === "ask");
+      // on the path's step, an answer left empty was skipped (it counts toward resting that question, reasons.ts)
+      const filled = (k: string) => (picked[k]?.length ?? 0) > 0 || !!words[k]?.trim();
+      if (mode === "ask") {
+        markAsked(keys.filter(filled), "saved", today, true);
+        markAsked(keys.filter((k) => !filled(k)), "skipped", today, true);
+      } else markAsked(keys, "saved", today, false);
       haptics.success();
       track("reasons_saved", { answers: keys.length, chips: keys.reduce((s, k) => s + (picked[k]?.length ?? 0), 0), words: keys.some((k) => !!words[k]?.trim()), from: mode === "ask" ? "path" : "notes" });
       onClose("saved");

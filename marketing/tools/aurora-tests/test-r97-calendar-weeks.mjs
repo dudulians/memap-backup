@@ -7,6 +7,8 @@
 //    "Not now" hides the card until another day is missed.
 // B. Only Mon and Wed of week 1, nothing since, today Sat Nov 14: week 1 is "A quiet week." (no report,
 //    no "Last week's report" step), this week can't reach 3 evenings either: "A quiet week." again.
+// C. Reports opened before calendar weeks move to their calendar week (no second report, no "A quiet week." over
+//    an opened one); the push's "report in N evenings" is counted for the evening it fires (Nov 10 2026).
 // EN + RU. Run from marketing/tools: node aurora-tests/test-r97-calendar-weeks.mjs
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
@@ -75,7 +77,7 @@ for (const lang of ["en", "ru"]) {
     ok(`${lang}.A chips`, c.map((x) => x.split("=")[1]).join("|") === want.join("|"), c.join("|"));
     const card = (await p.locator("[data-fill-card]").innerText().catch(() => "")).replace(/\s+/g, " ");
     out[`${lang}.A.card`] = card;
-    ok(`${lang}.A card words`, RU ? /Пропустили пару дней\? Ничего страшного\. Можно заполнить, если помнишь\./.test(card) && /Не сейчас/.test(card)
+    ok(`${lang}.A card words`, RU ? /Пропущено несколько дней\? Ничего страшного\. Можно заполнить, если помнишь\./.test(card) && /Не сейчас/.test(card)
       : /Missed a few days\? That's fine\. Fill them in if you remember\./.test(card) && /Not now/.test(card), card);
     ok(`${lang}.A no guilt words`, !/you didn.t|you missed|не заполнил|забыл/i.test(card), card);
     ok(`${lang}.A old pill gone`, (await p.locator(".past-pill").count()) === 0);
@@ -168,6 +170,42 @@ for (const lang of ["en", "ru"]) {
     await p.screenshot({ path: `${D}/${lang}-B2-quiet-week1.png` });
     await p.evaluate(() => document.querySelectorAll("[data-quiet-week]")[1]?.scrollIntoView({ block: "center" })); await p.waitForTimeout(900);
     await p.screenshot({ path: `${D}/${lang}-B3-quiet-this-week.png` });
+    await ctx.close();
+  }
+  // --- C: reports opened before calendar weeks (Nov 10 2026) --------------------------------------------------------
+  // Two reports saved under the old numbers (no dates): one opened Mon Nov 9 (the first day of week 2: last week's,
+  // so week 1), one opened Mon Nov 16 (week 2's). Week 1 has only 2 answered evenings by the calendar. Today Wed Nov 18:
+  // each moves to its calendar week, no "Last week's report" step for evenings already reported, and week 1 shows
+  // its opened report, not "A quiet week.".
+  {
+    const { ctx, p } = await open(lang, new Date(2026, 10, 18, 20, 0, 0));
+    const rec = (openedAt) => JSON.stringify({ openedAt, lines: [{ label: "x", k: 1, n: 7 }], reward: "rainbow" });
+    await seed(p, lang, ["2026-11-02", "2026-11-04", "2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14", "2026-11-17"],
+      { memap_week_chests: `{"0":${rec("2026-11-09")},"1":${rec("2026-11-16")}}`, memap_fill_card_hidden: JSON.stringify(["2026-11-15", "2026-11-16"]) });
+    await p.reload(); await p.waitForTimeout(2800);
+    const m = await model(p);
+    const chests = await p.evaluate(() => Object.fromEntries(Object.entries(JSON.parse(localStorage.getItem("memap_week_chests") || "{}")).map(([k, r]) => [k, `${r.dates?.[0]}..${r.dates?.[6]}${r.legacy ? " legacy" : ""}`])));
+    out[`${lang}.C.chests`] = chests;
+    ok(`${lang}.C old reports on their calendar weeks`, chests[0] === "2026-11-02..2026-11-08 legacy" && chests[1] === "2026-11-09..2026-11-15 legacy" && Object.keys(chests).length === 2, JSON.stringify(chests));
+    ok(`${lang}.C no second report for the same evenings`, !m.steps.includes("report"), m.steps.join());
+    // week 1 sits behind "1 earlier week": open it
+    await p.getByRole("button", { name: RU ? /Прошлых недель: 1/ : /1 earlier week/ }).click(); await p.waitForTimeout(1200);
+    const strips = await p.$$eval(".path-week-label", (els) => els.map((e) => e.textContent.trim()));
+    out[`${lang}.C.strips`] = strips;
+    await p.evaluate(() => document.querySelector(".path-week-label")?.scrollIntoView({ block: "start" })); await p.waitForTimeout(900);
+    const quiet = await p.$$eval("[data-quiet-week]", (els) => els.length);
+    const gold = await p.$$eval(".path-node", (els) => els.filter((n) => !n.closest(".path-coming") && /Week report|Отчёт недели/.test(n.getAttribute("aria-label") ?? "")).length);
+    ok(`${lang}.C an opened report, never "A quiet week." over it`, strips.length >= 2 && quiet === 0 && gold >= 2, JSON.stringify({ strips, quiet, gold }));
+    await p.screenshot({ path: `${D}/${lang}-C1-old-reports.png` });
+    // the push's report line is for the evening it fires: on a week's last day after the reminder time, tomorrow's
+    const r = await p.evaluate(async () => {
+      const ps = await import("/src/lib/pathSteps.ts"), st = await import("/src/lib/storage.ts");
+      const T = await st.getTrackers(), E = await st.getEntries();
+      return { thu: ps.reportInOn(T, E, new Date(2026, 10, 19, 21, 0, 0)), sun: ps.reportInOn(T, E, new Date(2026, 10, 22, 21, 0, 0)), mon: ps.reportInOn(T, E, new Date(2026, 10, 23, 21, 0, 0)) };
+    });
+    out[`${lang}.C.reportIn`] = r;
+    // Thu: 4 evenings left; Sun: this week can't reach 3 evenings any more (none); Mon: a new week, 7
+    ok(`${lang}.C report count on the push's own day`, r.thu === 4 && r.sun === null && r.mon === 7, JSON.stringify(r));
     await ctx.close();
   }
 }

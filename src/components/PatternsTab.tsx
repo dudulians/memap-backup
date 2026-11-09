@@ -128,8 +128,9 @@ export const PatternsTab = ({ focusIds, only, onTry, pair = false }: { focusIds?
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // the last periodDays days, today the last of them (the same span as the rules, lighthouses.ts)
     const rollingStart = new Date(today);
-    rollingStart.setDate(today.getDate() - tracker.periodDays);
+    rollingStart.setDate(today.getDate() - tracker.periodDays + 1);
 
     const cycleStart = tracker.cycleStartDate
       ? new Date(tracker.cycleStartDate + "T00:00:00")

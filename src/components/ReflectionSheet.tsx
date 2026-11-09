@@ -81,7 +81,8 @@ export const ReflectionSheet = ({
 
   // Default window start (rolling or cycle-based)
   const defaultStart = useMemo(() => {
-    const rolling = subDays(today, tracker.periodDays);
+    // the last periodDays days, today the last of them (the same span as the rules, lighthouses.ts)
+    const rolling = subDays(today, tracker.periodDays - 1);
     const cycle = tracker.cycleStartDate
       ? new Date(tracker.cycleStartDate + "T00:00:00")
       : null;

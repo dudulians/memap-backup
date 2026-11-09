@@ -494,6 +494,9 @@ export interface ChestRecord {
   openedAt: string; lines: ChestLine[]; fact?: string; reward: string; placed?: boolean;
   /** the days it counted (since calendar weeks, Nov 9 2026), so it reopens with the same days */
   dates?: string[];
+  /** opened before calendar weeks and moved to one (migrateChests): its numbers counted other days, so it
+   *  reopens without dates */
+  legacy?: boolean;
   /** the week's insight, said in words when opened */
   insight?: string; insightOther?: string; insightEarly?: boolean;
   /** "Fights — most often: money (4 of 7)" (src/lib/reasons.ts reasonLines), said in words when opened */
@@ -522,10 +525,36 @@ export const titleFor = (week: number) => CHEST_TITLES[Math.min(week, CHEST_TITL
 
 export const getChests = (): Record<number, ChestRecord> => {
   try {
-    return JSON.parse(localStorage.getItem(CHESTS_KEY) || "{}");
+    return migrateChests(JSON.parse(localStorage.getItem(CHESTS_KEY) || "{}"));
   } catch {
     return {};
   }
+};
+
+/** Reports opened before calendar weeks (Nov 9 2026) were saved under the old week numbers (seven answered
+ *  evenings each), so the path could offer a second report for the same evenings or call that week quiet.
+ *  Once, each moves to the calendar week it was opened in (the week before when opened on a week's first
+ *  day: that was "last week's report"); a later one keeps its week, an earlier one takes the free week
+ *  before it. Their numbers stay as counted then (legacy: shown without dates). */
+const migrateChests = (all: Record<number, ChestRecord>): Record<number, ChestRecord> => {
+  const old = Object.entries(all).filter(([, r]) => !r.dates).map(([k, r]) => ({ k: Number(k), r }));
+  if (old.length === 0) return all;
+  let start: string | null = null;
+  try { start = localStorage.getItem(START_KEY); } catch { /* not yet */ }
+  if (!start) return all; // the path's start isn't known yet: placed on a later load
+  const out: Record<number, ChestRecord> = {};
+  for (const [k, r] of Object.entries(all)) if (r.dates) out[Number(k)] = r;
+  for (const { r } of old.sort((a, b) => b.k - a.k)) {
+    const opened = /^\d{4}-\d{2}-\d{2}$/.test(r.openedAt ?? "") ? r.openedAt : isoLocal(new Date(r.openedAt));
+    const since = daysBetween(start, opened);
+    let w = !Number.isFinite(since) ? -1 : Math.floor(since / DAYS_PER_WEEK) - (since % DAYS_PER_WEEK === 0 ? 1 : 0);
+    while (w >= 0 && out[w]) w--;
+    // no free week left: kept (it still counts as a report opened), never on the path
+    if (w < 0) { w = -1; while (out[w]) w--; }
+    out[w] = { ...r, dates: w >= 0 ? weekDatesOf(start, w) : [], legacy: true };
+  }
+  try { localStorage.setItem(CHESTS_KEY, JSON.stringify(out)); } catch { /* placed again next time */ }
+  return out;
 };
 export const saveChest = (week: number, rec: ChestRecord) => {
   const all = getChests();
@@ -535,6 +564,36 @@ export const saveChest = (week: number, rec: ChestRecord) => {
   } catch {
     /* the chest just opens fresh next time */
   }
+};
+
+/** Week w's seven calendar days from the path start. */
+const weekDatesOf = (start: string, w: number) => Array.from({ length: DAYS_PER_WEEK }, (_, i) => addDaysIso(start, w * DAYS_PER_WEEK + i));
+
+/** Where a day stands in its calendar week: the week, the day in it, and the week's report. */
+const weekState = (start: string, counted: Set<string>, today: string) => {
+  const since = Math.max(0, daysBetween(start, today));
+  const week = Math.floor(since / DAYS_PER_WEEK);
+  const dayInWeek = since % DAYS_PER_WEEK;
+  const weekDates = weekDatesOf(start, week);
+  const pastInWeek = weekDates.slice(0, dayInWeek).filter((d) => counted.has(d));
+  const todayCounted = counted.has(today);
+  // the week's report: the evening of its last day, with at least REPORT_MIN answered evenings
+  const doneInWeek = pastInWeek.length + (todayCounted ? 1 : 0);
+  const eveningsLeft = DAYS_PER_WEEK - dayInWeek - (todayCounted ? 1 : 0);
+  const weekComplete = eveningsLeft === 0 && doneInWeek >= REPORT_MIN;
+  const quietWeek = doneInWeek + eveningsLeft < REPORT_MIN;
+  const reportIn = eveningsLeft > 0 && !quietWeek ? eveningsLeft : null;
+  return { week, dayInWeek, weekDates, pastInWeek, weekComplete, quietWeek, reportIn };
+};
+
+/** "Your week's report in N evenings" as it stands on a reminder's own day (Nov 10 2026: a reminder for
+ *  tomorrow carried today's count, and after a week's last day it announced a report for a week that had
+ *  ended). Nothing is saved but the path start, as pathModel would save it today. */
+export const reportInOn = (trackers: Tracker[], entries: TrackerEntry[], day: Date): number | null => {
+  const iso = isoLocal(day), today = isoLocal(new Date());
+  const firstEntry = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
+  const start = pathStart(iso < today ? iso : today, firstEntry);
+  return weekState(start, new Set(countedDays(trackers, entries, iso)), iso).reportIn;
 };
 
 // --- The model ----------------------------------------------------------------
@@ -561,22 +620,11 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // Calendar weeks from the path start (her note, Nov 9 2026: one missed evening shifted everything —
   // "Week 2 · 6 of 7" on a Monday, a report six days late): a week is seven days in a row, whatever was
   // answered; "k of 7" counts its answered evenings; a missed day is just an empty dot.
-  const since = Math.max(0, daysBetween(start, today));
-  const week = Math.floor(since / DAYS_PER_WEEK);
-  const dayInWeek = since % DAYS_PER_WEEK;
-  const weekOf = (w: number) => Array.from({ length: DAYS_PER_WEEK }, (_, i) => addDaysIso(start, w * DAYS_PER_WEEK + i));
-  const weekDates = weekOf(week);
-  const pastInWeek = weekDates.slice(0, dayInWeek).filter((d) => counted.has(d));
+  const { week, dayInWeek, weekDates, pastInWeek, weekComplete, quietWeek, reportIn } = weekState(start, counted, today);
   const pastWeeks: PathWeek[] = Array.from({ length: week }, (_, w) => {
-    const dates = weekOf(w), answered = dates.filter((d) => counted.has(d));
+    const dates = weekDatesOf(start, w), answered = dates.filter((d) => counted.has(d));
     return { dates, answered, quiet: answered.length < REPORT_MIN };
   });
-  // the week's report: the evening of its last day, with at least REPORT_MIN answered evenings
-  const doneInWeek = pastInWeek.length + (todayCounted ? 1 : 0);
-  const eveningsLeft = DAYS_PER_WEEK - dayInWeek - (todayCounted ? 1 : 0);
-  const weekComplete = eveningsLeft === 0 && doneInWeek >= REPORT_MIN;
-  const quietWeek = doneInWeek + eveningsLeft < REPORT_MIN;
-  const reportIn = eveningsLeft > 0 && !quietWeek ? eveningsLeft : null;
   // days to fill in if she remembers: the last 7 before today, since the path began
   const missedDays = Array.from({ length: DAYS_PER_WEEK }, (_, i) => addDaysIso(today, i - DAYS_PER_WEEK)).filter((d) => d >= start && !counted.has(d));
 

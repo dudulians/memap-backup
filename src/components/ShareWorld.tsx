@@ -29,7 +29,7 @@ export const ShareWorld = () => {
       const [trackers, entries, notes] = await Promise.all([getTrackers(), getEntries(), getNotes()]);
       const islands = buildIslands(trackers, entries), routes = buildRoutes(trackers, entries, islands);
       const ev = islandEvenings(trackers, entries);
-      const f = worldFacts(trackers, entries, islands, routes, notes.length);
+      const f = worldFacts(trackers, entries, islands, routes, notes.filter((n) => !n.reasonFor).length); // "Why?" words aren't notes written
       const m = pathModel(trackers, entries);
       const treasures = ITEMS.filter((it) => owned(it.id, f)).length;
       const list = islands.map((i) => ({ id: i.id, name: islandName(t, i.id), days: ev.get(i.id) ?? 0 })).sort((a, b) => b.days - a.days);

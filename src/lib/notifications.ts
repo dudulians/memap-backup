@@ -208,16 +208,24 @@ export const reminderPlan = async (
   const { templateIdOf } = await import("@/lib/answerPhrases");
   const askedCount = allActive.filter((t) => t.source !== "play" && !FOLLOW_UPS[templateIdOf(t) ?? ""]).length || allActive.length;
   // how close she is to the next things, for the new screens' reminders
-  // the first reminder may say when the week's report comes; later ones don't (that count follows the
-  // calendar, so it would be out of date by then; calendar weeks, Nov 9 2026)
-  const [progressFirst, progress] = getUiMode() === "new"
+  // the first reminder may say when the week's report comes, counted for the evening it fires (today's
+  // slot may have passed: then it's tomorrow's count, Nov 10 2026); later ones don't (that count follows
+  // the calendar, so it would be out of date by then; calendar weeks, Nov 9 2026).
+  // Words typed in "Why?" are kept as notes but aren't notes she wrote (Nov 10 2026): not counted.
+  const progressData = getUiMode() === "new"
     ? await (async () => {
       try {
         const [all, entries, notes] = await Promise.all([getTrackers(), getEntries(), getNotes()]);
-        return [progressLines(all, entries, notes.length), progressLines(all, entries, notes.length, { weekReport: false })];
-      } catch { return [[], []]; }
+        return { all, entries, notes: notes.filter((n) => !n.reasonFor).length };
+      } catch { return null; }
     })()
-    : [[], []];
+    : null;
+  const progressFirstAt = (at: Date): string[] => {
+    try { return progressData ? progressLines(progressData.all, progressData.entries, progressData.notes, { at }) : []; } catch { return []; }
+  };
+  const progress: string[] = (() => {
+    try { return progressData ? progressLines(progressData.all, progressData.entries, progressData.notes, { weekReport: false }) : []; } catch { return []; }
+  })();
 
   // Language-sensitive fallback strings, resolved in the user's
   // CURRENT UI language at schedule time. iOS stores the literal
@@ -287,7 +295,7 @@ export const reminderPlan = async (
         // says the closest thing; after it, every other day, the next ones in turn.
         // Each stays true until she answers again (which reschedules them all).
         const k = notifications.length;
-        const line = k === 0 ? progressFirst[0] ?? null : progress.length === 0 ? null : k % 2 === 0 ? progress[(k / 2) % progress.length] : null;
+        const line = k === 0 ? progressFirstAt(fireAt)[0] ?? null : progress.length === 0 ? null : k % 2 === 0 ? progress[(k / 2) % progress.length] : null;
         dayBody = line ? `${line}\n${today}` : today;
       }
     }

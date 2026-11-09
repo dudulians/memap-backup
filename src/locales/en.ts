@@ -224,13 +224,14 @@ const en = {
   // "Why?" reasons (Nov 10 2026, src/lib/reasons.ts): a skippable step, kept in Notes
   why: {
     step: "Why?",
-    later: "You can add why later.",
+    later: "You can add the reason later.",
+    laterOne: "{{name}}: you can add the reason later.",
     add: "Add",
     words: "In your own words (optional)",
     reasons: "Reasons",
     inNotes: "See in Notes",
     showAll: "Show all ({{n}})",
-    mostOften: "{{name}} — most often: {{reason}} ({{k}} of {{n}})",
+    mostOften: "{{name}} — most often: {{reason}} ({{k}} of {{n}})",
     one: { "argued-with-partner": "Fight", headache: "Headache", migraine: "Migraine" },
     many: { "argued-with-partner": "Fights", headache: "Headaches", migraine: "Migraines" },
     chip: {

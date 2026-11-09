@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { BarChart3 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { islandName, type IslandId, type Route } from "@/lib/islands";
-import { linkHead, linkOtherDays, linkTimes, trackerLookup } from "@/lib/linkText";
+import { linkHead, linkOtherDays, linkTimesBig, trackerLookup } from "@/lib/linkText";
 import { cap } from "@/lib/answerPhrases";
 import { art, artOf } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
@@ -66,7 +66,7 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           <p className="mt-5 text-[21px] font-bold leading-snug tracking-tight">{linkHead(t, r, of)}</p>
 
           {/* k of n, as dots: filled = it came */}
-          <p className="mt-4 text-[34px] font-bold leading-[1.1] tracking-tight tabular-nums">{linkTimes(t, r.k, r.n)}</p>
+          <p className="mt-4 text-[34px] font-bold leading-[1.1] tracking-tight tabular-nums">{linkTimesBig(t, r.k, r.n)}</p>
           <div className="mt-3 flex flex-wrap gap-1.5" aria-hidden="true">
             {Array.from({ length: Math.min(r.n, 40) }, (_, i) => (
               <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < r.k ? dot(r.secondHard) : r.secondHard === null ? "hsl(var(--foreground) / 0.12)" : dot(!r.secondHard, 0.7) }} />

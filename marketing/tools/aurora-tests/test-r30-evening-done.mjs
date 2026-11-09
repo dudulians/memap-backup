@@ -29,6 +29,11 @@ const setup = async (p, lang, theme, played) => {
     // the demo's headaches and fights of the last days: their "Why?" step done too (r98, Nov 10 2026)
     const rs = await import("/src/lib/reasons.ts");
     rs.markAsked(rs.pendingReasons(T, E, iso(0)).map(rs.reasonKey), "saved", iso(0), true);
+    // and today's "Worth watching" tip read: the demo is random, and on a day with no lit rule the tip took
+    // the free extra and the evening stayed open (Nov 10 2026)
+    const ot = await import("/src/lib/observeTips.ts");
+    const tip = ot.tipForToday(T, iso(0));
+    if (tip) ot.markTip(tip.tip.id, "later");
   }, { lang, theme, played });
   await p.reload(); await p.waitForTimeout(2500);
 };

@@ -23,7 +23,7 @@ import { getNotificationSettings, requestNotificationPermissionDetailed, schedul
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { ruleCount, ruleState, quietContext, type RuleState } from "@/lib/lighthouses";
+import { ruleCount, ruleState, ruleWindowDates, quietContext, type RuleState } from "@/lib/lighthouses";
 import { ruleKeyOf } from "@/lib/rules";
 import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
@@ -490,14 +490,12 @@ const ShowSheet = ({ tracker, k, st, entries, name, onClose, onTry, blocked }: {
   const [limitOpen, setLimitOpen] = useState(false);
   const ba = beforeAfter(tracker, entries);
   const [rule, setRule] = useState({ threshold: tracker.threshold, periodDays: tracker.periodDays });
-  // The rule's own window (ruleCount): the last periodDays days and today.
+  // The rule's own window (ruleState): the last periodDays days, today the last once it's answered.
   // Filled = a day that counts (the hard-day colour, as on the calendar).
   const days = useMemo(() => {
-    const now = new Date();
     const hit = tracker.problemWhen === "yes";
     const byDate = new Map(entries.filter((e) => e.trackerId === tracker.id).map((e) => [e.date, e.value]));
-    return Array.from({ length: tracker.periodDays + 1 }, (_, i) => {
-      const iso = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - tracker.periodDays + i));
+    return ruleWindowDates(tracker, entries).map((iso) => {
       const v = byDate.get(iso);
       const before = !!tracker.cycleStartDate && iso < tracker.cycleStartDate;
       return { iso, look: v === undefined ? "none" : before ? "before" : v === hit ? "hit" : "other" };

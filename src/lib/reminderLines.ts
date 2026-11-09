@@ -10,14 +10,14 @@ import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, buildRoutes, islandName, type IslandId } from "@/lib/islands";
 import { islandEvenings, toNextStage } from "@/lib/globeArt";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
-import { LINKS_AT, countedDays, pathModel } from "@/lib/pathSteps";
+import { LINKS_AT, countedDays, reportInOn } from "@/lib/pathSteps";
 import { isPlayful } from "@/lib/playful";
 
 /** Treasures that come with evenings (the others need something else done). */
 const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
 
 /** Progress lines, closest first (at most five). */
-export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], notes: number, opts: { weekReport?: boolean } = {}): string[] => {
+export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], notes: number, opts: { weekReport?: boolean; at?: Date } = {}): string[] => {
   const t = i18n.t.bind(i18n);
   if (entries.length === 0 && trackers.length === 0) return [];
   const out: { left: number; text: string }[] = [];
@@ -53,10 +53,11 @@ export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], note
   }
   // the week's report: evenings to the end of this calendar week, while it can still come (3 evenings).
   // The count goes down with the calendar, not with answers, so it's only for the next reminder
-  // (notifications.ts asks for it once: opts.weekReport).
+  // (notifications.ts asks for it once: opts.weekReport), counted for the evening that reminder fires
+  // (opts.at): a reminder tomorrow never tells today's count or a week that has ended (Nov 10 2026).
   if (opts.weekReport !== false) {
-    const m = pathModel(trackers, entries);
-    if (m.reportIn) out.push({ left: m.reportIn, text: t("notifications.report", { count: m.reportIn }) });
+    const reportIn = reportInOn(trackers, entries, opts.at ?? new Date());
+    if (reportIn) out.push({ left: reportIn, text: t("notifications.report", { count: reportIn }) });
   }
 
   out.sort((a, b) => a.left - b.left);

@@ -174,7 +174,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const canMake = getOwnIslands().length < MAX_OWN;
   // Her world grows with what she does (src/lib/growth.ts).
   const [notesCount, setNotesCount] = useState(0);
-  useEffect(() => { getNotes().then((n) => setNotesCount(n.length)).catch(() => undefined); }, []);
+  // words typed in "Why?" are kept as notes but aren't a note written: not counted (Nov 10 2026)
+  useEffect(() => { getNotes().then((n) => setNotesCount(n.filter((x) => !x.reasonFor).length)).catch(() => undefined); }, []);
   const growth = useMemo(() => {
     const days = islandDays(trackers, entries);
     return Object.fromEntries(islands.map((i) => [i.id, growthOf(i.id, days.get(i.id) ?? 0)]));

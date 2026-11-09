@@ -128,11 +128,12 @@ export const EveningPath = ({
 }) => {
   const { t, i18n } = useTranslation();
 
-  // Note days for the "Write a note" task; task records settle before the model.
+  // Note days for the "Write a note" task; task records settle before the model. Words typed in "Why?" are kept
+  // as notes but aren't a note written (Nov 10 2026): they never tick the task or count toward note treasures.
   const [noteDays, setNoteDays] = useState<string[] | null>(null);
   const loadNotes = () =>
     getNotes()
-      .then((ns) => setNoteDays(ns.map((n) => isoDay(new Date(n.createdAt))).sort()))
+      .then((ns) => setNoteDays(ns.filter((n) => !n.reasonFor).map((n) => isoDay(new Date(n.createdAt))).sort()))
       .catch(() => setNoteDays([]));
   useEffect(() => { loadNotes(); }, []);
   const [noteDraft, setNoteDraft] = useState<NoteDraft | null>(null);
@@ -171,19 +172,20 @@ export const EveningPath = ({
   // now 6 of 6 or 7 of 8 answers, the same share)
   const heavyMood = useMemo(() => {
     const now = new Date();
-    const start = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13)), end = isoLocal(now);
+    const end = isoLocal(now);
     return active.some((tr) => {
       if (!HEAVY_MOOD_IDS.has(moodTemplateOf(tr) ?? "")) return false;
       const all = entries.filter((e) => e.trackerId === tr.id && e.date <= end);
-      const mine = all.filter((e) => e.date >= start);
+      // today counts once answered (as in ruleState); the window is exactly 14 days ending there
+      const last = all.some((e) => e.date === end) ? end : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+      const start = isoLocal(new Date(Number(last.slice(0, 4)), Number(last.slice(5, 7)) - 1, Number(last.slice(8, 10)) - 13));
+      const mine = all.filter((e) => e.date >= start && e.date <= last);
       if (!mine.length) return false;
       // the window, or since her first answer to it when that's later
       const first = all.reduce((m, e) => (e.date < m ? e.date : m), end) > start ? all.reduce((m, e) => (e.date < m ? e.date : m), end) : start;
-      // today counts once answered (as in ruleState)
-      const last = mine.some((e) => e.date === end) ? end : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
       const days = Math.max(1, Math.round((Date.parse(last + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1);
       const k = new Set(mine.filter((e) => e.value === (tr.problemWhen === "yes")).map((e) => e.date)).size;
-      return k >= needOf(12, 13, new Set(mine.map((e) => e.date)).size, days);
+      return k >= needOf(12, 14, new Set(mine.map((e) => e.date)).size, days);
     });
   }, [active, entries]);
   // which "Need to talk?" sheet: low mood, or a partner who shouted or said hurtful things tonight
@@ -285,8 +287,11 @@ export const EveningPath = ({
     return out;
   }, [m, steps]);
   const firstStep = m.dayInWeek;
+  // a report already opened for this week (one opened before calendar weeks moved here, Nov 10 2026):
+  // it stands where the report would, gold, and opens; never "A quiet week." over it
+  const chestHere = !!getChests()[m.week];
   // fewer than 3 evenings can still come this week: no report, "A quiet week." where it would stand
-  const quietChest = m.quietWeek && !m.weekComplete;
+  const quietChest = m.quietWeek && !m.weekComplete && !chestHere;
   const isOpenStep = (s: Step) => !s.done && (s.kind !== "game" || canPlay);
   // The questions stay the main step; "Unload your mind" is there any time
   // without taking the highlight (it is the main step only when nothing else is left).
@@ -378,6 +383,7 @@ export const EveningPath = ({
     }
     if (n.kind === "chest") {
       if (quietChest) return { look: "locked", icon: null, title: t("path.quietWeek") };
+      if (chestHere && !m.weekComplete) return { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.weekReport") };
       return m.weekComplete
         ? { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.reportReady"), action: currentNode < 0 ? t("path.openReport") : undefined }
         : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
@@ -651,7 +657,7 @@ export const EveningPath = ({
     const evenings = countedDays(trackers, entries).length;
     // week 1's chip opens My days (a chip that looks tappable is tappable)
     if (part === 0) {
-      const text = m.weekComplete ? t("path.reportReady") : quietChest ? t("path.quietWeek") : t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo });
+      const text = m.weekComplete ? t("path.reportReady") : quietChest ? t("path.quietWeek") : chestHere && !m.reportIn ? t("path.weekReport") : t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo });
       return { text, open: "overview" as null | "overview" | "findings" | "signals" | "world" };
     }
     if (part === 1) {
@@ -702,7 +708,7 @@ export const EveningPath = ({
   // Duolingo; the Start bubble over her step starts it at once.
   const tap = (i: number) => {
     const n = nodes[i];
-    if (n.kind === "chest" && m.weekComplete) { setOpen(null); openThisChest(); return; }
+    if (n.kind === "chest" && (m.weekComplete || chestHere)) { setOpen(null); openThisChest(); return; }
     if (n.kind === "chest" && quietChest) return;
     const notYet = n.kind === "future" || (n.kind === "end" && !eveningDone) || (n.kind === "chest" && !m.weekComplete) || (n.kind === "step" && n.step.kind === "game" && !canPlay);
     if (notYet && open !== i) {

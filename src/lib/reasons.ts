@@ -87,12 +87,37 @@ const addDays = (iso: string, n: number) => {
 
 const hasReasons = (e: TrackerEntry) => (e.tags?.length ?? 0) > 0;
 
+// --- Resting ------------------------------------------------------------------------------------------------
+/** Someone with near-daily headaches would get "Why?" most evenings (Nov 10 2026): after the step was skipped this
+ *  many times in a row for a question, with no reason saved for it in between, the step stops asking about that
+ *  question. A reason saved for it later (Notes, the calendar day) brings it back. Read from the asked records. */
+export const SKIPS_TO_REST = 3;
+const resting = (asked: Asked, trackerId: string): boolean => {
+  // one event a day: a day with a save (anywhere) breaks the run; a skip on the path's step adds to it
+  const days = new Map<string, "saved" | "skipped">();
+  for (const [k, a] of Object.entries(asked)) {
+    if (!k.startsWith(`${trackerId}|`)) continue;
+    if (a.how === "saved") days.set(a.at, "saved");
+    else if (a.path && !days.has(a.at)) days.set(a.at, "skipped");
+  }
+  let run = 0;
+  for (const [, how] of [...days.entries()].sort(([a], [b]) => b.localeCompare(a))) {
+    if (how === "saved") return false;
+    if (++run >= SKIPS_TO_REST) return true;
+  }
+  return false;
+};
+/** The path's "Why?" step would ask about a "yes" to this question on this day: a reason question, the day within
+ *  the step's look-back, the question not resting. The deck says "you can add the reason later" only then. */
+export const reasonAskedLater = (tr: Tracker | null | undefined, date: string, today: string): boolean =>
+  !!tr && tr.source !== "play" && !!reasonTemplate(tr) && date <= today && date >= addDays(today, -REASON_DAYS) && !resting(readAsked(), tr.id);
+
 /** Yes-answers of today and the last REASON_DAYS days to a reason question, with no reasons yet and never
- *  asked about: newest first. */
+ *  asked about (and the question not resting): newest first. */
 export const pendingReasons = (trackers: Tracker[], entries: TrackerEntry[], today: string): TrackerEntry[] => {
   const asked = readAsked();
   const from = addDays(today, -REASON_DAYS);
-  const ok = new Set(trackers.filter((tr) => !tr.archived && tr.source !== "play" && reasonTemplate(tr)).map((tr) => tr.id));
+  const ok = new Set(trackers.filter((tr) => !tr.archived && tr.source !== "play" && reasonTemplate(tr) && !resting(asked, tr.id)).map((tr) => tr.id));
   return entries
     .filter((e) => e.value === true && ok.has(e.trackerId) && e.date >= from && e.date <= today && !hasReasons(e) && !asked[reasonKey(e)])
     .sort((a, b) => b.date.localeCompare(a.date) || a.trackerId.localeCompare(b.trackerId));
@@ -157,20 +182,23 @@ export const saveReasons = async (items: ReasonInput[]): Promise<void> => {
 
 // --- The week report ----------------------------------------------------------------------------------------
 
-/** "Fights — most often: money (4 of 7)": per reason question with at least REASON_LINE_FROM answers with reasons
- *  up to the week's last day, and one of them this week. The most common chip that is a cause, picked at least
- *  twice; a tie goes to the latest. */
+/** "Fights — most often: money (2 of 3)": per reason question with at least REASON_LINE_FROM answers with reasons
+ *  up to the week's last day (all time: when the line shows), and one of them this week. The most common chip
+ *  that is a cause among THIS week's answers with reasons, picked at least twice that week, and its count of
+ *  them (Nov 10 2026: "(3 of 3)" counted earlier weeks too); a tie goes to the latest. */
 export const reasonLines = (t: TFunction, trackers: Tracker[], entries: TrackerEntry[], weekDates: string[]): string[] => {
   if (!weekDates.length) return [];
-  const first = weekDates[0], last = weekDates[weekDates.length - 1];
+  const last = weekDates[weekDates.length - 1];
+  const inWeek = new Set(weekDates);
   const out: string[] = [];
   const seen = new Set<string>();
   for (const tr of trackers) {
     const id = reasonTemplate(tr);
     if (!id || tr.archived || seen.has(id)) continue;
     seen.add(id);
-    const mine = entries.filter((e) => e.trackerId === tr.id && e.value === true && hasReasons(e) && e.date <= last);
-    if (mine.length < REASON_LINE_FROM || !mine.some((e) => e.date >= first)) continue;
+    const all = entries.filter((e) => e.trackerId === tr.id && e.value === true && hasReasons(e) && e.date <= last);
+    const mine = all.filter((e) => inWeek.has(e.date));
+    if (all.length < REASON_LINE_FROM || mine.length === 0) continue;
     const count = new Map<string, { k: number; latest: string }>();
     for (const e of mine) for (const tag of new Set(e.tags)) {
       if (NOT_A_CAUSE.has(tag)) continue;

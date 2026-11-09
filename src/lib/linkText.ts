@@ -41,7 +41,11 @@ const nounLike = (p: string, ru: boolean): boolean => {
   if (ru) return !/^(без|в|во|с|со|по|у|сверх|ночью|всё|по-настоящему)\s/i.test(p)
     && !/(^|\s)(не|нет|ни|ел|хорошо|здоров|поровну|обычно|сильнее|в порядке)(?=\s|$)/i.test(p)
     && !/[а-яё]{2,}(ал|ял|ил|ел|ыл|ул|ла|ло|ли|ся|сь|ет|ёт|ит|ут|ют|ят|на|ны|но|ты|ен|ан)(?=[\s,]|$)/i.test(p);
-  return !/\b(raised|held|felt|taken|missed|done|kept|put|called|wrote|ate|slept|moved|skipped|refused|stumbled|fell|limping|walking|confused|clear|fine|healthy|okay|well|poorly|steady|on time|not)\b/i.test(p);
+  // "No workout and feeling drained…" reads as "no (workout and feeling drained)": a "no …" side
+  // takes the dash form, like «без …» («Без тренировки — и сильная усталость в тот же день»)
+  if (/^(no|nothing|without)\b/i.test(p)) return false;
+  if (/^(drained|up)\b/i.test(p)) return false; // "drained after work", "up on the first alarm"
+  return !/\b(raised|held|felt|taken|took|missed|done|kept|keep|put|called|wrote|ate|slept|moved|skipped|refused|stumbled|fell|learned|noticed|limping|walking|confused|clear|fine|healthy|okay|well|poorly|steady|on time|mood low|not)\b/i.test(p);
 };
 
 /** The headline: "Forced yes → headache the next day". The same day, no arrow (it says nothing
@@ -60,6 +64,11 @@ export const linkHead = (t: TFunction, r: Sides, of: TrackerOf): string => {
 /** "11 of 17 times"; all of them: "every time — 6 of 6" (never "always" alone). */
 export const linkTimes = (t: TFunction, k: number, n: number): string =>
   n > 0 && k === n ? t("link.everyTime", { k, n }) : t("link.times", { k, count: n });
+
+/** The big number on a link's sheet: "11 of 17 times", "Every time — 15 of 15". Capitalised; "15 of 15" stays on
+ *  one line and the dash never starts one (it may wrap after the dash: a whole line at that size can be too wide). */
+export const linkTimesBig = (t: TFunction, k: number, n: number): string =>
+  cap(linkTimes(t, k, n)).replace(/(\d+) (\S+) (\d+)/, "$1 $2 $3").replace(/ — /, " — ");
 
 /** "on other days 4 of 20" (empty when there are none to tell). */
 export const linkOtherDays = (t: TFunction, r: Counts): string =>
