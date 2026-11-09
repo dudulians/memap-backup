@@ -148,10 +148,12 @@ for (const lang of ["en", "ru"]) {
     const careTxt = await text(doneCard.locator("[data-care-done]"));
     ok(`${lang}.A Done card: the calm line after a last-card partner yes`, careTxt.startsWith(lang === "ru" ? "Это тяжело." : "That sounds hard."), careTxt);
     await doneCard.getByRole("button", { name: lang === "ru" ? /^Поговорить с кем-то$/ : /^Talk to someone$/ }).click(); await p.waitForTimeout(1200);
+    // by z-index: while a sheet is open the page under it takes no pointer events, so a hit test can't tell
     const sheetOnTop = await p.evaluate(() => {
-      const d = [...document.querySelectorAll("[role=dialog]")].pop(); if (!d) return false;
-      const r = d.getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + 40);
-      return !!el && d.contains(el);
+      const d = [...document.querySelectorAll("[role=dialog]")].pop();
+      const done = document.querySelector("[data-care-done]")?.closest("div.fixed.inset-0");
+      if (!d || !done) return false;
+      return Number(getComputedStyle(d).zIndex) > Number(getComputedStyle(done).zIndex);
     });
     ok(`${lang}.A Talk to someone opens above the Done card`, sheetOnTop, String(sheetOnTop));
     await p.screenshot({ path: `${D}/${lang}-A3b-done-support.png` });

@@ -474,6 +474,9 @@ export const DailySession = ({
   // a fresh deck via the parent's `key` change, not this effect.
   useEffect(() => {
     if (playMode) return;
+    // another day: the calm line after a partner-harm "yes" stays with that day's cards (Nov 10 2026 check)
+    setCare(null);
+    careSeen.current = false;
     const newDeck = buildDeck();
     setDeck(newDeck);
     setCurrentIndex(0);
@@ -670,6 +673,7 @@ export const DailySession = ({
   const handleSkip = () => {
     if (isAnimatingRef.current || !currentQuestion) return;
     setWhyLater(null);
+    if (care) careSeen.current = true;
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -1326,7 +1330,14 @@ export const DailySession = ({
                   }
                   // back to the card that was answered, not just one step: a follow-up that was
                   // passed by sits in between (audit, Nov 7 2026)
-                  if (last) sessionVals.current.delete(last.trackerId);
+                  if (last) {
+                    sessionVals.current.delete(last.trackerId);
+                    // a partner-harm "yes" taken back: its calm line goes too, unless another one stands (Nov 10 2026 check)
+                    const harm = (id: string) => { const tr = trackers.find((x) => x.id === id); return !!tr && HOME_HARM_IDS.has(templateIdOf(tr) ?? ""); };
+                    if (harm(last.trackerId) && ![...sessionVals.current].some(([id, v]) => v === true && harm(id))) {
+                      setCare(null); careSeen.current = false; hurtTonight.current = false;
+                    }
+                  }
                   setCurrentIndex((prev) => (last ? last.index : Math.max(0, prev - 1)));
                   setSwipeDirection(null);
                   setIsAnimating(false);
