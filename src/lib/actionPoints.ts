@@ -8,6 +8,8 @@ import { isoLocal } from "@/lib/doors";
 import { clearThresholdNotification } from "@/lib/notifications";
 import { adviceVariants } from "@/lib/trackerLocalize";
 import { uuid } from "@/lib/uuid";
+import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
+import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 
 /** Before a week of evenings nothing is called calm: "Your world is still taking shape". */
 export const SHAPING_EVENINGS = 7;
@@ -41,5 +43,16 @@ export const countFromToday = async (id: string, k: number, extra: Partial<Track
  *  until then a guess from the words (Nov 7 2026). */
 // unfollow / mute: done once, then before and after (her note, Nov 9 2026: "Unfollow or mute" every day for 14 days)
 const ONCE_WORDS = /\b(doctor|gp|dentist|check|checked|book|appointment|talk to|see a|visit|counsell?or|therapist|unfollow|mute)\b|анфоллоу|отпис|заглуш|врач|терапевт|стоматолог|провер|поговор|записат|сходить|психолог|психотерапевт/i;
+const TEMPLATES = new Map<string, LifeStreamTemplate>(LIFE_STREAMS.flatMap((s) => s.templates).map((t) => [t.id, t]));
+/** The library's own kind for its plan (content review, Nov 9 2026: the word guess called "Set a weekly
+ *  reminder to call" a 2-week test). Only while the question still has the library's plan, in either
+ *  language: a plan she wrote herself is guessed from its words. */
+const libraryKind = (tr: Tracker): "once" | "daily" | undefined => {
+  const id = matchTemplateIdByTitle(tr.title), tpl = id ? TEMPLATES.get(id) : undefined;
+  if (!tpl?.planKind) return undefined;
+  const plan = (tr.adviceAboveThreshold || "").trim();
+  return plan && (plan === tpl.adviceAboveThreshold || plan === tpl.adviceAboveThresholdRu) ? tpl.planKind : undefined;
+};
 // the same answer in both languages (Nov 8 2026: "Book 3 workout slots" was "once" in English, "every day" in Russian)
-export const planKindOf = (tr: Tracker): "once" | "daily" => tr.planKind ?? (adviceVariants(tr.adviceAboveThreshold || "").some((a) => ONCE_WORDS.test(a)) ? "once" : "daily");
+export const planKindOf = (tr: Tracker): "once" | "daily" =>
+  tr.planKind ?? libraryKind(tr) ?? (adviceVariants(tr.adviceAboveThreshold || "").some((a) => ONCE_WORDS.test(a)) ? "once" : "daily");
