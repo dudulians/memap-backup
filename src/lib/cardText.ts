@@ -38,8 +38,8 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "felt-overwhelmed-parenting": { en: "Did parenting feel like too much?", ru: "Было тяжело с детьми?" },
   headache: { en: "Did you have a headache?", ru: "Болела голова?" },
   exercised: { en: "Did you do a real workout?", ru: "Была тренировка?" },
-  "ate-sweets": { en: "Did you eat sweets?", ru: "Было сладкое?" },
-  "screen-time-long": { en: "Did you spend 4+ hours on screens?", ru: "Было больше 4 часов в экране?" },
+  "ate-sweets": { en: "Did you eat more sweets than you wanted?", ru: "Сладкого было больше, чем хотелось?" },
+  "screen-time-long": { en: "Did you spend 4+ hours on screens outside work?", ru: "Было больше 4 часов в экране не по работе?" },
   "felt-happy": { en: "Was it a happy day?", ru: "Был счастливый день?" },
   "had-energy": { en: "Did you have enough energy for your day?", ru: "Хватило энергии на день?" },
   "wanted-leave-job": { en: "Did you seriously think about quitting?", ru: "Была всерьёз мысль уволиться?" },
@@ -88,6 +88,13 @@ const CARD_TEXT: Record<string, { en: string; ru: string }> = {
   "child-physical-activity": { en: "Did your child run, play or walk outside a lot?", ru: "Ребёнок много двигался — бегал, играл, гулял?" },
 };
 
+/** The old card words of a question whose meaning changed (template.legacy keeps the old text). */
+const CARD_TEXT_OLD: Record<string, { en: string; ru: string }> = {
+  "ate-sweets": { en: "Did you eat sweets?", ru: "Было сладкое?" },
+  "apologized-first": { en: "Did you apologise to someone first?", ru: "Первое «прости» было от тебя?" },
+  "good-time-together": { en: "Did you share a good moment as a couple?", ru: "Был приятный момент вдвоём?" },
+};
+
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 /** «сделал(а)», «один(на)»: a library wording with gender endings (her own questions don't have them) */
 const GENDER_BRACKETS = /[а-яё]\((а|ась|ла|ой|на|ы|ая|легла|прошла|одна|довольна)\)/i;
@@ -106,6 +113,13 @@ export const cardQuestion = (tracker: Tracker): string => {
   // forms already applied) = still the library's question.
   if (short && tpl && norm(shown) === norm(localizeTrackerQuestion(tpl.questionText, tpl.title))) {
     return noToday(getLanguage() === "ru" ? short.ru : short.en);
+  }
+  // A question re-meant in the library (content review, Nov 9 2026) that she already tracks keeps
+  // its old meaning, in the old card's words: her answers were to that question.
+  const old = id ? CARD_TEXT_OLD[id] : undefined;
+  const leg = tpl?.legacy;
+  if (old && leg && [leg.questionText, leg.questionTextRu].some((q) => !!q && norm(shown) === norm(localizeTrackerQuestion(q, tracker.title)))) {
+    return noToday(getLanguage() === "ru" ? old.ru : old.en);
   }
   // Russian without gender brackets for the library wording (QA, Nov 8 2026)
   if (getLanguage() === "ru" && id && RU_CARD[id] && tpl && (norm(shown) === norm(localizeTrackerQuestion(tpl.questionText, tpl.title)) || GENDER_BRACKETS.test(shown))) return noToday(RU_CARD[id]);

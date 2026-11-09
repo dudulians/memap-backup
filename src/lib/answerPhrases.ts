@@ -26,7 +26,7 @@ const P: Record<string, [string, string, string, string]> = {
   "thought-about-leaving": ["thought of leaving", "no thought of leaving", "мысль расстаться", "без мысли расстаться"],
   "had-sex": ["intimacy with partner", "no intimacy", "физическая близость", "без физической близости"],
   "saw-friends": ["friends in person", "no friends in person", "встреча с друзьями", "без встреч с друзьями"],
-  "apologized-first": ["apologizing first", "not apologizing first", "первый шаг с извинением", "без первого извинения"],
+  "apologized-first": ["saying sorry for what wasn't your fault", "no needless sorry", "извинение не за свою вину", "без лишних извинений"],
   "didnt-like-friend-post": ["not liking a friend's post", "liking as usual", "без лайка другу", "лайки как обычно"],
   "complimented-stranger": ["kind words to a stranger", "no kind words to strangers", "комплимент незнакомцу", "без комплиментов незнакомцам"],
   "flirted": ["flirting", "no flirting", "флирт", "без флирта"],
@@ -70,7 +70,7 @@ const P: Record<string, [string, string, string, string]> = {
   "smoked-hookah": ["hookah", "no hookah", "кальян", "без кальяна"],
   "coffee-late": ["coffee after 2 pm", "no coffee after 2 pm", "кофе после 14:00", "без кофе после 14:00"],
   "ate-late": ["late dinner", "no late dinner", "поздний ужин", "без позднего ужина"],
-  "ate-sweets": ["sweets", "no sweets", "сладкое", "без сладкого"],
+  "ate-sweets": ["more sweets than you wanted", "sweets in check", "больше сладкого, чем хотелось", "сладкое в меру"],
   "screen-time-long": ["4+ hours on screens", "under 4 hours on screens", "4+ часа в экране", "меньше 4 часов в экране"],
   "ate-fast-food": ["fast food", "no fast food", "фастфуд", "без фастфуда"],
   "phone-free-morning": ["phone-free morning", "phone first thing", "утро без телефона", "телефон с утра"],
@@ -292,6 +292,9 @@ export const templateIdOf = (tr: Tracker): string | null => {
 // A question someone had before the Nov 7 2026 rewordings keeps the words that fit it
 // ("back or neck pain", not "back pain").
 const P_OLD: Record<string, [string, string, string, string]> = {
+  // re-meant Nov 9 2026 (content review): who still tracks the old question keeps its words
+  "apologized-first": ["apologizing first", "not apologizing first", "первый шаг с извинением", "без первого извинения"],
+  "ate-sweets": ["sweets", "no sweets", "сладкое", "без сладкого"],
   "period-symptoms": ["strong cycle symptoms", "mild cycle day", "сильные симптомы цикла", "без сильных симптомов цикла"],
   "back-or-neck-pain": ["back or neck pain", "no back or neck pain", "боль в спине или шее", "без боли в спине и шее"],
   "heart-palpitations": ["palpitations or BP swings", "no palpitations", "сердцебиение или скачки давления", "без сердцебиения и скачков"],
@@ -302,6 +305,8 @@ const P_OLD: Record<string, [string, string, string, string]> = {
   "skin-allergy": ["skin reaction", "no skin reaction", "реакция кожи", "без реакции кожи"],
 };
 const S_OLD: Record<string, [string, string, string, string]> = {
+  "apologized-first": ["you ~make the first move to make up", "there's ~no first move", "ты ~делаешь первый шаг к примирению", "первого шага ~нет"],
+  "ate-sweets": ["you ~eat sweets", "you ~skip sweets", "ты ~ешь сладкое", "ты ~не ешь сладкое"],
   "period-symptoms": ["cycle symptoms ~are strong", "cycle symptoms ~are mild", "симптомы цикла ~сильные", "симптомы цикла ~мягкие"],
   "back-or-neck-pain": ["your back or neck ~hurts", "your back and neck ~don't hurt", "~болит спина или шея", "спина и шея ~не болят"],
   "heart-palpitations": ["you ~have palpitations or BP swings", "you ~have no palpitations", "есть сердцебиение или скачки давления|~бывает сердцебиение или скачки давления", "сердцебиения и скачков ~нет"],
