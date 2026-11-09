@@ -39,6 +39,7 @@ export const countFromToday = async (id: string, k: number, extra: Partial<Track
 
 /** Once (see a doctor, get checked, book…) or every day (a 2-week test). Hers once she picks;
  *  until then a guess from the words (Nov 7 2026). */
-const ONCE_WORDS = /\b(doctor|gp|dentist|check|checked|book|appointment|talk to|see a|visit|counsell?or|therapist)\b|врач|терапевт|стоматолог|провер|поговор|записат|сходить|психолог|психотерапевт/i;
+// unfollow / mute: done once, then before and after (her note, Nov 9 2026: "Unfollow or mute" every day for 14 days)
+const ONCE_WORDS = /\b(doctor|gp|dentist|check|checked|book|appointment|talk to|see a|visit|counsell?or|therapist|unfollow|mute)\b|анфоллоу|отпис|заглуш|врач|терапевт|стоматолог|провер|поговор|записат|сходить|психолог|психотерапевт/i;
 // the same answer in both languages (Nov 8 2026: "Book 3 workout slots" was "once" in English, "every day" in Russian)
 export const planKindOf = (tr: Tracker): "once" | "daily" => tr.planKind ?? (adviceVariants(tr.adviceAboveThreshold || "").some((a) => ONCE_WORDS.test(a)) ? "once" : "daily");

@@ -10,6 +10,8 @@
 //                 or turn it off.
 // No "all calm" before there is data: "Your world is still taking shape"
 // until a week of evenings. Gold, never red; no alarms.
+import { ideasForQuestion } from "@/lib/topicIdeas";
+import { KindTag } from "./KindTag";
 import { track } from "@/lib/analytics";
 import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 import { useMemo, useState } from "react";
@@ -131,7 +133,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   /** the question under the plan; a good one is counted when it's missing */
   // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
-  const why = (tr: Tracker, k: number) => t("rules.why", { ans: t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo"), k, count: tr.periodDays });
+  const why = (tr: Tracker, k: number) => t("rules.why", { ans: t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo"), k, n: tr.threshold, count: tr.periodDays });
   const evenings = answeredEvenings(trackers, entries);
   // The tests running now: one per island, side by side (Nov 7 2026).
   const tests = runningExperiments();
@@ -213,10 +215,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               className="flex w-full items-start gap-3 px-4 pb-4 pt-4 text-left">
               <img src={mapPic("lighthouse")} alt="" width={40} height={46} className="h-11 w-10 shrink-0 object-contain drop-shadow-[0_0_8px_hsl(44_96%_60%/0.7)]" />
               <span className="min-w-0 flex-1">
-                <span className="block text-[20px] font-bold leading-snug">{plan || name(tr)}</span>
-                <span className="mt-1 block text-[15px] font-semibold leading-snug text-muted-foreground">
+                {/* what is what (her note, Nov 9 2026: "где задание, где вопрос, где вывод"): the finding, then the task */}
+                <KindTag kind="finding" />
+                <span className="mt-0.5 block text-[17px] font-bold leading-snug">
                   {t("rules.oftenLine", { what: answerClause(t, tr, hardYes, "result", t("rules.often")), count: k, days: tr.periodDays })}
                 </span>
+                {plan && <><KindTag kind="task" className="mt-3" /><span className="mt-0.5 block text-[20px] font-bold leading-snug">{plan}</span></>}
                 <span className="mt-2 inline-flex items-center gap-1 text-[15px] font-bold" style={{ color: TEAL }}>
                   {t(opened ? "rules.lessDetails" : "rules.details")}
                   <ChevronDown className={cn("h-4 w-4 transition-transform", opened && "rotate-180")} strokeWidth={2.6} />
@@ -225,16 +229,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             </button>
             {opened && (
             <div className="px-4 pb-4 animate-fade-in">
-            <p className="text-[14px] font-semibold text-muted-foreground">{t("experiment.everyEvening")}</p>
+            <KindTag kind="question" extra={t("kind.everyEvening")} />
             <p className="mt-0.5 text-[17px] font-bold leading-snug">{cardQuestion(tr)}</p>
             <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={hardYes} since={countedSince(tr)} className="mt-3" />
             {/* what MeMap suggests: a test with its evening question, or a one-off step */}
-            {plan && (
-              <>
-                <p className="mt-4 text-[14px] font-semibold text-muted-foreground">{t("rules.suggests")}</p>
-                <p className="mt-0.5 text-[16px] font-bold leading-snug">{once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>
-              </>
-            )}
+            {/* how the task goes, right above its button */}
+            {plan && <p className="mt-4 text-[15px] font-semibold leading-snug text-muted-foreground">{once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
             {!plan ? (
               <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.noPlan")}</button>
             ) : once ? (
@@ -264,7 +264,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               const causeTest = cause ? tests.find((x) => x.from === cause.id) : undefined;
               return (
                 <div className="mt-4 border-t border-foreground/[0.07] pt-4">
-                  <p className="text-[14px] font-semibold text-muted-foreground">{t("rules.linkedHead")}</p>
+                  <KindTag kind="finding" />
                   {linksInto(tr).map((l) => (
                     <p key={l.first.id} className="mt-1 text-[16px] font-bold leading-snug">
                       {linkSentence(t, { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n }, of)}
@@ -276,7 +276,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                           the possible cause by name, then what can be done about it; the button says once or daily */}
                       <p className="mt-3 text-[14px] font-semibold text-muted-foreground">{t("rules.causeHead")}</p>
                       <p className="mt-0.5 text-[17px] font-bold leading-snug">{cap(answerPhrase(t, cause, cause.problemWhen === "yes"))}</p>
-                      <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("rules.causeDo")}</p>
+                      <KindTag kind="task" className="mt-3" />
                       <p className="mt-0.5 text-[17px] font-bold leading-snug">{planOf(cause)}</p>
                       {causeTest && !experimentOver(causeTest) ? (
                         <p className="mt-2.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
@@ -379,8 +379,10 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
       <div className="flex min-h-0 flex-1 flex-col space-y-5 overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
           {/* the question is the title (her note: "непонятно, к какому вопросу это действие") */}
-          <p className="text-[24px] font-bold leading-tight tracking-tight">{name}</p>
-          <p className="mt-1.5 text-[19px] font-bold tabular-nums">
+          <KindTag kind="question" />
+          <p className="mt-0.5 text-[24px] font-bold leading-tight tracking-tight">{name}</p>
+          <KindTag kind="finding" className="mt-3" />
+          <p className="mt-0.5 text-[19px] font-bold tabular-nums">
             {k >= tracker.threshold
               ? t("rules.bigDone", { k, count: tracker.periodDays })
               : t("rules.bigOf", { k, count: tracker.threshold })}
@@ -407,7 +409,7 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
           )}
         </div>
         <div className="space-y-2">
-          <p className="text-[16px] font-bold">{t("rules.yourPlan")}</p>
+          <KindTag kind="task" />
           <textarea value={plan} onChange={(e) => setPlan(e.target.value)} rows={2} maxLength={120} placeholder={t("rules.planPh")}
             className="w-full resize-none rounded-2xl border border-foreground/[0.12] bg-foreground/[0.04] px-4 py-3 text-[18px] font-semibold leading-snug outline-none focus:ring-2 focus:ring-[hsl(var(--coin-teal))]" />
           {/* once (then before and after) or every day (a 2-week test) */}
@@ -459,10 +461,11 @@ const TestSheet = ({ test, trackers, entries, line, onClose, onStop }: { test: E
         <p className="flex items-center gap-1.5 pr-10 pt-1 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
           <FlaskConical className="h-4 w-4" strokeWidth={2.4} style={{ color: TEAL }} />{t("experiment.title")}
         </p>
-        <p className="mt-1 pr-10 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(test.change)}</p>
+        <KindTag kind="task" className="mt-3" />
+        <p className="mt-0.5 pr-10 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(test.change)}</p>
         <p className="mt-1 text-[16px] font-bold" style={{ color: TEAL }}>{line}</p>
         {test.perWeek && <p className="mt-0.5 text-[16px] font-bold">{t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}</p>}
-        <p className="mt-5 text-[14px] font-semibold text-muted-foreground">{t("experiment.everyEvening")}</p>
+        <KindTag kind="question" extra={t("kind.everyEvening")} className="mt-5" />
         <p className="mt-0.5 text-[19px] font-bold leading-snug">{tr ? cardQuestion(tr) : testQuestionOf(test.change)}</p>
         <div className="surface mt-5 flex items-center gap-3 rounded-[18px] px-4 py-3">
           <Bell className="h-5 w-5 shrink-0" strokeWidth={2.4} style={{ color: TEAL }} />
@@ -568,8 +571,8 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
 const ChangeSheet = ({ tracker, name, why, onClose }: { tracker: Tracker; k: number; name: string; why: string; onClose: () => void }) => {
   const { t } = useTranslation();
   const had = planOf(tracker);
-  // Small everyday ideas from the question's island (the week's-test ideas).
-  const ideas = ideasFor(islandOf(tracker)).map((id) => t(`experiment.idea.${id}.change`)).filter((s) => s !== had);
+  // changes on this question's own topic (her note, Nov 9 2026: the island's ones were about other things)
+  const ideas = ideasForQuestion(tracker).map((id) => t(`experiment.idea.${id}.change`)).filter((s) => s !== had);
   const [pick, setPick] = useState<string | null>(null);
   const [own, setOwn] = useState("");
   const next = pick ?? own.trim();
@@ -588,9 +591,12 @@ const ChangeSheet = ({ tracker, name, why, onClose }: { tracker: Tracker; k: num
     <BottomSheet open onOpenChange={(o) => { if (!o) onClose(); }} className="h-auto max-h-[88vh]" ariaTitle={t(had ? "rules.instead" : "rules.plan")}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
-          <p className="text-[16px] font-bold leading-snug">{name}</p>
-          <p className="mt-1 text-[15px] font-medium leading-snug text-muted-foreground">{why}</p>
-          <p className="mt-3 text-[24px] font-bold leading-tight tracking-tight">{t(had ? "rules.instead" : "rules.plan")}</p>
+          <KindTag kind="question" />
+          <p className="mt-0.5 text-[16px] font-bold leading-snug">{name}</p>
+          <KindTag kind="finding" className="mt-3" />
+          <p className="mt-0.5 text-[15px] font-semibold leading-snug">{why}</p>
+          <KindTag kind="task" className="mt-5" />
+          <p className="mt-0.5 text-[24px] font-bold leading-tight tracking-tight">{t(had ? "rules.instead" : "rules.plan")}</p>
         </div>
         <div className="mt-4 space-y-2.5">
           {ideas.map((s) => {

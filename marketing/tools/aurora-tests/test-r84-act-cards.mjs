@@ -23,7 +23,7 @@ const seed = (lang) => p.evaluate(async (lang) => {
     E.push({ id: `n${i}`, trackerId: "n1", date: iso(i), value: i % 5 === 0 });
     E.push({ id: `h${i}`, trackerId: "h1", date: iso(i), value: i % 9 === 0 });
   }
-  localStorage.clear();
+  localStorage.clear(); localStorage.setItem("memap_ab_onb", "A");
   localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
   localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true");
   localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
@@ -46,8 +46,8 @@ const check = {
   collapsedNoQuestion: out["en.collapsed"].every((s) => !/\?/.test(s)) && out["en.collapsed"].some((s) => /Your answers say you often feel nauseous: 6 times in the last 30 days/.test(s)),
   collapsedRu: out["ru.collapsed"].some((s) => /Судя по ответам, тебя часто тошнит: 6 раз за последние 30 дней/.test(s)),
   hurtfulAdvice: out["en.collapsed"].some((s) => /say which words hurt you/.test(s)) && out["ru.collapsed"].some((s) => /какие именно слова тебя ранят/.test(s)),
-  openShowsQuestionAndTest: /Every evening MeMap asks: Did you feel nauseous/.test(out["en.open"]) && /MeMap suggests: Test it for 14 days/.test(out["en.open"]) && /See the days/.test(out["en.open"]) && /note the time and what came before/.test(out["en.open"]),
-  openRu: /Каждый вечер MeMap спросит/.test(out["ru.open"]) && /MeMap предлагает: Проверить это 14 дней/.test(out["ru.open"]),
+  openShowsQuestionAndTest: /QUESTION · every evening Did you feel nauseous/.test(out["en.open"]) && /Test it for 14 days/.test(out["en.open"]) && /See the days/.test(out["en.open"]) && /note the time and what came before/.test(out["en.open"]),
+  openRu: /ВОПРОС · каждый вечер/.test(out["ru.open"]) && /Проверить это 14 дней/.test(out["ru.open"]),
 };
 console.log(JSON.stringify({ check, out, errs }, null, 1));
 await b.close();

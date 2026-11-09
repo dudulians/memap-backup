@@ -32,7 +32,7 @@ const seedResults = (lang) => p.evaluate(async ([lang, baseJs]) => {
   T.push({ id: "ex1", title: "Worked out", category: "Health", questionText: "Did you do a real workout today (gym, run, sport, yoga)?", answerType: "boolean", periodDays: 7, threshold: 5, problemWhen: "no", adviceAboveThreshold: "3 workouts a week", createdAt: new Date(Date.now() - 60 * 864e5).toISOString(), sortIndex: 1 });
   const yes1 = new Set([15, 13, 11]), yes2 = new Set([8, 5]);
   for (let i = 2; i <= 15; i++) E.push({ id: `x${i}`, trackerId: "ex1", date: iso(i), value: yes1.has(i) || yes2.has(i), createdAt: new Date().toISOString() });
-  localStorage.clear(); eval(baseJs);
+  localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); eval(baseJs);
   localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
   localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) })); localStorage.setItem("memap_path_start", iso(60));
   localStorage.setItem("memap_experiments", JSON.stringify([
@@ -60,7 +60,7 @@ for (const lang of ["en", "ru"]) {
 out.reminders = await p.evaluate(async (baseJs) => {
   const iso = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts"), nt = await import("/src/lib/notifications.ts");
-  localStorage.clear(); eval(baseJs);
+  localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); eval(baseJs);
   const [period, flow, slept] = await dz.ensureTemplates(["period-day", "heavy-flow-day", "slept-enough"]);
   // today: no period (so "heavy flow?" isn't asked), slept well; the follow-up stays unanswered
   await st.saveEntries([{ id: "a", trackerId: period, date: iso(0), value: false }, { id: "b", trackerId: slept, date: iso(0), value: true }]);

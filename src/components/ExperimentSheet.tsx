@@ -4,6 +4,8 @@
 // full-screen frame as the games. From an action point ("I'll try", Nov 5
 // 2026) her plan is the first choice, the island is the question's own, and
 // starting the test counts that action point again from today.
+import { ideasForIsland, ideasForQuestion } from "@/lib/topicIdeas";
+import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -79,7 +81,10 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   };
   // what already runs on this island keeps running (Nov 8 2026), and isn't offered twice
   const runningHere = island && !started ? runningExperiments().filter((x) => x.island === island) : [];
-  const choices = [...(plan ? [PLAN] : []), ...(island ? ideasFor(island).filter((k) => !runningHere.some((x) => ideaOf(x.change) === k)) : [])];
+  // the changes on the question's own topic (from a plan), or for what is hardest on the island lately (Nov 9 2026)
+  const pool = plan ? (source ? ideasForQuestion(source) : island ? ideasFor(island) : []) : island ? ideasForIsland(island, trackers, entries) : [];
+  const planIdea = plan ? ideaOf(plan) : null;
+  const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !runningHere.some((x) => ideaOf(x.change) === k))];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
@@ -143,7 +148,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               {question ? (
                 // what MeMap will ask every evening, before it starts
                 <div className="mb-4 text-center">
-                  <p className="text-[14px] font-semibold text-muted-foreground">{t("experiment.everyEvening")}</p>
+                  <KindTag kind="question" extra={t("kind.everyEvening")} className="justify-center" />
                   <p className="mt-0.5 text-[18px] font-bold leading-snug">{question}</p>
                   {goal && <p className="mt-1 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("experiment.goal", { count: goal })}</p>}
                 </div>
@@ -190,7 +195,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
 
         {mode === "result" && experiment && result && (
           <>
-            <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(experiment.change)}</p>
+            <KindTag kind="task" className="mt-3" />
+            <p className="mt-0.5 text-[26px] font-bold leading-tight tracking-tight">{testNameOf(experiment.change)}</p>
             {/* a weekly goal: each week, and praise when it was met (Nov 8 2026); else the days, all 14 praised */}
             {experiment.perWeek && result.weeks ? (
               <>
@@ -203,7 +209,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               <p className="mt-1 text-[17px] font-medium text-muted-foreground">{result.did === EXPERIMENT_DAYS ? t("experiment.didAll", { count: EXPERIMENT_DAYS }) : t("experiment.didDays", { k: result.did, count: EXPERIMENT_DAYS })}</p>
             )}
             <div className="surface mt-5 rounded-[22px] px-5 py-4">
-              <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>
+              <KindTag kind="finding" />
+              <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>
               {comparedBy(result) === "before" ? (
                 <>
                   <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.duringIt", { k: result.during[0], count: result.during[1] })}</p>

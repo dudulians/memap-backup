@@ -23,7 +23,7 @@ const seed = (lang) => p.evaluate(async (lang) => {
     E.push({ id: `n${i}`, trackerId: "n1", date: iso(i), value: i % 5 === 0 });
     E.push({ id: `h${i}`, trackerId: "h1", date: iso(i), value: i % 5 === 1 });
   }
-  localStorage.clear();
+  localStorage.clear(); localStorage.setItem("memap_ab_onb", "A");
   localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
   localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true");
   localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
@@ -42,9 +42,9 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.open`] = await p.evaluate(() => { const b = [...document.querySelectorAll("[role=dialog] button[aria-expanded=true]")][0]; return b?.parentElement?.innerText.replace(/\s+/g, " ") ?? "NONE"; });
 }
 const check = {
-  linkShown: /In your days it comes with this:/.test(out["en.open"]) && /hurtful/i.test(out["en.open"].split("In your days")[1] ?? ""),
-  causeOffered: /Possible cause: Hurtful words from partner What you can do about it: Talk to your partner and say which words hurt you/.test(out["en.open"]),
-  linkShownRu: /В твоих днях это бывает вместе с этим:/.test(out["ru.open"]) && /Возможная причина: Обидные слова партнёра Что можно с этим сделать: Поговорить с партнёром/.test(out["ru.open"]),
+  linkShown: /Not for me FINDING When your partner says something hurtful/.test(out["en.open"]),
+  causeOffered: /Possible cause: Hurtful words from partner TASK Talk to your partner and say which words hurt you/.test(out["en.open"]),
+  linkShownRu: /Не моё ВЫВОД Если партнёр говорит что-то обидное/.test(out["ru.open"]) && /Возможная причина: Обидные слова партнёра ЗАДАНИЕ Поговорить с партнёром/.test(out["ru.open"]),
 };
 console.log(JSON.stringify({ check, out, errs }, null, 1));
 await b.close();

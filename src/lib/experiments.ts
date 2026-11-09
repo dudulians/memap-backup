@@ -45,7 +45,8 @@ export const smartRemindTime = (idea: string | null, text = ""): string => {
   const at: Record<string, string> = { bed23: "22:00", phoneAway: "21:30", noNewsEvening: "20:30", noMailEvening: "19:00", stop19: "18:30", noSweetsEvening: "19:30",
     noCoffee14: "13:30", water: "10:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00",
     threeLines: "20:30", talkNoPhones: "19:00", thankYou: "18:00", walkTogether: "17:30", playTogether: "17:30", extraWalk: "17:00", playTime: "18:00",
-    sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00", nauseaLog: "12:00" };
+    sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00", nauseaLog: "12:00",
+    socialLimit: "12:00", noSocialMorning: "07:30", noSocialBed: "21:30", gladLine: "20:30", noPhoneMorning: "07:30", screenBreaks: "10:00", newsOnce: "09:00", sameWake: "21:30", worryList: "21:00", coffeeTwo: "11:00", regularMeals: "08:00", dinnerEarly: "18:30", vegOne: "12:00", noAlcohol: "18:00", drinkLimit: "17:30", urgeNote: "12:00", delayTen: "10:00", waitDay: "12:00", spendLog: "20:30", noShopApps: "19:30", moveBreak: "10:00", symptomNote: "20:00", foodLog: "20:00", breathe: "13:00", smallJoy: "17:00", angerNote: "12:00", myTime: "17:00", doneList: "20:30", textFriend: "13:00", callOne: "18:00", outAmongPeople: "16:00", noPhoneMeal: "18:30", focusFirst: "08:30", oneThing: "20:00", learn15: "18:00", read10: "21:00", hobby20: "18:00", pauseYes: "09:00", tidy10: "18:00", askLocal: "11:00" };
   if (idea && at[idea]) return at[idea];
   const s = text.toLowerCase();
   // eating or drinking hours before bed: early evening; anything else about bed: an hour before it
@@ -91,6 +92,50 @@ export const IDEAS: Record<string, string[]> = {
 export const ideasFor = (island: string): string[] => IDEAS[island] ?? IDEAS.other;
 /** Plans with their own test words (a question and today's line) that aren't island ideas (Nov 8 2026). */
 export const PLAN_IDEAS = ["nauseaLog"];
+/** Changes on a question's own topic (her note, Nov 9 2026: "Not for me" on comparing oneself online
+ *  offered sweets and stretching). Which question has which topic: src/lib/topicIdeas.ts. */
+export const TOPIC_IDEAS: Record<string, string[]> = {
+  social: ["socialLimit", "noSocialMorning", "noSocialBed", "gladLine"],
+  screens: ["phoneAway", "noPhoneMorning", "socialLimit", "screenBreaks"],
+  news: ["newsOnce", "noNewsEvening", "noPhoneMorning"],
+  sleep: ["bed23", "phoneAway", "sameWake", "worryList", "noCoffee14"],
+  caffeine: ["noCoffee14", "coffeeTwo", "water"],
+  food: ["regularMeals", "dinnerEarly", "vegOne", "noSweetsEvening", "water"],
+  alcohol: ["noAlcohol", "drinkLimit", "urgeNote"],
+  smoking: ["delayTen", "urgeNote", "walk20"],
+  money: ["waitDay", "spendLog", "noShopApps"],
+  movement: ["walk20", "stretch", "outsideMorning", "moveBreak"],
+  pain: ["stretch", "moveBreak", "symptomNote"],
+  headache: ["symptomNote", "water", "bed23", "regularMeals"],
+  digestion: ["foodLog", "regularMeals", "dinnerEarly", "water"],
+  nausea: ["nauseaLog", "foodLog", "regularMeals"],
+  body: ["symptomNote", "water", "bed23"],
+  eyes: ["screenBreaks", "phoneAway"],
+  energy: ["bed23", "outsideMorning", "regularMeals", "walk20"],
+  calm: ["breathe", "walk20", "outsideMorning", "threeLines"],
+  mood: ["smallJoy", "outsideMorning", "textFriend", "threeLines"],
+  joy: ["smallJoy", "gladLine", "outsideMorning"],
+  anger: ["breathe", "angerNote", "myTime"],
+  selfworth: ["doneList", "gladLine", "smallJoy"],
+  rest: ["myTime", "smallJoy", "hobby20"],
+  lonely: ["textFriend", "callOne", "outAmongPeople"],
+  partner: ["talkNoPhones", "thankYou", "walkTogether", "noPhoneMeal"],
+  past: ["threeLines", "textFriend", "noSocialBed"],
+  kids: ["playTogether", "screenFreeHour", "bedtimeSame"],
+  parenting: ["myTime", "breathe", "playTogether"],
+  pet: ["extraWalk", "playTime", "sameFoodTime"],
+  parents: ["callParents", "visitWeekend", "shortMessage"],
+  work: ["stop19", "lunchBreak", "noMailEvening", "oneThing"],
+  focus: ["focusFirst", "oneThing", "screenBreaks"],
+  workpeople: ["lunchBreak", "breathe", "threeLines"],
+  boundaries: ["pauseYes", "myTime", "threeLines"],
+  habits: ["sameWake", "oneThing", "noPhoneMorning"],
+  growth: ["learn15", "read10", "hobby20"],
+  decisions: ["threeLines", "callOne"],
+  home: ["tidy10"],
+  expat: ["callOne", "outAmongPeople", "threeLines"],
+  language: ["askLocal", "learn15"],
+};
 
 export const getExperiments = (): Experiment[] => {
   try {

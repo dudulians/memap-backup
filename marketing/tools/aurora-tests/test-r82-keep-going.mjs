@@ -20,7 +20,7 @@ const seed = (lang) => p.evaluate(async (lang) => {
   // a finished two-week test "Go to bed by 23:00" with its own question, answered most days
   T.push({ id: "1-test", title: "Go to bed by 23:00", category: "Curious", questionText: "Did you go to bed by 23:00?", answerType: "boolean", periodDays: 30, threshold: 0, problemWhen: "no", adviceAboveThreshold: "", createdAt: new Date(Date.now() - 16 * 864e5).toISOString(), sortIndex: -1, island: "health" });
   for (let i = 2; i <= 15; i++) E.push({ id: `t${i}`, trackerId: "1-test", date: iso(i), value: i % 3 !== 0, createdAt: new Date().toISOString() });
-  localStorage.clear();
+  localStorage.clear(); localStorage.setItem("memap_ab_onb", "A");
   localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
   localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true");
   localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");

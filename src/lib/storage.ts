@@ -41,6 +41,9 @@ const ENTRIES_KEY = "memap_entries";
 /** Library advice that was retired (Nov 7 2026: no tests, drugs or therapies by name). Only these
  *  are refreshed to the current text; a plan she wrote herself is never touched. */
 const RETIRED_ADVICE = new Set<string>([
+    // "Got recognition" counts days without praise (Nov 9 2026)
+    "Save what was said — for days I doubt myself",
+    "Сохранить что сказали — для дней когда сомневаюсь в себе",
     // said plainly (Nov 8 2026)
     "Name how those words landed — be specific with my partner",
     "Назвать конкретно какие слова ранили — поделиться с партнёром",

@@ -1946,8 +1946,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 30,
         threshold: 5,
         problemWhen: "no",
-        adviceAboveThreshold: "Save what was said — for days I doubt myself",
-        adviceAboveThresholdRu: "Сохранить что сказали — для дней когда сомневаюсь в себе",
+        // the rule counts days WITHOUT praise (her note, Nov 9 2026: "Save what was said" made no sense there)
+        adviceAboveThreshold: "Write down 3 things you did today, even small ones",
+        adviceAboveThresholdRu: "Записывать 3 дела за день, даже мелкие",
       },
       {
         id: "heard-bad-news",

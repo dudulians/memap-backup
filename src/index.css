@@ -2556,3 +2556,11 @@ svg .tour-pop { transform-box: fill-box; transform-origin: center; }
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
 }
+
+/* What a line is (Nov 9 2026, KindTag.tsx): Finding amber, Task teal, Question indigo */
+.kind-tag { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; line-height: 1.25; }
+.kind-tag .kind-extra { font-size: 13px; font-weight: 700; text-transform: none; letter-spacing: 0; color: hsl(var(--muted-foreground)); }
+.kind-task { color: hsl(var(--coin-teal)); }
+.kind-question { color: hsl(var(--data-a)); }
+.kind-finding { color: hsl(28 78% 42%); }
+html[data-theme="aurora"] .kind-finding { color: hsl(38 90% 62%); }
