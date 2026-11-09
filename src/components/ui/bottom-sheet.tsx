@@ -57,6 +57,8 @@ interface BottomSheetProps {
    * the body has its own visible heading, pass that as the title.
    */
   ariaTitle?: string;
+  /** a z-index class for sheets opened over a full-screen card (z-[60]), e.g. "z-[70]" */
+  layer?: string;
 }
 
 export const BottomSheet = ({
@@ -68,6 +70,7 @@ export const BottomSheet = ({
   hideHandle = false,
   scaleBackground = false,
   ariaTitle,
+  layer,
 }: BottomSheetProps) => (
   <DrawerPrimitive.Root
     open={open}
@@ -93,13 +96,14 @@ export const BottomSheet = ({
     scrollLockTimeout={0}
   >
     <DrawerPrimitive.Portal>
-      <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
+      <DrawerPrimitive.Overlay className={cn("fixed inset-0 z-50 bg-black/40", layer)} />
       <DrawerPrimitive.Content
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-background shadow-2xl outline-none",
           // Default cap. Consumer can override with `className` since
           // tailwind-merge resolves height conflicts in cn().
           "max-h-[92vh]",
+          layer,
           className,
         )}
       >

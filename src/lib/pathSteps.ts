@@ -533,21 +533,25 @@ export const getChests = (): Record<number, ChestRecord> => {
 
 /** Reports opened before calendar weeks (Nov 9 2026) were saved under the old week numbers (seven answered
  *  evenings each), so the path could offer a second report for the same evenings or call that week quiet.
- *  Once, each moves to the calendar week it was opened in (the week before when opened on a week's first
- *  day: that was "last week's report"); a later one keeps its week, an earlier one takes the free week
- *  before it. Their numbers stay as counted then (legacy: shown without dates). */
+ *  Once, each moves to the calendar week of the evening before it was opened (the evenings it counted), and
+ *  never to the current week (Nov 10 2026 check: a legacy report there drew a gold "Week report" while the
+ *  chip still counted evenings, and "Report ready" reopened the old one; one opened this week covered last
+ *  week's evenings). A later one keeps its week, an earlier one takes the free week before it. Their
+ *  numbers stay as counted then (legacy: shown without dates). */
 const migrateChests = (all: Record<number, ChestRecord>): Record<number, ChestRecord> => {
   const old = Object.entries(all).filter(([, r]) => !r.dates).map(([k, r]) => ({ k: Number(k), r }));
   if (old.length === 0) return all;
   let start: string | null = null;
   try { start = localStorage.getItem(START_KEY); } catch { /* not yet */ }
   if (!start) return all; // the path's start isn't known yet: placed on a later load
+  const thisWeek = Math.floor(Math.max(0, daysBetween(start, isoLocal(new Date()))) / DAYS_PER_WEEK);
   const out: Record<number, ChestRecord> = {};
   for (const [k, r] of Object.entries(all)) if (r.dates) out[Number(k)] = r;
   for (const { r } of old.sort((a, b) => b.k - a.k)) {
     const opened = /^\d{4}-\d{2}-\d{2}$/.test(r.openedAt ?? "") ? r.openedAt : isoLocal(new Date(r.openedAt));
     const since = daysBetween(start, opened);
-    let w = !Number.isFinite(since) ? -1 : Math.floor(since / DAYS_PER_WEEK) - (since % DAYS_PER_WEEK === 0 ? 1 : 0);
+    let w = !Number.isFinite(since) ? -1 : Math.floor((since - 1) / DAYS_PER_WEEK);
+    if (w >= thisWeek) w = thisWeek - 1;
     while (w >= 0 && out[w]) w--;
     // no free week left: kept (it still counts as a report opened), never on the path
     if (w < 0) { w = -1; while (out[w]) w--; }

@@ -557,6 +557,8 @@ export const DailySession = ({
   const [care, setCare] = useState<string | null>(null);
   // after such a "yes" the evening doesn't celebrate (persona walk, Nov 9 2026: the calm line came up under falling confetti)
   const hurtTonight = useRef(false);
+  /** the calm line was on screen under a card (a partner-harm yes on the last card goes straight to Done) */
+  const careSeen = useRef(false);
   // "Why?" (her answer, Nov 9 2026: "чтоб это было очевидно при ответе — типа сможешь добавить причину позже"):
   // a "yes" to a fight or a headache gets one quiet line under the buttons, nothing to tap; the path asks later.
   // It stays a few seconds (it stands under the next card by then, so it names its answer: "Fight: you can add
@@ -573,6 +575,7 @@ export const DailySession = ({
 
   const handleAnswer = (value: boolean) => {
     if (isAnimatingRef.current || !currentQuestion) return;
+    if (care) careSeen.current = true;
     sessionVals.current.set(currentQuestion.tracker.id, value);
     const why = value && !playMode && reasonAskedLater(currentQuestion.tracker, selectedDate, isoLocal(new Date()));
     const whyId = why ? reasonTemplate(currentQuestion.tracker) : null;
@@ -581,7 +584,7 @@ export const DailySession = ({
     // a partner shouted or said something hurtful: one calm line before the next card (persona walk, Nov 9 2026:
     // the deck went straight on to "Great work today!")
     const tid = templateIdOf(currentQuestion.tracker) ?? "";
-    if (value && HOME_HARM_IDS.has(tid)) { setCare(tid); hurtTonight.current = true; confetti.reset(); }
+    if (value && HOME_HARM_IDS.has(tid)) { setCare(tid); careSeen.current = false; hurtTonight.current = true; confetti.reset(); }
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -858,9 +861,17 @@ export const DailySession = ({
         </p>
         {/* a fight or a headache this sitting: the reasons can come later, on the path ("Why?") */}
         {whyAsked.current && !hurtTonight.current && <p data-why-later className="mt-3 text-[16px] font-semibold text-muted-foreground">{t("why.later")}</p>}
+        {/* a partner-harm yes on the last card: the calm line it would have had under the next card (Nov 10 2026 check) */}
+        {care && !careSeen.current && (
+          <div data-care-done className="surface mt-5 w-full max-w-sm rounded-[18px] px-4 py-3 text-left" role="status">
+            <p className="text-[15px] font-semibold leading-snug">{t("support.careLine")}</p>
+            <button type="button" onClick={() => { setSupportAbout(care); setSupport(true); }} className="raised-btn is-small mt-2 px-4">{t("support.chip")}</button>
+          </div>
+        )}
         <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("path.continue")}
         </Pressable>
+        <SupportSheet open={support} onClose={() => setSupport(false)} about={supportAbout} layer="z-[70]" />
       </div>,
       document.body,
     );

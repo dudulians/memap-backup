@@ -11,13 +11,13 @@ import { ExternalLink, FileText } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { HOME_HARM_IDS, helpLinks } from "@/lib/supportLines";
 
-export const SupportSheet = ({ open, onClose, about }: { open: boolean; onClose: () => void; about?: string | null }) => {
+export const SupportSheet = ({ open, onClose, about, layer }: { open: boolean; onClose: () => void; about?: string | null; layer?: string }) => {
   const { t, i18n } = useTranslation();
   const links = helpLinks(i18n.language);
   const home = !!about && HOME_HARM_IDS.has(about);
   const report = () => { onClose(); setTimeout(() => window.dispatchEvent(new CustomEvent("memap-doctor-report")), 320); };
   return (
-    <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(); }} className="h-[80vh]" ariaTitle={t("support.title")}>
+    <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(); }} className="h-[80vh]" layer={layer} ariaTitle={t("support.title")}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-10">
         <h2 className="pt-1 text-[24px] font-bold leading-tight">{t("support.title")}</h2>
         <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{t(home ? "support.homeLine" : "support.line")}</p>

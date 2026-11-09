@@ -17,14 +17,16 @@ const ALWAYS_LIGHT = new Set([...RED_FLAG_IDS, ...HOME_HARM_IDS, "parent-took-me
 const windowFrom = (end: string, days: number): string =>
   isoLocal(new Date(Number(end.slice(0, 4)), Number(end.slice(5, 7)) - 1, Number(end.slice(8, 10)) - Math.max(1, days) + 1));
 
-/** Days in the rule's window that count (YES for a problem question, NO
- *  for a "good" one), from the cycle start or the last periodDays days (today the last of them). */
+/** Days in the rule's window that count (YES for a problem question, NO for a "good" one): the same
+ *  periodDays days ruleState counts (ending today once today is answered, else yesterday), from the cycle
+ *  start when later. The "Try it" baseline reads this, so it matches the card (Nov 10 2026). */
 export const ruleCount = (tracker: Tracker, entries: TrackerEntry[], now = new Date()): number => {
-  let start = windowFrom(isoLocal(now), tracker.periodDays); // same window as the Limits tab
-  if (tracker.cycleStartDate && tracker.cycleStartDate > start) start = tracker.cycleStartDate;
   const today = isoLocal(now);
+  const end = entries.some((e) => e.trackerId === tracker.id && e.date === today) ? today : isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  let start = windowFrom(end, tracker.periodDays);
+  if (tracker.cycleStartDate && tracker.cycleStartDate > start) start = tracker.cycleStartDate;
   const hit = tracker.problemWhen === "yes";
-  return new Set(entries.filter((e) => e.trackerId === tracker.id && e.date >= start && e.date <= today && e.value === hit).map((e) => e.date)).size;
+  return new Set(entries.filter((e) => e.trackerId === tracker.id && e.date >= start && e.date <= end && e.value === hit).map((e) => e.date)).size;
 };
 
 /** A question onboarding added around her topic (not one she picked) stays quiet: no lighthouse, no task

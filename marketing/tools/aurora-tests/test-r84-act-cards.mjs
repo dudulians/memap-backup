@@ -43,11 +43,12 @@ for (const lang of ["en", "ru"]) {
 }
 const check = {
   adviceRefreshed: out["en.advice"].every((a) => !/Log time of day|Name how those words/.test(a)),
-  collapsedNoQuestion: out["en.collapsed"].every((s) => !/\?/.test(s)) && out["en.collapsed"].some((s) => /Your answers say you often feel nauseous: 6 times in the last 30 days/.test(s)),
-  collapsedRu: out["ru.collapsed"].some((s) => /Судя по ответам, тебя часто тошнит: 6 раз за последние 30 дней/.test(s)),
-  hurtfulAdvice: out["en.collapsed"].some((s) => /say which words hurt you/.test(s)) && out["ru.collapsed"].some((s) => /какие именно слова тебя ранят/.test(s)),
-  openShowsQuestionAndTest: /QUESTION · every evening Did you feel nauseous/.test(out["en.open"]) && /Test it for 14 days/.test(out["en.open"]) && /See the days/.test(out["en.open"]) && /note the time and what came before/.test(out["en.open"]),
-  openRu: /ВОПРОС · каждый вечер/.test(out["ru.open"]) && /Проверить это 14 дней/.test(out["ru.open"]),
+  // the plain rule line since v113, the partner steps since v115 (updated Nov 10 2026)
+  collapsedNoQuestion: out["en.collapsed"].every((s) => !/\?/.test(s)) && out["en.collapsed"].some((s) => /You often feel nauseous 6 of the last 30 days\./.test(s)),
+  collapsedRu: out["ru.collapsed"].some((s) => /Тебя часто тошнит 6 из последних 30 дней\./.test(s)),
+  hurtfulAdvice: out["en.collapsed"].some((s) => /Your partner often says something hurtful 3 of the last 30 days/.test(s)) && out["ru.collapsed"].some((s) => /Партнёр часто говорит что-то обидное 3 из последних 30 дней/.test(s)),
+  openShowsQuestionAndTest: /TASK Note the time and what came before/.test(out["en.open"]) && /Test it for 14 days/.test(out["en.open"]) && /See the days/.test(out["en.open"]),
+  openRu: /ЗАДАНИЕ Записывать время/.test(out["ru.open"]) && /Проверять 14 дней/.test(out["ru.open"]),
 };
 console.log(JSON.stringify({ check, out, errs }, null, 1));
 await b.close();

@@ -144,6 +144,18 @@ for (const lang of ["en", "ru"]) {
     out[`${lang}.A.doneCard`] = done.slice(0, 200);
     ok(`${lang}.A Done card: no reason line after a partner-harm yes`, done.length > 0 && !done.includes(W.doneLater) && (await doneCard.locator("[data-why-later]").count()) === 0, done);
     await p.screenshot({ path: `${D}/${lang}-A3-done-card.png` });
+    // the partner card was the last one: its calm line is on the Done card (Nov 10 2026), and "Talk to someone" opens above it
+    const careTxt = await text(doneCard.locator("[data-care-done]"));
+    ok(`${lang}.A Done card: the calm line after a last-card partner yes`, careTxt.startsWith(lang === "ru" ? "Это тяжело." : "That sounds hard."), careTxt);
+    await doneCard.getByRole("button", { name: lang === "ru" ? /^Поговорить с кем-то$/ : /^Talk to someone$/ }).click(); await p.waitForTimeout(1200);
+    const sheetOnTop = await p.evaluate(() => {
+      const d = [...document.querySelectorAll("[role=dialog]")].pop(); if (!d) return false;
+      const r = d.getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + 40);
+      return !!el && d.contains(el);
+    });
+    ok(`${lang}.A Talk to someone opens above the Done card`, sheetOnTop, String(sheetOnTop));
+    await p.screenshot({ path: `${D}/${lang}-A3b-done-support.png` });
+    await p.keyboard.press("Escape"); await p.waitForTimeout(800);
     await p.getByRole("button", { name: W.cont }).last().click(); await p.waitForTimeout(2200);
 
     // 2. the path: "Why?"
