@@ -41,6 +41,7 @@ import { SteadyCard } from "./SteadyCard";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { track } from "@/lib/analytics";
+import { usePlayful } from "@/lib/playful";
 
 type Only = "overview" | "trends" | "signals" | "findings";
 export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
@@ -182,8 +183,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const dayCount = useMemo(() => Object.fromEntries(islandDays(trackers, entries)) as Record<string, number>, [trackers, entries]);
   const facts = useMemo(() => worldFacts(trackers, entries, islands, routes, notesCount), [trackers, entries, islands, routes, notesCount]);
   // her treasures, each on its island, on the Map and the Globe alike (Nov 5 2026)
-  const treasures = useMemo(() => (loaded ? placeTreasures({ islands: islands.map((i) => i.id), days: dayCount, facts, routes, trackers }) : new Map()),
-    [loaded, islands, dayCount, facts, routes, trackers]);
+  // none with "Games and rewards" off (Nov 9 2026)
+  const playful = usePlayful();
+  const treasures = useMemo(() => (loaded && playful ? placeTreasures({ islands: islands.map((i) => i.id), days: dayCount, facts, routes, trackers }) : new Map()),
+    [loaded, playful, islands, dayCount, facts, routes, trackers]);
   const garden = useMemo(() => gardenTrees(islands.map((i) => i.id)), [islands]);
   useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
@@ -312,8 +315,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
                   words, what to answer today, the questions, then this
                   island's calendar / chart / action points, links, test, growth. */}
               <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0} />
-              <IslandTreasures placed={treasures.get(island.id)} facts={facts}
-                onAll={() => { setOpen(null); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 260); }} />
+              {playful && <IslandTreasures placed={treasures.get(island.id)} facts={facts}
+                onAll={() => { setOpen(null); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 260); }} />}
               {island.trackerIds.length > 0 && <IslandWeek island={island} trackers={trackers} />}
               <div className="mb-1 mt-2"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
               <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />

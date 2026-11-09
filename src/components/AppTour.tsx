@@ -19,6 +19,7 @@ import { countedDays, markDiscovered, pathModel } from "@/lib/pathSteps";
 import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
 import { track, useScreen } from "@/lib/analytics";
+import { isPlayful } from "@/lib/playful";
 
 type Tab = "cards" | "patterns" | "notes";
 interface Stop {
@@ -474,7 +475,7 @@ export const AppTour = () => {
     : stop.id === "actions" ? <Rule />
     : stop.id === "helps" ? <Try />
     : stop.id === "notes" ? <NoteExample />
-    : stop.id === "you" ? <Treasures />
+    : stop.id === "you" ? (isPlayful() ? <Treasures /> : null)
     : null;
 
   // the card goes where there's room: under the light, over it, or at the bottom
@@ -522,7 +523,7 @@ export const AppTour = () => {
       <div className="fixed left-4 right-4 mx-auto max-w-[380px]" style={place}>
       <div ref={cardRef} data-tour-card className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", moving && "is-moving")}>
         <p className="text-[22px] font-bold leading-tight tracking-tight">{title}</p>
-        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : `tour.${stop.id}.line`)}</p>
+        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : stop.id === "you" && !isPlayful() ? "tour.you.linePlain" : `tour.${stop.id}.line`)}</p>
         {visual}
         {/* where she is in the tour, then Skip and Next on their own line (Russian words are long) */}
         <div className="mt-3.5 flex justify-center gap-1.5" aria-hidden="true">

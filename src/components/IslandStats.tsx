@@ -28,6 +28,7 @@ import { testNameOf } from "@/lib/testWords";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
 import { last7Range } from "@/lib/weekRange";
+import { isPlayful, usePlayful } from "@/lib/playful";
 
 const WEATHER_PIC = { storm: "thunder_cloud", clouds: "partly_cloudy", sun: "sun" } as const;
 
@@ -270,10 +271,12 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
   const dayLetter = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { weekday: "short" }).slice(0, 2);
   const first = entries.reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
   const withUs = first ? Math.round((Date.parse(today + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1 : 0;
+  // "Games and rewards" off (Nov 9 2026): no streak tile, no treasure shelf
+  const playful = usePlayful();
   // a treasure that came since she last looked says "New", once
-  const [fresh] = useState<ItemId[]>(() => (facts ? unseenTreasures(facts) : []));
+  const [fresh] = useState<ItemId[]>(() => (facts && isPlayful() ? unseenTreasures(facts) : []));
   useEffect(() => {
-    if (!facts) return;
+    if (!facts || !isPlayful()) return;
     markTreasuresSeen(facts);
     if (fresh.length) { haptics.sparkle(); playSparkle(); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -281,11 +284,11 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
     <div className="space-y-3 pb-4">
       <div className="flex gap-3">
         <Tile n={days.length} label={t("map.daysCounted")} />
-        <Tile n={eveningStreak(days)} label={t("map.inARow")} />
+        {playful && <Tile n={eveningStreak(days)} label={t("map.inARow")} />}
         <Tile n={chests} label={t("map.chests")} />
       </div>
       {/* Her special items: earned ones in colour, the rest with how far along. */}
-      {facts && (
+      {facts && playful && (
         <>
           <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("items.shelf")}</p>
           <div className="surface grid grid-cols-3 gap-y-3 rounded-[20px] px-2 py-3">

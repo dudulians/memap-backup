@@ -11,6 +11,7 @@ import { buildIslands, buildRoutes, islandName, type IslandId } from "@/lib/isla
 import { islandEvenings, toNextStage } from "@/lib/globeArt";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { DAYS_PER_WEEK, LINKS_AT, countedDays, pathModel } from "@/lib/pathSteps";
+import { isPlayful } from "@/lib/playful";
 
 /** Treasures that come with evenings (the others need something else done). */
 const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
@@ -41,9 +42,9 @@ export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], note
   }
   // links found: how many, never what (her note, Nov 6 2026: reminders can be beautiful too)
   else out.push({ left: 2, text: t("notifications.links", { count: routes.length }) });
-  // the nearest treasure that comes with evenings
+  // the nearest treasure that comes with evenings (not with "Games and rewards" off)
   const f = worldFacts(trackers, entries, islands, routes, notes);
-  const next = DAILY.filter((id) => !owned(id, f))
+  const next = !isPlayful() ? undefined : DAILY.filter((id) => !owned(id, f))
     .map((id) => { const [k, n] = itemProgress(id, f); return { id, left: n - k }; })
     .filter((x) => x.left >= 1)
     .sort((a, b) => a.left - b.left)[0];

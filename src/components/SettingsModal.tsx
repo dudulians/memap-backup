@@ -39,6 +39,7 @@ import { switchToOld } from "@/components/UpgradeInvite";
 import { History } from "lucide-react";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { track, useScreen, onbLabel, setOnbPreview, type OnbVariant } from "@/lib/analytics";
+import { markPlayfulAsked, setPlayful, usePlayful } from "@/lib/playful";
 import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 import { getDoorState } from "@/lib/doors";
@@ -140,6 +141,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     () => localStorage.getItem("memap_show_sensitive") === "true",
   );
   const [theme, setThemeState] = useState<AppTheme>(() => getTheme());
+  // "Games and rewards" (Nov 9 2026): bubbles, treasures, ranks, confetti, the streak flame
+  const playful = usePlayful();
+  const handlePlayful = (on: boolean) => {
+    setPlayful(on);
+    // chosen here: Today won't ask about it later
+    markPlayfulAsked();
+    track("playful_choice", { on, from: "settings" });
+  };
   const [currentLang, setCurrentLang] = useState<SupportedLanguage>(() => getLanguage());
   const [currentPol, setCurrentPol] = useState<"male" | "female" | "neutral">(() => getPol() ?? "neutral");
 
@@ -861,6 +870,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                               </button>
                             ))}
                           </div>
+                        </div>
+                        <div className={row}>
+                          <label htmlFor="playful-toggle" className="flex-1 text-[17px] font-medium">{t("settings.games")}</label>
+                          <Switch id="playful-toggle" checked={playful} onCheckedChange={handlePlayful} />
                         </div>
                         {nav("trackers", t("today.myQuestions"), String(activeTrackerCount))}
                         {nav("language", t("language.settingsLabel"), langLabel)}

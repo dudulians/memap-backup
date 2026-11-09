@@ -57,6 +57,8 @@ const App = () => {
     // swipe, Play swipe, calendar edit, bulk multi-select, undo, …)
     // refreshes the queue uniformly — no per-callsite plumbing.
     window.addEventListener("memap-entries-changed", refreshSchedule);
+    // "Games and rewards" switched: the reminders stop (or start) naming treasures
+    window.addEventListener("memap-settings-changed", refreshSchedule);
 
     // Tap-on-notification deep-link. Whenever the user taps the
     // daily reminder on the lock screen / notification center, we
@@ -174,6 +176,7 @@ const App = () => {
     return () => {
       window.removeEventListener("memap-language-changed", refreshSchedule);
       window.removeEventListener("memap-entries-changed", refreshSchedule);
+      window.removeEventListener("memap-settings-changed", refreshSchedule);
       document.removeEventListener("visibilitychange", onVisibility);
       notifSubPromise?.then((sub) => sub?.remove()).catch(() => {});
       window.clearTimeout(ratingTimer);

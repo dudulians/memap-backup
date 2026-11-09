@@ -15,6 +15,7 @@ import { getEntries, getTrackers } from "@/lib/storage";
 import { findTarget, focusGlobe, frames, isleRects, union, wait } from "@/lib/spotlight";
 import { markGrowSeen } from "@/lib/growMoment";
 import { track } from "@/lib/analytics";
+import { isPlayful } from "@/lib/playful";
 
 interface Shown { island: IslandId; stage: Stage; days: number; rect: DOMRect; art: DOMRect }
 
@@ -33,7 +34,8 @@ export const GrowMoment = () => {
   useEffect(() => {
     const run = async (e: Event) => {
       const d = (e as CustomEvent).detail as { island: IslandId; stage: Stage } | undefined;
-      if (!d || busy.current || d.stage < 2) return;
+      // not with "Games and rewards" off (Nov 9 2026): the island just stands grown on the globe
+      if (!d || busy.current || d.stage < 2 || !isPlayful()) return;
       busy.current = true;
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
       const days = islandEvenings(trackers, entries).get(d.island) ?? 0;

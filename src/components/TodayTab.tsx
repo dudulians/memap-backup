@@ -51,6 +51,7 @@ import { isToday, format } from "date-fns";
 import { ru as ruLocale } from "date-fns/locale";
 import { getLanguage } from "@/lib/i18n";
 import confetti from "canvas-confetti";
+import { isPlayful } from "@/lib/playful";
 import {
   DndContext,
   closestCenter,
@@ -444,7 +445,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
         // never over a hard answer (persona walk, Nov 9 2026: confetti fell as "my partner shouted at me" got its "yes")
         const tr = trackers.find((x) => x.id === trackerId);
         const hard = !!tr && value === (tr.problemWhen === "yes");
-        if (isStreakMilestone(streak.currentStreak) && !hard) {
+        // and not with "Games and rewards" off (Nov 9 2026)
+        if (isStreakMilestone(streak.currentStreak) && !hard && isPlayful()) {
           triggerConfetti();
         }
       }

@@ -258,7 +258,9 @@ export type AnalyticsEvent =
   | "onboarding_reminder"
   | "world_begun"
   | "world_waiting"
-  | "experiment_remind";
+  | "experiment_remind"
+  // "Games and rewards" kept or turned off: on, and where (the one-time question on Today, or Settings)
+  | "playful_choice";
 
 /** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
 export const setSource = (source: string) => {

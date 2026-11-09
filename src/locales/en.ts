@@ -214,6 +214,13 @@ const en = {
     },
   },
 
+  // "Games and rewards": asked once on Today after the 10th answered evening (Nov 9 2026)
+  playful: {
+    ask: "Games and rewards — keep them?",
+    keep: "Keep",
+    off: "Turn off",
+    line: "You can change this in Settings.",
+  },
   tipDay: {
     step: "Worth watching",
     open: "Read",
@@ -665,6 +672,7 @@ const en = {
     kindDailyLine: "A 2-week test: MeMap asks each evening if you did it, and compares days with it and without.",
     doneOnce: "I did it",
     didToast: "Done. Well done!",
+    didToastPlain: "Done.",
     didToastLine: "The count starts again from today. In a week MeMap shows your days before and after.",
     often: "often",
     oftenLine_one: "Your answers say {{what}}: {{count}} time in the last {{days}} days.",
@@ -1257,6 +1265,7 @@ const en = {
     showAppTour: "Show app tour",
     eveningReminder: "Evening reminder",
     theme: "Theme",
+    games: "Games and rewards",
     more: "More",
     rateApp: "Rate MeMap",
     contactSupport: "Contact support",
@@ -1554,6 +1563,8 @@ const en = {
     eveningDoneSub: "Want more? Only if you feel like it.",
     eveningSoft: "That's today done",
     eveningSoftSub: "Go easy on yourself tonight.",
+    // "Games and rewards" off (Nov 9 2026): the Done card says only this
+    eveningAll: "That's all for today.",
     popBubbles: "Pop bubbles",
     exploreQuestions: "Explore new questions",
     seeLinks: "See your links",
@@ -2459,7 +2470,7 @@ const en = {
     actions: { line: "Set your rule. When it's reached, the lighthouse lights up.", sample: "If 3 nights in a week are hard, put screens away after 10 pm." },
     helps: { line: "Try one small change for two weeks. See if it helped.", sample: "Skip coffee after 14:00", day: "Day 5 of 14" },
     notes: { line: "Anything about a day, in your own words.", sampleDay: "Tuesday", sample: "Slept badly, big meeting tomorrow" },
-    you: { line: "Your treasures, questions and settings — and “How MeMap works”." },
+    you: { line: "Your treasures, questions and settings — and “How MeMap works”.", linePlain: "Your questions and settings — and “How MeMap works”." },
     end: { title: "That's your world", line: "That's the tour. Your next step is waiting on Today.", lineTonight: "Tonight your questions wait on Today." },
     toStep: "My next step",
   },

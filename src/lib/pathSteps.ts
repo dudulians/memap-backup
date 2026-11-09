@@ -18,6 +18,7 @@ import { experimentOver, getExperiments, runningExperiments } from "@/lib/experi
 import { getHunches, hunchDoneToday, readyHunch } from "@/lib/hunches";
 import { track, onbVariant } from "@/lib/analytics";
 import { tipForToday } from "@/lib/observeTips";
+import { isPlayful } from "@/lib/playful";
 
 export const DAYS_PER_WEEK = 7;
 /** Answered evenings (countedDays) before the first links can show: 5 days with and 5 without
@@ -692,7 +693,8 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // evening of answers should show progress by itself, no extra taps).
   // Several islands growing the same evening are one light (QA, Nov 8 2026: four stacked lights
   // "Your … island grew" for one event), after the last questions step that grew one of them.
-  const grown = grewToday(trackers, entries, today);
+  // Not with "Games and rewards" off (Nov 9 2026): the island still grows on the globe, quietly.
+  const grown = isPlayful() ? grewToday(trackers, entries, today) : [];
   if (grown.length > 0) {
     const isl = new Set(grown.map((g) => g.island));
     let at = -1;

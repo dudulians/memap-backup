@@ -16,7 +16,8 @@
 // Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top notes).
 import { ObserveTipSheet } from "@/components/ObserveTipSheet";
 import { OBSERVE_TIPS } from "@/lib/observeTipsData";
-import { TipCard, markTip as markTipSeen, tipSeen } from "./Tips";
+import { TipCard, markTip as markTipSeen, maluPic, tipSeen } from "./Tips";
+import { PLAYFUL_ASK_AT, markPlayfulAsked, playfulAsked, setPlayful, usePlayful } from "@/lib/playful";
 import { switchToOld } from "./UpgradeInvite";
 import { SupportSheet } from "./SupportSheet";
 import { HEAVY_MOOD_IDS, HOME_HARM_IDS } from "@/lib/supportLines";
@@ -143,12 +144,16 @@ export const EveningPath = ({
   };
   // Bumped when a task is skipped or the game is played (stored outside React).
   const [tick, setTick] = useState(0);
+  // "Games and rewards" (Nov 9 2026): off = no bubbles, treasures, flame, "grew" lights or "Great work"
+  const playful = usePlayful();
+  // the one-time question was just answered
+  const [askGone, setAskGone] = useState(false);
   const m = useMemo(() => {
     const draft = pathModel(trackers, entries);
     if (noteDays === null) return draft;
     syncTasks(trackers, noteDays, draft.week);
     return pathModel(trackers, entries);
-  }, [trackers, entries, noteDays, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [trackers, entries, noteDays, tick, playful]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   // low mood or no interest on 12 of the last 14 days: a doctor or therapist (when-to-act.md). Days she
@@ -191,11 +196,12 @@ export const EveningPath = ({
   // said on "Done for today" with how far she is and what tomorrow brings — a reason
   // to come back. Ties go to the shorter way.
   const nextUp = useMemo(() => {
+    if (!playful) return null;
     const f = worldFacts(trackers, entries, world.islands, world.routes, noteDays?.length ?? 0);
     const left = ITEMS.filter((it) => !owned(it.id, f)).map((it) => { const [k, n] = itemProgress(it.id, f); return { id: it.id, pic: it.pic, k, n }; }).filter((x) => x.n > 0 && x.k < x.n);
     left.sort((a, b) => b.k / b.n - a.k / a.n || a.n - b.n);
     return left[0] ?? null;
-  }, [trackers, entries, world, noteDays]);
+  }, [trackers, entries, world, noteDays, playful]);
   // "Look around" finished or skipped (src/components/AppTour.tsx): the path moves on
   useEffect(() => {
     const done = () => setTick((k) => k + 1);
@@ -239,7 +245,8 @@ export const EveningPath = ({
   const hunchReady = useMemo(() => !!readyHunch(trackers, entries), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   // A missed day to fill in waits beside the path, not on it (WORLD-BIBLE,
   // Nov 5 2026): the path holds only today's steps.
-  const steps = useMemo(() => m.steps.filter((s) => s.kind !== "fill" || s.onPath), [m]);
+  // the bubbles step is a game: not with "Games and rewards" off
+  const steps = useMemo(() => m.steps.filter((s) => (s.kind !== "fill" || s.onPath) && (playful || s.kind !== "unload")), [m, playful]);
   // A past day to fill in (her note, Nov 6 2026: "дать возможность заполнять за
   // прошлые дни, как у меня было"): the latest of the last 3 days without its
   // answers, on a pill that stays in sight; the evening card then shows all 7 days.
@@ -288,6 +295,8 @@ export const EveningPath = ({
   const height = stops[chestIndex].y + R_CHEST + 56;
 
   // --- Words ---------------------------------------------------------------
+  // "Play" on the hunch is a game word: "Check" with "Games and rewards" off (Nov 9 2026)
+  const playWord = playful ? t("game.play") : t("hunch.check");
   // someone with days from before the new look isn't on a "first week" (persona walk, Nov 9 2026)
   const firstWeek = m.week === 0 && m.prior === 0;
   const reportLabel = firstWeek ? t("path.firstReport") : t("path.weekReport");
@@ -345,8 +354,8 @@ export const EveningPath = ({
     }
     if (n.kind === "end") {
       // the day is done: the last light is the bubbles (Nov 8 2026)
-      // after the bubbles the day looks finished (QA: the light stayed lit)
-      if (eveningDone && unloadPlayedToday()) return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: t("path.end.title") };
+      // after the bubbles the day looks finished (QA: the light stayed lit); with "Games and rewards" off, no bubbles
+      if (eveningDone && (unloadPlayedToday() || !playful)) return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: t("path.end.title") };
       if (eveningDone) return { look: current ? "current" : "todo", hue: "198 55% 58%", icon: <Wind className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />, title: t("path.end.playTitle"), action: current ? t("path.end.playAction") : undefined };
       return {
         look: current ? "current" : "todo", icon: <Flag className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2.2} />,
@@ -372,10 +381,10 @@ export const EveningPath = ({
     if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
-    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("game.play") };
+    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : playWord };
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
     if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
-    if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
+    if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: playWord };
     if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
     if (s.kind === "tip") return { look, icon, hue, title: stepName(s), sub: tipTitle(s.tipId), action: t("tipDay.open") };
     if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t("firstLink.sub"), action: t("firstLink.see") };
@@ -414,6 +423,7 @@ export const EveningPath = ({
   // (her note, Nov 5 2026: short, no taps needed).
   const [grewNow, setGrewNow] = useState<IslandId | null>(null);
   useEffect(() => {
+    if (!playful) return;
     const today = isoDay(new Date());
     const grew = m.steps.filter((s) => s.kind === "grew").flatMap((s) => s.grew ?? [{ island: s.island!, stage: s.stage ?? 0 }]);
     let seen: string[] = [];
@@ -423,7 +433,7 @@ export const EveningPath = ({
     try { localStorage.setItem("memap_grew_seen", JSON.stringify([...seen.slice(-40), `${today}:${fresh.island}:${fresh.stage}`])); } catch { /* ignore */ }
     haptics.sparkle();
     setGrewNow(fresh.island!);
-  }, [m]);
+  }, [m, playful]);
   // it goes away by itself (a re-render of the path must not keep it up)
   useEffect(() => {
     if (!grewNow) return;
@@ -606,6 +616,20 @@ export const EveningPath = ({
     return { text: x ? t("path.next4.trying", { change: testNameOf(x.change), k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : t("path.next4.try"), open: "world" as const };
   })();
 
+  // "Games and rewards — keep them?": once, after the 10th answered evening (so on a day whose evening is
+  // answered: the end of the evening, not while answering), never on a hard evening (low mood, a hurtful
+  // partner); either answer ends it, and Settings can change it later. Not while the old-look card holds
+  // the same spot (her first week after switching).
+  // (Already off: nothing to keep, no question.)
+  const askPlayful = playful && !askGone && !heavyMood && !hardHome && !fromOld && m.todayCounted && m.totalDays >= PLAYFUL_ASK_AT && !playfulAsked();
+  const answerPlayful = (on: boolean) => {
+    haptics.tap();
+    markPlayfulAsked();
+    setAskGone(true);
+    if (!on) setPlayful(false);
+    track("playful_choice", { on, from: "ask" });
+  };
+
   const openActionPoints = () =>
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
   const tipTitle = (id?: string) => { const x = OBSERVE_TIPS.find((o) => o.id === id); return x ? (i18n.language?.startsWith("ru") ? x.ru.title : x.en.title) : ""; };
@@ -772,7 +796,8 @@ export const EveningPath = ({
     // "Done for today": what's left, all optional (the week's report first when it's ready)
     if (n.kind === "end") {
       // before today is answered: say plainly it comes later, and take her to her step (phone test, Nov 7 2026)
-      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), t(new Date().getHours() >= 17 ? "path.end.notYetEvening" : "path.end.notYet", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
+      // with "Games and rewards" off it promises no bubbles: just how many steps are left
+      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), playful ? t(new Date().getHours() >= 17 ? "path.end.notYetEvening" : "path.end.notYet", { count: openLeft }) : t("path.end.left", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
       const go = (f: () => void, action = "") => () => { setOpen(null); if (action) track("end_card_action", { action }); f(); };
       const ic = "h-5 w-5";
       // Links and the calendar only once there's something on them (her note, Nov 5
@@ -781,9 +806,10 @@ export const EveningPath = ({
       return (
         <>
           {/* a hurtful evening with a partner ends gently, no "Great work!" and no game (persona walk, Nov 9 2026) */}
-          {hardHome ? head(t("path.eveningSoft"), t("path.eveningSoftSub")) : head(t("path.eveningDone"), t("path.eveningDoneSub"))}
+          {/* "Games and rewards" off (Nov 9 2026): a neutral line, no bubbles, no next treasure */}
+          {hardHome ? head(t("path.eveningSoft"), t("path.eveningSoftSub")) : playful ? head(t("path.eveningDone"), t("path.eveningDoneSub")) : head(t("path.eveningAll"))}
           {hardHome && button(t("support.chip"), go(() => setSupport("home"), "support"), "teal")}
-          {!hardHome && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
+          {!hardHome && playful && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
           {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"), "gold")}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}
@@ -811,7 +837,7 @@ export const EveningPath = ({
       return (
         <>
           {head(t("hunch.step"), s.done ? t("hunch.doneToday") : t("hunch.sub"))}
-          {!s.done && button(t("game.play"), () => startStep(s))}
+          {!s.done && button(playWord, () => startStep(s))}
         </>
       );
     }
@@ -821,7 +847,7 @@ export const EveningPath = ({
       return (
         <>
           {head(t("unload.step"), s.done ? t("unload.doneToday") : t("unload.sub"))}
-          {button(s.done ? t("unload.again") : t("game.play"), () => startStep(s), s.done ? "plain" : "teal")}
+          {button(s.done ? t("unload.again") : playWord, () => startStep(s), s.done ? "plain" : "teal")}
         </>
       );
     }
@@ -973,7 +999,8 @@ export const EveningPath = ({
       })}
 
       {/* a run of one only says "you missed yesterday" (persona walk, Nov 9 2026): from two evenings in a row */}
-      {headerSlot && m.streak > 1 && createPortal(
+      {/* the flame is a game: not with "Games and rewards" off (Nov 9 2026) */}
+      {headerSlot && playful && m.streak > 1 && createPortal(
         <span aria-label={t("path.streakAria", { count: m.streak })} className="surface inline-flex h-9 items-center gap-1 rounded-full pl-2 pr-3 text-[16px] font-bold tabular-nums text-foreground">
           <Flame className="h-[18px] w-[18px] fill-amber-400 text-amber-500" strokeWidth={2} />
           {m.streak}
@@ -1013,6 +1040,24 @@ export const EveningPath = ({
         {fromOld && oldLookShown && (
           <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
             <TipCard id="old-look" title={t("tips.oldLookTitle")} line={t("tips.oldLookLine")} action={t("upgrade.oldLook")} onAction={switchToOld} className="!bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" />
+          </div>
+        )}
+        {/* after the 10th answered evening, once: keep the games and rewards? (Nov 9 2026). In sight
+            like the old-look card (the path scrolls to today's step, so a card above it is out of view):
+            at the top, solid, a tip's look with two answers */}
+        {askPlayful && (
+          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+            <div data-playful-ask role="group" aria-label={t("playful.ask")} className="surface relative flex shrink-0 gap-3 rounded-[20px] !bg-background p-3 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
+              {maluPic() && <img src={maluPic()!} alt="" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />}
+              <div className="min-w-0 flex-1">
+                <p className="text-[16px] font-bold leading-snug">{t("playful.ask")}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => answerPlayful(true)} className="raised-btn is-small justify-center px-3">{t("playful.keep")}</button>
+                  <button type="button" onClick={() => answerPlayful(false)} className="quiet-btn h-[50px] px-3 text-[16px]">{t("playful.off")}</button>
+                </div>
+                <p className="mt-2 text-[14px] font-semibold leading-snug text-muted-foreground">{t("playful.line")}</p>
+              </div>
+            </div>
           </div>
         )}
         {/* after a few evenings: there is a report for a doctor */}

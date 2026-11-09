@@ -13,6 +13,7 @@ import { buildIslands, buildRoutes, islandName, isNightMap } from "@/lib/islands
 import { islandEvenings } from "@/lib/globeArt";
 import { ITEMS, owned, worldFacts } from "@/lib/growth";
 import { pathModel } from "@/lib/pathSteps";
+import { isPlayful } from "@/lib/playful";
 import { drawShareCard, shareCard } from "@/lib/shareCard";
 
 export const ShareWorld = () => {
@@ -36,7 +37,8 @@ export const ShareWorld = () => {
         islands: list,
         title: t("share.title"),
         sub: t("share.sub", { week: m.week + 1, count: f.days }),
-        stats: [t("share.evenings", { count: f.days }), t("share.links", { count: routes.length }), t("share.treasures", { count: treasures })],
+        // no treasure count with "Games and rewards" off (Nov 9 2026)
+        stats: [t("share.evenings", { count: f.days }), t("share.links", { count: routes.length }), ...(isPlayful() ? [t("share.treasures", { count: treasures })] : [])],
         footer: t("share.footer"),
         night: isNightMap(),
       });

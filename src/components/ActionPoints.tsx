@@ -40,6 +40,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { SupportSheet } from "@/components/SupportSheet";
+import { isPlayful } from "@/lib/playful";
 
 /** "I'll try": the week's test to start, for the screen that holds the sheets. */
 export interface TryAction { island: IslandId; plan: string; trackerId: string; k: number }
@@ -227,7 +228,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const [resultOf, setResultOf] = useState<Experiment | null>(null);
   const openTest = (x: Experiment) => { haptics.tap(); if (experimentOver(x)) setResultOf(x); else setTestOpen(x); };
   // a word that it worked, and what happens next (QA, Nov 8 2026: the card just moved away)
-  const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); toast({ title: t("rules.didToast"), description: t("rules.didToastLine") }); };
+  const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); toast({ title: t(isPlayful() ? "rules.didToast" : "rules.didToastPlain"), description: t("rules.didToastLine") }); };
   // a partner-harm step: noted, no praise; on "partner raised their voice" the next step becomes the task
   // (telling the partner, the last choice on "hurtful words", is never offered as a next step)
   const didHome = async (tr: Tracker, tid: string) => {

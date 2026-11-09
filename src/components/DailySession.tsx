@@ -18,6 +18,7 @@ import { X, ChevronRight, ChevronLeft, ChevronDown, ArrowLeft, ArrowRight, Spark
 import { getTrackerIcon, getCategoryColor } from "@/lib/categoryHelpers";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
+import { isPlayful } from "@/lib/playful";
 import { LIFE_STREAMS, LifeStreamTemplate } from "@/lib/lifeStreams";
 import { getRelatedQuestions, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { getEntries, getTrackers, saveTrackers } from "@/lib/storage";
@@ -686,7 +687,8 @@ export const DailySession = ({
   };
 
   const triggerConfetti = () => {
-    if (hurtTonight.current) return;
+    // not over a hurt evening, and not with "Games and rewards" off (Nov 9 2026)
+    if (hurtTonight.current || !isPlayful()) return;
     confetti({
       particleCount: 150,
       spread: 100,

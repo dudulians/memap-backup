@@ -71,6 +71,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { dateRange } from "@/lib/weekRange";
 import { track, useScreen } from "@/lib/analytics";
+import { usePlayful } from "@/lib/playful";
 
 export const WeekChest = ({
   week,
@@ -94,6 +95,8 @@ export const WeekChest = ({
   // Cards shown so far; an already opened chest shows them all.
   const [shown, setShown] = useState(() => (getChests()[week] ? 99 : 1));
   const [testOpen, setTestOpen] = useState(false);
+  // "Games and rewards" (Nov 9 2026): off keeps the insight, the numbers, what grew and the mission
+  const playful = usePlayful();
 
   const label = (s: ChestStat) => {
     if (s.door) {
@@ -189,7 +192,7 @@ export const WeekChest = ({
     onClose();
     window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 250);
   };
-  const hasTreasure = !!rec?.fresh?.items.length;
+  const hasTreasure = playful && !!rec?.fresh?.items.length;
 
   const early = (
     <span className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-full border border-foreground/15 px-2.5 text-[13px] font-semibold text-muted-foreground">
@@ -254,8 +257,8 @@ export const WeekChest = ({
     if (fresh) {
       const rows: ReactNode[] = [];
       // Special items first (the rarest), then each island's new pieces, then bridges.
-      // treasures first (the rarest), with the island they stand on
-      fresh.items.forEach((id) => {
+      // treasures first (the rarest), with the island they stand on; none with "Games and rewards" off
+      (playful ? fresh.items : []).forEach((id) => {
         const it = ITEMS.find((x) => x.id === id);
         const host = fresh.itemIslands?.[id] as IslandId | undefined;
         if (it) rows.push(row(it.pic, t(`items.${id}.name`), host ? t("items.onIsland", { how: t(`items.${id}.how`), island: islandName(t, host) }) : t(`items.${id}.how`), true));
@@ -277,7 +280,8 @@ export const WeekChest = ({
         const more = rows.length - 4;
         rows.splice(4, rows.length, <p key="more" className="mt-3 text-[15px] font-semibold text-muted-foreground">{t("path.chest.moreOnMap", { count: more })}</p>);
       }
-      out.push(
+      // with "Games and rewards" off, "Coming next" (the treasures closest) isn't shown
+      if (playful || rows.length > 0) out.push(
         <div className="surface rounded-[22px] px-5 py-4 text-left">
           {kicker(<Sparkles className="h-4 w-4 text-[hsl(var(--coin-gold))]" strokeWidth={2.4} />, rows.length ? t("path.chest.grew") : t("path.chest.nextUp"))}
           {rows.length > 0 ? rows.map((x, i) => <div key={i} className="tour-pop" style={{ animationDelay: `${0.25 + i * 0.22}s` }}>{x}</div>) : (r.nextUp ?? []).map((x) => {
@@ -289,8 +293,8 @@ export const WeekChest = ({
         </div>,
       );
     }
-    // 5. Next week's mission.
-    if (r.mission) {
+    // 5. Next week's mission (a streak to reach is a game: not with "Games and rewards" off).
+    if (r.mission && (playful || r.mission.id !== "streak")) {
       const id = r.mission.id;
       out.push(
         <div className="surface rounded-[22px] px-5 py-4 text-left">
@@ -306,8 +310,8 @@ export const WeekChest = ({
         </div>,
       );
     }
-    // 6. A new title.
-    out.push(
+    // 6. A new title (no ranks or rewards with "Games and rewards" off, Nov 9 2026).
+    if (playful) out.push(
       <div className="surface rounded-[22px] px-5 py-4 text-left">
         {kicker(null, t("path.chest.rewards"))}
         {!r.fresh && (
@@ -365,7 +369,7 @@ export const WeekChest = ({
               {shown < cards(rec).length ? (
                 <Pressable tone="gold" haptic="none" onClick={() => {
                   // The world-grew card sparkles, the others land.
-                  const nextIsWorld = !!rec.fresh && shown === cards(rec).length - (rec.mission ? 3 : 2);
+                  const nextIsWorld = playful && !!rec.fresh && shown === cards(rec).length - (rec.mission ? 3 : 2);
                   if (nextIsWorld) { haptics.sparkle(); playSparkle(); } else { haptics.land(); playThump(); }
                   setShown((n) => n + 1);
                 }} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">

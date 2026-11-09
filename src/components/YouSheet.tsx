@@ -19,6 +19,7 @@ import { syncTreasures, worldFacts } from "@/lib/growth";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
 import { haptics } from "@/lib/haptics";
+import { usePlayful } from "@/lib/playful";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 
 const Row = ({ icon: Icon, label, onClick }: { icon: ComponentType<LucideProps>; label: string; onClick: () => void }) => (
@@ -74,6 +75,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
   }, []);
   const [picking, setPicking] = useState(false);
   const [how, setHow] = useState(false);
+  const playful = usePlayful();
   // Malu's tips open these straight away
   useEffect(() => {
     const pick = () => setPicking(true), openHow = () => setHow(true);
@@ -97,7 +99,7 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
               {t("you.change")}
             </button>
           </div>
-          {!tourCompleted() && <TipCard id="block:you" className="mb-4" title={t("map.you")} line={t("tour.you.line")} />}
+          {!tourCompleted() && <TipCard id="block:you" className="mb-4" title={t("map.you")} line={t(playful ? "tour.you.line" : "tour.you.linePlain")} />}
           {/* shrink-0: in the scrolling column an overflow-hidden box would squash to nothing */}
           <div className="surface shrink-0 overflow-hidden rounded-[20px]">
             <Row icon={ListChecks} label={data ? `${t("today.myQuestions")} · ${questions}` : t("today.myQuestions")} onClick={onQuestions} />
