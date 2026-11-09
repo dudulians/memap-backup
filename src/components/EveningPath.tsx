@@ -1030,7 +1030,7 @@ export const EveningPath = ({
                 )}
                 {i === focus && avatar && !tipNow && orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb) && (
                   <div className="malu-tip surface absolute z-[8] w-[270px] rounded-[18px] px-3.5 py-3 animate-fade-in" role="note"
-                    style={{ left: Math.max(8, Math.min(f.x - 135, width - 278)), top: f.y - f.r - 70, transform: "translateY(-100%)" }}>
+                    style={{ left: Math.max(8, Math.min(f.x - 135, width - 278)), top: f.y - f.r - 86, transform: "translateY(-100%)" }}>{/* clear of the Start bubble (68px above the light, bobbing 4px): it covered "Start" (r65, Nov 9 2026) */}
                     <p className="text-[16px] font-bold leading-snug">{t(shortOnb ? "tips.stepsTitle" : "tips.anyOrderTitle")}</p>
                     <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{t(shortOnb ? "tips.stepsLine" : "tips.anyOrderLine")}</p>
                     <button type="button" onClick={closeOrderTip} className="raised-btn is-small mt-2 px-5">{t("tips.anyOrderOk")}</button>

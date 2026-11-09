@@ -34,7 +34,10 @@ const openAct = async () => { await p.evaluate(() => window.dispatchEvent(new Cu
 await openAct(); await shot("act-lit");
 out.workoutCard = await p.evaluate(() => { const c = [...document.querySelectorAll("[role=dialog] .surface")].find((x) => /3 workouts a week/.test(x.textContent)); return c ? c.innerText.replace(/\s+/g, " ") : null; });
 // Try it for 2 weeks on "3 workouts a week": the question she has, with a goal
-await p.evaluate(() => { const c = [...document.querySelectorAll("[role=dialog] .surface")].find((x) => /3 workouts a week/.test(x.textContent)); [...c.querySelectorAll("button")].find((x) => /Try it for 2 weeks/.test(x.textContent))?.click(); });
+// since v103 the card opens its details first (Nov 9 2026)
+{ const card = p.locator("[role=dialog] .surface", { hasText: "3 workouts a week" }).last();
+  await card.getByRole("button", { name: /Details/ }).first().click(); await p.waitForTimeout(800);
+  await card.getByRole("button", { name: /Try it for 2 weeks/ }).first().click(); }
 await p.waitForTimeout(1500); await shot("goal-start");
 out.goalStart = await p.evaluate(() => document.querySelector("[role=dialog][aria-modal=true]")?.innerText.replace(/\s+/g, " ").slice(0, 400));
 await p.getByRole("button", { name: /^Start$/i }).last().click(); await p.waitForTimeout(1200); await shot("goal-started");
