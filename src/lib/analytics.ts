@@ -260,7 +260,11 @@ export type AnalyticsEvent =
   | "world_waiting"
   | "experiment_remind"
   // "Games and rewards" kept or turned off: on, and where (the one-time question on Today, or Settings)
-  | "playful_choice";
+  | "playful_choice"
+  // calendar weeks (Nov 9 2026): a missed day opened from the "Missed a few days?" card (how many days ago),
+  // and the card put away with "Not now" (how many days it showed)
+  | "fill_day_opened"
+  | "fill_card_hidden";
 
 /** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
 export const setSource = (source: string) => {

@@ -1434,7 +1434,12 @@ const en = {
     // Steps, not evenings (Nov 2 2026)
     fillTitle: "Answer for {{day}}",
     fillYesterday: "Yesterday's questions",
-    pastFill: "Answer for {{day}}",
+    // calendar weeks (Nov 9 2026): a missed day is an empty dot; a gentle card to fill in, never "you didn't"
+    fillCard_one: "Missed a day? That's fine. Fill it in if you remember.",
+    fillCard_other: "Missed a few days? That's fine. Fill them in if you remember.",
+    fillNotNow: "Not now",
+    fillDay: "Fill it in",
+    quietWeek: "A quiet week.",
     missedDay: "Missed {{day}}? Fill it in",
     skip: "Not today",
     skipped: "Skipped",

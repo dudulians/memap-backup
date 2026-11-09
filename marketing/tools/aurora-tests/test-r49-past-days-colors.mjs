@@ -29,7 +29,8 @@ const dayOne = async (lang, hour, tag) => {
   await p.screenshot({ path: `${D}/${tag}-1-today.png` });
   const r = {};
   r.steps = await p.evaluate(() => [...document.querySelectorAll("[data-path-stop]")].map((x) => x.getAttribute("aria-label")).filter(Boolean).slice(0, 6));
-  r.pill = await p.evaluate(() => document.querySelector(".past-pill")?.textContent ?? null);
+  // the "Answer for Thursday" pill became the "Missed a few days?" card (calendar weeks, r97); none on day 1
+  r.pill = await p.evaluate(() => document.querySelector("[data-fill-card]")?.textContent ?? null);
   r.start = await p.evaluate(() => document.querySelector(".path-start")?.getAttribute("aria-label"));
   return { p, ctx, r };
 };
@@ -61,7 +62,7 @@ for (const lang of ["en", "ru"]) {
   {
     const { p, ctx, r } = await dayOne(lang, 19, `${lang}-B`);
     if (r.pill) {
-      await p.locator(".past-pill").click(); await p.waitForTimeout(1300);
+      await p.locator("[data-fill-card] [data-fill-day]").first().click(); await p.waitForTimeout(1300);
       await p.screenshot({ path: `${D}/${lang}-B-2-past.png` });
       r.title = await p.evaluate(() => document.querySelector("[role=dialog] button[aria-expanded]")?.textContent);
     }

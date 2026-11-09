@@ -3,8 +3,8 @@
 // разный — разные цвета", "за первый же день несколько шагов, какие-то станут
 // зелёными автоматически"). Today's path is a row of different steps: one per
 // island (topic, at most 7 questions), the main topic first; on day 1 two
-// steps are already done; then one small task. Seven counted days make a
-// week. Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top note).
+// steps are already done; then one small task. Seven calendar days from the
+// path start make a week (since Nov 9 2026; before, seven answered ones). Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top note).
 import { FOLLOW_UPS } from "./bodyTemplates";
 import { templateIdOf } from "./answerPhrases";
 import { Tracker, TrackerEntry } from "@/types/tracker";
@@ -21,6 +21,9 @@ import { tipForToday } from "@/lib/observeTips";
 import { isPlayful } from "@/lib/playful";
 
 export const DAYS_PER_WEEK = 7;
+/** A week's report needs this many answered evenings in its calendar week; with fewer it's "A quiet week."
+ *  (her note, Nov 9 2026: "надо сделать так, чтоб людям было спокойно и хорошо в приложении"). */
+export const REPORT_MIN = 3;
 /** Answered evenings (countedDays) before the first links can show: 5 days with and 5 without
  *  (linkWorthShowing). One number for the push, the week-2 chip and the Links screen (persona walk,
  *  Nov 9 2026: "10 of 14 days with answers" on Links while the push said "first links in about 1 evening"). */
@@ -102,18 +105,38 @@ export interface Step {
   done: boolean;
 }
 
+/** A finished calendar week of the path. */
+export interface PathWeek {
+  /** its seven calendar days, oldest first */
+  dates: string[];
+  /** the ones with an answered evening */
+  answered: string[];
+  /** fewer than REPORT_MIN answered evenings: "A quiet week.", no report */
+  quiet: boolean;
+}
+
 export interface PathModel {
   /** counted days before the path started (an old user's history), folded into one chip */
   prior: number;
-  /** finished weeks before this one, oldest first: their seven days */
-  pastWeeks: string[][];
-  /** 0-based week */
+  /** finished calendar weeks before this one, oldest first */
+  pastWeeks: PathWeek[];
+  /** 0-based calendar week since the path start */
   week: number;
-  /** counted days of this week before today, oldest first */
+  /** this week's seven calendar days, oldest first */
+  weekDates: string[];
+  /** today's place in this week, 0–6 */
+  dayInWeek: number;
+  /** counted (answered) days of this week before today, oldest first */
   pastInWeek: string[];
   todayCounted: boolean;
-  /** today was the week's seventh counted day */
+  /** today is the week's last day, answered, and the week has its report (REPORT_MIN evenings) */
   weekComplete: boolean;
+  /** evenings until this week's report (tonight included while it isn't answered); null when it's ready or can't come */
+  reportIn: number | null;
+  /** this week can no longer reach REPORT_MIN answered evenings: "A quiet week." */
+  quietWeek: boolean;
+  /** the last 7 days before today, on/after the path start, with no answered evening (oldest first) */
+  missedDays: string[];
   totalDays: number;
   /** days in a row, ending today or yesterday */
   streak: number;
@@ -415,18 +438,27 @@ const START_KEY = "memap_path_start";
 /** The day the path began: onboarding day for a new user, the first day on
  *  the new screens for an old one (their earlier days fold into a chip, so
  *  nobody starts at "Week 9" with eight empty weeks; plan §3.2.2). */
-export const pathStart = (today: string): string => {
+export const pathStart = (today: string, firstAnswer?: string | null): string => {
   try {
     const saved = localStorage.getItem(START_KEY);
     if (saved) return saved;
     const door = getDoorState();
-    const start = door?.startedAt && door.startedAt <= today ? door.startedAt : today;
+    // no door: the first answered day, when it's from the last week (a young install; an old one starts today)
+    const weekAgo = addDaysIso(today, -DAYS_PER_WEEK);
+    const start = door?.startedAt && door.startedAt <= today ? door.startedAt : firstAnswer && firstAnswer >= weekAgo && firstAnswer <= today ? firstAnswer : today;
     localStorage.setItem(START_KEY, start);
     return start;
   } catch {
     return today;
   }
 };
+
+/** Whole calendar days from one ISO day to another (daylight-saving safe). */
+const ymd = (iso: string) => Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
+export const daysBetween = (from: string, to: string) => Math.round((ymd(to) - ymd(from)) / 86_400_000);
+/** An ISO day n days later (or earlier). */
+export const addDaysIso = (iso: string, n: number) =>
+  isoLocal(new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) + n));
 
 /** A past day she fills in counts on a young path (her note, Nov 6 2026: "дать
  *  возможность заполнять за прошлые дни"): a path that began in the last 7 days
@@ -458,6 +490,8 @@ const CHESTS_KEY = "memap_week_chests";
 export interface ChestLine { label: string; k: number; n: number; main?: boolean; calm?: boolean; days?: (boolean | null)[]; hardWhen?: "yes" | "no" | null }
 export interface ChestRecord {
   openedAt: string; lines: ChestLine[]; fact?: string; reward: string; placed?: boolean;
+  /** the days it counted (since calendar weeks, Nov 9 2026), so it reopens with the same days */
+  dates?: string[];
   /** the week's insight, said in words when opened */
   insight?: string; insightOther?: string; insightEarly?: boolean;
   /** "Predict" this week: guessed k of n */
@@ -514,15 +548,33 @@ export const followUpNotNeeded = (tr: Tracker, trackers: Tracker[], valueOf: (tr
 export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = new Date()): PathModel => {
   const today = isoLocal(now);
   const all = countedDays(trackers, entries, today);
-  const start = pathStart(today);
+  const firstEntry = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
+  const start = pathStart(today, firstEntry);
   const days = all.filter((d) => d >= start);
   const prior = all.length - days.length;
   const todayCounted = days.includes(today);
-  const before = days.filter((d) => d !== today);
-  const week = Math.floor(before.length / DAYS_PER_WEEK);
-  const k = before.length % DAYS_PER_WEEK;
-  const pastInWeek = before.slice(week * DAYS_PER_WEEK, week * DAYS_PER_WEEK + k);
-  const pastWeeks = Array.from({ length: week }, (_, w) => before.slice(w * DAYS_PER_WEEK, (w + 1) * DAYS_PER_WEEK));
+  const counted = new Set(all);
+  // Calendar weeks from the path start (her note, Nov 9 2026: one missed evening shifted everything —
+  // "Week 2 · 6 of 7" on a Monday, a report six days late): a week is seven days in a row, whatever was
+  // answered; "k of 7" counts its answered evenings; a missed day is just an empty dot.
+  const since = Math.max(0, daysBetween(start, today));
+  const week = Math.floor(since / DAYS_PER_WEEK);
+  const dayInWeek = since % DAYS_PER_WEEK;
+  const weekOf = (w: number) => Array.from({ length: DAYS_PER_WEEK }, (_, i) => addDaysIso(start, w * DAYS_PER_WEEK + i));
+  const weekDates = weekOf(week);
+  const pastInWeek = weekDates.slice(0, dayInWeek).filter((d) => counted.has(d));
+  const pastWeeks: PathWeek[] = Array.from({ length: week }, (_, w) => {
+    const dates = weekOf(w), answered = dates.filter((d) => counted.has(d));
+    return { dates, answered, quiet: answered.length < REPORT_MIN };
+  });
+  // the week's report: the evening of its last day, with at least REPORT_MIN answered evenings
+  const doneInWeek = pastInWeek.length + (todayCounted ? 1 : 0);
+  const eveningsLeft = DAYS_PER_WEEK - dayInWeek - (todayCounted ? 1 : 0);
+  const weekComplete = eveningsLeft === 0 && doneInWeek >= REPORT_MIN;
+  const quietWeek = doneInWeek + eveningsLeft < REPORT_MIN;
+  const reportIn = eveningsLeft > 0 && !quietWeek ? eveningsLeft : null;
+  // days to fill in if she remembers: the last 7 before today, since the path began
+  const missedDays = Array.from({ length: DAYS_PER_WEEK }, (_, i) => addDaysIso(today, i - DAYS_PER_WEEK)).filter((d) => d >= start && !counted.has(d));
 
   const answeredToday = new Set(entries.filter((e) => e.date === today).map((e) => e.trackerId));
   // a follow-up ("heavy period?", "did it hurt?") isn't needed when its question wasn't "yes" today
@@ -544,8 +596,6 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // should be able to fill in yesterday): yesterday, else the day before,
   // never before the path or onboarding began, only if answering already.
   const started = door?.startedAt ?? start;
-  const firstEntry = entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null);
-  const counted = new Set(all);
   // Day 1 before the evening (her note, Nov 6 2026: "если онбординг проходит днём
   // или утром, предлагать вопросы за вчера"): today isn't over yet, so yesterday's
   // questions come first, on the path itself; tonight is today's.
@@ -615,8 +665,8 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
   // Last week's report waits (QA, Nov 8 2026: on day 8 the Start bubble skipped it): the first step
-  // of the new week until it's opened.
-  if (week > 0 && !getChests()[week - 1]) steps.unshift({ id: "report", kind: "report", trackerIds: [], answered: 0, done: false });
+  // of the new week until it's opened. A quiet week (fewer than REPORT_MIN evenings) has none.
+  if (week > 0 && !pastWeeks[week - 1].quiet && !getChests()[week - 1]) steps.unshift({ id: "report", kind: "report", trackerIds: [], answered: 0, done: false });
   // A rule she set was reached (a lit lighthouse): her plan, once a day.
   const lit = litTrackers(trackers, entries);
   // only when a rule lit that she hasn't seen yet (or it was opened today, as done)
@@ -736,9 +786,14 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     prior,
     pastWeeks,
     week,
+    weekDates,
+    dayInWeek,
     pastInWeek,
     todayCounted,
-    weekComplete: todayCounted && k === DAYS_PER_WEEK - 1,
+    weekComplete,
+    reportIn,
+    quietWeek,
+    missedDays,
     totalDays: all.length,
     streak: eveningStreak(all, now),
     steps,

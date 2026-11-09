@@ -55,7 +55,8 @@ export const WeekRing = ({ size, done, on, off, width = 4 }: { size: number; don
  *  full coloured rim and a soft glow); gold: a reward ready; locked: not yet
  *  (grey, with a lock; her note, Nov 3 2026: "визуально должно быть понятно,
  *  какие уровни открыты, а какие ещё нет"). */
-export type NodeLook = "done" | "current" | "todo" | "gold" | "locked";
+export type NodeLook = "done" | "current" | "todo" | "gold" | "locked" | "empty";
+// "empty": a day with no answered evening (calendar weeks, Nov 9 2026): a quiet dot, never red, never a cross
 /** Line icons for the islands (one family with the rest of the path, her
  *  note: pasted 3D tiles looked "нелепо"). Keys are the island icon names. */
 const ICONS: Record<string, LucideIcon> = {
@@ -108,6 +109,13 @@ export const LightLabel = ({ stop, text, dim, below = 0 }: { stop: Stop; text: s
   </span>
 );
 
+/** "A quiet week." where a week's report would stand (fewer than 3 answered evenings): a line, no report. */
+export const QuietLine = ({ stop, text }: { stop: Stop; text: string }) => (
+  <span data-quiet-week className="planet-label path-label is-dim" style={{ left: stop.x, top: stop.y - 14 }}>
+    <span>{text}</span>
+  </span>
+);
+
 /** Stops winding down the middle (seven days and the reward, or today's week). */
 export const weekStops = (width: number, radii: number[], top = 24) => {
   const out: Stop[] = [];
@@ -119,12 +127,16 @@ export const weekStops = (width: number, radii: number[], top = 24) => {
 };
 
 /** A whole week that isn't today's: finished (above) or coming (below,
- *  quiet at 45%). Seven day nodes and the reward. */
+ *  quiet at 45%). Seven day nodes and the reward. Since Nov 9 2026 a week is
+ *  seven calendar days: a day with no answers is an empty dot, and a week with
+ *  fewer than 3 answered evenings ends in "A quiet week." instead of a report. */
 export const WeekStrip = ({
   week,
   width,
   kind,
   dates,
+  answered,
+  quiet,
   firstOffset = 0,
   chest,
   onOpenDay,
@@ -133,8 +145,12 @@ export const WeekStrip = ({
   week: number;
   width: number;
   kind: "past" | "coming";
-  /** past: the seven days */
+  /** past: the seven calendar days */
   dates?: string[];
+  /** past: the days with an answered evening (all of dates when left out) */
+  answered?: string[];
+  /** past: fewer than 3 answered evenings, no report */
+  quiet?: boolean;
   /** coming: days from today to this week's first day */
   firstOffset?: number;
   chest?: ChestRecord | null;
@@ -166,6 +182,13 @@ export const WeekStrip = ({
       </div>
       <div className="path-box relative mx-auto mt-2 [overflow-x:clip]" style={{ width, height }}>
         {stops.map((p, i) => {
+          if (i === DAYS_PER_WEEK && kind === "past" && quiet) {
+            return (
+              <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+                <QuietLine stop={p} text={t("path.quietWeek")} />
+              </div>
+            );
+          }
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
@@ -178,12 +201,14 @@ export const WeekStrip = ({
             );
           }
           const d = day(i);
+          // a day with no answers: an empty dot (it still opens, to fill it in there)
+          const missed = kind === "past" && !!dates?.[i] && !!answered && !answered.includes(dates[i]);
           return (
             <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
-              <LightLabel stop={p} text={dayName(d)} dim={kind === "coming"} />
-              <PathNode stop={p} look={kind === "past" ? "done" : "locked"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
+              <LightLabel stop={p} text={dayName(d)} dim={kind === "coming" || missed} />
+              <PathNode stop={p} look={missed ? "empty" : kind === "past" ? "done" : "locked"} label={dayName(d)} hue={kind === "past" ? undefined : DAY_AHEAD}
                 onClick={kind === "past" && dates?.[i] ? () => onOpenDay?.(dates[i]) : undefined}>
-                {kind === "past" ? <Check className="h-6 w-6" strokeWidth={3} /> : <MoonStar className="h-6 w-6" strokeWidth={2} />}
+                {missed ? null : kind === "past" ? <Check className="h-6 w-6" strokeWidth={3} /> : <MoonStar className="h-6 w-6" strokeWidth={2} />}
               </PathNode>
             </div>
           );

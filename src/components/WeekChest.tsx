@@ -75,7 +75,7 @@ import { usePlayful } from "@/lib/playful";
 
 export const WeekChest = ({
   week,
-  dates,
+  dates: weekDates,
   trackers,
   entries,
   onClose,
@@ -125,7 +125,7 @@ export const WeekChest = ({
     const hosts = placeTreasures({ islands: islands.map((i) => i.id), days: Object.fromEntries(days), facts, routes, trackers });
     const hostOf = (id: string) => [...hosts.entries()].find(([, list]) => list.some((x) => x.id === id && !x.ghost))?.[0];
     // islands that reached a new stage this week (their pictures on the map)
-    const was = islandEvenings(trackers, entries.filter((e) => e.date < dates[0]));
+    const was = islandEvenings(trackers, entries.filter((e) => e.date < weekDates[0]));
     const now = islandEvenings(trackers, entries);
     const world = {
       growth: islands.map((i) => `${i.id}:stage${stageOf(now.get(i.id) ?? 0)}`),
@@ -146,7 +146,7 @@ export const WeekChest = ({
       .map((it) => ({ id: it.id, p: itemProgress(it.id, facts) }))
       .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1]).slice(0, 2)
       .map((x) => `${x.id}:${x.p[0]}/${x.p[1]}`);
-    const c = chestContent(trackers, entries, dates);
+    const c = chestContent(trackers, entries, weekDates);
     const lines = [
       ...(c.main ? [{ label: label(c.main), k: c.main.k, n: c.main.n, main: true, calm: c.main.k === 0, days: c.main.days, hardWhen: c.main.hardWhen }] : []),
       ...c.rows.map((r) => ({ label: label(r), k: r.k, n: r.n, days: r.days, hardWhen: r.hardWhen })),
@@ -157,6 +157,7 @@ export const WeekChest = ({
     const insight = route ? linkHead(t, route, trackerLookup(trackers)) : undefined;
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),
+      dates: weekDates,
       lines,
       fact: c.fact ? factLine(t, c.fact, c.main ? label(c.main) : undefined) : undefined,
       reward: rewardFor(week),
@@ -235,7 +236,9 @@ export const WeekChest = ({
         {(r.insight ? r.insightEarly : !!r.fact) && early}
       </div>,
     );
-    // 2. The week in numbers.
+    // 2. The week in numbers, with the days it counted when opened (a report opened before calendar weeks,
+    // Nov 9 2026, counted other days: it reopens with plain dots and no dates rather than wrong ones).
+    const dates = r.dates ?? [];
     out.push(
       <div className="surface rounded-[22px] px-5 py-4 text-left">
         {kicker(null, dates.length ? `${t("path.chest.inNumbers")} · ${dateRange(i18n.language ?? "en", new Date(dates[0] + "T12:00:00"), new Date(dates[dates.length - 1] + "T12:00:00"))}` : t("path.chest.inNumbers"))}

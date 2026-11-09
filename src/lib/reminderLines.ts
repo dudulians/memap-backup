@@ -10,14 +10,14 @@ import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, buildRoutes, islandName, type IslandId } from "@/lib/islands";
 import { islandEvenings, toNextStage } from "@/lib/globeArt";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
-import { DAYS_PER_WEEK, LINKS_AT, countedDays, pathModel } from "@/lib/pathSteps";
+import { LINKS_AT, countedDays, pathModel } from "@/lib/pathSteps";
 import { isPlayful } from "@/lib/playful";
 
 /** Treasures that come with evenings (the others need something else done). */
 const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
 
 /** Progress lines, closest first (at most five). */
-export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], notes: number): string[] => {
+export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], notes: number, opts: { weekReport?: boolean } = {}): string[] => {
   const t = i18n.t.bind(i18n);
   if (entries.length === 0 && trackers.length === 0) return [];
   const out: { left: number; text: string }[] = [];
@@ -51,10 +51,13 @@ export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], note
   if (next && ITEMS.some((it) => it.id === next.id)) {
     out.push({ left: next.left, text: t("notifications.treasure", { treasure: t(`items.${next.id}.name`), count: next.left }) });
   }
-  // the week's report
-  const m = pathModel(trackers, entries);
-  const done = m.pastInWeek.length + (m.todayCounted ? 1 : 0);
-  if (done < DAYS_PER_WEEK) out.push({ left: DAYS_PER_WEEK - done, text: t("notifications.report", { count: DAYS_PER_WEEK - done }) });
+  // the week's report: evenings to the end of this calendar week, while it can still come (3 evenings).
+  // The count goes down with the calendar, not with answers, so it's only for the next reminder
+  // (notifications.ts asks for it once: opts.weekReport).
+  if (opts.weekReport !== false) {
+    const m = pathModel(trackers, entries);
+    if (m.reportIn) out.push({ left: m.reportIn, text: t("notifications.report", { count: m.reportIn }) });
+  }
 
   out.sort((a, b) => a.left - b.left);
   return [...new Set(out.map((x) => x.text))].slice(0, 5);

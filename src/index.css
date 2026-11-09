@@ -2324,6 +2324,9 @@ html[data-ui="new"] .press3d.rounded-2xl { border-radius: 9999px; }
 .path-node.disc-locked { --face: #E4E8F1; --lip: #C6CEDD; color: #A3ACC0; }
 html[data-ui="new"][data-theme="aurora"] .path-node.disc-todo { --face: #EEF1FB; --lip: #9DA8D6; }
 html[data-ui="new"][data-theme="aurora"] .path-node.disc-locked { --face: #535E9C; --lip: #3B4581; color: #97A2D6; }
+/* a day with no answers (calendar weeks, Nov 9 2026): a quiet empty dot, lighter than the days ahead, no icon */
+.path-node.disc-empty { --face: #F4F6FB; --lip: #DCE1EC; }
+html[data-ui="new"][data-theme="aurora"] .path-node.disc-empty { --face: #46518F; --lip: #39437D; }
 .path-cur-ring { position: absolute; inset: -12px; border-radius: 9999px; border: 6px solid rgba(255, 255, 255, .75); }
 html[data-ui="new"][data-theme="aurora"] .path-cur-ring { border-color: rgba(255, 255, 255, .28); }
 @media (prefers-reduced-motion: reduce) { .path-node .path-disc, .path-node .path-icon { transition: none; } }

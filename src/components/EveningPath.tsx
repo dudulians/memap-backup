@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pastDays, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -46,7 +46,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { getNotes } from "@/lib/notes";
-import { DAY_AHEAD, LightLabel, PathNode, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
+import { DAY_AHEAD, LightLabel, PathNode, QuietLine, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
@@ -77,6 +77,8 @@ const addDays = (base: Date, n: number) => {
 
 type PNode =
   | { kind: "past"; date: string }
+  /** a day of this week with no answered evening: a quiet empty dot (calendar weeks, Nov 9 2026) */
+  | { kind: "missed"; date: string }
   | { kind: "step"; step: Step }
   /** "Done for today": the last light of today (her note, Nov 5 2026: the app
    *  should always say what's next, then "всё, можешь шарики полопать…") */
@@ -86,9 +88,15 @@ type PNode =
 type Open = number | null;
 
 /** Day 1, she chose to start tonight (onboarding v7): no "fill in yesterday" that day. */
-/** the onboarding day: no past-day pill yet */
+/** the onboarding day: no "Missed a few days?" card yet */
 const firstDayTonight = () => {
   try { return localStorage.getItem("memap_first_day_at") === isoLocal(new Date()); } catch { return false; }
+};
+
+/** "Not now" on the missed-days card: the days it showed; it comes back only for a day not among them. */
+const FILL_HIDDEN_KEY = "memap_fill_card_hidden";
+const readFillHidden = (): string[] => {
+  try { const v = JSON.parse(localStorage.getItem(FILL_HIDDEN_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
 };
 
 export const EveningPath = ({
@@ -247,23 +255,32 @@ export const EveningPath = ({
   // Nov 5 2026): the path holds only today's steps.
   // the bubbles step is a game: not with "Games and rewards" off
   const steps = useMemo(() => m.steps.filter((s) => (s.kind !== "fill" || s.onPath) && (playful || s.kind !== "unload")), [m, playful]);
-  // A past day to fill in (her note, Nov 6 2026: "дать возможность заполнять за
-  // прошлые дни, как у меня было"): the latest of the last 3 days without its
-  // answers, on a pill that stays in sight; the evening card then shows all 7 days.
-  // Not while yesterday waits on the path itself (day 1 morning).
-  const firstAnswer = useMemo(() => entries.reduce<string | null>((min, e) => (min === null || e.date < min ? e.date : min), null), [entries]);
-  // never a day before her first answers (QA: it offered the day before she installed)
-  const pastPick = useMemo(() => (m.steps.some((s) => s.onPath) || firstDayTonight() || !firstAnswer ? null : pastDays(trackers, entries).slice(-3).reverse().find((d) => d.state !== "done" && d.date >= firstAnswer) ?? null), [m, trackers, entries, firstAnswer]);
+  // Days to fill in (her notes: Nov 6 2026 "дать возможность заполнять за прошлые дни", Nov 9 2026
+  // "если чего-то не хватает, можно попросить их дозаполнить"): a calm card with a chip per missed day
+  // of the last week (it replaced the "Answer for Thursday" pill, which covered the path's names).
+  // Not on the onboarding day, not while yesterday waits on the path itself (day 1 morning), not before
+  // any answers. "Not now" hides it until another day is missed.
+  const [fillHidden, setFillHidden] = useState<string[]>(readFillHidden);
+  const missedToFill = useMemo(() => {
+    const door = getDoorState();
+    if (entries.length === 0 || m.steps.some((s) => s.onPath) || firstDayTonight() || door?.startedAt === isoDay(new Date())) return [];
+    return m.missedDays;
+  }, [m, entries]);
+  const fillCardOn = missedToFill.length > 0 && missedToFill.some((d) => !fillHidden.includes(d));
   const nodes: PNode[] = useMemo(() => {
-    const out: PNode[] = m.pastInWeek.map((date) => ({ kind: "past" as const, date }));
+    // this calendar week's days before today: answered ones done, the others empty dots
+    const answered = new Set(m.pastInWeek);
+    const out: PNode[] = m.weekDates.slice(0, m.dayInWeek).map((date) => (answered.has(date) ? { kind: "past" as const, date } : { kind: "missed" as const, date }));
     for (const step of steps) out.push({ kind: "step", step });
     if (steps.length > 0) out.push({ kind: "end" });
-    const coming = m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length;
+    const coming = DAYS_PER_WEEK - 1 - m.dayInWeek;
     for (let o = 1; o <= coming; o++) out.push({ kind: "future", offset: o });
     out.push({ kind: "chest" });
     return out;
   }, [m, steps]);
-  const firstStep = m.pastInWeek.length;
+  const firstStep = m.dayInWeek;
+  // fewer than 3 evenings can still come this week: no report, "A quiet week." where it would stand
+  const quietChest = m.quietWeek && !m.weekComplete;
   const isOpenStep = (s: Step) => !s.done && (s.kind !== "game" || canPlay);
   // The questions stay the main step; "Unload your mind" is there any time
   // without taking the highlight (it is the main step only when nothing else is left).
@@ -304,6 +321,8 @@ export const EveningPath = ({
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const dayTitle = (iso: string) => cap(new Date(iso + "T00:00:00").toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long" }));
   const weekdayName = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString(lang, { weekday: "long" });
+  /** "Thu 6" / «Чт 6»: a missed day on its chip */
+  const shortDay = (iso: string) => { const d = new Date(iso + "T00:00:00"); return `${cap(d.toLocaleDateString(lang, { weekday: "short" }).replace(".", ""))} ${d.getDate()}`; };
   const answersOn = (date: string) => {
     const ids = new Set(active.map((tr) => tr.id));
     return new Set(entries.filter((e) => e.date === date && ids.has(e.trackerId)).map((e) => e.trackerId)).size;
@@ -344,10 +363,12 @@ export const EveningPath = ({
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
     const current = i === currentNode;
     if (n.kind === "past") return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: cap(weekdayName(n.date)) };
+    if (n.kind === "missed") return { look: "empty", icon: null, title: cap(weekdayName(n.date)) };
     if (n.kind === "future") {
       return { look: "locked", hue: DAY_AHEAD, icon: <MoonStar className="h-6 w-6" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
     }
     if (n.kind === "chest") {
+      if (quietChest) return { look: "locked", icon: null, title: t("path.quietWeek") };
       return m.weekComplete
         ? { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.reportReady"), action: currentNode < 0 ? t("path.openReport") : undefined }
         : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
@@ -487,10 +508,21 @@ export const EveningPath = ({
   const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
   useEffect(() => setHeaderTitle(document.getElementById("memap-header-center")), []);
 
+  // the "Missed a few days?" card at the top: her step comes to the middle of the room below it
+  const fillCardRef = useRef<HTMLDivElement>(null);
   const measure = (main: HTMLElement) => {
     const cs = getComputedStyle(main);
-    mid.current = (main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0)) / 2;
+    const bottom = main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0);
+    const card = fillCardRef.current?.getBoundingClientRect();
+    const top = card ? Math.max(0, card.bottom - main.getBoundingClientRect().top + 12) : 0;
+    mid.current = (top + bottom) / 2;
   };
+  // the card came or went ("Not now", the last day filled): the middle moves with it
+  const fillCardShown = fillCardOn && !(fromOld && oldLookShown);
+  useEffect(() => {
+    const main = document.querySelector("main");
+    if (main && hasPath) { measure(main); frameRef.current(); }
+  }, [fillCardShown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     const main = document.querySelector("main");
@@ -597,16 +629,21 @@ export const EveningPath = ({
   if (trackers.length === 0) return null;
 
   const title = t(`path.title${m.week % WEEK_TITLES}`);
+  // answered evenings of this calendar week ("k of 7")
   const daysDone = m.pastInWeek.length + (m.todayCounted ? 1 : 0);
-  const toGo = DAYS_PER_WEEK - daysDone;
-  const openThisChest = () => setChestOpen({ week: m.week, dates: [...m.pastInWeek, isoDay(new Date())] });
+  // evenings to the end of the week, when its report comes
+  const toGo = m.reportIn ?? 0;
+  const openThisChest = () => setChestOpen({ week: m.week, dates: m.weekDates });
   // what this week's part gives now, and where it lives (board 68)
   const part = m.week % WEEK_TITLES;
   const weekNext = (() => {
     // answered evenings, the same count as the push and the Links screen
     const evenings = countedDays(trackers, entries).length;
     // week 1's chip opens My days (a chip that looks tappable is tappable)
-    if (part === 0) return { text: t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo }), open: "overview" as null | "overview" | "findings" | "signals" | "world" };
+    if (part === 0) {
+      const text = m.weekComplete ? t("path.reportReady") : quietChest ? t("path.quietWeek") : t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo });
+      return { text, open: "overview" as null | "overview" | "findings" | "signals" | "world" };
+    }
     if (part === 1) {
       const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length;
       return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: evenings < LINKS_AT ? t("path.next4.linksSoon", { count: LINKS_AT - evenings }) : t("path.next4.linksWait"), open: null };
@@ -646,7 +683,7 @@ export const EveningPath = ({
     else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
     else if (s.kind === "link") window.dispatchEvent(new CustomEvent("memap-link-moment"));
     else if (s.kind === "tip") setTipOpen(s.tipId ?? null);
-    else if (s.kind === "report") setChestOpen({ week: m.week - 1, dates: m.pastWeeks[m.week - 1] ?? [] });
+    else if (s.kind === "report") setChestOpen({ week: m.week - 1, dates: m.pastWeeks[m.week - 1]?.dates ?? [] });
     else if (s.kind === "task") onTask(s.task!);
     else onStartStep(s, stepName(s));
   };
@@ -655,6 +692,7 @@ export const EveningPath = ({
   const tap = (i: number) => {
     const n = nodes[i];
     if (n.kind === "chest" && m.weekComplete) { setOpen(null); openThisChest(); return; }
+    if (n.kind === "chest" && quietChest) return;
     const notYet = n.kind === "future" || (n.kind === "end" && !eveningDone) || (n.kind === "chest" && !m.weekComplete) || (n.kind === "step" && n.step.kind === "game" && !canPlay);
     if (notYet && open !== i) {
       setWiggle(i);
@@ -768,6 +806,15 @@ export const EveningPath = ({
 
   const bubbleBody = (i: number): ReactNode => {
     const n = nodes[i];
+    // a day of this week with no answers: its name and one way to fill it in (no "you didn't…")
+    if (n.kind === "missed") {
+      return (
+        <>
+          {head(dayTitle(n.date))}
+          {button(t("path.fillDay"), () => { setOpen(null); onFillDay(n.date); }, "plain")}
+        </>
+      );
+    }
     if (n.kind === "past") {
       return (
         <>
@@ -955,7 +1002,8 @@ export const EveningPath = ({
     );
   };
 
-  const comingAfter = (m.weekComplete ? 0 : DAYS_PER_WEEK - 1 - m.pastInWeek.length) + 1;
+  // days from today to next week's first day
+  const comingAfter = DAYS_PER_WEEK - m.dayInWeek;
   const pastFrom = Math.max(0, m.pastWeeks.length - pastShown);
 
   // Malu's tip (her note, Nov 7 2026: "нажимаешь на барашка — подсказка"): a tap on the
@@ -990,11 +1038,11 @@ export const EveningPath = ({
           </div>
         </div>
       )}
-      {m.pastWeeks.slice(pastFrom).map((dates, j) => {
+      {m.pastWeeks.slice(pastFrom).map((pw, j) => {
         const w = pastFrom + j;
         return (
-          <WeekStrip key={w} week={w} width={width} kind="past" dates={dates} chest={chests[w] ?? null}
-            onOpenDay={onOpenDay} onOpenChest={() => setChestOpen({ week: w, dates })} />
+          <WeekStrip key={w} week={w} width={width} kind="past" dates={pw.dates} answered={pw.answered} quiet={pw.quiet} chest={chests[w] ?? null}
+            onOpenDay={onOpenDay} onOpenChest={() => setChestOpen({ week: w, dates: pw.dates })} />
         );
       })}
 
@@ -1083,6 +1131,14 @@ export const EveningPath = ({
               ? n.kind === "step" ? () => startStep(n.step) : n.kind === "end" ? () => tap(i) : n.kind === "chest" ? openThisChest : undefined
               : undefined;
             const lockedGame = n.kind === "step" && n.step.kind === "game" && !canPlay && !n.step.done;
+            // a quiet week: one line where the report would stand, nothing to tap
+            if (n.kind === "chest" && quietChest) {
+              return (
+                <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+                  <QuietLine stop={p} text={t("path.quietWeek")} />
+                </div>
+              );
+            }
             return (
               <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
                 {/* her animal stands beside her step, rolls with it, and opens You */}
@@ -1120,7 +1176,7 @@ export const EveningPath = ({
                 {i === currentNode && open !== i && act && (
                   <StartBubble stop={p} label={v.action ?? t("path.start")} aria={`${v.title}: ${v.action ?? t("path.start")}`} onClick={act} />
                 )}
-                <LightLabel stop={p} text={v.title} dim={v.look === "locked" || lockedGame} below={i === currentNode ? 10 : 0} />
+                <LightLabel stop={p} text={v.title} dim={v.look === "locked" || v.look === "empty" || lockedGame} below={i === currentNode ? 10 : 0} />
                 <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
@@ -1150,15 +1206,29 @@ export const EveningPath = ({
         } />
 
 
-      {/* a past day to fill in: always in sight, bottom left (the "back" pill is right) */}
-      {pastPick && createPortal(
-        <button type="button" onClick={() => { haptics.tap(); onFillDay(pastPick.date); }}
-          className="past-pill fixed left-4 z-[30] flex h-12 items-center gap-2 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg animate-fade-in active:scale-95 transition-transform dark:bg-[hsl(var(--surface))]"
-          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
-          <CalendarDays className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
-          {t("path.pastFill", { day: weekdayName(pastPick.date) })}
-        </button>,
-        document.body,
+      {/* missed days: a calm card at the top, in sight like the cards above (the path scrolls to today's
+          step), solid; a chip per day opens that evening's questions; "Not now" hides it until another
+          day is missed. Not while another card holds the spot, or Malu's first tip is up. */}
+      {fillCardOn && !(fromOld && oldLookShown) && !askPlayful && !(orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb)) && (
+        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+          <div data-fill-card role="group" aria-label={t("path.fillCard", { count: missedToFill.length })}
+            className="surface relative rounded-[20px] !bg-background p-3.5 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
+            <p className="text-[16px] font-bold leading-snug">{t("path.fillCard", { count: missedToFill.length })}</p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              {missedToFill.map((d) => (
+                <button key={d} type="button" data-fill-day={d} onClick={() => { haptics.tap(); track("fill_day_opened", { ago: Math.round((Date.parse(isoDay(new Date())) - Date.parse(d)) / 864e5), from: "card" }); onFillDay(d); }}
+                  className="quiet-btn h-10 px-3.5 tabular-nums">{shortDay(d)}</button>
+              ))}
+              <button type="button" onClick={() => {
+                haptics.tap();
+                const all = [...new Set([...fillHidden, ...missedToFill])].sort().slice(-30);
+                try { localStorage.setItem(FILL_HIDDEN_KEY, JSON.stringify(all)); } catch { /* it shows again, harmless */ }
+                setFillHidden(all);
+                track("fill_card_hidden", { days: missedToFill.length });
+              }} className="ml-auto h-10 px-2 text-[15px] font-semibold text-muted-foreground">{t("path.fillNotNow")}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Away from her step: back to it, her avatar on the button. */}
