@@ -35,9 +35,10 @@ export const LEGACY_IDEA_NAMES: Record<string, { en?: string; ru?: string }> = {
     "ru": "В кровати до 23:00"
   },
   "noCoffee14": {
-    "en": "No coffee after 14:00",
+    "en": "Skip coffee after 14:00",
     "ru": "Без кофе после 14:00"
   },
+  "noCoffee14__1": { "en": "No coffee after 14:00" },
   "water": {
     "en": "About 2 litres of water",
     "ru": "Около 2 литров воды"
@@ -66,15 +67,28 @@ export const LEGACY_IDEA_NAMES: Record<string, { en?: string; ru?: string }> = {
     "en": "Pet meals at the same times",
     "ru": "Кормление в одно время"
   },
+  // one parent, not "parents" (content review, Nov 9 2026); the names before Nov 8 under __1
   "callParents": {
+    "en": "Call your parents",
+    "ru": "Звонить родителям"
+  },
+  "callParents__1": {
     "en": "A short call to your parents",
     "ru": "Короткий звонок родителям"
   },
   "visitWeekend": {
+    "en": "Ask your parents about their day",
+    "ru": "Спрашивать родителей, как прошёл их день"
+  },
+  "visitWeekend__1": {
     "en": "Ask them about their day",
     "ru": "Спросить, как прошёл их день"
   },
   "shortMessage": {
+    "en": "Send your parents a short message",
+    "ru": "Писать родителям короткое сообщение"
+  },
+  "shortMessage__1": {
     "en": "A short message to them",
     "ru": "Короткое сообщение им"
   },
@@ -102,4 +116,6 @@ export const LEGACY_IDEA_NAMES: Record<string, { en?: string; ru?: string }> = {
   },
   "talkNoPhones__ru2": { "ru": "10 минут говорить без телефонов" },
   "outsideMorning__ru2": { "ru": "Утром 10 минут побыть на улице" },
+  // content review, Nov 9 2026: "в своей жизни" was filler
+  "gladLine": { "ru": "Записывать одну вещь, которая радует в своей жизни" },
 };
