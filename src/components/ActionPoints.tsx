@@ -299,7 +299,9 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         // 2026: "Book a couples therapist" stayed on; the Hotline and Gottman: not where there may be abuse)
         const partnerPaused = couplesOff && !home && tr.subcategory === "Partner";
         return (
-          <div key={tr.id} className="surface scroll-mt-4 rounded-[22px]">
+          <div key={tr.id} className="surface scroll-mt-4 rounded-[22px] px-4 pb-4 pt-3.5">
+            {/* where it is and what MeMap noticed, small; a tap opens the details (her note, Nov 9 2026: "главная
+                мысль у нас в действии, а сейчас бОльшими буквами написан вывод") */}
             <button type="button" aria-expanded={opened} onClick={(e) => {
               haptics.tap();
               const card = e.currentTarget.parentElement;
@@ -307,30 +309,25 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               // the opened card comes into view (persona walk: opening the migraine card left it below the fold)
               if (!opened) window.setTimeout(() => card?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80);
             }}
-              className="flex w-full items-start gap-3 px-4 py-3.5 text-left">
-              <img src={mapPic("lighthouse")} alt="" width={30} height={36} className="mt-0.5 h-9 w-[30px] shrink-0 object-contain drop-shadow-[0_0_6px_hsl(44_96%_60%/0.7)]" />
+              className="flex w-full items-start gap-2.5 text-left">
+              <img src={mapPic("lighthouse")} alt="" width={24} height={29} className="mt-0.5 h-[29px] w-6 shrink-0 object-contain drop-shadow-[0_0_6px_hsl(44_96%_60%/0.7)]" />
               <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{islandName(t, islandOf(tr))}</span>
-                  <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", opened && "rotate-180")} strokeWidth={2.4} />
-                </span>
+                <span className="block truncate text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{islandName(t, islandOf(tr))}</span>
                 {/* what MeMap noticed, in her answer's words, then the days behind it (one number for one fact) */}
-                <span className="mt-0.5 block text-[18px] font-bold leading-snug">{cap(answerClause(t, tr, hardYes, "result", t("rules.often")))}</span>
-                <span className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{evidence(tr, k)}</span>
-                {/* the task is seen without opening the card (her answer + Lena's walk, Nov 9 2026) */}
-                {plan && !partnerPaused && (
-                  <span className="mt-2.5 block">
-                    <KindTag kind="task" />
-                    <span className="mt-0.5 block text-[17px] font-bold leading-snug">{plan}</span>
-                  </span>
-                )}
+                <span className="mt-0.5 block text-[15px] font-semibold leading-snug text-foreground/80">{cap(answerClause(t, tr, hardYes, "result", t("rules.often")))}</span>
+                <span className="block text-[13px] font-semibold leading-snug text-muted-foreground">{evidence(tr, k)}</span>
               </span>
+              <ChevronDown className={cn("mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition-transform", opened && "rotate-180")} strokeWidth={2.4} />
             </button>
-            {opened && (
-            <div className="px-4 pb-4 animate-fade-in">
-            {/* how it goes, one main button (the task itself is in the card's head) */}
-            {partnerPaused && <p className="pl-[42px] text-[15px] font-semibold leading-snug text-muted-foreground">{t("rules.partnerPaused")}</p>}
-            {plan && !partnerPaused && <p className="pl-[42px] text-[15px] font-semibold leading-snug text-muted-foreground">{home ? t("rules.suggestHome") : once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
+            {/* the action is the main thing: the task big, its button right under it, without opening the card */}
+            {partnerPaused ? (
+              <p className="mt-3 text-[17px] font-bold leading-snug">{t("rules.partnerPaused")}</p>
+            ) : plan ? (
+              <div className="mt-3">
+                <KindTag kind="task" />
+                <p className="mt-0.5 text-[21px] font-bold leading-snug tracking-tight">{plan}</p>
+              </div>
+            ) : null}
             {partnerPaused ? (
               <button type="button" onClick={() => { haptics.tap(); setSupportFor(HOME_STEPS_FIRST); }} className="raised-btn is-small mt-3.5 w-full justify-center">{t("support.chip")}</button>
             ) : home && plan ? (
@@ -362,6 +359,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             )}
             {/* a free helpline and the emergency words, one tap away on these two cards */}
             {home && <button type="button" onClick={() => { haptics.tap(); setSupportFor(tid); }} className={cn(quietBtn, "mt-2")}>{t("support.chip")}</button>}
+            {opened && (
+            <div className="animate-fade-in">
+            {/* how it goes */}
+            {plan && !partnerPaused && <p className="mt-3 text-[15px] font-semibold leading-snug text-muted-foreground">{home ? t("rules.suggestHome") : once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
