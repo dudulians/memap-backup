@@ -12,13 +12,14 @@ import type { Tracker } from "@/types/tracker";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { localizeTrackerAdvice } from "@/lib/trackerLocalize";
-import { IDEAS, PLAN_IDEAS, TOPIC_IDEAS, getExperiments, replaceExperiments, type Experiment } from "@/lib/experiments";
+import { IDEAS, OLD_IDEAS, PLAN_IDEAS, QUESTION_IDEAS, TOPIC_IDEAS, getExperiments, replaceExperiments, type Experiment } from "@/lib/experiments";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { templateQuestion } from "@/lib/cardText";
 import { LEGACY_IDEA_NAMES } from "@/lib/ideaNames";
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/[.?!？]+$/, "").replace(/\s+/g, " ");
-const ideaKeys = () => [...new Set([...Object.values(IDEAS).flat(), ...PLAN_IDEAS, ...Object.values(TOPIC_IDEAS).flat()])];
+// every ready idea: island, plan, topic and per-question ones, and the retired ones tests may still run
+const ideaKeys = () => [...new Set([...Object.values(IDEAS).flat(), ...PLAN_IDEAS, ...Object.values(TOPIC_IDEAS).flat(), ...Object.values(QUESTION_IDEAS).flat(), ...OLD_IDEAS])];
 
 /** The ready idea a plan or a test's name is, in either language. */
 export const ideaOf = (text: string): string | null => {

@@ -46,7 +46,19 @@ export const smartRemindTime = (idea: string | null, text = ""): string => {
     noCoffee14: "13:30", water: "10:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00",
     threeLines: "20:30", talkNoPhones: "19:00", thankYou: "18:00", walkTogether: "17:30", playTogether: "17:30", extraWalk: "17:00", playTime: "18:00",
     sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00", nauseaLog: "12:00",
-    socialLimit: "12:00", noSocialMorning: "07:30", noSocialBed: "21:30", gladLine: "20:30", noPhoneMorning: "07:30", screenBreaks: "10:00", newsOnce: "09:00", sameWake: "21:30", worryList: "21:00", coffeeTwo: "11:00", regularMeals: "08:00", dinnerEarly: "18:30", vegOne: "12:00", noAlcohol: "18:00", drinkLimit: "17:30", urgeNote: "12:00", delayTen: "10:00", waitDay: "12:00", spendLog: "20:30", noShopApps: "19:30", moveBreak: "10:00", symptomNote: "20:00", foodLog: "20:00", breathe: "13:00", smallJoy: "17:00", angerNote: "12:00", myTime: "17:00", doneList: "20:30", textFriend: "13:00", callOne: "18:00", outAmongPeople: "16:00", noPhoneMeal: "18:30", focusFirst: "08:30", oneThing: "20:00", learn15: "18:00", read10: "21:00", hobby20: "18:00", pauseYes: "09:00", tidy10: "18:00", askLocal: "11:00" };
+    socialLimit: "12:00", noSocialMorning: "07:30", noSocialBed: "21:30", gladLine: "20:30", noPhoneMorning: "07:30", screenBreaks: "10:00", newsOnce: "09:00", sameWake: "21:30", worryList: "21:00", coffeeTwo: "11:00", regularMeals: "08:00", dinnerEarly: "18:30", vegOne: "12:00", noAlcohol: "18:00", drinkLimit: "17:30", urgeNote: "12:00", delayTen: "10:00", waitDay: "12:00", spendLog: "20:30", noShopApps: "19:30", moveBreak: "10:00", symptomNote: "20:00", foodLog: "20:00", breathe: "13:00", smallJoy: "17:00", angerNote: "12:00", myTime: "17:00", doneList: "20:30", textFriend: "13:00", callOne: "18:00", outAmongPeople: "16:00", noPhoneMeal: "18:30", focusFirst: "08:30", oneThing: "20:00", learn15: "18:00", read10: "21:00", hobby20: "18:00", pauseYes: "09:00", tidy10: "18:00", askLocal: "11:00",
+    // a question's own changes (Nov 9 2026, QUESTION_IDEAS)
+    pauseHeated: "18:00", sayHurt: "18:00", handTask: "17:00", askPartnerDay: "19:00", warnFive: "16:00", askChildDay: "18:00", readTogether: "19:30", handChildTask: "10:00", askHelp: "10:00", tableMeal: "18:00", kidMealTimes: "08:00", newFoodNext: "12:00", kidOutside30: "16:00", walkPartWay: "08:00", washHands: "16:00", airRoom: "19:30",
+    pauseSorry: "10:00", sorryThanks: "12:00", thankByName: "12:00", kindStranger: "12:00", sweatWorkout: "17:30", strength10: "17:30", kettleSquats: "08:00", warmPad: "20:00", sameCoffee: "09:00", sameSleepTimes: "21:30", sideSleep: "21:30", noAlcoholBed: "18:00", drinkFreeDays: "17:30", coffeeLess: "11:00", waterWaking: "07:30", waterMeals: "12:00", bottleNear: "09:00",
+    breakfast2h: "08:00", lunchBy1: "12:00", breakfastReady: "20:00", snackBag: "08:00", moisturize: "08:00", warmShower: "20:00", noFragrance: "08:00", fruitVegMeals: "08:00", toiletAfterBreakfast: "08:00", noStrain: "08:00", smallDinner: "18:30", noDrinksBed2h: "19:30", pelvicSqueeze3: "09:00", urgeWaitMinute: "10:00", noHoldPee: "10:00",
+    coolBedroom: "21:00", layers: "08:00", dressWarm: "08:00", gloves: "08:00", sameSkincare: "08:00", noPicking: "10:00", standSlowly: "08:00", relaxJaw: "21:30", squeezeBrushing: "08:00", antiperspirantNight: "21:30", looseCotton: "08:00", softSound: "21:30", supportBra: "08:00",
+    stopAtTwo: "17:30", waterBetween: "17:30", decafOne: "11:00", decafAfternoon: "13:30", halfCupStep: "09:00", noSmokeEvening: "19:30", smokeFreeFirstHour: "07:00", hookahFreeMeet: "16:00", noHookah: "18:00", dinnerBy7: "18:00", realLunch: "12:30", lightLate: "20:00", sweetsAway: "10:00", fruitDessert: "13:00", sweetsAfterMeal: "12:00",
+    cookOne: "17:30", lunchFromHome: "08:00", alarmClock: "21:30", gameTimer: "18:00", gamesStopBed: "21:00", gamesAfterTasks: "17:00", noExCheck: "20:00", friendInstead: "20:00", postNoCheck: "12:00", postStay: "20:00", noProfileDay: "20:00", waitScreenshot: "12:00", writeInstead: "20:00", cookDouble: "17:30", dinnerByLunch: "11:30", pickDinner: "20:00",
+    sitToEat: "12:00", snackPlate: "15:00", plannedSnack: "14:00", weeklyAmount: "19:00", doItYourself: "10:00", chargeOutside: "21:00", readInstead: "21:30", dimLights: "21:00", walkAfterMeals: "12:30", fruitSnack: "15:00", vegReady: "18:00", halfPlateVeg: "12:00", clothesReady: "20:30", clearSurface: "18:00", dishesNow: "19:00",
+    funny10: "19:00", funnyPerson: "17:00", songMove: "18:00", animalWalk: "17:00", likeLook: "20:30", worryTime: "18:00", smallNo: "10:00", waitReply: "09:00", caredTask: "09:00", workWin: "17:30", balanceOnce: "19:00", make15: "18:00", words5: "18:00", decisionLines: "20:30",
+    calmWalks: "08:00", noTreats: "18:00", petFoodLog: "20:00", petEveningPlay: "19:00", petEarlyMeal: "18:00", parentWater: "11:00", parentRoutine: "09:00", parentTalk15: "18:00", parentMeal: "12:30", parentSnacks: "10:00", parentDaylight: "09:00", parentNoLateNap: "14:30", nightLight: "20:00", parentShoes: "09:00", pillCheck: "09:00", askPain: "18:00",
+    wellDone: "20:30", kindPerson: "17:00", muteChat: "18:30", kidsMessage: "12:00", kidsShare: "18:00", billsSameDay: "19:00", messageHome: "13:00", localThing: "16:00", cookHome: "17:30", localDish: "12:30", localProduct: "11:00", daylight20: "11:00", homeSounds: "20:00", localChat: "12:00", messageExpat: "13:00", goodHardHere: "20:30",
+    earplugs: "21:30", leaveEarly15: "07:30", easyTimeOut: "07:30", localLang15: "18:00", localListen10: "18:00" };
   if (idea && at[idea]) return at[idea];
   const s = text.toLowerCase();
   // eating or drinking hours before bed: early evening; anything else about bed: an hour before it
@@ -92,24 +104,31 @@ export const IDEAS: Record<string, string[]> = {
 export const ideasFor = (island: string): string[] => IDEAS[island] ?? IDEAS.other;
 /** Plans with their own test words (a question and today's line) that aren't island ideas (Nov 8 2026). */
 export const PLAN_IDEAS = ["nauseaLog"];
+/** Ideas no longer offered (content review, Nov 9 2026), kept so the tests already running keep their
+ *  name, question and reminder: "No alcohol for two weeks" (a sudden stop is unsafe for someone who
+ *  drinks every day → drinkFreeDays), "No more than 2 coffees" (halving at once gives withdrawal
+ *  headaches → coffeeLess), "Note how you feel" (the evening answers already are that diary). */
+export const OLD_IDEAS = ["noAlcohol", "coffeeTwo", "symptomNote"];
 /** Changes on a question's own topic (her note, Nov 9 2026: "Not for me" on comparing oneself online
- *  offered sweets and stretching). Which question has which topic: src/lib/topicIdeas.ts. */
+ *  offered sweets and stretching). Which question has which topic: src/lib/topicIdeas.ts. A question
+ *  with its own list in QUESTION_IDEAS uses that instead. */
 export const TOPIC_IDEAS: Record<string, string[]> = {
   social: ["socialLimit", "noSocialMorning", "noSocialBed", "gladLine"],
   screens: ["phoneAway", "noPhoneMorning", "socialLimit", "screenBreaks"],
   news: ["newsOnce", "noNewsEvening", "noPhoneMorning"],
   sleep: ["bed23", "phoneAway", "sameWake", "worryList", "noCoffee14"],
-  caffeine: ["noCoffee14", "coffeeTwo", "water"],
+  caffeine: ["coffeeLess", "noCoffee14", "decafOne"],
   food: ["regularMeals", "dinnerEarly", "vegOne", "noSweetsEvening", "water"],
-  alcohol: ["noAlcohol", "drinkLimit", "urgeNote"],
-  smoking: ["delayTen", "urgeNote", "walk20"],
+  alcohol: ["drinkFreeDays", "drinkLimit", "urgeNote"],
+  smoking: ["delayTen", "noSmokeEvening", "smokeFreeFirstHour", "urgeNote"],
   money: ["waitDay", "spendLog", "noShopApps"],
   movement: ["walk20", "stretch", "outsideMorning", "moveBreak"],
-  pain: ["stretch", "moveBreak", "symptomNote"],
-  headache: ["symptomNote", "water", "bed23", "regularMeals"],
+  pain: ["moveBreak", "stretch", "walk20"],
+  headache: ["sameCoffee", "regularMeals", "sameSleepTimes", "walk20", "water"],
   digestion: ["foodLog", "regularMeals", "dinnerEarly", "water"],
   nausea: ["nauseaLog", "foodLog", "regularMeals"],
-  body: ["symptomNote", "water", "bed23"],
+  // every body question has its own list (QUESTION_IDEAS): a symptom has its own levers
+  body: [],
   eyes: ["screenBreaks", "phoneAway"],
   energy: ["bed23", "outsideMorning", "regularMeals", "walk20"],
   calm: ["breathe", "walk20", "outsideMorning", "threeLines"],
@@ -131,10 +150,146 @@ export const TOPIC_IDEAS: Record<string, string[]> = {
   boundaries: ["pauseYes", "myTime", "threeLines"],
   habits: ["sameWake", "oneThing", "noPhoneMorning"],
   growth: ["learn15", "read10", "hobby20"],
-  decisions: ["threeLines", "callOne"],
-  home: ["tidy10"],
+  decisions: ["decisionLines"],
+  home: ["tidy10", "clearSurface", "dishesNow"],
   expat: ["callOne", "outAmongPeople", "threeLines"],
-  language: ["askLocal", "learn15"],
+  language: ["localLang15", "askLocal"],
+};
+
+/** Changes for one library question (template id → idea keys), ahead of its topic's list (content
+ *  review, Nov 9 2026: all 14 partner questions had the same 4 ideas, "Partner raised their voice" got
+ *  "Say thank you", "Pet limped" got "an extra walk"). Each fits that question and a real person who
+ *  answered it that way; a daily habit for two weeks, never a once-action (those are plans). An empty
+ *  list on purpose: no 2-week habit changes it (a cold, a heavy period day), only "write your own". */
+export const QUESTION_IDEAS: Record<string, string[]> = {
+  // love: partner
+  "argued-with-partner": ["pauseHeated", "talkNoPhones", "thankYou", "walkTogether"],
+  "felt-lonely-with-partner": ["askPartnerDay", "talkNoPhones", "walkTogether", "noPhoneMeal"],
+  "partner-raised-voice": ["pauseHeated", "talkNoPhones"],
+  "partner-said-hurtful": ["sayHurt", "pauseHeated", "talkNoPhones"],
+  "unfair-chores": ["handTask", "talkNoPhones"],
+  flirted: ["talkNoPhones"],
+  "thought-about-someone-else": ["talkNoPhones"],
+  // love: others
+  "called-parent": ["shortMessage", "visitWeekend"],
+  "apologized-first": ["pauseSorry", "sorryThanks", "doneList"],
+  "complimented-stranger": ["thankByName", "kindStranger", "outAmongPeople"],
+  // kids
+  "quality-time-kid": ["playTogether", "askChildDay", "readTogether"],
+  "got-help-with-kids": ["handChildTask", "askHelp", "myTime"],
+  "child-refused-food": ["tableMeal", "kidMealTimes", "newFoodNext"],
+  "child-physical-activity": ["playTogether", "kidOutside30", "walkPartWay"],
+  "child-sick-symptoms": ["washHands", "airRoom", "bedtimeSame"],
+  "child-meltdown": ["warnFive", "bedtimeSame", "screenFreeHour", "playTogether"],
+  // health: movement
+  "trained-hard": ["sweatWorkout", "walk20"],
+  "strength-training": ["strength10", "kettleSquats"],
+  stretched: ["moveBreak", "walk20"],
+  "walked-a-lot": ["walkPartWay", "walkAfterMeals"],
+  // health: sleep
+  "snored-or-gasped": ["sideSleep", "noAlcoholBed"],
+  "sleep-aid": ["bed23", "sameWake", "worryList"],
+  "same-wake-time": ["bed23", "phoneAway", "worryList", "noCoffee14"],
+  // health: food and water
+  "drank-water": ["waterWaking", "waterMeals", "bottleNear"],
+  "ate-by-2pm": ["breakfast2h", "lunchBy1", "breakfastReady", "regularMeals"],
+  "skipped-meal": ["regularMeals", "snackBag", "lunchBy1"],
+  // health: body
+  "period-symptoms": ["walk20", "warmPad", "regularMeals"],
+  "pms-signs": ["walk20", "bed23", "regularMeals"],
+  "skin-allergy": ["moisturize", "warmShower", "noFragrance"],
+  "heart-palpitations": ["coffeeLess", "drinkFreeDays", "breathe"],
+  "bladder-leak": ["pelvicSqueeze3", "coffeeLess"],
+  "bladder-urgency": ["coffeeLess", "urgeWaitMinute"],
+  "pee-burning": ["water", "noHoldPee"],
+  "night-pee-2-plus": ["noDrinksBed2h", "noAlcoholBed", "noCoffee14"],
+  "pelvic-floor-exercises": ["squeezeBrushing", "pelvicSqueeze3"],
+  "hot-flushes": ["coolBedroom", "noAlcoholBed", "layers"],
+  "night-sweats": ["coolBedroom", "noAlcoholBed", "layers"],
+  breakout: ["sameSkincare", "noPicking", "bed23"],
+  dizzy: ["water", "regularMeals", "standSlowly"],
+  "sweated-a-lot": ["antiperspirantNight", "looseCotton"],
+  "tinnitus-louder": ["softSound", "bed23", "noCoffee14"],
+  "breast-tender": ["supportBra"],
+  "fingers-white-cold": ["gloves", "dressWarm"],
+  "sick-day": [],
+  "heavy-flow-day": [],
+  "morning-libido": [],
+  // health: pain and digestion
+  "jaw-sore-morning": ["noAlcoholBed", "noCoffee14", "relaxJaw"],
+  "pooped-today": ["fruitVegMeals", "walk20", "toiletAfterBreakfast", "water"],
+  "hard-to-poop": ["fruitVegMeals", "walk20", "toiletAfterBreakfast", "water"],
+  "piles-bothered": ["fruitVegMeals", "noStrain", "walk20", "water"],
+  heartburn: ["dinnerEarly", "noAlcoholBed", "smallDinner", "foodLog"],
+  bloated: ["foodLog", "regularMeals", "drinkFreeDays", "walk20"],
+  "loose-stool": ["foodLog", "regularMeals", "drinkFreeDays", "walk20"],
+  // body & habits
+  "alcohol-3-plus": ["stopAtTwo", "waterBetween", "drinkFreeDays", "drinkLimit"],
+  "caffeine-4-plus": ["coffeeLess", "decafOne", "noCoffee14"],
+  "coffee-late": ["decafAfternoon", "noCoffee14"],
+  "less-caffeine-than-usual": ["sameCoffee", "halfCupStep"],
+  "smoked-hookah": ["hookahFreeMeet", "noHookah"],
+  "ate-late": ["dinnerBy7", "realLunch", "lightLate", "regularMeals"],
+  "ate-sweets": ["sweetsAway", "fruitDessert", "sweetsAfterMeal", "regularMeals"],
+  "ate-fast-food": ["cookOne", "snackBag", "lunchFromHome"],
+  "ordered-delivery": ["cookOne", "cookDouble", "dinnerByLunch"],
+  "cooked-myself": ["pickDinner", "cookDouble"],
+  "ate-by-fridge": ["sitToEat", "snackPlate", "plannedSnack"],
+  "ate-vegetables": ["fruitSnack", "vegReady", "halfPlateVeg"],
+  "paid-to-skip-effort": ["weeklyAmount", "doItYourself"],
+  "phone-free-morning": ["alarmClock", "chargeOutside", "noPhoneMorning", "phoneAway"],
+  "screens-before-bed": ["chargeOutside", "readInstead", "dimLights"],
+  "gaming-streams-2h": ["gameTimer", "gamesStopBed", "gamesAfterTasks"],
+  "stalked-ex": ["noExCheck", "friendInstead"],
+  "rewatched-stories": ["noProfileDay", "friendInstead", "socialLimit"],
+  "deleted-own-post": ["postNoCheck", "postStay"],
+  "screenshotted-chat": ["waitScreenshot", "writeInstead", "textFriend"],
+  "wore-same-shirt": ["clothesReady", "smallJoy", "outsideMorning", "textFriend"],
+  // me: mind and mood
+  "felt-anxious": ["worryTime", "breathe", "walk20", "outsideMorning"],
+  meditated: ["walk20", "outsideMorning"],
+  "heard-bad-news": ["newsOnce", "noNewsEvening", "breathe", "walk20"],
+  "felt-grateful": ["smallJoy", "outsideMorning"],
+  "laughed-uncontrollably": ["funny10", "funnyPerson"],
+  "danced-or-sang-alone": ["songMove"],
+  "petted-an-animal": ["animalWalk"],
+  "liked-my-selfie": ["likeLook"],
+  "said-yes-when-meant-no": ["smallNo", "waitReply", "pauseYes"],
+  "criticized-by-close": ["wellDone", "kindPerson", "myTime"],
+  "toxic-friend": ["kindPerson", "muteChat", "myTime"],
+  "kids-reached-out": ["kidsMessage", "kidsShare", "callOne"],
+  "did-creative-work": ["make15", "hobby20"],
+  "studied-language": ["words5", "learn15"],
+  // work and money
+  "felt-fulfilled-at-work": ["caredTask", "workWin"],
+  "money-worry": ["balanceOnce", "spendLog"],
+  "financial-issue": ["balanceOnce", "billsSameDay", "spendLog"],
+  // pet
+  "pet-limped": ["calmWalks"],
+  "pet-skipped-food": ["sameFoodTime", "noTreats", "petFoodLog"],
+  "pet-stomach-upset": ["sameFoodTime", "noTreats"],
+  "pet-restless-night": ["petEveningPlay", "petEarlyMeal"],
+  // parents
+  "parent-confused": ["parentWater", "parentRoutine", "parentTalk15"],
+  "parent-skipped-meal": ["parentMeal", "parentSnacks"],
+  "parent-slept-poorly": ["parentDaylight", "parentNoLateNap"],
+  "parent-stumbled": ["nightLight", "parentShoes"],
+  "parent-took-meds": ["pillCheck", "callParents"],
+  "parent-pain": ["askPain", "callParents"],
+  // world: life abroad
+  "missed-home-country": ["messageHome", "localThing", "outAmongPeople"],
+  "missed-familiar-food": ["cookHome", "localDish"],
+  "missed-familiar-weather": ["daylight20", "homeSounds"],
+  "felt-foreigner": ["localChat", "outAmongPeople"],
+  "talked-to-fellow-expats": ["messageExpat", "outAmongPeople"],
+  "tried-local-food": ["localProduct", "localThing"],
+  "thought-about-going-back": ["goodHardHere", "threeLines"],
+  "thought-third-country": ["goodHardHere", "threeLines"],
+  "didnt-understand-locals": ["localListen10", "localLang15", "askLocal"],
+  // markers with no topic, where a real daily lever exists
+  "noisy-neighbors": ["earplugs"],
+  "transport-issue": ["leaveEarly15"],
+  "climate-drained-me": ["easyTimeOut"],
 };
 
 export const getExperiments = (): Experiment[] => {

@@ -2,10 +2,12 @@
 // idea was "Unfollow or mute people who trigger this", and "Not for me" then offered "Skip sweets in
 // the evening" and "Stretch for 5 minutes" — the island's ideas, about something else entirely).
 // Every library question has a topic; each topic has its own small changes (TOPIC_IDEAS in
-// experiments.ts, words in experiment.idea.*). A library question with no topic (noise, paperwork…)
-// gets no ready ideas, only "write your own"; her own questions fall back to the island's ideas.
+// experiments.ts, words in experiment.idea.*). A question the content review (Nov 9 2026) found the
+// topic's list wrong for has its own list (QUESTION_IDEAS), which wins. A library question with no
+// topic and no list (paperwork…) gets no ready ideas, only "write your own"; her own questions fall
+// back to the island's ideas.
 import type { Tracker, TrackerEntry } from "@/types/tracker";
-import { IDEAS, TOPIC_IDEAS, ideasFor } from "@/lib/experiments";
+import { IDEAS, QUESTION_IDEAS, TOPIC_IDEAS, ideasFor } from "@/lib/experiments";
 import { templateIdOf } from "@/lib/answerPhrases";
 import { islandOf, type IslandId } from "@/lib/islands";
 import { isoLocal } from "@/lib/doors";
@@ -61,24 +63,33 @@ export const topicOf = (tr: Tracker): string | null => {
   return id ? TOPIC_OF.get(id) ?? null : null;
 };
 
+/** A library question's ready changes: its own list, else its topic's; null when it has neither. */
+const ideasOfTemplate = (id: string): string[] | null => {
+  const own = QUESTION_IDEAS[id];
+  if (Array.isArray(own)) return own;
+  const topic = TOPIC_OF.get(id);
+  return topic ? TOPIC_IDEAS[topic] ?? [] : null;
+};
+
 /** Small changes that fit this question (keys into experiment.idea.*). */
 export const ideasForQuestion = (tr: Tracker): string[] => {
-  const topic = topicOf(tr);
-  if (topic) return TOPIC_IDEAS[topic] ?? [];
-  // a library question with no topic (noise, paperwork…): nothing unrelated
-  if (templateIdOf(tr)) return [];
+  const id = templateIdOf(tr);
+  // a library question: its own changes or its topic's; with neither (paperwork…), nothing unrelated
+  if (id) return ideasOfTemplate(id) ?? [];
   // her own question: the island's everyday ideas
   return ideasFor(islandOf(tr));
 };
 
-/** "Test one change" on an island: the changes for what is hardest there lately, a few topics in turn. */
+/** "Test one change" on an island: the changes for what is hardest there lately, a few questions in
+ *  turn (questions of one topic without their own list share it, so it comes once). */
 export const ideasForIsland = (island: IslandId, trackers: Tracker[], entries: TrackerEntry[]): string[] => {
   const d = new Date(); d.setDate(d.getDate() - 30);
   const since = isoLocal(d);
   const here = trackers.filter((x) => !x.archived && x.source !== "play" && islandOf(x) === island);
   const hard = (tr: Tracker) => entries.filter((e) => e.trackerId === tr.id && e.date >= since && typeof e.value === "boolean" && e.value === (tr.problemWhen === "yes")).length;
-  const lists = [...new Set(here.map((tr) => ({ tr, n: hard(tr) })).sort((a, b) => b.n - a.n).map(({ tr }) => topicOf(tr)).filter((x): x is string => !!x))]
-    .map((topic) => TOPIC_IDEAS[topic] ?? []);
+  const lists = [...new Set(here.map((tr) => ({ tr, n: hard(tr) })).sort((a, b) => b.n - a.n)
+    .map(({ tr }) => { const id = templateIdOf(tr); return id ? ideasOfTemplate(id) : null; })
+    .filter((x): x is string[] => !!x && x.length > 0))];
   const out: string[] = [];
   for (let k = 0; k < 4 && out.length < 4; k++) for (const l of lists) { const id = l[k]; if (id && !out.includes(id) && out.length < 4) out.push(id); }
   return out.length ? out : IDEAS[island] ?? ideasFor(island);
