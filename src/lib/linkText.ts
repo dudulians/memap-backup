@@ -77,4 +77,5 @@ export const linkOtherDays = (t: TFunction, r: Counts): string =>
 /** The count line under the headline: "11 of 17 times · on other days 4 of 20". Each part stays
  *  on one line (a narrow card broke it as "on other days 14 / of 45"); it wraps only at the dot. */
 export const linkCount = (t: TFunction, r: Counts): string =>
-  [linkTimes(t, r.k, r.n), linkOtherDays(t, r)].filter(Boolean).map((x) => x.replace(/ /g, " ")).join(" · ");
+  // a line of its own: "Every time — 15 of 15 · …" starts with a capital (Nov 10 2026: "every time — …" in the list)
+  [cap(linkTimes(t, r.k, r.n)), linkOtherDays(t, r)].filter(Boolean).map((x) => x.replace(/ /g, " ")).join(" · ");

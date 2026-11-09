@@ -47,7 +47,7 @@ for (const lang of ["en", "ru"]) {
   const links = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.links`] = links.slice(0, 900);
   ok(`${lang}.links: forced yes → headache`, lang === "en" ? /Unwanted yes → headache the next day \d+ of \d+ times · on other days \d+ of \d+/.test(links) : /Согласие против желания → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни \d+ из \d+/.test(links), links.slice(0, 300));
-  ok(`${lang}.links: same day, every time`, lang === "en" ? /Short night and headache often come together every time — (\d+) of \1/.test(links) : /Короткая ночь и головная боль часто бывают вместе каждый раз — (\d+) из \1/.test(links));
+  ok(`${lang}.links: same day, every time`, lang === "en" ? /Short night and headache often come together Every time — (\d+) of \1/.test(links) : /Короткая ночь и головная боль часто бывают вместе Каждый раз — (\d+) из \1/.test(links));
   ok(`${lang}.links: no sentence`, !SENTENCE[lang].test(links));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   // a link's own sheet on the map (every time: the big count)
@@ -94,7 +94,7 @@ for (const lang of ["en", "ru"]) {
   await shot("week-report");
   const week = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.week`] = week.slice(0, 600);
-  ok(`${lang}.week: insight in two parts`, lang === "en" ? /→ .* the next day \d+ of \d+ times · on other days|come together .*(\d+ of \d+ times|every time)/.test(week) : /→ .* на следующий день \d+ из \d+ раз(а)? · в другие дни|вместе .*(\d+ из \d+ раз|каждый раз)/.test(week), week.slice(0, 300));
+  ok(`${lang}.week: insight in two parts`, lang === "en" ? /→ .* the next day \d+ of \d+ times · on other days|come together .*(\d+ of \d+ times|[Ee]very time)/.test(week) : /→ .* на следующий день \d+ из \d+ раз(а)? · в другие дни|вместе .*(\d+ из \d+ раз|[Кк]аждый раз)/.test(week), week.slice(0, 300));
   ok(`${lang}.week: no sentence`, week.length > 0 && !SENTENCE[lang].test(week));
 
   // 4. The doctor's report: every word drawn on its pages
