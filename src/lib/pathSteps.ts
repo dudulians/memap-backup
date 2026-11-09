@@ -266,11 +266,16 @@ export const skipTask = (task: TaskId) => {
 
 const ACT_KEY = "memap_act_seen";
 /** She looked at her lit rules today. */
-export const markActSeen = () => {
-  try { localStorage.setItem(ACT_KEY, isoLocal(new Date())); } catch { /* shows again, harmless */ }
+/** The day When to act was last opened, and the rules she has seen lit (persona walk, Nov 9 2026: "3 rules are
+ *  reached" every evening, the same three). An old value is just the date. */
+const readAct = (): { date: string; ids: string[] } => {
+  try { const v = localStorage.getItem(ACT_KEY) ?? ""; return v.startsWith("{") ? JSON.parse(v) : { date: v, ids: [] }; } catch { return { date: "", ids: [] }; }
+};
+export const markActSeen = (ids: string[] = []) => {
+  try { const prev = readAct(); localStorage.setItem(ACT_KEY, JSON.stringify({ date: isoLocal(new Date()), ids: [...new Set([...prev.ids, ...ids])] })); } catch { /* shows again, harmless */ }
 };
 const actSeenToday = () => {
-  try { return localStorage.getItem(ACT_KEY) === isoLocal(new Date()); } catch { return false; }
+  try { return readAct().date === isoLocal(new Date()); } catch { return false; }
 };
 
 const UNLOAD_KEY = "memap_unload_played";
@@ -609,7 +614,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   if (week > 0 && !getChests()[week - 1]) steps.unshift({ id: "report", kind: "report", trackerIds: [], answered: 0, done: false });
   // A rule she set was reached (a lit lighthouse): her plan, once a day.
   const lit = litTrackers(trackers, entries);
-  if (lit.size > 0) {
+  // only when a rule lit that she hasn't seen yet (or it was opened today, as done)
+  const seenLit = new Set(readAct().ids);
+  if (lit.size > 0 && ([...lit].some((id) => !seenLit.has(id)) || actSeenToday())) {
     steps.push({ id: "act", kind: "act", trackerIds: [...lit], answered: 0, done: actSeenToday() });
   }
   // Her test week is over: see how it went (it grows a garden).

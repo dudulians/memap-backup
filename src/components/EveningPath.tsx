@@ -598,7 +598,7 @@ export const EveningPath = ({
     setOpen(null);
     track("path_step_started", { kind: s.kind, week: m.week + 1, ...(s.task ? { task: s.task } : {}) });
     if (s.kind === "game") { if (canPlay) setGameOpen(true); }
-    else if (s.kind === "act") { markActSeen(); setTick((k) => k + 1); openActionPoints(); }
+    else if (s.kind === "act") { markActSeen(s.trackerIds); setTick((k) => k + 1); openActionPoints(); }
     else if (s.kind === "fill") onFillDay(s.date!);
     else if (s.kind === "task" && s.task === "note") { noteFromTask.current = true; noteSaved.current = false; setNoteDraft(newDraft()); }
     else if (s.kind === "task" && s.task === "experiment") setTestOpen("pick");

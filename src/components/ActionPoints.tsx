@@ -14,7 +14,7 @@ import { ideasForQuestion } from "@/lib/topicIdeas";
 import { KindTag } from "./KindTag";
 import { track } from "@/lib/analytics";
 import { answerClause, answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, Check, ChevronDown, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
 import { cardQuestion } from "@/lib/cardText";
@@ -25,12 +25,13 @@ import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { ruleCount, quietContext } from "@/lib/lighthouses";
 import { ruleKeyOf } from "@/lib/rules";
-import { isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
+import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkSentence, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { toast } from "@/hooks/use-toast";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { markActSeen } from "@/lib/pathSteps";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
@@ -43,7 +44,8 @@ import { ExperimentSheet } from "@/components/ExperimentSheet";
 export interface TryAction { island: IslandId; plan: string; trackerId: string; k: number }
 
 const TEAL = "hsl(var(--coin-teal))";
-const quietBtn = "quiet-btn w-full";
+// one line, never a two-line pill (RU «Посмотреть дни», Nov 9 2026)
+const quietBtn = "quiet-btn w-full whitespace-nowrap px-3 text-[15px]";
 
 /** Door questions go by their door name ("Fights with my partner"). */
 const useName = () => {
@@ -131,7 +133,9 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     .filter((tr) => !tr.archived && tr.threshold > 0)
     .map((tr) => ({ tr, k: ruleCount(tr, entries) }))
     .map((r) => ({ ...r, lit: r.k >= r.tr.threshold && !quietContext(r.tr) }));
-  const lit = rows.filter((r) => r.lit);
+  // her topics first, then the most crossed (persona walks, Nov 9 2026)
+  const leadRank = (id: string) => (id === door?.trackerId ? 0 : (door?.extra ?? []).some((x) => x.trackerId === id) ? 1 : 2);
+  const lit = rows.filter((r) => r.lit).sort((a, b) => leadRank(a.tr.id) - leadRank(b.tr.id) || b.k / b.tr.threshold - a.k / a.tr.threshold);
   const evenings = answeredEvenings(trackers, entries);
   const allWatching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
   // the first week: only her topic's rules, not a wall of "0 of the last 30 days" (QA, Nov 8 2026)
@@ -139,6 +143,27 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const watching = evenings < SHAPING_EVENINGS && allWatching.length > 1
     ? (allWatching.some((r) => mainIds.has(r.tr.id)) ? allWatching.filter((r) => mainIds.has(r.tr.id)) : allWatching.slice(0, 1))
     : allWatching;
+  // three lit cards at most, the rest behind "more"; the calm rules folded into one line
+  // opening this sheet counts as seeing what is lit: the Today step won't ask again for the same rules
+  const litKey = lit.map((r) => r.tr.id).join(",");
+  useEffect(() => { if (litKey) markActSeen(litKey.split(",")); }, [litKey]);
+  const [allLit, setAllLit] = useState(false);
+  const [calmOpen, setCalmOpen] = useState(false);
+  const litShown = allLit ? lit : lit.slice(0, 3);
+  const litMore = Math.max(0, lit.length - 3);
+  /** The days a rule can look at: its window, or her days so far when she began later (persona walk,
+   *  Nov 9 2026: "1 of the last 14 days" on day 1 counted days before she had the app). */
+  const todayIso = isoLocal(new Date());
+  const span = (tr: Tracker) => {
+    const first = entries.filter((e) => e.trackerId === tr.id).reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
+    if (!first) return { n: tr.periodDays, soFar: false };
+    const d = Math.round((Date.parse(todayIso + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1;
+    return d < tr.periodDays ? { n: d, soFar: true } : { n: tr.periodDays, soFar: false };
+  };
+  const ansOf = (tr: Tracker) => t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo");
+  /** One number for one fact, the same on the card and in the list: "“No” on 6 of the last 14 days." */
+  const evidence = (tr: Tracker, k: number) => { const s = span(tr); return t(s.soFar ? "rules.evidenceSoFar" : "rules.evidence", { ans: ansOf(tr), k, count: s.n }); };
+  const watchLine = (tr: Tracker, k: number) => `${evidence(tr, k)} ${t("rules.actAt", { n: tr.threshold, count: tr.periodDays })}`;
   /** the question under the plan; a good one is counted when it's missing */
   // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
@@ -173,24 +198,6 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
   return (
     <div className="space-y-2.5 animate-fade-in">
-      {/* The tests she is trying now. */}
-      {tests.map((test) => (
-        <button key={test.id} type="button" onClick={() => openTest(test)} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
-          <span className="icon-dot h-11 w-11">
-            <FlaskConical className="h-5 w-5" strokeWidth={2.4} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[17px] font-bold leading-snug">{testNameOf(test.change)}</span>
-            <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}</span>
-            {test.perWeek && <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}</span>}
-            <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
-              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${clockTime(test.remind)}` : t("experiment.noRemind")}
-            </span>
-          </span>
-          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
-        </button>
-      ))}
-
       {lit.length === 0 && (evenings < SHAPING_EVENINGS ? (
         // Too early to say anything is calm (GPT review, Nov 5 2026).
         <div className="surface rounded-[22px] px-5 py-4">
@@ -204,11 +211,16 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         </div>
       ) : (
         // never "Nothing to do now" over a partner who shouted or said hurtful things (persona walk, Nov 9 2026)
-        !watching.some((r) => r.k > 0 && HOME_HARM_IDS.has(templateIdOf(r.tr) ?? "")) && <p className="surface rounded-[22px] px-5 py-4 text-[18px] font-bold">{t("rules.nothingNow")}</p>
+        // with calm rules, the folded line below says it ("Nothing to act on now. 5 rules are calm")
+        watching.length === 0 && <p className="surface rounded-[22px] px-5 py-4 text-[18px] font-bold">{t("rules.nothingNow")}</p>
       ))}
 
+      {/* What needs her now, folded (her ask + the GPT brief, Nov 9 2026: "непонятное и слишком много
+          всего"): a card shows the island, what MeMap noticed in one line and the days behind it; a tap
+          opens the small step, how it goes and one button. One card open at a time; her main topic first;
+          three at most, the rest behind "more". */}
       {lit.length > 0 && <p className="px-1 pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.timeToAct")}</p>}
-      {lit.map(({ tr, k }) => {
+      {litShown.map(({ tr, k }) => {
         const plan = planOf(tr);
         // several tests may run at once (Nov 8 2026); only this plan's own running test replaces the button
         const ownTest = tests.find((x) => x.from === tr.id);
@@ -221,83 +233,72 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         const hardYes = tr.problemWhen === "yes";
         return (
           <div key={tr.id} className="surface rounded-[22px]">
-            {/* the advice and how often, in words; the whole top opens the details (her note, Nov 8 2026:
-                "вместо вопроса — ты часто… судя по ответам… и можно посмотреть детали… клацнуть на весь блок") */}
-            <button type="button" aria-expanded={opened} onClick={() => { haptics.tap(); setOpenCards((l) => (l.includes(tr.id) ? l.filter((x) => x !== tr.id) : [...l, tr.id])); }}
-              className="flex w-full items-start gap-3 px-4 pb-4 pt-4 text-left">
-              <img src={mapPic("lighthouse")} alt="" width={40} height={46} className="h-11 w-10 shrink-0 object-contain drop-shadow-[0_0_8px_hsl(44_96%_60%/0.7)]" />
+            <button type="button" aria-expanded={opened} onClick={() => { haptics.tap(); setOpenCards((l) => (l.includes(tr.id) ? [] : [tr.id])); }}
+              className="flex w-full items-start gap-3 px-4 py-3.5 text-left">
+              <img src={mapPic("lighthouse")} alt="" width={30} height={36} className="mt-0.5 h-9 w-[30px] shrink-0 object-contain drop-shadow-[0_0_6px_hsl(44_96%_60%/0.7)]" />
               <span className="min-w-0 flex-1">
-                {/* what is what (her note, Nov 9 2026: "где задание, где вопрос, где вывод"): the finding, then the task */}
-                <KindTag kind="finding" />
-                <span className="mt-0.5 block text-[17px] font-bold leading-snug">
-                  {t("rules.oftenLine", { what: answerClause(t, tr, hardYes, "result", t("rules.often")), count: k, days: tr.periodDays })}
+                <span className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{islandName(t, islandOf(tr))}</span>
+                  <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", opened && "rotate-180")} strokeWidth={2.4} />
                 </span>
-                {plan && <><KindTag kind="task" className="mt-3" /><span className="mt-0.5 block text-[20px] font-bold leading-snug">{plan}</span></>}
-                <span className="mt-2 inline-flex items-center gap-1 text-[15px] font-bold" style={{ color: TEAL }}>
-                  {t(opened ? "rules.lessDetails" : "rules.details")}
-                  <ChevronDown className={cn("h-4 w-4 transition-transform", opened && "rotate-180")} strokeWidth={2.6} />
-                </span>
+                {/* what MeMap noticed, in her answer's words, then the days behind it (one number for one fact) */}
+                <span className="mt-0.5 block text-[18px] font-bold leading-snug">{cap(answerClause(t, tr, hardYes, "result", t("rules.often")))}</span>
+                <span className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{evidence(tr, k)}</span>
               </span>
             </button>
             {opened && (
             <div className="px-4 pb-4 animate-fade-in">
-            <KindTag kind="question" extra={t("kind.everyEvening")} />
-            <p className="mt-0.5 text-[17px] font-bold leading-snug">{cardQuestion(tr)}</p>
-            <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={hardYes} since={countedSince(tr)} className="mt-3" />
-            {/* what MeMap suggests: a test with its evening question, or a one-off step */}
-            {/* how the task goes, right above its button */}
-            {plan && <p className="mt-4 text-[15px] font-semibold leading-snug text-muted-foreground">{once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
+            {/* what she can try, how it goes, one main button */}
+            {plan && <><KindTag kind="task" /><p className="mt-0.5 text-[19px] font-bold leading-snug">{plan}</p></>}
+            {plan && <p className="mt-1.5 text-[15px] font-semibold leading-snug text-muted-foreground">{once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
             {!plan ? (
-              <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.noPlan")}</button>
+              <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.noPlan")}</button>
             ) : once ? (
               // a one-off plan: mark it done; then MeMap compares before and after
-              <button type="button" onClick={() => void didOnce(tr, k)} className="raised-btn is-small mt-4 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+              <button type="button" onClick={() => void didOnce(tr, k)} className="raised-btn is-small mt-3.5 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
             ) : blocked ? (() => {
               // one test per island: this one waits, and says why; a finished one opens its result
               const isle = ownTest ?? null;
               return isle && experimentOver(isle) ? (
-                <button type="button" onClick={() => openTest(isle)} className="raised-btn is-small mt-4 w-full justify-center gap-2"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("rules.seeTest")}</button>
+                <button type="button" onClick={() => openTest(isle)} className="raised-btn is-small mt-3.5 w-full justify-center gap-2"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("rules.seeTest")}</button>
               ) : (
-                <p className="mt-3.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
+                <p className="mt-3 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
                   <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />
                   {blocked}
                 </p>
               );
             })() : (
-              <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-4 w-full justify-center">{t("rules.tryDaily")}</button>
+              <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.tryDaily")}</button>
             )}
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <div className="mt-2 grid grid-cols-2 gap-2">
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
             </div>
-            {/* what comes with it in her days, and the possible cause to test (Nov 8 2026) */}
+            {/* what comes with it in her days, and the possible cause (Nov 8 2026): one quiet block, its button
+                plain so it doesn't compete with the main one */}
             {linksInto(tr).length > 0 && (() => {
               const cause = causeOf(tr);
               const causeTest = cause ? tests.find((x) => x.from === cause.id) : undefined;
               return (
-                <div className="mt-4 border-t border-foreground/[0.07] pt-4">
-                  <KindTag kind="finding" />
+                <div className="mt-4 border-t border-foreground/[0.07] pt-3.5">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.comesWith")}</p>
                   {linksInto(tr).map((l) => (
-                    <p key={l.first.id} className="mt-1 text-[16px] font-bold leading-snug">
+                    <p key={l.first.id} className="mt-1 text-[15px] font-semibold leading-snug">
                       {linkSentence(t, { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n }, of)}
                     </p>
                   ))}
                   {cause && (
                     <>
-                      {/* not "test the cause" (her note, Nov 8 2026: "протестировать причину — поговорить с партнёром?"):
-                          the possible cause by name, then what can be done about it; the button says once or daily */}
-                      <p className="mt-3 text-[14px] font-semibold text-muted-foreground">{t("rules.causeHead")}</p>
-                      <p className="mt-0.5 text-[17px] font-bold leading-snug">{cap(answerPhrase(t, cause, cause.problemWhen === "yes"))}</p>
-                      <KindTag kind="task" className="mt-3" />
-                      <p className="mt-0.5 text-[17px] font-bold leading-snug">{planOf(cause)}</p>
+                      <p className="mt-3 text-[14px] font-semibold text-muted-foreground">{t("rules.causeHead")} <span className="font-bold text-foreground">{answerPhrase(t, cause, cause.problemWhen === "yes")}</span></p>
+                      <p className="mt-0.5 text-[16px] font-semibold leading-snug">{planOf(cause)}</p>
                       {causeTest && !experimentOver(causeTest) ? (
-                        <p className="mt-2.5 flex items-center gap-2 rounded-2xl bg-foreground/[0.05] px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-muted-foreground">
+                        <p className="mt-2 flex items-center gap-2 text-[14px] font-semibold leading-snug text-muted-foreground">
                           <FlaskConical className="h-4 w-4 shrink-0" strokeWidth={2.4} />{t("rules.testing", { k: experimentDay(causeTest), count: EXPERIMENT_DAYS })}
                         </p>
                       ) : planKindOf(cause) === "once" ? (
-                        <button type="button" onClick={() => void didOnce(cause, ruleCount(cause, entries))} className="raised-btn is-small mt-3 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+                        <button type="button" onClick={() => void didOnce(cause, ruleCount(cause, entries))} className={cn(quietBtn, "mt-2.5 w-full")}><Check className="h-4 w-4" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
                       ) : (
-                        <button type="button" onClick={() => tryIt(cause, ruleCount(cause, entries))} className="raised-btn is-small mt-3 w-full justify-center">{t("rules.tryDaily")}</button>
+                        <button type="button" onClick={() => tryIt(cause, ruleCount(cause, entries))} className={cn(quietBtn, "mt-2.5 w-full")}>{t("rules.tryDaily")}</button>
                       )}
                     </>
                   )}
@@ -309,28 +310,60 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
           </div>
         );
       })}
+      {litMore > 0 && (
+        <button type="button" onClick={() => { haptics.tap(); setAllLit((v) => !v); }} className={cn(quietBtn, "w-full")}>
+          {allLit ? t("rules.fewer") : t("rules.moreLit", { count: litMore })}
+        </button>
+      )}
 
+      {/* The tests she is trying now: one quiet list under what needs her (her note, Nov 9 2026: three big
+          test cards pushed "Time to act" off the first screen) */}
+      {tests.length > 0 && <p className="px-1 pt-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.testsNow")}</p>}
+      {tests.length > 0 && (
+        <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
+          {tests.map((test) => (
+            <button key={test.id} type="button" onClick={() => openTest(test)} className="flex w-full items-center gap-3 px-4 py-3 text-left">
+              <FlaskConical className="h-5 w-5 shrink-0" style={{ color: TEAL }} strokeWidth={2.4} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[16px] font-bold leading-snug">{testNameOf(test.change)}</span>
+                <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}{test.perWeek ? ` · ${t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}` : ""}</span>
+                {!experimentOver(test) && <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground"><Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${clockTime(test.remind)}` : t("experiment.noRemind")}</span>}
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+            </button>
+          ))}
+        </div>
+      )}
+      {/* the rules not reached yet: one line, opened on tap (persona walks, Nov 9 2026: a wall of
+          "0 of the last 30 days" under "Nothing to act on now") */}
       {watching.length > 0 && (
         <>
-          <p className="px-1 pt-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.watching")}</p>
-          <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
+          <button type="button" aria-expanded={calmOpen} onClick={() => { haptics.tap(); setCalmOpen((v) => !v); }}
+            className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
+            <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{t(lit.length || watching.some((r) => r.k > 0 && HOME_HARM_IDS.has(templateIdOf(r.tr) ?? "")) ? "rules.calmMore" : "rules.calmAll", { count: watching.length })}</span>
+            <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted-foreground transition-transform", calmOpen && "rotate-180")} strokeWidth={2.4} />
+          </button>
+          {calmOpen && (
+          <div className="surface divide-y divide-foreground/[0.06] rounded-[22px] animate-fade-in">
             {watching.map(({ tr, k }) => {
               const mineTest = tests.find((x) => x.from === tr.id);
-              const mine = !!mineTest;
               const ba = beforeAfter(tr, entries);
               return (
                 <button key={tr.id} type="button" onClick={() => open(tr.id, "show")} className="block w-full px-4 py-3 text-left">
                   <span className="line-clamp-2 block text-[16px] font-semibold leading-snug">{planOf(tr) || name(tr)}</span>
-                  <span className={cn("mt-0.5 flex items-center gap-1 text-[14px] font-medium leading-snug", !mine && "text-muted-foreground")} style={mine ? { color: TEAL } : undefined}>
-                    {mine && <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />}
-                    {mineTest ? lineOf(mineTest) : planOf(tr) ? cardQuestion(tr) : ""}
-                  </span>
+                  {mineTest ? (
+                    <span className="mt-0.5 flex items-center gap-1 text-[14px] font-medium leading-snug" style={{ color: TEAL }}>
+                      <FlaskConical className="h-3.5 w-3.5 shrink-0" strokeWidth={2.4} />{lineOf(mineTest)}
+                    </span>
+                  ) : (
+                    <span className="mt-0.5 block text-[14px] font-medium leading-snug text-muted-foreground">{watchLine(tr, k)}</span>
+                  )}
                   {ba && <span className="mt-1 block text-[13px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</span>}
-                  <RuleMeter k={k} n={tr.threshold} period={tr.periodDays} hardYes={tr.problemWhen === "yes"} since={countedSince(tr)} className="mt-2" />
                 </button>
               );
             })}
           </div>
+          )}
         </>
       )}
 
