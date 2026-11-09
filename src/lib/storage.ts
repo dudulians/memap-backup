@@ -301,7 +301,7 @@ const migrateLegacyAdvice = async (): Promise<void> => {
 /** Library rules that changed ([days, out of days]). A question still on the OLD library rule moves to
  *  the new one, once per question; a rule she set herself is never touched, and neither is one she
  *  sets back to the old numbers later. Threshold 0 = no rule (no action point). */
-const RULE_CHANGES: { id: string; was: [number, number]; now: [number, number] }[] = [
+const RULE_CHANGES: { id: string; was: [number, number]; now: [number, number]; /** false: not for questions she had before the new look */ oldUsers?: false }[] = [
   // the weekly goals (Nov 8 2026): "12 days without a workout in 30" didn't match "3 workouts a week"
   { id: "exercised", was: [12, 30], now: [5, 7] },
   { id: "strength-training", was: [23, 30], now: [6, 7] },
@@ -313,11 +313,11 @@ const RULE_CHANGES: { id: string; was: [number, number]; now: [number, number] }
   { id: "pet-skipped-food", was: [5, 30], now: [2, 7] },
   { id: "pet-limped", was: [5, 30], now: [3, 14] },
   // when-to-act.md: the research rules (UK drink-free days; light; NHS "tired for a few weeks")
-  { id: "drank-alcohol", was: [12, 30], now: [4, 7] },
-  { id: "screens-before-bed", was: [15, 30], now: [4, 7] },
-  { id: "outside-30min", was: [15, 30], now: [4, 7] },
-  { id: "saw-daylight", was: [15, 30], now: [4, 7] },
-  { id: "felt-fatigued", was: [12, 30], now: [14, 21] },
+  { id: "drank-alcohol", was: [12, 30], now: [4, 7], oldUsers: false },
+  { id: "screens-before-bed", was: [15, 30], now: [4, 7], oldUsers: false },
+  { id: "outside-30min", was: [15, 30], now: [4, 7], oldUsers: false },
+  { id: "saw-daylight", was: [15, 30], now: [4, 7], oldUsers: false },
+  { id: "felt-fatigued", was: [12, 30], now: [14, 21], oldUsers: false },
   // good things that are rare by nature lit up for nearly everyone in the first week or two
   { id: "partner-complimented-me", was: [8, 30], now: [24, 30] },
   { id: "called-parent", was: [10, 30], now: [25, 30] },
@@ -340,7 +340,7 @@ const RULE_CHANGES: { id: string; was: [number, number]; now: [number, number] }
   { id: "looped-one-song", was: [8, 30], now: [12, 30] },
   { id: "social-media-hour", was: [15, 30], now: [20, 30] },
   // two months is too long to wait for "I want out" one day in three
-  { id: "thought-about-leaving", was: [20, 60], now: [10, 30] },
+  { id: "thought-about-leaving", was: [20, 60], now: [10, 30], oldUsers: false },
   // no rule: a sensitive question that sent people to a GP for ordinary mornings; a pet or plant to talk to
   { id: "morning-libido", was: [12, 30], now: [0, 30] },
   { id: "talked-to-pet", was: [10, 30], now: [0, 30] },
@@ -359,6 +359,8 @@ const archiveRemoved = async (): Promise<void> => {
 };
 const migrateRules = async (): Promise<void> => {
   const trackers = await getTrackers();
+  let newSince: string | null = null;
+  try { newSince = localStorage.getItem("memap_path_start"); } catch { /* every rule moves */ }
   const seen = new Set(safeParse<string[]>(localStorage.getItem(RULE_MOVES_KEY), []));
   const before = seen.size;
   let changed = false;
@@ -370,9 +372,15 @@ const migrateRules = async (): Promise<void> => {
     const id = matchTemplateIdByTitle(tr.title);
     if (!id) return tr;
     let out = tr;
+    // a rule that would light SOONER isn't changed for a question she had before the new look (persona walk,
+    // Nov 9 2026: an updating user saw a lighthouse 1.7.9 never lit, with no word why); quieter rules and the
+    // harm ones (a fall, medicines, a pet) still move
+    // before the new look began (on the first start after the update it hasn't begun yet: before today)
+    const hadBefore = (tr.createdAt ?? "").slice(0, 10) < (newSince ?? new Date().toISOString().slice(0, 10));
     // in order, so a rule that changed twice moves along both steps
     for (const r of RULE_CHANGES) {
       if (r.id !== id) continue;
+      if (r.oldUsers === false && hadBefore) continue;
       const key = `${tr.id}|${r.id}|${r.was.join("/")}>${r.now.join("/")}`;
       if (seen.has(key)) continue;
       seen.add(key);

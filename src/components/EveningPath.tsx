@@ -274,7 +274,9 @@ export const EveningPath = ({
   const height = stops[chestIndex].y + R_CHEST + 56;
 
   // --- Words ---------------------------------------------------------------
-  const reportLabel = m.week === 0 ? t("path.firstReport") : t("path.weekReport");
+  // someone with days from before the new look isn't on a "first week" (persona walk, Nov 9 2026)
+  const firstWeek = m.week === 0 && m.prior === 0;
+  const reportLabel = firstWeek ? t("path.firstReport") : t("path.weekReport");
   const lang = i18n.language?.startsWith("ru") ? "ru-RU" : "en-US";
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const dayTitle = (iso: string) => cap(new Date(iso + "T00:00:00").toLocaleDateString(lang, { weekday: "long", day: "numeric", month: "long" }));
@@ -579,7 +581,7 @@ export const EveningPath = ({
   const weekNext = (() => {
     const evenings = m.week * DAYS_PER_WEEK + daysDone;
     // week 1's chip opens My days (a chip that looks tappable is tappable)
-    if (part === 0) return { text: t(m.week === 0 ? "path.next4.report" : "path.next4.reportN", { count: toGo }), open: "overview" as null | "overview" | "findings" | "signals" | "world" };
+    if (part === 0) return { text: t(firstWeek ? "path.next4.report" : "path.next4.reportN", { count: toGo }), open: "overview" as null | "overview" | "findings" | "signals" | "world" };
     if (part === 1) {
       const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length;
       return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: t("path.next4.linksSoon", { count: Math.max(1, 10 - evenings) }), open: null };
@@ -955,7 +957,8 @@ export const EveningPath = ({
         );
       })}
 
-      {headerSlot && m.streak > 0 && createPortal(
+      {/* a run of one only says "you missed yesterday" (persona walk, Nov 9 2026): from two evenings in a row */}
+      {headerSlot && m.streak > 1 && createPortal(
         <span aria-label={t("path.streakAria", { count: m.streak })} className="surface inline-flex h-9 items-center gap-1 rounded-full pl-2 pr-3 text-[16px] font-bold tabular-nums text-foreground">
           <Flame className="h-[18px] w-[18px] fill-amber-400 text-amber-500" strokeWidth={2} />
           {m.streak}

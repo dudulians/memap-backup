@@ -347,7 +347,9 @@ const taskForToday = (week: number, today: string): { task: TaskId; done: boolea
     if (r?.skipped === today) return { task, done: true, skipped: true };
     // A note skipped once doesn't come back (her note, Nov 5 2026: "я сама
     // знаю, что если что, я напишу note"): notes stay one tap away on Today.
-    if (task === "note" && r?.skipped) continue;
+    // Adding questions or islands the same: skipped once, it doesn't come back every evening (persona walks,
+    // Nov 9 2026: "Open a new island" was the Start step every evening from day 13; it stays in You)
+    if ((task === "note" || task === "newIsland" || task === "ownQuestion") && r?.skipped) continue;
     return { task, done: false };
   }
   return null;

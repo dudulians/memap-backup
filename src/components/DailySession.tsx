@@ -419,7 +419,7 @@ export const DailySession = ({
   const [completed, setCompleted] = useState(false);
   // The step that finished a week says so (QA, Nov 8 2026: the 7th evening said only "your next step is
   // waiting"): read fresh from storage, since today's answers may not be in the props yet.
-  const [weekDone, setWeekDone] = useState<number | null>(null);
+  const [weekDone, setWeekDone] = useState<{ week: number; first: boolean } | null>(null);
   useEffect(() => {
     if (!completed) return;
     let live = true;
@@ -427,7 +427,7 @@ export const DailySession = ({
     const before = pathModel(trackers, entries).weekComplete;
     void Promise.all([getTrackers(), getEntries()]).then(([trs, ens]) => {
       const pm = pathModel(trs, ens);
-      if (live && !before && pm.weekComplete) setWeekDone(pm.week);
+      if (live && !before && pm.weekComplete) setWeekDone({ week: pm.week, first: pm.week === 0 && pm.prior === 0 });
     }).catch(() => { /* the plain line stays */ });
     return () => { live = false; };
   }, [completed]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -830,7 +830,7 @@ export const DailySession = ({
         </span>
         <p className="mt-6 text-[28px] font-bold tracking-tight">{t("path.stepDone")}</p>
         <p className="mt-1 text-[17px] font-medium text-muted-foreground">
-          {weekDone !== null ? t(weekDone === 0 ? "path.weekSaved" : "path.weekSavedN", { n: weekDone + 1 }) : t("path.stepSaved", { count: answeredCount })}
+          {weekDone !== null ? t(weekDone.first ? "path.weekSaved" : "path.weekSavedN", { n: weekDone.week + 1 }) : t("path.stepSaved", { count: answeredCount })}
         </p>
         <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("path.continue")}
