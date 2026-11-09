@@ -159,7 +159,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     window.addEventListener("memap-theme-changed", sync);
     return () => window.removeEventListener("memap-theme-changed", sync);
   }, []);
-  const [hint, setHint] = useState(true);
+  // the hint until she has turned the globe once (QA, Nov 8 2026: still shown after 59 days)
+  const [hint, setHintState] = useState(() => { try { return localStorage.getItem("memap_globe_turned") !== "1"; } catch { return true; } });
+  const setHint = (v: boolean) => { setHintState(v); if (!v) { try { localStorage.setItem("memap_globe_turned", "1"); } catch { /* shows again */ } } };
   const [away, setAway] = useState(false);
   const [note, setNote] = useState(false);
   const [on, setOn] = useState<string | null>(null);

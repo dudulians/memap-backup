@@ -340,6 +340,8 @@ export const sentenceIds = () => Object.keys(S);
  *  when it came more often than on other days, so "more often" is always true). */
 export const oftenWord = (t: TFunction, k: number, n: number): string => {
   const r = n ? k / n : 0;
+  // every one of the days: "always", never "almost always" for 4 of 4 (QA, Nov 8 2026)
+  if (n > 0 && k === n) return t("link.advAll");
   return t(`link.adv${r >= 0.9 ? 0 : r >= 0.7 ? 1 : r >= 0.5 ? 2 : 3}`);
 };
 

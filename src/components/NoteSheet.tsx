@@ -64,7 +64,9 @@ export const NoteSheet = ({
 
   const dayLabel = (iso: string) => {
     const d = parseISO(iso);
-    return format(d, d.getFullYear() === new Date().getFullYear() ? "d MMMM" : "d MMMM yyyy", { locale: dateLocale });
+    // with the weekday (QA, Nov 8 2026: "5 ноября" with no day): "Thursday, 5 November" / «Четверг, 5 ноября»
+    const x = format(d, d.getFullYear() === new Date().getFullYear() ? "EEEE, d MMMM" : "EEEE, d MMMM yyyy", { locale: dateLocale });
+    return x.charAt(0).toUpperCase() + x.slice(1);
   };
   // the Aurora kit (Nov 5 2026): switches and filters look like Map | Globe
   const chip = (on: boolean) => cn("chip", on && "is-on");
@@ -141,8 +143,10 @@ export const NoteSheet = ({
 
             {/* Optional: which question this note is about. It also shows
                 on that question's calendar day. */}
+            {/* labelled, and wrapping instead of running off the edge (QA, Nov 8 2026) */}
+            {trackers.length > 0 && <p className="mt-4 text-[14px] font-semibold text-muted-foreground">{t("notes.about")}</p>}
             {trackers.length > 0 && (
-              <div className="mt-4 -mx-5 px-5 flex gap-2 overflow-x-auto scrollbar-hide">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {trackers.map((tr) => {
                   const on = draft.linkedPatternId === tr.id;
                   return (

@@ -7,7 +7,7 @@
 // checks each as she answers and shows them together when there are enough
 // days. First, checked hunches, if any are ready. Counts only, never a cause.
 import { useScreen } from "@/lib/analytics";
-import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
+import { answerClause, answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -22,7 +22,7 @@ import { ensureTemplates } from "@/lib/doors";
 import { islandOf } from "@/lib/islands";
 import { addQuestionToIsland } from "@/lib/ownIslands";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
-import { HUNCH_DAYS, addHunches, hunchDoneToday, hunchTarget, markHunchDay, markHunchSeen, readyHunches, suspectsFor, type Suspect } from "@/lib/hunches";
+import { HUNCH_DAYS, addHunches, checking, hunchDoneToday, hunchTarget, markHunchDay, markHunchSeen, readyHunches, suspectsFor, type Suspect } from "@/lib/hunches";
 import { Pressable } from "@/components/ui/pressable";
 
 const keyOf = (s: Suspect) => (s.kind === "tracked" ? s.tracker.id : `tpl:${s.template.id}`);
@@ -44,7 +44,10 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
   const ru = lang === "ru";
   const ready = useMemo(() => readyHunches(trackers, entries), [trackers, entries]);
   const target = useMemo(() => hunchTarget(trackers, entries), [trackers, entries]);
-  const suspects = useMemo(() => (target ? suspectsFor(target, trackers) : []), [target, trackers]);
+  // guesses already being checked for this question: said once, and not offered again (QA, Nov 8 2026:
+  // day 2 showed the same list with nothing about yesterday's pick)
+  const open = useMemo(() => (target ? checking(trackers, entries).filter((c) => c.hunch.target === target.id) : []), [target, trackers, entries]);
+  const suspects = useMemo(() => (target ? suspectsFor(target, trackers).filter((s) => !(s.kind === "tracked" && open.some((c) => c.hunch.suspect === s.tracker.id))) : []), [target, trackers, open]);
   const [stage, setStage] = useState<"result" | "ask" | "checking">(ready.length > 0 ? "result" : "ask");
   const [chosen, setChosen] = useState<Set<string>>(() => new Set());
   const [ownOpen, setOwnOpen] = useState(false);
@@ -61,7 +64,12 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
   }, [stage, ready, anyOnto]);
 
   const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
-  const sName = (s: Suspect) => (s.kind === "tracked" ? localizeTrackerTitle(s.tracker.title) : ru ? s.template.titleRu : s.template.title);
+  // a suspect by its hard side, in the app's answer words (QA, Nov 8 2026: "Slept enough (7+ hours)" offered
+  // as a migraine cause; RU «Поел(а) до 14:00» raw from the library); her own question keeps its title
+  const sName = (s: Suspect) => {
+    const q = s.kind === "tracked" ? s.tracker : ({ id: `0-${s.template.id}-0`, title: s.template.title, problemWhen: s.template.problemWhen } as Tracker);
+    return templateIdOf(q) ? cap(answerPhrase(t, q, q.problemWhen !== "no")) : localizeTrackerTitle(q.title);
+  };
   const x = target ? answerPhrase(t, target, true) : "";
   // the question as a whole sentence (her note, Nov 8 2026: «What do you think comes before “long workday”? — что это вообще за вопрос?»)
   const xc = target ? answerClause(t, target, true, "cause") : "";
@@ -180,6 +188,11 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
               {t(target.problemWhen === "yes" ? "hunch.askHard" : "hunch.askGood", { x: xc })}
             </p>
             <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("hunch.pickMany")}</p>
+            {open.length > 0 && (
+              <p className="mt-3 rounded-2xl bg-foreground/[0.05] px-4 py-3 text-[15px] font-semibold leading-snug">
+                {t("hunch.already", { list: open.map((c) => { const q = tr(c.hunch.suspect); return q ? cap(answerPhrase(t, q, q.problemWhen !== "no")) : ""; }).filter(Boolean).join(", "), k: Math.min(Math.max(...open.map((c) => c.days)), HUNCH_DAYS), count: HUNCH_DAYS })}
+              </p>
+            )}
             <div className="mt-5 space-y-2.5">
               {suspects.map((s) => {
                 const on = chosen.has(keyOf(s));

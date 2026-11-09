@@ -66,6 +66,12 @@ const locale = () => (ru() ? "ru-RU" : "en-GB");
 const dayList = (n: number): string[] => Array.from({ length: n }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - (n - 1 - i)); return isoLocal(d); });
 const date = (iso: string) => new Date(iso + "T00:00:00");
 const fmt = (iso: string, year = false) => date(iso).toLocaleDateString(locale(), { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) });
+/** "13 October – 9 November 2026" / «13 октября – 9 ноября 2026» (QA, Nov 8 2026: «13 окт. 2026 г. – 9 нояб. 2026 г.») */
+const span = (a: string, b: string): { from: string; to: string } => {
+  const dm = (iso: string) => date(iso).toLocaleDateString(locale(), { day: "numeric", month: "long" });
+  const ya = date(a).getFullYear(), yb = date(b).getFullYear();
+  return { from: ya === yb ? dm(a) : `${dm(a)} ${ya}`, to: `${dm(b)} ${yb}` };
+};
 const load = (src: string) => new Promise<HTMLImageElement | null>((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
 const title = (q: Tracker) => localizeTrackerTitle(q.title);
 
@@ -151,7 +157,10 @@ const collect = (r: ReportInput): Data => {
   // the period starts at her first answer when that's later (QA: "Answered on 59 of 91 days" for 59 days of answers)
   const all = dayList(r.days);
   const firstAnswer = r.entries.filter((e) => r.ids.includes(e.trackerId) && e.date >= all[0]).reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
-  const days = firstAnswer ? all.filter((d) => d >= firstAnswer) : all, first = days[0], last = days[days.length - 1];
+  // today not answered yet isn't a missed day (QA re-check, Nov 9 2026: "59 of 60" for someone who never missed one)
+  const today = all[all.length - 1];
+  const todayIn = r.entries.some((e) => e.date === today && r.ids.includes(e.trackerId));
+  const days = (firstAnswer ? all.filter((d) => d >= firstAnswer) : all).filter((d) => todayIn || d !== today || all.length === 1), first = days[0], last = days[days.length - 1];
   const inPeriod = r.entries.filter((e) => e.date >= first && e.date <= last);
   const vals = new Map<string, Map<string, unknown>>();
   for (const e of inPeriod) { if (!vals.has(e.trackerId)) vals.set(e.trackerId, new Map()); vals.get(e.trackerId)!.set(e.date, e.value); }
@@ -393,7 +402,7 @@ const proTop = async (p: Pages, r: ReportInput, data: Data) => {
   p.text(t("report.pro.kicker"), 21, 700, SOFT, PX.w - M, "right");
   p.y += 100; p.text(t(`report.pro.title.${r.audience === "me" ? "doctor" : r.audience}`), 50, 800, INK);
   if (r.name?.trim()) { p.y += 52; p.text(t("report.pro.name", { name: r.name.trim() }), 28, 700, INK); }
-  p.y += 48; p.text(t("report.pro.period", { from: fmt(data.first, true), to: fmt(data.last, true), count: data.days.length }), 26, 600, SOFT);
+  p.y += 48; p.text(t("report.pro.period", { ...span(data.first, data.last), count: data.days.length }), 26, 600, SOFT);
   p.y += 38; p.text(t("report.pro.answered", { k: data.answeredDays, count: data.days.length, date: fmt(isoLocal(new Date()), true) }), 23, 500, SOFT);
 };
 /** For herself: her islands on her sea, the counts. Returns nothing; leaves y under it. */
@@ -412,7 +421,7 @@ const meTop = async (p: Pages, r: ReportInput, data: Data, bandH: number) => {
   g.fillStyle = fade; g.fillRect(0, bandH - 170, PX.w, 172);
   const s = bandH / 720;
   p.y = 140 * Math.max(0.8, s); p.text(t("report.me.title"), 66, 800, INK, PX.w / 2, "center");
-  p.y += 56; p.text(`${fmt(data.first)} – ${fmt(data.last)}`, 30, 600, SOFT, PX.w / 2, "center");
+  p.y += 56; p.text((({ from, to }) => `${from} – ${to}`)(span(data.first, data.last)), 30, 600, SOFT, PX.w / 2, "center");
   const spots = [{ x: 620, y: 500, s: 440 }, { x: 240, y: 390, s: 250 }, { x: 1000, y: 390, s: 250 }, { x: 205, y: 610, s: 210 }, { x: 1035, y: 610, s: 210 }]
     .map((sp) => ({ x: sp.x, y: 180 + (sp.y - 180) * s, s: sp.s * Math.max(0.72, s) }));
   for (let i = Math.min(isles.length, spots.length) - 1; i >= 0; i--) {

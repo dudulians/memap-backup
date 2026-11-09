@@ -199,7 +199,7 @@ const LinkCount = ({ from }: { from: number }) => {
 const Month = () => {
   const { i18n } = useTranslation();
   const HARD = new Set([2, 3, 9, 15, 16, 22]);
-  const days = i18n.language === "ru" ? ["П", "В", "С", "Ч", "П", "С", "В"] : ["M", "T", "W", "T", "F", "S", "S"];
+  const days = i18n.language === "ru" ? ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"] : ["M", "T", "W", "T", "F", "S", "S"];
   return (
     <Box example>
       <div className="mx-auto grid w-fit grid-cols-7 gap-x-1.5 gap-y-1" aria-hidden="true">

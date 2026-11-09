@@ -8,6 +8,7 @@
 // were too thin): one style everywhere — smooth thick lines with a soft fill,
 // in the app's colours — and the full chart is the same chart, bigger, with
 // dates, 8 weeks or 6 months, and a finger to read any week.
+import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { linkOf, linkWorthShowing } from "@/lib/islands";
 import { linkArrow, trackerLookup, linkSentence } from "@/lib/linkText";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -26,7 +27,8 @@ const WEEKS = 8;
 const LONG = 26;
 // a pair's two lines: the data colours (index.css --data-a/--data-b)
 const PAIR_A = "var(--data-a)";
-const PAIR_B = "var(--data-b)";
+// indigo and rose (QA, Nov 8 2026: orange was off the palette)
+const PAIR_B = "var(--strong)";
 
 /** The end of week w (0 = oldest of n), as a date. */
 const weekEnd = (w: number, n: number) => {
@@ -192,6 +194,8 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   const mine = useMemo(() => (focusIds ? live.filter((tr) => focusIds.includes(tr.id)) : live), [live, focusIds]);
   const name = (id: string) => localizeTrackerTitle(live.find((x) => x.id === id)?.title ?? "");
+  /** the answer a line counts (weekly counts the hard one), in its own words: "Short night" */
+  const hardWord = (tr: Tracker) => (templateIdOf(tr) ? cap(answerPhrase(t, tr, tr.problemWhen === "yes")) : localizeTrackerTitle(tr.title));
 
   // Links found (on this island, if it's one island's charts), read like the map's.
   const links = useMemo(() => {
@@ -219,7 +223,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
   const [detail, setDetail] = useState<{ ids: string[]; title: string; sub?: string } | null>(() => {
     if (!pair || focusIds?.length !== 2) return null;
     const l = links[0];
-    return l ? { ids: [l.a.id, l.b.id], title: l.arrow, sub: t("map.timesOf", { k: l.k, count: l.n }) } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
+    return l ? { ids: [l.a.id, l.b.id], title: l.arrow } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
   });
   const [long, setLong] = useState(false);
 
@@ -229,7 +233,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
     const n = long ? LONG : WEEKS;
     const series = detail.ids.map((id, k) => {
       const tr = live.find((x) => x.id === id)!;
-      return { color: colorOf(tr, k, detail.ids.length > 1), values: weekly(tr, entries, n), label: name(id) };
+      return { color: colorOf(tr, k, detail.ids.length > 1), values: weekly(tr, entries, n), label: detail.ids.length > 1 ? hardWord(tr) : name(id) };
     });
     return (
       <div className="animate-fade-in">
@@ -274,15 +278,16 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
           {links.length === 0 && <p className="surface rounded-[22px] px-4 py-4 text-[16px] font-semibold">{t("charts.noLinks")}</p>}
           {links.map((l, i) => {
             const title = l.arrow;
-            const sub = t("map.timesOf", { k: l.k, count: l.n });
+            // the count is already in the sentence; the lines are named by the answer they count (QA, Nov 8 2026:
+            // "Slept enough (7+ hours)" under "you usually sleep under 7 hours")
+            const sub = undefined;
             const series = [
-              { color: PAIR_A, values: weekly(l.a, entries), label: name(l.a.id) },
-              { color: PAIR_B, values: weekly(l.b, entries), label: name(l.b.id) },
+              { color: PAIR_A, values: weekly(l.a, entries), label: hardWord(l.a) },
+              { color: PAIR_B, values: weekly(l.b, entries), label: hardWord(l.b) },
             ];
             return (
               <button key={i} type="button" className={card} onClick={() => { haptics.tap(); setDetail({ ids: [l.a.id, l.b.id], title, sub }); }}>
                 <p className="text-[17px] font-bold leading-snug">{title}</p>
-                <p className="text-[14px] font-medium text-muted-foreground">{sub}</p>
                 <Chart series={series} height={96} />
                 <Legend series={series} />
               </button>

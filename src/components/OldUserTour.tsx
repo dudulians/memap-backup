@@ -25,7 +25,8 @@ export const startOldTour = () => {
   try { if (!localStorage.getItem(`${KEY}_done`)) localStorage.setItem(KEY, "1"); } catch { /* the new look opens without it */ }
 };
 const pending = () => { try { return localStorage.getItem(KEY) === "1"; } catch { return false; } };
-const finish = () => { try { localStorage.removeItem(KEY); localStorage.setItem(`${KEY}_done`, new Date().toISOString()); } catch { /* shown again next time */ } };
+// it is her tour of the new look: the beginner tips inside the sheets don't show after it (QA, Nov 8 2026)
+const finish = () => { try { localStorage.removeItem(KEY); localStorage.setItem(`${KEY}_done`, new Date().toISOString()); localStorage.setItem("memap_tour_completed", "1"); } catch { /* shown again next time */ } };
 
 interface TourData {
   trackers: Tracker[]; islands: Island[]; routes: Route[];

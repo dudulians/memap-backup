@@ -72,7 +72,9 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
     if (iso === today) return t("doors.when.today");
     if (iso === yesterday) return t("doors.when.yesterday");
     const d = parseISO(iso);
-    return format(d, d.getFullYear() === new Date().getFullYear() ? "d MMMM" : "d MMMM yyyy", { locale: dateLocale });
+    // with the weekday (QA, Nov 8 2026: "5 ноября" with no day): "Thursday, 5 November" / «Четверг, 5 ноября»
+    const x = format(d, d.getFullYear() === new Date().getFullYear() ? "EEEE, d MMMM" : "EEEE, d MMMM yyyy", { locale: dateLocale });
+    return x.charAt(0).toUpperCase() + x.slice(1);
   };
 
   const q = searchQuery.trim().toLowerCase();

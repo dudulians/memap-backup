@@ -76,7 +76,7 @@ export const DoorHero = ({
       {size === "lg" &&
         counts.week.map((d) => (
           <span key={`l${d.date}`} className="text-center text-[11px] font-semibold uppercase text-muted-foreground">
-            {format(new Date(d.date + "T12:00:00"), "EEEEE", { locale: dateLocale })}
+            {format(new Date(d.date + "T12:00:00"), dateLocale ? "EEEEEE" : "EEEEE", { locale: dateLocale })}
           </span>
         ))}
       {counts.week.map((d) => (

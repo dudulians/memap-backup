@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { getLanguage } from "@/lib/i18n";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
+import { cardQuestion } from "@/lib/cardText";
 import { haptics } from "@/lib/haptics";
 
 interface CalendarAnswerEditorProps {
@@ -40,6 +41,8 @@ export const CalendarAnswerEditor = ({
 }: CalendarAnswerEditorProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
+  // "Monday, 12 October" / «Понедельник, 12 октября»: dates with weekdays (QA, Nov 8 2026)
+  const dayTitle = (() => { const x = format(new Date(date + "T00:00:00"), "EEEE, d MMMM", { locale: dateLocale }); return x.charAt(0).toUpperCase() + x.slice(1); })();
   const [selectedValue, setSelectedValue] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
   const swipeStartX = useRef(0);
@@ -125,11 +128,11 @@ export const CalendarAnswerEditor = ({
       open={open}
       onOpenChange={(isOpen) => !isOpen && onClose()}
       className="h-auto max-h-[80vh]"
-      ariaTitle={format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
+      ariaTitle={dayTitle}
     >
       <div className="px-6 pt-3 pb-2 flex-shrink-0">
         <h2 className="text-base font-semibold">
-          {format(new Date(date + "T00:00:00"), "d MMM yyyy", { locale: dateLocale })}
+          {dayTitle}
         </h2>
       </div>
 
@@ -184,7 +187,7 @@ export const CalendarAnswerEditor = ({
                   itself (with its qualifiers) needs to read like a
                   headline. Same `text-lg font-medium leading-snug`
                   treatment as TrackerDetails. */}
-              <p className="text-lg font-medium leading-snug text-foreground">{localizeTrackerQuestion(tracker.questionText, tracker.title)}</p>
+              <p className="text-lg font-medium leading-snug text-foreground">{cardQuestion(tracker)}</p>
             </div>
           </div>
 

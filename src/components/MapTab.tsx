@@ -136,6 +136,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     const open = (e: Event) => {
       const d = (e as CustomEvent).detail as { a: string; b: string } | undefined;
       if (!d) return;
+      setOpenRaw(null);
       window.setTimeout(() => setLink(routes.find((r) => (r.a === d.a && r.b === d.b) || (r.a === d.b && r.b === d.a)) ?? null), 200);
     };
     window.addEventListener("memap-open-link", open);
@@ -332,8 +333,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
           {only && !tourCompleted() && (
-            <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={onlyTitle(only)}
-              line={t(only === "findings" ? "tour.links.line" : only === "signals" ? "tour.actions.line" : "tour.calendar.line")} />
+            <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={null}
+              line={t(only === "findings" ? "tips.inLinks" : only === "signals" ? "tour.actions.line" : "tips.inMonth")} />
           )}
           {/* My days holds both the calendar and the chart (her note, Nov 6 2026) */}
           {(only === "overview" || only === "trends") && (

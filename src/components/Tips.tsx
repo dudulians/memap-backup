@@ -29,8 +29,8 @@ export const TipCard = ({ id, title, line, action, onAction, onClose, className 
     <div className={cn("surface relative flex shrink-0 gap-3 rounded-[20px] py-3 pl-3 pr-10 animate-fade-in", className)} role="note">
       {pic && <img src={pic} alt="" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />}
       <div className="min-w-0 flex-1">
-        <p className="text-[16px] font-bold leading-snug">{title}</p>
-        <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{line}</p>
+        {title && <p className="text-[16px] font-bold leading-snug">{title}</p>}
+        <p className={cn("text-[15px] font-semibold leading-snug", title ? "mt-0.5 text-muted-foreground" : "")}>{line}</p>
         {action && onAction && (
           <button type="button" onClick={() => { close(); onAction(); }} className="raised-btn is-small mt-2 px-5">{action}</button>
         )}

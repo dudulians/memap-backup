@@ -80,9 +80,9 @@ export const WorldBegun = () => {
       const days = islandEvenings(trackers, entries).get(island) ?? 1;
       setShown({ kind: "begun", island, days, date });
       track("world_begun", { saved: saved.length, island });
-      // the reminder comes after the joy, not instead of it
+      // the reminder comes after the joy, not over it (QA, Nov 8 2026: it slid up after 1.6 s and hid
+      // "Show me around"): it's asked when she taps the button, before the tour
       asked.current = false; tourAfter.current = false;
-      if (!getNotificationSettings().enabled) window.setTimeout(() => { if (!asked.current) { asked.current = true; setSheet(true); } }, 1600);
     };
     const waiting = () => { setShown({ kind: "waiting" }); track("world_waiting"); };
     window.addEventListener("memap-world-begun", begun);

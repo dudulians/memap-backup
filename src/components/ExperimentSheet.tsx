@@ -24,7 +24,7 @@ import { countFromToday } from "@/lib/actionPoints";
 import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { Pressable } from "@/components/ui/pressable";
 import { cardQuestion } from "@/lib/cardText";
-import { goalOf, ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
+import { busyIdeas, goalOf, ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
 
 /* Chosen: a teal ring and a teal tick (the Aurora kit, Nov 5 2026: no
    tinted backgrounds, one accent colour). */
@@ -84,7 +84,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   // the changes on the question's own topic (from a plan), or for what is hardest on the island lately (Nov 9 2026)
   const pool = plan ? (source ? ideasForQuestion(source) : island ? ideasFor(island) : []) : island ? ideasForIsland(island, trackers, entries) : [];
   const planIdea = plan ? ideaOf(plan) : null;
-  const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !runningHere.some((x) => ideaOf(x.change) === k))];
+  const busy = busyIdeas();
+  const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !busy.has(k))];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
@@ -101,7 +102,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   };
 
   return createPortal(
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[70] flex flex-col bg-background/95 backdrop-blur-sm animate-fade-in">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[70] flex flex-col bg-background animate-fade-in">
       <div className="flex justify-end px-3 pt-[max(env(safe-area-inset-top),12px)]">
         <button type="button" onClick={onClose} aria-label={t("common.close")} className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground">
           <X className="h-6 w-6" />
@@ -109,7 +110,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto px-6 pb-10">
         <p className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
-          <FlaskConical className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{t("experiment.title")}
+          <FlaskConical className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{t("experiment.eyebrow")}
         </p>
 
         {mode === "pick" && !started && (
@@ -243,8 +244,9 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               <img src={mapPic("orange_tree")} alt="" width={64} height={56} className="object-contain" />
               <p className="text-[17px] font-semibold leading-snug">{t("experiment.garden", { island: islandName(t, experiment.island as IslandId) })}</p>
             </div>
-            {/* "Keep going like this?" (her note, Nov 8 2026): yes keeps the question and the reminder */}
-            <div className="mt-auto pt-8">
+            {/* "Keep going like this?" (her note, Nov 8 2026): yes keeps the question and the reminder;
+                a test looked at again later only shows its result */}
+            {!experiment.reviewed && <div className="mt-auto pt-8">
               <p className="text-[22px] font-bold leading-tight">{t("experiment.keepAsk")}</p>
               <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">
                 {experiment.perWeek
@@ -255,7 +257,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                 {t("experiment.keepYes")}
               </Pressable>
               <button type="button" onClick={() => finish(false)} className="mt-1 h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("experiment.keepNo")}</button>
-            </div>
+            </div>}
           </>
         )}
       </div>

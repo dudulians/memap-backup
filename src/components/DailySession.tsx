@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { RED_FLAG_IDS } from "@/lib/bodyTemplates";
 import { templateIdOf } from "@/lib/answerPhrases";
-import { followUpNotNeeded } from "@/lib/pathSteps";
+import { followUpNotNeeded, pathModel } from "@/lib/pathSteps";
 import { RedFlagsSheet } from "./RedFlagsSheet";
 import { SupportSheet } from "./SupportSheet";
 import { MOOD_SUPPORT_IDS } from "@/lib/supportLines";
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
 import { LIFE_STREAMS, LifeStreamTemplate } from "@/lib/lifeStreams";
 import { getRelatedQuestions, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
-import { getTrackers, saveTrackers } from "@/lib/storage";
+import { getEntries, getTrackers, saveTrackers } from "@/lib/storage";
 import { uuid } from "@/lib/uuid";
 import { playSwipeSound, preloadSounds } from "@/lib/feedback";
 import { haptics } from "@/lib/haptics";
@@ -416,6 +416,20 @@ export const DailySession = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right" | "down" | null>(null);
   const [completed, setCompleted] = useState(false);
+  // The step that finished a week says so (QA, Nov 8 2026: the 7th evening said only "your next step is
+  // waiting"): read fresh from storage, since today's answers may not be in the props yet.
+  const [weekDone, setWeekDone] = useState<number | null>(null);
+  useEffect(() => {
+    if (!completed) return;
+    let live = true;
+    // only the step that completed it: the week wasn't complete before this step's answers
+    const before = pathModel(trackers, entries).weekComplete;
+    void Promise.all([getTrackers(), getEntries()]).then(([trs, ens]) => {
+      const pm = pathModel(trs, ens);
+      if (live && !before && pm.weekComplete) setWeekDone(pm.week);
+    }).catch(() => { /* the plain line stays */ });
+    return () => { live = false; };
+  }, [completed]); // eslint-disable-line react-hooks/exhaustive-deps
   // Fire one success haptic + one analytics event when the round
   // transitions to "done", no matter which path triggered it (last
   // answer, last skip, disable-recs). Single source of truth for
@@ -806,7 +820,7 @@ export const DailySession = ({
         </span>
         <p className="mt-6 text-[28px] font-bold tracking-tight">{t("path.stepDone")}</p>
         <p className="mt-1 text-[17px] font-medium text-muted-foreground">
-          {t("path.stepSaved", { count: answeredCount })}
+          {weekDone !== null ? t(weekDone === 0 ? "path.weekSaved" : "path.weekSavedN", { n: weekDone + 1 }) : t("path.stepSaved", { count: answeredCount })}
         </p>
         <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("path.continue")}
@@ -1320,12 +1334,15 @@ export const DailySession = ({
           // which days already have answers: a gold dot; a missed one: an empty ring
           const ids = new Set(trackers.filter((tr) => !tr.archived).map((tr) => tr.id));
           const answered = new Set(entries.filter((e) => ids.has(e.trackerId)).map((e) => e.date));
+          // no days before her first one (QA, Nov 8 2026: day 1 showed five empty days before she started)
+          const firstDay = [...answered, getDoorState()?.startedAt ?? todayStr, selectedDate].filter(Boolean).sort()[0];
           const days = Array.from({ length: 7 }, (_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - (6 - i));
             const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
             return { iso, dayNum: d.getDate(), date: d };
-          });
+          }).filter((x) => x.iso >= firstDay);
+          if (days.length < 2) return null;
           return (
             <div className="flex items-center justify-between gap-1">
               {days.map(({ iso, dayNum, date }) => {

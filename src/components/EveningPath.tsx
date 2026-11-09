@@ -283,7 +283,7 @@ export const EveningPath = ({
   };
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
-    if (s.kind === "grew") return t("path.grew", { name: islandName(t, s.island!) });
+    if (s.kind === "grew") return (s.grew?.length ?? 1) > 1 ? t("path.grewMany") : t("path.grew", { name: islandName(t, s.island!) });
     if (s.kind === "fill") return s.onPath ? t("path.fillYesterday") : t("path.fillTitle", { day: weekdayName(s.date!) });
     if (s.kind === "game") return t("hunch.step");
     if (s.kind === "act") return t("act.step");
@@ -303,8 +303,8 @@ export const EveningPath = ({
   /** A step's own calm colour: its island, else what kind of step it is. */
   const hueOf = (s: Step): string => {
     if ((s.kind === "questions" || s.kind === "grew") && s.island) return islandHsl(s.island);
-    // a task: rose (gold is for what's done)
-    if (s.kind === "task") return "350 60% 66%";
+    // a task: mauve, not rose (rose means a hard day; QA re-check, Nov 9 2026); gold is for what's done
+    if (s.kind === "task") return "300 30% 62%";
     if (s.kind === "game") return "262 40% 64%";
     if (s.kind === "act") return "16 72% 62%";
     if (s.kind === "test") return "152 36% 46%";
@@ -354,7 +354,7 @@ export const EveningPath = ({
     if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
     const left = s.trackerIds.length - s.answered;
     if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
-    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("hunch.go") };
+    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("game.play") };
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
     if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: t("game.play") };
@@ -397,7 +397,7 @@ export const EveningPath = ({
   const [grewNow, setGrewNow] = useState<IslandId | null>(null);
   useEffect(() => {
     const today = isoDay(new Date());
-    const grew = m.steps.filter((s) => s.kind === "grew");
+    const grew = m.steps.filter((s) => s.kind === "grew").flatMap((s) => s.grew ?? [{ island: s.island!, stage: s.stage ?? 0 }]);
     let seen: string[] = [];
     try { seen = JSON.parse(localStorage.getItem("memap_grew_seen") || "[]"); } catch { /* shows again, harmless */ }
     const fresh = grew.find((s) => !seen.includes(`${today}:${s.island}:${s.stage}`));
@@ -497,7 +497,8 @@ export const EveningPath = ({
       const lim = mid.current - 120;
       // "down" only once the Start bubble over her step (about 90px above it) has gone behind the
       // tabs: the button covered a bubble still in sight (her phone test, Nov 7 2026)
-      const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd - 90 > mid.current - 110 ? "down" : null;
+      // and only once her step itself is below the screen (QA re-check, Nov 9 2026: the pill still covered "Start")
+      const nowAway = Number.isNaN(fd) ? null : fd < -lim ? "up" : fd > mid.current - 20 ? "down" : null;
       if (nowAway !== awayRef.current) { awayRef.current = nowAway; setAway(nowAway); }
     };
     frameRef.current = frame;
@@ -677,6 +678,22 @@ export const EveningPath = ({
       {button(t("path.seeGrow"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-grow-moment", { detail: { island, stage: stageOf(evenings.get(island) ?? 0) } })); })}
     </>
   );
+  // several islands grew the same evening: one card, a row each
+  const grewManyBody = (list: { island: IslandId }[]) => (
+    <>
+      <p className="text-[20px] font-bold leading-snug">{t("path.grewMany")}</p>
+      {list.map(({ island }) => (
+        <button key={island} type="button" onClick={() => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-grow-moment", { detail: { island, stage: stageOf(evenings.get(island) ?? 0) } })); }}
+          className="mt-2 flex w-full items-center gap-3 text-left">
+          {islandPic(island, 56)}
+          <span className="min-w-0">
+            <span className="block text-[17px] font-bold leading-tight">{islandName(t, island)}</span>
+            <span className="block text-[14px] font-semibold text-muted-foreground">{stageLine(island)}</span>
+          </span>
+        </button>
+      ))}
+    </>
+  );
 
   /** Treasures that come with evenings: tomorrow brings the next dot. */
   const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
@@ -718,7 +735,11 @@ export const EveningPath = ({
         </>
       );
     }
-    if (n.kind === "future") return head(n.offset === 1 ? t("path.opensTomorrow") : t("path.inDays", { count: n.offset }));
+    // whole sentences, the day by name (QA, Nov 8 2026: "Tomorrow's questions open tomorrow", "In 2 days")
+    if (n.kind === "future") {
+      const d = new Date(); d.setDate(d.getDate() + n.offset);
+      return head(dayTitle(isoDay(d)), n.offset === 1 ? t("path.opensTomorrow") : t("path.opensIn", { count: n.offset }));
+    }
     if (n.kind === "chest") {
       return m.weekComplete ? (
         <>
@@ -751,7 +772,7 @@ export const EveningPath = ({
       );
     }
     const s = n.step;
-    if (s.kind === "grew") return grewBody(s.island!);
+    if (s.kind === "grew") return (s.grew?.length ?? 1) > 1 ? grewManyBody(s.grew!) : grewBody(s.island!);
     if (s.kind === "auto") {
       const door = getDoorState();
       return head(s.auto === "topic" ? t("path.auto.topicBubble", { name: door ? t(`doors.${door.id}.name`) : "" }) : t("path.auto.firstBubble"));
@@ -940,7 +961,7 @@ export const EveningPath = ({
       {headerTitle && createPortal(
         <span className="animate-fade-in whitespace-nowrap text-[16px] font-bold leading-[1.5] tracking-tight text-foreground">
           {t("path.weekN", { n: m.week + 1 })}
-          <span className="font-semibold tabular-nums text-muted-foreground"> · {daysDone}/{DAYS_PER_WEEK}</span>
+          <span className="font-semibold tabular-nums text-muted-foreground"> · {t("path.kOf7", { k: daysDone, count: DAYS_PER_WEEK })}</span>
         </span>,
         headerTitle,
       )}

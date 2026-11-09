@@ -34,6 +34,20 @@ export const ideaOf = (text: string): string | null => {
 
 /** A test's name (her plan) in today's language; her own words stay hers. A weekly goal, also in
  *  its old words ("Внести 3 тренировки в календарь на эту неделю"), is "3 workouts a week". */
+/** Ideas she is already doing: a test running now, or one she kept going (QA, Nov 8 2026: the picker
+ *  and "Not for me" offered "Go to bed by 23:00" on day 5 of that very test). */
+export const busyIdeas = (): Set<string> =>
+  new Set(getExperiments().filter((x) => !x.reviewed || x.kept).map((x) => ideaOf(x.change)).filter((k): k is string => !!k));
+
+/** "21:30" said the way the phone's time field shows it (QA, Nov 8 2026: the row said 21:30, the sheet
+ *  09:30 PM): 12-hour in English, 24-hour in Russian. */
+export const clockTime = (hhmm: string): string => {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  if (i18n.language?.startsWith("ru")) return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
+};
+
 /** A test name in quotes of the language: «…» in Russian, “…” in English. */
 export const quotedTestName = (change: string): string => { const n = testNameOf(change); return i18n.language?.startsWith("ru") ? `«${n}»` : `“${n}”`; };
 export const testNameOf = (change: string): string => {
@@ -51,7 +65,22 @@ export const testQuestionOf = (change: string): string => {
   if (k) return i18n.t(`experiment.idea.${k}.q`);
   const g = goalTemplateOf(change), tpl = g ? TEMPLATES.get(g) : undefined;
   if (tpl) return templateQuestion(tpl);
-  return i18n.t("experiment.planQ", { plan: testNameOf(change) });
+  return planAsQuestion(testNameOf(change));
+};
+
+/** A plan that starts with a verb reads as a plain question (QA, Nov 8 2026: "Did you do this: “Write 3
+ *  lines before bed”?" read like a robot): EN "Did you write 3 lines before bed?", RU «Получилось писать
+ *  3 строчки перед сном?». Anything else keeps the quoted form. */
+const planAsQuestion = (plan: string): string => {
+  const p = plan.trim().replace(/[.!?]+$/, "");
+  const first = p.split(/\s+/)[0] ?? "";
+  const lower = p.charAt(0).toLocaleLowerCase() + p.slice(1);
+  if (i18n.language?.startsWith("ru")) {
+    if (/^[А-ЯЁа-яё]+(ть|ться|ти|тись|чь|чься)$/.test(first)) return `Получилось ${lower}?`;
+  } else if (/^[A-Za-z]+$/.test(first) && !/^(no|not|less|more|a|an|the|only|without|never|one|two|three|every|each|my|your|some|any|at|in|on|by|for|before|after)$/i.test(first) && !/(ing|ed|s)$/i.test(first)) {
+    return `Did you ${lower}?`;
+  }
+  return i18n.t("experiment.planQ", { plan: p });
 };
 
 /** Today's step for a test's push (her note, Nov 8 2026: not the plan, but "не забудь

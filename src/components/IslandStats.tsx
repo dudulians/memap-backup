@@ -18,7 +18,7 @@ import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
-import { BarChart3, CalendarDays, FlaskConical } from "lucide-react";
+import { BarChart3, CalendarDays, FlaskConical, ChevronRight } from "lucide-react";
 import { GROWTH_AT, ITEMS, growthLand, homeWord, itemProgress, keptTreasures, markTreasuresSeen, owned, unseenTreasures, type GrowthKind, type ItemId, type PlacedTreasure, type WorldFacts } from "@/lib/growth";
 import { playSparkle } from "@/lib/feedback";
 import { useEffect, useState } from "react";
@@ -27,7 +27,7 @@ import { experimentDay, EXPERIMENT_DAYS, runningExperiments } from "@/lib/experi
 import { testNameOf } from "@/lib/testWords";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
-import { weekRange } from "@/lib/weekRange";
+import { last7Range } from "@/lib/weekRange";
 
 const WEATHER_PIC = { storm: "thunder_cloud", clouds: "partly_cloudy", sun: "sun" } as const;
 
@@ -46,12 +46,15 @@ const useTitles = (trackers: Tracker[]) => (id: string) => {
 const LinkLine = ({ r, of }: { r: Route; of: TrackerOf }) => {
   const { t } = useTranslation();
   return (
-    <div className="surface rounded-[20px] px-4 py-3">
-      <p className="text-[16px] font-bold leading-snug">
-        {linkSentence(t, r, of)}
-      </p>
-      <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{linkOther(t, r)}</p>
-    </div>
+    // it looks like a card, so it opens the link's own card (QA, Nov 8 2026: the tiles didn't open)
+    <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-link", { detail: { a: r.a, b: r.b } })); }}
+      className="surface flex w-full items-center gap-2 rounded-[20px] px-4 py-3 text-left active:scale-[0.99] transition-transform">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[16px] font-bold leading-snug">{linkSentence(t, r, of)}</span>
+        <span className="mt-0.5 block text-[14px] font-medium text-muted-foreground">{linkOther(t, r)}</span>
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+    </button>
   );
 };
 
@@ -114,10 +117,11 @@ export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tra
   const early = island.answeredDays < 3;
   const line = early
     ? t("isle.early")
-    : t("isle.hardWeek", { count: island.weekHard, n: island.weekAnswered, range: weekRange(i18n.language ?? "en") });
+    : t("isle.hardWeek", { count: island.weekHard, n: island.weekAnswered, range: last7Range(i18n.language ?? "en") });
   return (
     <div className="px-1 pb-1">
-      <div className="flex items-center gap-3">
+      {/* "too early" sits in its own card, not between two (QA, Nov 8 2026) */}
+      <div className={cn("flex items-center gap-3", early && "surface rounded-[18px] px-4 py-3")}>
         {island.weather && !early && (
           <img src={mapPic(WEATHER_PIC[island.weather])} alt="" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
         )}
@@ -191,7 +195,7 @@ export const IslandMore = ({ island, routes, trackers, growth = [], days = 0, on
             <div key={o.id} className="flex items-center gap-3 rounded-[20px] border-2 border-dashed border-foreground/15 px-4 py-3">
               <img src={mapPic("icon_" + o.def.icon)} alt="" width={28} height={28} />
               <p className="min-w-0 text-[15px] font-semibold leading-snug">
-                {islandName(t, island.id)} ↔ {islandName(t, o.id)}? <span className="font-medium text-muted-foreground">{t(both >= 21 ? "map.noLinkYet" : "map.checking")}</span>
+                {t(both >= 21 ? "map.noLinkBetween" : "map.checkingBetween", { a: islandName(t, island.id), b: islandName(t, o.id) })}
               </p>
             </div>
           ))}
@@ -241,7 +245,7 @@ export const IslandTreasures = ({ placed, facts, onAll }: { placed?: PlacedTreas
                 {p.ghost && <span className="rounded-full bg-foreground/[0.07] px-2 py-0.5 text-[12px] font-bold text-muted-foreground">{t("items.next")}</span>}
               </span>
               <span className="block text-[14px] font-medium leading-snug text-muted-foreground">
-                {p.ghost ? t("items.toGet", { how: t(`items.${p.id}.how`), k, count: n }) : t("items.got", { how: t(`items.${p.id}.how`), date: when(kept[p.id]) })}
+                {p.ghost ? t("items.toGet", { how: t(`items.${p.id}.how`), k, count: n }) : kept[p.id] && kept[p.id] !== "-" ? t("items.got", { how: t(`items.${p.id}.how`), date: when(kept[p.id]) }) : t(`items.${p.id}.how`)}
               </span>
             </span>
           </div>
@@ -260,7 +264,8 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
   const chests = Object.keys(getChests()).length;
   // Monday to Sunday of this calendar week, and the days since the first answer
   const today = isoLocal(new Date());
-  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + i); return isoLocal(d); });
+  // the last 7 days, today last: the same days as the weather and the island sheets (QA re-check, Nov 9 2026)
+  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return isoLocal(d); });
   const { i18n } = useTranslation();
   const dayLetter = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { weekday: "short" }).slice(0, 2);
   const first = entries.reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
@@ -302,8 +307,8 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
       )}
       {/* the calendar week, since Monday, the same "this week" as the island sheets (her note 5,
           Nov 8 2026); days are dots, coloured by meaning: hard rose, good green */}
-      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisCalWeek", { range: weekRange(i18n.language ?? "en") })}</p>
-      {withUs > 0 && <p className="-mt-1 text-[15px] font-bold leading-snug">{t("map.withUs", { count: withUs })}</p>}
+      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisCalWeek", { range: last7Range(i18n.language ?? "en") })}</p>
+      {withUs > 0 && <p className="-mt-1 text-[15px] font-bold leading-snug">{t("map.withUs", { count: withUs, date: new Date(first + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { month: "long", day: "numeric" }) })}</p>}
       <div className="surface space-y-3 rounded-[20px] px-4 py-3.5">
         <div className="flex items-center gap-3" aria-hidden="true">
           <span className="w-[30px] shrink-0" />

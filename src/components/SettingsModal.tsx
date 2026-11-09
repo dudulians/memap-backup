@@ -117,6 +117,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings());
   const [sessionSettings, setSessionSettings] = useState(getSessionSettings());
   const [avatarOpen, setAvatarOpen] = useState(false);
+  // one tap switched the whole app (QA, Nov 8 2026): ask first, in place
+  const [askOld, setAskOld] = useState(false);
   const [avatarId, setAvatarId] = useState<string | null>(getAvatar());
   useEffect(() => {
     const sync = () => setAvatarId(getAvatar());
@@ -751,7 +753,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         className="h-[80vh] p-0 flex flex-col"
         ariaTitle={t("settings.title")}
       >
-        <div className="px-5 pt-3 pb-3 border-b border-border/40 flex-shrink-0 flex items-center gap-2 min-h-[3rem]">
+        <div className="px-5 pt-3 pb-3 flex-shrink-0 flex items-center gap-2 min-h-[3rem]">
           {screen !== "main" && (
             <button
               type="button"
@@ -899,11 +901,21 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         {/* Back to the old screens, right here (her note, Nov 6 2026: ads bring
                             people to the old version; whoever tries the new one and doesn't
                             like it must find the way back without digging into "More"). */}
-                        <button type="button" onClick={switchToOld} className={cn(row, "active:bg-muted/60 transition-colors")}>
-                          <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                          <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
-                        </button>
+                        {askOld ? (
+                          <div className="px-4 py-3">
+                            <p className="text-[16px] font-semibold leading-snug">{t("upgrade.oldAsk")}</p>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              <button type="button" onClick={() => setAskOld(false)} className="h-11 rounded-full bg-foreground/[0.06] text-[15px] font-bold">{t("upgrade.oldStay")}</button>
+                              <button type="button" onClick={switchToOld} className="raised-btn is-small h-11 justify-center">{t("upgrade.oldGo")}</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setAskOld(true)} className={cn(row, "active:bg-muted/60 transition-colors")}>
+                            <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                            <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                          </button>
+                        )}
                       </div>
                     </>
                   );

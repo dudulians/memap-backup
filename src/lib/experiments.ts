@@ -6,7 +6,7 @@
 // that island (src/lib/growth.ts). Stored on the phone like everything else.
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, saveTrackers } from "@/lib/storage";
-import { isoLocal } from "@/lib/doors";
+import { getDoorState, isoLocal } from "@/lib/doors";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf } from "@/lib/islands";
 import { track } from "@/lib/analytics";
 
@@ -232,15 +232,18 @@ export interface ExperimentResult {
  *  days with it, more, or about the same; when one side is too small (every day "yes"), the two weeks
  *  during against the two before; too few days either way. Never a promise. */
 export type Verdict = "few" | "better" | "worse" | "same" | "betterBefore" | "worseBefore" | "sameBefore";
+/** Days needed on each side before saying anything (QA re-check, Nov 9 2026: "Maybe this one isn't for
+ *  you" came from 3 days without it). */
+export const MIN_SIDE = 5;
 export const verdictOf = (r: ExperimentResult): Verdict => {
   const cmp = ([a, b]: [number, number], [c, d]: [number, number]) => { const diff = a / b - c / d; return diff <= -0.15 ? "better" : diff >= 0.15 ? "worse" : "same"; };
-  if (r.withChange[1] >= 3 && r.without[1] >= 3) return cmp(r.withChange, r.without);
-  if (r.during[1] >= 3 && r.before[1] >= 3) return `${cmp(r.during, r.before)}Before` as Verdict;
+  if (r.withChange[1] >= MIN_SIDE && r.without[1] >= MIN_SIDE) return cmp(r.withChange, r.without);
+  if (r.during[1] >= MIN_SIDE && r.before[1] >= MIN_SIDE) return `${cmp(r.during, r.before)}Before` as Verdict;
   return "few";
 };
 /** Compare the two sides inside the test (days with it and without), or else during and before. */
 export const comparedBy = (r: ExperimentResult): "with" | "before" | null =>
-  r.withChange[1] >= 3 && r.without[1] >= 3 ? "with" : r.during[1] >= 3 && r.before[1] >= 3 ? "before" : null;
+  r.withChange[1] >= MIN_SIDE && r.without[1] >= MIN_SIDE ? "with" : r.during[1] >= MIN_SIDE && r.before[1] >= MIN_SIDE ? "before" : null;
 
 /** How the island's hard days went on days with the change and without (and before it began). */
 export const experimentResult = (x: Experiment, trackers: Tracker[], entries: TrackerEntry[]): ExperimentResult => {
@@ -257,13 +260,28 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
   const own = new Map(trackers.filter((t) => !t.archived && !isTestQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island).map((t) => [t.id, t]));
   const did = new Map<string, boolean>();
   for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date)) did.set(e.date, e.value === true);
-  const hard = new Set(entries.filter((e) => days.has(e.date) && own.has(e.trackerId) && isHardAnswer(own.get(e.trackerId)!, e.value)).map((e) => e.date));
+  // a hard day by the islands' rule (QA re-check, Nov 9 2026: one hard answer made the day hard here while
+  // the island counted half): her topic's question hard, or at least half of that day's answers hard
+  const door = getDoorState(), lead = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((y) => y.trackerId)] : []);
+  const hardDaysIn = (set: Set<string>) => {
+    const per = new Map<string, { a: number; h: number; main: boolean }>();
+    for (const e of entries) {
+      const t = set.has(e.date) ? own.get(e.trackerId) : undefined;
+      if (!t || isNeutralQuestion(t)) continue;
+      const d = per.get(e.date) ?? { a: 0, h: 0, main: false };
+      d.a++;
+      if (isHardAnswer(t, e.value)) { d.h++; if (lead.has(t.id)) d.main = true; }
+      per.set(e.date, d);
+    }
+    return new Set([...per].filter(([, d]) => d.main || (d.a > 0 && d.h * 2 >= d.a)).map(([date]) => date));
+  };
+  const hard = hardDaysIn(days);
   const answeredHard = new Set(entries.filter((e) => days.has(e.date) && own.has(e.trackerId)).map((e) => e.date));
   const withDays = [...did.entries()].filter(([d, v]) => v && answeredHard.has(d)).map(([d]) => d);
   const withoutDays = [...did.entries()].filter(([d, v]) => !v && answeredHard.has(d)).map(([d]) => d);
   // the two weeks before, the same island's questions
   const beforeAnswered = new Set(entries.filter((e) => beforeDays.has(e.date) && own.has(e.trackerId)).map((e) => e.date));
-  const beforeHard = new Set(entries.filter((e) => beforeDays.has(e.date) && own.has(e.trackerId) && isHardAnswer(own.get(e.trackerId)!, e.value)).map((e) => e.date));
+  const beforeHard = hardDaysIn(beforeDays);
   const r: ExperimentResult = {
     answered: did.size,
     did: [...did.values()].filter(Boolean).length,
@@ -286,7 +304,7 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
       const es = entries.filter((e) => e.trackerId === t.id);
       const side = (set: Set<string>): [number, number] => { const on = es.filter((e) => set.has(e.date)); return [on.filter((e) => isHardAnswer(t, e.value)).length, on.length]; };
       const a = side(setA), b = side(setB);
-      if (a[1] < 3 || b[1] < 3) continue;
+      if (a[1] < MIN_SIDE || b[1] < MIN_SIDE) continue;
       const diff = Math.abs(a[0] / a[1] - b[0] / b[1]);
       if (diff >= bestDiff) { bestDiff = diff; best = { trackerId: t.id, hardYes: t.problemWhen === "yes", by, a, b }; }
     }

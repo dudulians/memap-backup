@@ -197,11 +197,13 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own,
   // closed at first; an island with a pick stays open (her note: "все списки будут раскрываться?")
   const [opened, setOpened] = useState<IslandId[]>(() => groups.filter((g) => g.ids.some((id) => (initial ?? []).includes(id))).map((g) => g.island));
   const [full, setFull] = useState(false);
+  // a 4th pick shakes the chip itself (QA, Nov 8 2026: only the subtitle changed colour)
+  const [shake, setShake] = useState<DoorId | null>(null);
   const name = (id: DoorId) => t(id === "energy" && tone === "bother" ? "onb7.lowEnergy" : `doors.${id}.name`);
   const room = MAX_TOPICS - (own ? 1 : 0);
   const toggle = (id: DoorId) => {
     if (sel.includes(id)) { setSel((s) => s.filter((x) => x !== id)); setFull(false); return; }
-    if (sel.length >= room) { setFull(true); haptics.warning?.(); return; }
+    if (sel.length >= room) { setFull(true); haptics.warning?.(); setShake(id); window.setTimeout(() => setShake(null), 450); return; }
     setSel((s) => [...s, id]);
   };
   const on = (id: DoorId) => sel.includes(id);
@@ -237,7 +239,7 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own,
                 <div className="flex flex-wrap gap-2 pb-3.5 animate-fade-in">
                   {g.ids.map((id) => (
                     <button key={id} type="button" onClick={() => { haptics.tap(); toggle(id); }} aria-pressed={on(id)} data-onb-interactive
-                      className={cn("inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[16px] font-bold", on(id) ? "pick-on bg-card" : "bg-foreground/[0.05]")}>
+                      className={cn("inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[16px] font-bold", on(id) ? "pick-on bg-card" : "bg-foreground/[0.05]", shake === id && "path-wiggle-flat")}>
                       {on(id) && <Check className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={3} />}{name(id)}
                     </button>
                   ))}
@@ -378,7 +380,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone, progress = [2, 5] }: { pick:
               <div className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
                   <i className={cn("block h-2.5 w-2.5 shrink-0 rounded-full", neutral ? "bg-[hsl(var(--data-a))]" : "bg-[hsl(var(--coin-teal))]")} />
-                  <span className="truncate">{m.tpl ? isl(m.tpl) : islandName(t, "mine" as IslandId)} · {t("onb7.qMain")}</span>
+                  {/* whole words, never cut (QA, Nov 8 2026: «НАСТРОЕНИЕ · ГЛАВНЫЙ ВОП…») */}<span className="min-w-0 leading-tight">{m.tpl ? isl(m.tpl) : islandName(t, "mine" as IslandId)} · {t("onb7.qMain")}</span>
                 </span>
                 {editing !== i && <button type="button" onClick={() => { haptics.tap(); setEditing(i); }} data-onb-interactive className="flex shrink-0 items-center gap-1 text-[14px] font-bold text-[hsl(var(--coin-teal))]"><Pencil className="h-3.5 w-3.5" strokeWidth={2.6} />{t("onb7.qEdit")}</button>}
               </div>
@@ -399,7 +401,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone, progress = [2, 5] }: { pick:
       <div className="mt-2 flex flex-col gap-2">
         {aroundTpls.map((id) => (
           <Row key={id} on={on.has(id)} onClick={() => toggle(id)} className="text-[16px]"
-            icon={<span className="w-[64px] shrink-0 truncate text-[11px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{isl(id)}</span>}>{qOf(id)}</Row>
+            >{/* the island on its own small line above, never cut (QA, Nov 8 2026: "MIND & M…") */}<span className="block text-[11px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{isl(id)}</span>{qOf(id)}</Row>
         ))}
         {own.map((q, i) => (
           <Row key={`own${i}`} on onClick={() => setOwn((o) => o.filter((_, k) => k !== i))} className="text-[16px]"

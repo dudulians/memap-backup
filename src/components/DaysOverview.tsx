@@ -15,8 +15,7 @@ import { litTrackers } from "@/lib/lighthouses";
 import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
 import { Spline, Sprout } from "lucide-react";
-import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments } from "@/lib/experiments";
-import { testNameOf } from "@/lib/testWords";
+import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments, runningExperiments } from "@/lib/experiments";
 import { cn } from "@/lib/utils";
 import { smooth } from "./ChartViews";
 
@@ -130,11 +129,14 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
     return dayLook(isoLocal(d));
   }), [dayLook]);
   const test = currentExperiment();
+  const running = runningExperiments();
   const tried = finishedExperiments().length;
+  // the test that ends first: how many days it has left
+  const endsIn = running.length ? Math.min(...running.map((x) => Math.max(0, EXPERIMENT_DAYS - experimentDay(x) + 1))) : 0;
   const card = "surface flex min-w-0 flex-1 flex-col items-start rounded-[16px] px-2 pb-2 pt-1.5 text-left active:scale-[0.97] transition-transform";
   const open = (s: "overview" | "trends" | "signals" | "findings") => { haptics.tap(); onOpen(s); };
   const head = (k: string) => <span className="line-clamp-2 min-h-[30px] text-[12.5px] font-bold leading-[1.2]">{t(k)}</span>;
-  const sub = (s: string) => <span className="mt-0.5 line-clamp-2 w-full break-words text-[11px] font-semibold leading-[1.2] text-muted-foreground">{s}</span>;
+  const sub = (s: string) => <span className="mt-0.5 line-clamp-3 w-full text-[11px] font-semibold leading-[1.2] text-muted-foreground [hyphens:auto]">{s}</span>;
 
   return (
     <div className="flex gap-1.5 px-4">
@@ -155,22 +157,23 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
           <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links > 0 ? links : null}
         </span>
-        {sub(links > 0 ? t("world4.found") : t("world4.soon"))}
+        {/* whole words, no "0 · …" or "12 found" (QA, Nov 8 2026) */}
+        {sub(links > 0 ? t("world4.found", { count: links }) : t("world4.soon"))}
       </button>
       <button type="button" className={card} onClick={() => open("signals")} data-tour="actions">
         {head("world4.whenToAct")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
-          <img src={mapPic("lighthouse")} alt="" width={14} height={18} className={lit > 0 ? "drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" : "opacity-60 grayscale"} />{lit > 0 || !shaping ? lit : null}
+          <img src={mapPic("lighthouse")} alt="" width={14} height={18} className={lit > 0 ? "drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" : "opacity-60 grayscale"} />{lit > 0 ? lit : null}
         </span>
-        {sub(lit === 0 && shaping ? t("world4.shaping") : t("world4.ofRules", { count: rules }))}
+        {sub(lit > 0 ? t("world4.needYou", { count: lit }) : shaping ? t("world4.shaping") : rules > 0 ? t("world4.noneYet") : t("world4.setRule"))}
       </button>
       <button type="button" className={card} onClick={() => { haptics.tap(); onHelps?.(); }} data-tour="helps">
         {head("world4.whatHelps")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[15px] font-bold tabular-nums">
           <Sprout className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
-          {test ? `${Math.min(experimentDay(test), EXPERIMENT_DAYS)}/${EXPERIMENT_DAYS}` : tried > 0 ? tried : null}
+          {running.length > 1 ? running.length : test ? null : tried > 0 ? tried : null}
         </span>
-        {sub(test ? testNameOf(test.change) : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
+        {sub(running.length > 1 ? t("world4.nextEnds", { count: endsIn }) : test ? t("world4.testDay", { k: Math.min(experimentDay(test), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
       </button>
     </div>
   );

@@ -18,6 +18,7 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
 import { isNeutralQuestion } from "@/lib/islands";
 import { getDoorState } from "@/lib/doors";
+import { answerPhrase, cap } from "@/lib/answerPhrases";
 
 interface OverviewCardProps {
   trackers: Tracker[];
@@ -179,8 +180,12 @@ export const OverviewCard = ({
   // Year view: the last 12 months as small squares, oldest first.
   const yearData = useMemo(() => {
     if (!activeTracker) return [];
-    return Array.from({ length: 12 }, (_, k) => {
-      const monthDate = subMonths(today, 11 - k);
+    // from her first answered month, at most 12 (QA, Nov 8 2026: it opened on 9 empty months)
+    const firstIso = [...entryMap.keys()].sort()[0];
+    const first = firstIso ? new Date(firstIso + "T12:00:00") : today;
+    const span = Math.max(1, Math.min(12, (getYear(today) - getYear(first)) * 12 + today.getMonth() - first.getMonth() + 1));
+    return Array.from({ length: span }, (_, k) => {
+      const monthDate = subMonths(today, span - 1 - k);
       const calStart = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
       const calEnd = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
       const days: { dateStr: string; show: boolean; status: "balanced" | "significant" | "untracked" }[] = [];
@@ -295,12 +300,12 @@ export const OverviewCard = ({
 
   if (!activeTracker) return null;
 
-  const doorId = doorOf.get(activeTracker.id);
-  const countLabel = doorId
-    ? t(`doors.${doorId}.noun`, { count: monthCount })
-    : activeTracker.problemWhen === "yes"
-      ? t("overview.daysYes", { count: monthCount })
-      : t("overview.daysNo", { count: monthCount });
+  // "2 days" and what they were, in the answer's own words (QA, Nov 8 2026: "2 migraines" over a headache
+  // question, "14 days with Yes")
+  const countLabel = t("overview.daysN", { count: monthCount });
+  const countWhat = cap(answerPhrase(t, activeTracker, neutral || activeTracker.problemWhen === "yes"));
+  const yesWord = cap(answerPhrase(t, activeTracker, activeTracker.problemWhen === "yes"));
+  const noWord = cap(answerPhrase(t, activeTracker, activeTracker.problemWhen !== "yes"));
   const monthTitle = (() => {
     const s = format(displayMonth, "LLLL yyyy", { locale: dateLocale });
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -395,8 +400,8 @@ export const OverviewCard = ({
             ))}
           </div>
           <div className="mt-4 flex items-center justify-center gap-5 text-[15px] text-muted-foreground">
-            <span className="flex items-center gap-2"><span className={cn("h-3 w-3 rounded-full", neutral ? "bg-[hsl(var(--data-a))]" : "bg-strong")} />{neutral ? t("common.yes") : t("overview.significant")}</span>
-            <span className="flex items-center gap-2"><span className={cn("h-3 w-3 rounded-full", neutral ? "bg-[hsl(var(--data-a)/0.22)]" : "bg-balanced/60")} />{neutral ? t("common.no") : t("overview.balanced")}</span>
+            <span className="flex items-center gap-2"><span className={cn("h-3 w-3 rounded-full", neutral ? "bg-[hsl(var(--data-a))]" : "bg-strong")} />{neutral ? t("common.yes") : yesWord}</span>
+            <span className="flex items-center gap-2"><span className={cn("h-3 w-3 rounded-full", neutral ? "bg-[hsl(var(--data-a)/0.22)]" : "bg-balanced/60")} />{neutral ? t("common.no") : noWord}</span>
           </div>
         </div>
       )}
@@ -428,11 +433,12 @@ export const OverviewCard = ({
           <span className="text-[56px] leading-none font-bold tracking-tight tabular-nums">{monthCount}</span>
           <span className="text-xl font-semibold">{countLabel}</span>
         </p>
+        <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{countWhat}</p>
 
         <div className="mt-5 grid grid-cols-7">
           {Array.from({ length: 7 }, (_, i) => (
             <span key={i} className="text-center text-[13px] font-semibold uppercase text-muted-foreground">
-              {format(addDays(MONDAY, i), "EEEEE", { locale: dateLocale })}
+              {/* RU two letters: «В» and «С» were each two days (QA, Nov 8 2026) */}{format(addDays(MONDAY, i), dateLocale ? "EEEEEE" : "EEEEE", { locale: dateLocale })}
             </span>
           ))}
         </div>
@@ -462,7 +468,8 @@ export const OverviewCard = ({
                       <Check className="h-3 w-3" strokeWidth={3.5} />
                     </span>
                   )}
-                  {noteDatesSet.has(day.dateStr) && (
+                  {/* the tick wins while picking: the note mark hid it (QA, Nov 8 2026) */}
+                  {noteDatesSet.has(day.dateStr) && !(multi && picked.has(day.dateStr)) && (
                     <span aria-hidden="true" className="absolute -right-1.5 -top-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm"><FileText className="h-[11px] w-[11px]" strokeWidth={2.6} /></span>
                   )}
                 </button>
@@ -506,7 +513,8 @@ export const OverviewCard = ({
                 <button type="button" onClick={() => answerPicked(false)} className="quiet-btn h-[50px] text-[17px]">
                   {t("common.no")}
                 </button>
-                <button type="button" onClick={() => answerPicked(true)} className="raised-btn is-small justify-center">
+                {/* both plain: a teal "Yes" read as "good" on a hard question (QA, Nov 8 2026) */}
+                <button type="button" onClick={() => answerPicked(true)} className="quiet-btn h-[50px] text-[17px]">
                   {t("common.yes")}
                 </button>
               </div>

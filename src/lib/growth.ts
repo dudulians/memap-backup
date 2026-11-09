@@ -14,7 +14,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandOf, type Island, type IslandId, type Route } from "@/lib/islands";
 import { countedDays, getChests, unloadDays } from "@/lib/pathSteps";
 import { eveningStreak } from "@/lib/eveningPath";
-import { finishedExperiments, currentExperiment, experimentDay } from "@/lib/experiments";
+import { finishedExperiments, currentExperiment, experimentDay, EXPERIMENT_DAYS } from "@/lib/experiments";
 import { getOwnIslands } from "@/lib/ownIslands";
 import { getHunches } from "@/lib/hunches";
 import { isoLocal } from "@/lib/doors";
@@ -152,7 +152,10 @@ export const syncTreasures = (f: WorldFacts): void => {
   let changed = false;
   const today = isoLocal(new Date());
   const fresh = !!Object.keys(kept).length;
-  for (const it of ITEMS) if (!kept[it.id] && itemEarned(it.id, f)) { kept[it.id] = today; changed = true; if (fresh) track("treasure_earned", { id: it.id }); }
+  // someone updating with weeks of answers earned these before: no date rather than "since today"
+  // (QA, Nov 8 2026: "Easel — First test. Yours since November 8", the test was in September)
+  const when = !fresh && f.days > 7 ? "-" : today;
+  for (const it of ITEMS) if (!kept[it.id] && itemEarned(it.id, f)) { kept[it.id] = when; changed = true; if (fresh) track("treasure_earned", { id: it.id }); }
   if (changed) { try { localStorage.setItem(KEPT, JSON.stringify(kept)); } catch { /* shown, not kept */ } }
 };
 /** She has it: kept, or earned right now. */
@@ -324,16 +327,23 @@ export const gardenTrees = (islands: IslandId[]): Map<IslandId, string[]> => {
 // --- Mission ------------------------------------------------------------------
 
 export type Mission =
+  | { id: "links" }
+  | { id: "linksWait" }
+  | { id: "act" }
   | { id: "test" }
   | { id: "testRunning"; day: number }
   | { id: "newIsland" }
   | { id: "notes"; left: number }
   | { id: "streak"; goal: number };
 
-/** Next week's mission: try a change first, then widen the map, then habits. */
-export const nextMission = (f: WorldFacts, islandsWithDays: number): Mission => {
+/** Next week's mission. The first month follows the four parts (QA, Nov 8 2026: after week 1 the
+ *  report said "Test one change" while Today said "Week 2: Links"): week 2 links, week 3 when to act,
+ *  week 4 a change to try; then widen the map, then habits. A running test comes first. */
+export const nextMission = (f: WorldFacts, islandsWithDays: number, week = 99, linksFound = 0): Mission => {
   const running = currentExperiment();
-  if (running) return { id: "testRunning", day: Math.min(experimentDay(running), 7) };
+  if (running) return { id: "testRunning", day: Math.min(experimentDay(running), EXPERIMENT_DAYS) };
+  if (week === 0) return linksFound > 0 ? { id: "links" } : { id: "linksWait" };
+  if (week === 1) return { id: "act" };
   if (f.tests === 0) return { id: "test" };
   if (islandsWithDays < 3 && f.ownIslands === 0) return { id: "newIsland" };
   if (f.notes < 10) return { id: "notes", left: Math.min(3, 10 - f.notes) };

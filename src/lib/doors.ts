@@ -18,6 +18,7 @@ import {
   localizeTrackerAdviceRaw,
 } from "./trackerLocalize";
 import { uuid } from "./uuid";
+import { matchTemplateIdByTitle } from "./relatedQuestions";
 
 export type DoorId = "fights" | "mood" | "migraine" | "drinking" | "kid" | "sleep"
   // onboarding v2 (Nov 5 2026): "I want more good days"
@@ -123,14 +124,14 @@ export const DOORS: Door[] = [
   // that keeps coming back (her original idea: "правда ли я этого хочу?") — no right answer
   { id: "period", branch: "pain", kind: "event", mainTemplateId: "period-symptoms", contextTemplateIds: ["period-day", "felt-stressed", "slept-enough"], reasons: ["dontKnow"], icon: Droplet, iconClass: "text-[hsl(340_62%_60%)]" },
   { id: "stress", branch: "pain", kind: "event", mainTemplateId: "felt-stressed", contextTemplateIds: ["slept-enough", "worked-overtime", "exercised"], reasons: ["dontKnow"], icon: Wind, iconClass: "text-[hsl(262_48%_62%)]" },
-  { id: "quit", branch: "thought", kind: "event", mainTemplateId: "wanted-leave-job", contextTemplateIds: ["slept-enough", "burned-out-after-work", "argued-with-partner"], reasons: ["dontKnow"], icon: Briefcase, iconClass: "text-[hsl(212_60%_56%)]" },
+  { id: "quit", branch: "thought", kind: "event", mainTemplateId: "wanted-leave-job", contextTemplateIds: ["slept-enough", "burned-out-after-work", "boss-was-difficult"], reasons: ["dontKnow"], icon: Briefcase, iconClass: "text-[hsl(212_60%_56%)]" },
   { id: "move", branch: "thought", kind: "event", mainTemplateId: "thought-about-emigrating", contextTemplateIds: ["slept-enough", "felt-lonely", "burned-out-after-work"], reasons: ["dontKnow"], icon: Plane, iconClass: "text-[hsl(36_86%_52%)]" },
   // "I want more good days" (onboarding v2): the good question is the main one
   ...([
     ["energy", "had-energy", ["slept-enough", "outside-30min", "exercised"], Zap, "text-[hsl(36_86%_52%)]"],
     ["calm", "felt-calm", ["slept-enough", "phone-free-morning", "time-for-myself"], Leaf, "text-[hsl(152_36%_44%)]"],
     ["goodSleep", "slept-enough", ["racing-thoughts-in-bed", "drank-alcohol", "coffee-late"], BedDouble, "text-[hsl(232_62%_62%)]"],
-    ["closeness", "felt-close-to-partner", ["slept-enough", "felt-fatigued", "saw-friends"], HeartHandshake, "text-[hsl(340_62%_60%)]"],
+    ["closeness", "felt-close-to-partner", ["slept-enough", "felt-fatigued", "phones-together"], HeartHandshake, "text-[hsl(340_62%_60%)]"],
     ["focus", "main-thing-done", ["slept-enough", "focus-hour", "phone-free-morning"], Target, "text-[hsl(212_60%_56%)]"],
     ["movement", "exercised", ["slept-enough", "outside-30min", "had-energy"], Footprints, "text-[hsl(16_72%_58%)]"],
     ["joy", "felt-happy", ["saw-friends", "outside-30min", "did-creative-work"], Sparkles, "text-[hsl(290_40%_60%)]"],
@@ -140,18 +141,18 @@ export const DOORS: Door[] = [
   })),
   // Nov 8 2026: more topics, each a library question and three asked around it
   ...([
-    ["headache", "pain", "headache", ["slept-enough", "felt-stressed", "drank-water"]],
+    ["headache", "pain", "headache", ["slept-enough", "felt-stressed", "neck-pain"]],
     ["backPain", "pain", "back-or-neck-pain", ["slept-enough", "stretched", "felt-stressed"]],
     ["stomach", "pain", "stomach-issues", ["ate-late", "felt-stressed", "ate-fast-food"]],
     ["fatigue", "pain", "felt-fatigued", ["slept-enough", "outside-30min", "skipped-meal"]],
-    ["anxiety", "pain", "felt-anxious", ["slept-enough", "coffee-late", "doomscrolled-news"]],
+    ["anxiety", "pain", "felt-anxious", ["slept-enough", "caffeine-4-plus", "doomscrolled-news"]],
     ["loneliness", "pain", "felt-lonely", ["saw-friends", "isolated-at-home", "social-media-hour"]],
     ["anger", "pain", "felt-angry", ["slept-enough", "felt-stressed", "skipped-meal"]],
     ["procrastination", "pain", "procrastinated", ["slept-enough", "social-media-hour", "many-interruptions"]],
     ["irritation", "pain", "partner-irritated-me", ["slept-enough", "felt-stressed", "unfair-chores"]],
     ["aloneTogether", "pain", "felt-lonely-with-partner", ["phones-together", "felt-stressed", "slept-enough"]],
     ["phones", "pain", "phones-together", ["felt-stressed", "screen-time-long", "slept-enough"]],
-    ["chores", "pain", "unfair-chores", ["argued-with-partner", "felt-fatigued", "got-help-with-kids"]],
+    ["chores", "pain", "unfair-chores", ["argued-with-partner", "felt-fatigued", "felt-stressed"]],
     ["bedtime", "pain", "bedtime-battle", ["child-too-much-screen", "child-physical-activity", "slept-enough"]],
     ["meltdowns", "pain", "child-meltdown", ["child-slept-poorly", "child-too-much-screen", "child-refused-food"]],
     ["overwhelmed", "pain", "felt-overwhelmed-parenting", ["slept-enough", "got-help-with-kids", "time-for-myself"]],
@@ -168,7 +169,7 @@ export const DOORS: Door[] = [
     ["water", "good", "drank-water", ["had-energy", "headache", "exercised"]],
     ["daylight", "good", "saw-daylight", ["slept-enough", "had-energy", "felt-happy"]],
     ["wakeTime", "good", "same-wake-time", ["slept-enough", "had-energy", "screens-before-bed"]],
-    ["nature", "good", "time-in-nature", ["felt-calm", "had-energy", "felt-stressed"]],
+    ["nature", "good", "time-in-nature", ["felt-calm", "had-energy", "felt-happy"]],
     ["selfTime", "good", "time-for-myself", ["felt-calm", "slept-enough", "worked-overtime"]],
     ["gratitude", "good", "felt-grateful", ["felt-happy", "outside-30min", "saw-friends"]],
     ["creative", "good", "did-creative-work", ["felt-happy", "time-for-myself", "screen-time-long"]],
@@ -176,12 +177,12 @@ export const DOORS: Door[] = [
     ["together", "good", "good-time-together", ["slept-enough", "phones-together", "felt-stressed"]],
     ["friends", "good", "saw-friends", ["felt-happy", "felt-lonely", "had-energy"]],
     ["kidTime", "good", "quality-time-kid", ["slept-enough", "worked-overtime", "child-too-much-screen"]],
-    ["brightMoment", "good", "child-bright-moment", ["quality-time-kid", "slept-enough", "child-physical-activity"]],
+    ["brightMoment", "good", "child-bright-moment", ["child-slept-poorly", "slept-enough", "child-physical-activity"]],
     ["focusHour", "good", "focus-hour", ["slept-enough", "many-interruptions", "phone-free-morning"]],
     ["fulfilled", "good", "felt-fulfilled-at-work", ["main-thing-done", "got-recognition", "worked-overtime"]],
     ["steps", "good", "walked-a-lot", ["had-energy", "slept-enough", "felt-calm"]],
     ["veggies", "good", "ate-vegetables", ["had-energy", "cooked-myself", "ate-fast-food"]],
-    ["cooking", "good", "cooked-myself", ["had-energy", "worked-overtime", "stayed-on-budget"]],
+    ["cooking", "good", "cooked-myself", ["had-energy", "worked-overtime", "ate-fast-food"]],
     ["phoneFree", "good", "phone-free-morning", ["felt-calm", "main-thing-done", "slept-enough"]],
   ] as const).map(([id, branch, main, ctx]): Door => ({
     id, branch, kind: "event", mainTemplateId: main, contextTemplateIds: [...ctx] as [string, string, string],
@@ -478,7 +479,10 @@ export const strongestContextFact = (
     const k = answered.filter((e) => e.value === bad).length;
     const n = yesDates.size;
     if (k < 2 || k * 2 < n) return;
-    if (!best || k > best.k) best = { templateId: door.contextTemplateIds[i], k, n };
+    // the template of this very tracker (QA re-check, Nov 9 2026: with two topics the index pointed at another
+    // question, so the app named a link it never counted)
+    const tpl = matchTemplateIdByTitle(tracker.title) ?? door.contextTemplateIds[i];
+    if (!best || k > best.k) best = { templateId: tpl, k, n };
   });
   return best;
 };

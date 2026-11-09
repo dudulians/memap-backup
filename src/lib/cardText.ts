@@ -94,8 +94,13 @@ export const cardQuestion = (tracker: Tracker): string => {
  *  today?" on a past day). Only the library's own wording; her own questions stay as she typed them. */
 const noToday = (q: string): string => {
   const en = q.replace(/\btoday's\b/gi, "the day's").replace(/^Was today a day\b/i, "Was it a day").replace(/\bmake today\b/gi, "make the day")
-    .replace(/,?\s+today or last night/i, " during the day or at night").replace(/\s+today\b/gi, "");
-  const ru = en.replace(/^Сегодня\s+(\S)/, (_m, c: string) => c.toUpperCase()).replace(/\s+сегодня(?=\s*(\(|\?|—|,|$))/, "");
+    .replace(/,?\s+today or last night/i, " during the day or at night").replace(/\s+today\b/gi, "")
+    // "last night" is the wrong night when she answers for yesterday (QA re-check, Nov 9 2026)
+    .replace(/\bfall asleep last night\b/gi, "fall asleep").replace(/\s+last night\b/gi, " at night")
+    // one way to write a time in English: "2 pm" (QA, Nov 8 2026: "after 2pm" next to "2 pm")
+    .replace(/\b(\d{1,2})(am|pm)\b/g, "$1 $2");
+  // «сегодня» anywhere in the sentence, not only at its end (QA re-check: «Болел сегодня какой-то сустав?»)
+  const ru = en.replace(/^Сегодня\s+(\S)/, (_m, c: string) => c.toUpperCase()).replace(/\s+сегодня(?=[\s?,—(/]|$)/g, "");
   return ru;
 };
 

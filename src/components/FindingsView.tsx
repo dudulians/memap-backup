@@ -153,7 +153,7 @@ const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
             <Strip label={cap(answerPhrase(t, b, r.secondYes))} days={daysWith(r.second, r.secondYes)} color={toneOf(b, r.secondYes)} />
           </div>
           <div className="mt-3.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            <span className={cn("inline-flex h-7 items-center rounded-full px-3 text-[13px] font-semibold", solid ? "bg-balanced/25 text-balanced-foreground" : "bg-emerging/20 text-emerging-foreground")}>
+            <span className={cn("inline-flex h-7 items-center rounded-full px-3 text-[13px] font-semibold", /* the text colour of the theme over a soft tint: readable at night too (QA, Nov 8 2026) */ solid ? "bg-balanced/25 text-foreground" : "bg-emerging/20 text-foreground")}>
               {t(solid ? "patterns.findHolds" : "patterns.findEarly", { k: r.k, n: r.n })}
             </span>
             <span className="text-[13px] font-medium text-muted-foreground">{t("patterns.findDays", { count: c.sharedDays })}</span>

@@ -18,9 +18,8 @@ export const echoLine = (t: TFunction, door: Door, counts: DoorCounts): string =
   })}`;
 };
 
-export const factLine = (t: TFunction, fact: ContextFact): string =>
-  t("doors.echo.fact", {
-    k: fact.k,
-    n: fact.n,
-    after: t(`doors.context.${fact.templateId}.after`),
-  });
+/** A question with no "after" words says nothing rather than its key (QA re-check, Nov 9 2026). */
+export const factLine = (t: TFunction, fact: ContextFact): string => {
+  const after = t(`doors.context.${fact.templateId}.after`, { defaultValue: "" });
+  return after ? t("doors.echo.fact", { k: fact.k, n: fact.n, after }) : "";
+};

@@ -73,6 +73,8 @@ export interface Step {
   discover?: DiscoverId;
   /** grew: the stage the island reached today */
   stage?: number;
+  /** grew: every island that grew today (one light for all of them) */
+  grew?: { island: IslandId; stage: number }[];
   /** fill: the day */
   date?: string;
   /** task: skipped for today */
@@ -441,7 +443,7 @@ export const pastDays = (trackers: Tracker[], entries: TrackerEntry[], now = new
 
 const CHESTS_KEY = "memap_week_chests";
 /** What a week's chest showed when it was opened: saved once, reopened as is. */
-export interface ChestLine { label: string; k: number; n: number; main?: boolean; calm?: boolean }
+export interface ChestLine { label: string; k: number; n: number; main?: boolean; calm?: boolean; days?: (boolean | null)[]; hardWhen?: "yes" | "no" | null }
 export interface ChestRecord {
   openedAt: string; lines: ChestLine[]; fact?: string; reward: string; placed?: boolean;
   /** the week's insight, said in words when opened */
@@ -662,19 +664,26 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   const fl = entries.length > 0 ? firstLinkState(buildRoutes(trackers, entries, buildIslands(trackers, entries)), true) : { route: null, seenToday: false };
   if (fl.route || fl.seenToday) {
     const step: Step = { id: "link", kind: "link", trackerIds: [], answered: 0, done: !fl.route };
-    const boat = steps.findIndex((s) => !s.done && s.kind !== "unload");
+    // last week's report stays first (QA re-check, Nov 9 2026: the link went in front of it on day 8)
+    let boat = steps.findIndex((s) => !s.done && s.kind !== "unload");
+    if (boat >= 0 && steps[boat].kind === "report") boat += 1;
     let lastQ = -1; steps.forEach((s, i) => { if (s.kind === "questions") lastQ = i; });
     steps.splice(step.done ? lastQ + 1 : boat >= 0 ? boat : steps.length, 0, step);
   }
   // An island that reached a new stage with today's answers: a step already
   // done, right after the questions that grew it (her note, Nov 5 2026: one
   // evening of answers should show progress by itself, no extra taps).
-  for (const g of grewToday(trackers, entries, today)) {
+  // Several islands growing the same evening are one light (QA, Nov 8 2026: four stacked lights
+  // "Your … island grew" for one event), after the last questions step that grew one of them.
+  const grown = grewToday(trackers, entries, today);
+  if (grown.length > 0) {
+    const isl = new Set(grown.map((g) => g.island));
     let at = -1;
     steps.forEach((s, i) => {
-      if (s.kind === "questions" && s.trackerIds.some((id) => { const t = byId.get(id); return !!t && islandOf(t) === g.island; })) at = i;
+      if (s.kind === "questions" && s.trackerIds.some((id) => { const t = byId.get(id); return !!t && isl.has(islandOf(t)); })) at = i;
     });
-    steps.splice(at >= 0 ? at + 1 : steps.length, 0, { id: `grew:${g.island}`, kind: "grew", island: g.island, stage: g.stage, trackerIds: [], answered: 0, done: true });
+    const first = grown[0];
+    steps.splice(at >= 0 ? at + 1 : steps.length, 0, { id: grown.length === 1 ? `grew:${first.island}` : "grew:many", kind: "grew", island: first.island, stage: first.stage, grew: grown, trackerIds: [], answered: 0, done: true });
   }
 
   // A calm day (her "а что ты предлагаешь", Nov 8 2026; QA C16: the morning after week 1 jumped to

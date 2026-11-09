@@ -54,6 +54,9 @@ export const HowItWorksSheet = ({ open, onClose, onAddQuestion }: { open: boolea
           } title={t("how.route")} line={t("how.routeLine")} />
           <Line pic={<img src={mapPic("lighthouse")} alt="" width={20} height={26} className="drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" />} title={t("how.lit")} line={t("how.litLine")} />
           <Line pic={<span className="h-3 w-3 rounded-full bg-[hsl(var(--coin-teal))]" />} title={t("how.main")} line={t("how.mainLine")} />
+          {/* the weather over an island (QA, Nov 8 2026: nothing explained the storm cloud) */}
+          <Line pic={<img src={mapPic("thunder_cloud")} alt="" width={28} height={28} className="object-contain" />} title={t("how.storm")} line={t("how.stormLine")} />
+          <Line pic={<img src={mapPic("sun")} alt="" width={28} height={28} className="object-contain" />} title={t("how.sun")} line={t("how.sunLine")} />
         </div>
 
         <p className="mt-6 text-[15px] font-semibold leading-snug text-muted-foreground">{t("link.honest")}</p>

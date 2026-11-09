@@ -30,6 +30,7 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import i18n from "@/lib/i18n";
 
 interface BottomSheetProps {
   open: boolean;
@@ -128,8 +129,9 @@ export const BottomSheet = ({
           <DrawerPrimitive.Close asChild>
             <button
               type="button"
-              aria-label="Close"
-              className="absolute right-3 top-3 h-9 w-9 rounded-full bg-muted/40 hover:bg-muted flex items-center justify-center text-foreground z-10"
+              aria-label={i18n.t("common.close")}
+              // a solid circle: over scrolled content it read as part of the row under it (QA, Nov 8 2026)
+              className="absolute right-3 top-3 h-9 w-9 rounded-full bg-background shadow-[0_2px_10px_rgba(20,30,60,.14)] flex items-center justify-center text-foreground z-10"
             >
               <X className="h-5 w-5" />
             </button>

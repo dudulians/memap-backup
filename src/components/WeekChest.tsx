@@ -46,7 +46,29 @@ const WeekDots = ({ k, n, calm, delay }: { k: number; n: number; calm?: boolean;
     ))}
   </span>
 );
+/** The week's answers as dots in day order, weekday letters under them, coloured by meaning
+ *  (rose = the hard answer, green = the other one, an empty ring = no answer). QA, Nov 8 2026. */
+const DayDots = ({ days, hardWhen, dates, delay }: { days: (boolean | null)[]; hardWhen: "yes" | "no" | null; dates: string[]; delay: number }) => {
+  const { i18n } = useTranslation();
+  const lang = i18n.language?.startsWith("ru") ? "ru-RU" : "en-US";
+  return (
+    <span className="mt-1.5 flex gap-2" aria-hidden="true">
+      {days.map((v, i) => {
+        const hard = v !== null && hardWhen !== null && v === (hardWhen === "yes");
+        const bg = v === null ? "transparent" : hard ? "hsl(var(--strong))" : hardWhen === null ? (v ? "hsl(var(--data-a))" : "hsl(var(--foreground) / 0.18)") : "hsl(var(--balanced) / 0.85)";
+        const wd = new Date(dates[i] + "T12:00:00").toLocaleDateString(lang, { weekday: "short" }).replace(".", "").slice(0, 2);
+        return (
+          <span key={i} className="flex w-[18px] flex-col items-center gap-1">
+            <span className="tour-pop h-3.5 w-3.5 rounded-full" style={{ animationDelay: `${delay + i * 0.07}s`, background: bg, boxShadow: v === null ? "inset 0 0 0 1.5px hsl(var(--foreground) / 0.25)" : undefined }} />
+            <span className="text-[10px] font-bold uppercase text-muted-foreground">{wd}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+};
 import { Pressable } from "@/components/ui/pressable";
+import { dateRange } from "@/lib/weekRange";
 import { track, useScreen } from "@/lib/analytics";
 
 export const WeekChest = ({
@@ -66,7 +88,7 @@ export const WeekChest = ({
   onPlaced: () => void;
 }) => {
   useScreen("week_report");
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [rec, setRec] = useState<ChestRecord | null>(() => getChests()[week] ?? null);
   // Cards shown so far; an already opened chest shows them all.
   const [shown, setShown] = useState(() => (getChests()[week] ? 99 : 1));
@@ -111,7 +133,7 @@ export const WeekChest = ({
       items: world.items.filter((g) => !before.items.includes(g)),
       bridges: world.bridges.filter((g) => !before.bridges.includes(g)),
     };
-    const m = nextMission(facts, [...days.values()].filter((d) => d >= 3).length);
+    const m = nextMission(facts, [...days.values()].filter((d) => d >= 3).length, week, routes.length);
     const mission = { id: m.id, n: m.id === "testRunning" ? m.day : m.id === "notes" ? m.left : m.id === "streak" ? m.goal : undefined };
     // The two items she's closest to, for "next up" when nothing new grew.
     const nextUp = ITEMS.filter((it) => !owned(it.id, facts))
@@ -120,8 +142,8 @@ export const WeekChest = ({
       .map((x) => `${x.id}:${x.p[0]}/${x.p[1]}`);
     const c = chestContent(trackers, entries, dates);
     const lines = [
-      ...(c.main ? [{ label: label(c.main), k: c.main.k, n: c.main.n, main: true, calm: c.main.k === 0 }] : []),
-      ...c.rows.map((r) => ({ label: label(r), k: r.k, n: r.n })),
+      ...(c.main ? [{ label: label(c.main), k: c.main.k, n: c.main.n, main: true, calm: c.main.k === 0, days: c.main.days, hardWhen: c.main.hardWhen }] : []),
+      ...c.rows.map((r) => ({ label: label(r), k: r.k, n: r.n, days: r.days, hardWhen: r.hardWhen })),
     ];
     const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
     const insight = c.insight
@@ -210,7 +232,7 @@ export const WeekChest = ({
     // 2. The week in numbers.
     out.push(
       <div className="surface rounded-[22px] px-5 py-4 text-left">
-        {kicker(null, t("path.chest.inNumbers"))}
+        {kicker(null, dates.length ? `${t("path.chest.inNumbers")} · ${dateRange(i18n.language ?? "en", new Date(dates[0] + "T12:00:00"), new Date(dates[dates.length - 1] + "T12:00:00"))}` : t("path.chest.inNumbers"))}
         {r.lines.length === 0 && <p className="mt-2 text-[17px] font-semibold">{t("path.chest.calm")}</p>}
         {r.lines.map((l, i) => (
           <div key={i} className={i > 0 ? "mt-3 border-t border-foreground/[0.06] pt-3" : "mt-2"}>
@@ -218,7 +240,8 @@ export const WeekChest = ({
             <p className={l.main ? "text-[19px] font-bold leading-tight" : "text-[17px] font-semibold leading-tight"}>
               {l.label}: <KofN k={l.k} n={l.n} delay={0.3 + i * 0.35} />
             </p>
-            {l.n <= 14 && <WeekDots k={l.k} n={l.n} calm={l.calm} delay={0.3 + i * 0.35} />}
+            {l.days && l.days.length === dates.length ? <DayDots days={l.days} hardWhen={l.hardWhen ?? null} dates={dates} delay={0.3 + i * 0.35} />
+              : l.n <= 14 && <WeekDots k={l.k} n={l.n} calm={l.calm} delay={0.3 + i * 0.35} />}
           </div>
         ))}
       </div>,

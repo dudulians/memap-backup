@@ -169,7 +169,10 @@ export const linkOf = (c: CorrelationResult) => {
   // same day: her topic's question goes second, as the thing explained ("Short night →
   // migraine", not "Migraine → short night"; Nov 6 2026)
   const door = getDoorState(), lead = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((x) => x.trackerId)] : []);
-  const flip = c.lag === -1 || (c.lag === 0 && lead.has(c.trackerA.id) && !lead.has(c.trackerB.id));
+  // same day, neither or both her topic: one fixed order, so the Links list, the island, the week report and
+  // the PDF all say it the same way round (QA re-check, Nov 9 2026: the PDF said it reversed)
+  const leadA = lead.has(c.trackerA.id), leadB = lead.has(c.trackerB.id);
+  const flip = c.lag === -1 || (c.lag === 0 && (leadA !== leadB ? leadA : c.trackerA.id > c.trackerB.id));
   const second0 = flip ? c.trackerA : c.trackerB;
   const secondYes = c.phi >= 0 || trackerPolarity(second0) !== "good";
   const firstYes = c.phi >= 0 || !secondYes;
@@ -190,8 +193,16 @@ export const linkOf = (c: CorrelationResult) => {
  *  hard thing before a good one) only when it held many times: stable and
  *  p < 0.01. "Without" links only from the counted tiers (early and fresh count
  *  "both yes" only). */
+/** Days needed on each side of a link (QA, Nov 8 2026: "4 of 4 times, on other days 0 of 3" and "1 of 2"
+ *  proved nothing, and they are claims about her health). */
+export const LINK_MIN_SIDE = 5;
 export const linkWorthShowing = (c: CorrelationResult): boolean => {
   if (c.phi === 0) return false;
+  // a 2-week test has its own result screen; as a link it read as a double negative
+  // ("When you answer “no” to “Walk for 20 minutes”")
+  if (isTestQuestion(c.trackerA) || isTestQuestion(c.trackerB)) return false;
+  const l = linkOf(c);
+  if (l.n < LINK_MIN_SIDE || l.other.n < LINK_MIN_SIDE) return false;
   if (correlationFrame(trackerPolarity(c.trackerA), trackerPolarity(c.trackerB), c.phi) === "unexpected") return c.stage === "stable" && isHighlySignificant(c.chiSquare);
   if (c.phi < 0) return c.stage === "stable" || c.stage === "emerging";
   return true;
@@ -245,7 +256,8 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
       }
       perDay.set(e.date, d);
     }
-    const monday = dayStart((new Date().getDay() + 6) % 7);
+    // the same last 7 days as the weather (QA re-check, Nov 9 2026: on a Monday the line said "0 hard days out of 0" under a storm)
+    const from7 = dayStart(6);
     const cal = { answered: 0, hard: 0 };
     const weekDays: Record<string, boolean> = {};
     for (const [date, d] of perDay) {
@@ -255,7 +267,7 @@ export const buildIslands = (trackers: Tracker[], entries: TrackerEntry[]): Isla
         weeks[w].answered.add(date);
         if (hardDay) weeks[w].hard.add(date);
       }
-      if (date >= monday && date <= dayStart(0) && d.a > 0) { cal.answered++; if (hardDay) cal.hard++; weekDays[date] = hardDay; }
+      if (date >= from7 && date <= dayStart(0) && d.a > 0) { cal.answered++; if (hardDay) cal.hard++; weekDays[date] = hardDay; }
     }
     const now = weeks[0];
     const weather: Weather = now.answered.size < 3 ? null : now.hard.size >= 3 ? "storm" : now.hard.size >= 1 ? "clouds" : "sun";

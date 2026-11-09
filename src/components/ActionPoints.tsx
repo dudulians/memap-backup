@@ -18,7 +18,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, Check, ChevronDown, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
 import { cardQuestion } from "@/lib/cardText";
-import { ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
+import { busyIdeas, clockTime, ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
@@ -29,6 +29,7 @@ import { isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, 
 import { computeCorrelations } from "@/lib/correlations";
 import { linkSentence, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
+import { toast } from "@/hooks/use-toast";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
@@ -124,25 +125,34 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     return !isNeutralQuestion(c) && !c.archived && !!c.adviceAboveThreshold && l.firstYes === (c.problemWhen === "yes");
   }) ?? null;
   const [trying, setTrying] = useState<TryAction | null>(null);
+  const door = getDoorState();
   const rows = trackers
     .filter((tr) => !tr.archived && tr.threshold > 0)
     .map((tr) => ({ tr, k: ruleCount(tr, entries) }))
     .map((r) => ({ ...r, lit: r.k >= r.tr.threshold }));
   const lit = rows.filter((r) => r.lit);
-  const watching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
+  const evenings = answeredEvenings(trackers, entries);
+  const allWatching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
+  // the first week: only her topic's rules, not a wall of "0 of the last 30 days" (QA, Nov 8 2026)
+  const mainIds = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((x) => x.trackerId)] : []);
+  const watching = evenings < SHAPING_EVENINGS && allWatching.length > 1
+    ? (allWatching.some((r) => mainIds.has(r.tr.id)) ? allWatching.filter((r) => mainIds.has(r.tr.id)) : allWatching.slice(0, 1))
+    : allWatching;
   /** the question under the plan; a good one is counted when it's missing */
   // the hard answer in its own words (answerPhrases): "Short night", not «Без «Спал(а) 7+ часов»»
   const label = (tr: Tracker) => cap(answerPhrase(t, tr, tr.problemWhen === "yes"));
   const why = (tr: Tracker, k: number) => t("rules.why", { ans: t(tr.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo"), k, n: tr.threshold, count: tr.periodDays });
-  const evenings = answeredEvenings(trackers, entries);
-  // The tests running now: one per island, side by side (Nov 7 2026).
-  const tests = runningExperiments();
+  // The tests running now, side by side (Nov 7 2026); with one island picked, only that island's
+  // (QA, Nov 8 2026: tests from other islands stayed on top of the Health filter)
+  const islandsHere = new Set(trackers.map((tr) => islandOf(tr) as string));
+  const tests = runningExperiments().filter((x) => islandsHere.has(x.island) || trackers.some((tr) => tr.id === x.trackerId));
   const lineOf = (x: Experiment) => { const d = experimentDay(x); return d > EXPERIMENT_DAYS ? t("rules.testDone") : t("rules.testing", { k: d, count: EXPERIMENT_DAYS }); };
   const [testOpen, setTestOpen] = useState<Experiment | null>(null);
   // a finished test opens its result here (QA: "Your test is done: see it on Today" led nowhere)
   const [resultOf, setResultOf] = useState<Experiment | null>(null);
   const openTest = (x: Experiment) => { haptics.tap(); if (experimentOver(x)) setResultOf(x); else setTestOpen(x); };
-  const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); };
+  // a word that it worked, and what happens next (QA, Nov 8 2026: the card just moved away)
+  const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); toast({ title: t("rules.didToast"), description: t("rules.didToastLine") }); };
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
   const tryIt = (tr: Tracker, k: number) => {
@@ -173,7 +183,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}</span>
             {test.perWeek && <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}</span>}
             <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
-              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${test.remind}` : t("experiment.noRemind")}
+              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${clockTime(test.remind)}` : t("experiment.noRemind")}
             </span>
           </span>
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
@@ -384,8 +394,8 @@ const ShowSheet = ({ tracker, k, entries, name, onClose, onTry, blocked }: { tra
           <KindTag kind="finding" className="mt-3" />
           <p className="mt-0.5 text-[19px] font-bold tabular-nums">
             {k >= tracker.threshold
-              ? t("rules.bigDone", { k, count: tracker.periodDays })
-              : t("rules.bigOf", { k, count: tracker.threshold })}
+              ? t("rules.bigDone", { k, count: tracker.periodDays, ans: t(tracker.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo") })
+              : t("rules.bigOf", { k, count: tracker.threshold, ans: t(tracker.problemWhen === "yes" ? "rules.ansYes" : "rules.ansNo") })}
           </p>
           <p className="mt-1 text-[15px] font-medium leading-snug text-muted-foreground">{t("rules.ruleLine", { n: tracker.threshold, count: tracker.periodDays })}</p>
           {ba && <p className="mt-2 text-[15px] font-bold" style={{ color: TEAL }}>{t("rules.beforeAfter", ba)}</p>}
@@ -469,7 +479,7 @@ const TestSheet = ({ test, trackers, entries, line, onClose, onStop }: { test: E
         <p className="mt-0.5 text-[19px] font-bold leading-snug">{tr ? cardQuestion(tr) : testQuestionOf(test.change)}</p>
         <div className="surface mt-5 flex items-center gap-3 rounded-[18px] px-4 py-3">
           <Bell className="h-5 w-5 shrink-0" strokeWidth={2.4} style={{ color: TEAL }} />
-          <span className="min-w-0 flex-1 text-[16px] font-bold">{t("experiment.remindMe")}</span>
+          <span className="min-w-0 flex-1 whitespace-nowrap text-[16px] font-bold">{t("experiment.remindMe")}</span>
           <input type="time" value={at} disabled={!on} aria-label={t("experiment.remindAt")}
             onChange={(e) => { const v = e.target.value || "09:00"; setAt(v); if (on) void apply(true, v); }}
             className="h-10 w-[124px] rounded-[12px] bg-foreground/[0.05] px-2 text-center text-[15px] font-bold tabular-nums outline-none disabled:opacity-40" />
@@ -521,9 +531,10 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
             <span className="block text-[17px] font-bold leading-snug">{testNameOf(x.change)}</span>
             <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(x)}</span>
             {x.perWeek && <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{t("experiment.weekOf", { k: weekDone(x, entries), n: x.perWeek })}</span>}
-            <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
-              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{x.remind ? `${t("experiment.remindAt")} ${x.remind}` : t("experiment.noRemind")}
-            </span>
+            {/* a finished test has no reminder to speak of (QA, Nov 8 2026) */}
+            {!experimentOver(x) && <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground">
+              <Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{x.remind ? `${t("experiment.remindAt")} ${clockTime(x.remind)}` : t("experiment.noRemind")}
+            </span>}
           </span>
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
         </button>
@@ -541,13 +552,14 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
           <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
             {(list as Experiment[]).map((x) => {
               const r = experimentResult(x, trackers, entries);
+              // every row opens: a kept one to change or stop it, one tried before to its result (QA, Nov 8 2026)
               return (
-                <div key={x.id} className="px-4 py-3" {...(x.kept ? { role: "button", tabIndex: 0, onClick: () => { haptics.tap(); setOpen(x); } } : {})}>
+                <div key={x.id} className="px-4 py-3" role="button" tabIndex={0} onClick={() => { haptics.tap(); if (x.kept) setOpen(x); else onResult(x); }}>
                   <p className="text-[16px] font-bold leading-snug">{testNameOf(x.change)}</p>
                   {/* kept going: since when, and its reminder (opens to change or stop it) */}
                   {x.kept && (
                     <p className="mt-0.5 flex items-center gap-1 text-[14px] font-bold" style={{ color: TEAL }}>
-                      {lineOf(x)}<span className="font-semibold text-muted-foreground">{" · "}</span><Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{x.remind ?? t("experiment.noRemind")}
+                      {lineOf(x)}<span className="font-semibold text-muted-foreground">{" · "}</span><Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{x.remind ? clockTime(x.remind) : t("experiment.noRemind")}
                     </p>
                   )}
                   <p className="mt-0.5 text-[14px] font-semibold leading-snug text-muted-foreground">
@@ -572,7 +584,8 @@ const ChangeSheet = ({ tracker, name, why, onClose }: { tracker: Tracker; k: num
   const { t } = useTranslation();
   const had = planOf(tracker);
   // changes on this question's own topic (her note, Nov 9 2026: the island's ones were about other things)
-  const ideas = ideasForQuestion(tracker).map((id) => t(`experiment.idea.${id}.change`)).filter((s) => s !== had);
+  const busy = busyIdeas();
+  const ideas = ideasForQuestion(tracker).filter((id) => !busy.has(id)).map((id) => t(`experiment.idea.${id}.change`)).filter((s) => s !== had);
   const [pick, setPick] = useState<string | null>(null);
   const [own, setOwn] = useState("");
   const next = pick ?? own.trim();
