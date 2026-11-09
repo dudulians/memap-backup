@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
-import { isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, type Route } from "@/lib/islands";
+import { isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, rankLinks, type Route } from "@/lib/islands";
 import { ChevronDown } from "lucide-react";
 import { linkOther, linkSentence, trackerLookup } from "@/lib/linkText";
 import { answerPhrase, cap } from "@/lib/answerPhrases";
@@ -58,10 +58,7 @@ export const FindingsView = ({
   const findings = useMemo(() => {
     const every = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing);
     const all = focusIds ? every.filter((c) => focusIds.includes(c.trackerA.id) || focusIds.includes(c.trackerB.id)) : every;
-    const doorId = getDoorState()?.trackerId;
-    if (!doorId) return all;
-    const hasDoor = (c: CorrelationResult) => c.trackerA.id === doorId || c.trackerB.id === doorId;
-    return [...all.filter(hasDoor), ...all.filter((c) => !hasDoor(c))];
+    return rankLinks(all);
   }, [trackers, entries, focusIds]);
 
   // Same "value moment" bookkeeping the old Links tab did: feeds the

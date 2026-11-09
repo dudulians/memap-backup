@@ -4,10 +4,10 @@
 // the door's context questions. A week where nothing came up is a "calm
 // week", never "nothing to show".
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { getDoorState, strongestContextFact, type ContextFact } from "@/lib/doors";
+import { getDoor, getDoorState, strongestContextFact, type ContextFact } from "@/lib/doors";
 import { activeQuestions } from "@/lib/pathSteps";
 import { computeCorrelations } from "@/lib/correlations";
-import { isNeutralQuestion, linkOf, linkWorthShowing } from "@/lib/islands";
+import { isNeutralQuestion, linkOf, linkWorthShowing, rankLinks } from "@/lib/islands";
 
 /** days: the week's answers in day order (true/false, null = no answer); hardWhen: which answer is hard */
 export interface ChestStat { trackerId: string; door: boolean; k: number; n: number; days: (boolean | null)[]; hardWhen: "yes" | "no" | null }
@@ -19,7 +19,7 @@ export interface ChestContent { main: ChestStat | null; rows: ChestStat[]; fact:
 // The same link as the top of the Links list, read the same way round (QA, Nov 8 2026: the week
 // report said the opposite of the Links list about the same two questions).
 const strongestLink = (trackers: Tracker[], entries: TrackerEntry[]): ChestInsight | null => {
-  const c = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing)[0];
+  const c = rankLinks(computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing))[0];
   if (!c) return null;
   const l = linkOf(c);
   return { a: l.first.id, b: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, otherK: l.other.k, otherN: l.other.n };
@@ -34,7 +34,11 @@ export const chestContent = (trackers: Tracker[], entries: TrackerEntry[], dates
     // "the first three days")
     const days = dates.map((d) => { const v = es.find((e) => e.date === d)?.value; return typeof v === "boolean" ? v : null; });
     const hardWhen = isNeutralQuestion(t) ? null : t.problemWhen;
-    return { trackerId: t.id, door: t.id === door?.trackerId, k: es.filter((e) => e.value === true).length, n: es.length, days, hardWhen };
+    // k counts what the label says (persona walk, Nov 9 2026: "Bad nights: 2 of 7" counted the GOOD nights):
+    // her topic by its own answer ("Bad nights" = a "no" to Slept 7+), any other question by its hard answer
+    const isDoor = t.id === door?.trackerId;
+    const counted = isDoor ? (getDoor(door!.id)?.mainValue ?? true) : hardWhen === null ? true : hardWhen === "yes";
+    return { trackerId: t.id, door: isDoor, k: es.filter((e) => e.value === counted).length, n: es.length, days, hardWhen };
   }).filter((s) => s.n > 0);
   const problem = new Set(trackers.filter((t) => t.problemWhen === "yes").map((t) => t.id));
   const byCount = (a: ChestStat, b: ChestStat) => b.k - a.k || b.k / b.n - a.k / a.n;
@@ -43,7 +47,9 @@ export const chestContent = (trackers: Tracker[], entries: TrackerEntry[], dates
     [...stats].filter((s) => problem.has(s.trackerId)).sort(byCount)[0] ??
     [...stats].sort(byCount)[0] ??
     null;
-  const rows = stats.filter((s) => s !== main && s.k > 0).sort(byCount).slice(0, 3);
+  // her other picked topics first (persona walk: "Drank enough water", a main topic, was missing), then the rest
+  const extra = new Set((door?.extra ?? []).map((x) => x.trackerId));
+  const rows = [...stats.filter((s) => s !== main && extra.has(s.trackerId)), ...stats.filter((s) => s !== main && !extra.has(s.trackerId) && s.k > 0).sort(byCount)].slice(0, 3);
   const fact = door ? strongestContextFact(door, trackers, entries) : null;
   return { main, rows, fact, insight: strongestLink(trackers, entries) };
 };

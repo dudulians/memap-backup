@@ -67,13 +67,16 @@ export const hunchTarget = (trackers: Tracker[], entries: TrackerEntry[]): Track
   const act = live(trackers);
   if (act.length < 2) return null;
   const since = isoLocal(new Date(Date.now() - 30 * 86_400_000));
+  // how often each question's HARD answer came (persona walks, Nov 9 2026: a "Slept 7+" question was
+  // counted by its good days)
+  const byId = new Map(act.map((t) => [t.id, t]));
   const yes = new Map<string, number>();
-  for (const e of entries) if (e.value === true && e.date >= since) yes.set(e.trackerId, (yes.get(e.trackerId) ?? 0) + 1);
+  for (const e of entries) { const t = byId.get(e.trackerId); if (t && e.date >= since && e.value === (t.problemWhen === "yes")) yes.set(e.trackerId, (yes.get(e.trackerId) ?? 0) + 1); }
   // her own topics first (QA, Nov 8 2026: a Migraines person got "…days when you feel lonely?")
   const door = getDoorState();
   const mine = [door?.trackerId, ...(door?.extra ?? []).map((x) => x.trackerId)].map((id) => act.find((t) => t.id === id)).find((t) => !!t && (yes.get(t.id) ?? 0) > 0);
   if (mine) return mine;
-  const top = act.filter((t) => t.problemWhen === "yes" && (yes.get(t.id) ?? 0) > 0)
+  const top = act.filter((t) => (yes.get(t.id) ?? 0) > 0)
     .sort((a, b) => (yes.get(b.id) ?? 0) - (yes.get(a.id) ?? 0)).slice(0, 3);
   if (top.length > 0) return top[Math.floor(Date.now() / 86_400_000) % top.length];
   return act.find((t) => t.id === door?.trackerId) ?? act.find((t) => t.problemWhen === "yes") ?? act[0];
@@ -113,11 +116,15 @@ export const hunchResult = (h: Hunch, trackers: Tracker[], entries: TrackerEntry
   const target = trackers.find((t) => t.id === h.target);
   if (!target) return null;
   const hit = target.problemWhen === "yes";
+  // the suspect by its HARD side too: her guess "short night" is a "no" to "Slept 7+" (persona walk,
+  // Nov 9 2026: the app compared 7+ hour nights and said her short-night hunch was confirmed)
+  const sus = trackers.find((t) => t.id === h.suspect);
+  const sHit = sus ? sus.problemWhen === "yes" : true;
   const s = new Map<string, boolean>();
   const tg = new Map<string, boolean>();
   for (const e of entries) {
     if (e.date < h.made) continue;
-    if (e.trackerId === h.suspect) s.set(e.date, e.value === true);
+    if (e.trackerId === h.suspect && typeof e.value === "boolean") s.set(e.date, e.value === sHit);
     if (e.trackerId === h.target) tg.set(e.date, e.value === hit);
   }
   const next = (d: string) => {

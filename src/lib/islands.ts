@@ -193,6 +193,18 @@ export const linkOf = (c: CorrelationResult) => {
  *  hard thing before a good one) only when it held many times: stable and
  *  p < 0.01. "Without" links only from the counted tiers (early and fresh count
  *  "both yes" only). */
+/** Links in the order that tells her most (persona walks, Nov 9 2026: "stress → overtime" led while
+ *  "overtime → a short night" sat 6th): into her own topics first, then out of them, a next-day link
+ *  before a same-day one; within that, the engine's own order (strength). */
+export const rankLinks = (cs: CorrelationResult[]): CorrelationResult[] => {
+  // her main topic weighs most, then her other picked topics; a next-day link before a same-day one (Nov 9 2026:
+  // "after a fight you sleep under 7 hours" over "on stressful days you fight"; migraine links over
+  // "the child slept badly → you slept less")
+  const door = getDoorState(), main = door?.trackerId, extra = new Set((door?.extra ?? []).map((x) => x.trackerId));
+  const score = (c: CorrelationResult) => { const l = linkOf(c); return (l.second.id === main ? 8 : 0) + (l.first.id === main ? 6 : 0) + (extra.has(l.second.id) ? 3 : 0) + (extra.has(l.first.id) ? 2 : 0) + (l.nextDay ? 2 : 0); };
+  return cs.map((c, i) => ({ c, i, s: score(c) })).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.c);
+};
+
 /** Days needed on each side of a link (QA, Nov 8 2026: "4 of 4 times, on other days 0 of 3" and "1 of 2"
  *  proved nothing, and they are claims about her health). */
 export const LINK_MIN_SIDE = 5;
@@ -203,7 +215,9 @@ export const linkWorthShowing = (c: CorrelationResult): boolean => {
   if (isTestQuestion(c.trackerA) || isTestQuestion(c.trackerB)) return false;
   const l = linkOf(c);
   if (l.n < LINK_MIN_SIDE || l.other.n < LINK_MIN_SIDE) return false;
-  if (correlationFrame(trackerPolarity(c.trackerA), trackerPolarity(c.trackerB), c.phi) === "unexpected") return c.stage === "stable" && isHighlySignificant(c.chiSquare);
+  // against intuition: only strong, and over twice the usual days (persona walk, Nov 9 2026: "when you're NOT
+  // lonely with your partner, you always fight the next day — 6 of 6")
+  if (correlationFrame(trackerPolarity(c.trackerA), trackerPolarity(c.trackerB), c.phi) === "unexpected") return c.stage === "stable" && isHighlySignificant(c.chiSquare) && l.n >= LINK_MIN_SIDE * 2;
   if (c.phi < 0) return c.stage === "stable" || c.stage === "emerging";
   return true;
 };
@@ -297,8 +311,7 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
   for (const isl of islands) for (const id of isl.trackerIds) where.set(id, isl.id);
   const seen = new Set<string>();
   const out: Route[] = [];
-  for (const c of computeCorrelations(trackers, entries, 12)) {
-    if (!linkWorthShowing(c)) continue;
+  for (const c of rankLinks(computeCorrelations(trackers, entries, 12).filter(linkWorthShowing))) {
     const l = linkOf(c);
     // islands in reading order: the first question's island, then the second's
     const a = where.get(l.first.id), b = where.get(l.second.id);

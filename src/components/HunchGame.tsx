@@ -70,9 +70,12 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
     const q = s.kind === "tracked" ? s.tracker : ({ id: `0-${s.template.id}-0`, title: s.template.title, problemWhen: s.template.problemWhen } as Tracker);
     return templateIdOf(q) ? cap(answerPhrase(t, q, q.problemWhen !== "no")) : localizeTrackerTitle(q.title);
   };
-  const x = target ? answerPhrase(t, target, true) : "";
+  // always the hard side of the question (persona walks, Nov 9 2026: "What leads to the days when you
+  // sleep 7+ hours?" offered short nights and coffee as answers)
+  const hardYes = target ? target.problemWhen === "yes" : true;
+  const x = target ? answerPhrase(t, target, hardYes) : "";
   // the question as a whole sentence (her note, Nov 8 2026: «What do you think comes before “long workday”? — что это вообще за вопрос?»)
-  const xc = target ? answerClause(t, target, true, "cause") : "";
+  const xc = target ? answerClause(t, target, hardYes, "cause") : "";
   const tr = (id: string) => trackers.find((y) => y.id === id);
   const avatar = avatarUrl(getAvatar());
   const ownText = own.trim();
@@ -185,7 +188,7 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
         {stage === "ask" && target && (
           <>
             <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">
-              {t(target.problemWhen === "yes" ? "hunch.askHard" : "hunch.askGood", { x: xc })}
+              {t("hunch.askHard", { x: xc })}
             </p>
             <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("hunch.pickMany")}</p>
             {open.length > 0 && (

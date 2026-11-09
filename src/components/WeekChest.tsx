@@ -68,6 +68,7 @@ const DayDots = ({ days, hardWhen, dates, delay }: { days: (boolean | null)[]; h
   );
 };
 import { Pressable } from "@/components/ui/pressable";
+import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { dateRange } from "@/lib/weekRange";
 import { track, useScreen } from "@/lib/analytics";
 
@@ -100,8 +101,10 @@ export const WeekChest = ({
       const d = door ? getDoor(door.id) : undefined;
       if (d) return t(`doors.${d.id}.name`);
     }
+    // any other question by the answer it counts ("Short night: 5 of 7 days"), as the number does
     const tr = trackers.find((x) => x.id === s.trackerId);
-    return tr ? localizeTrackerTitle(tr.title) : "";
+    if (!tr) return "";
+    return templateIdOf(tr) ? cap(answerPhrase(t, tr, s.hardWhen === null ? true : s.hardWhen === "yes")) : localizeTrackerTitle(tr.title);
   };
 
   const open = async () => {
@@ -152,7 +155,7 @@ export const WeekChest = ({
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),
       lines,
-      fact: c.fact ? factLine(t, c.fact) : undefined,
+      fact: c.fact ? factLine(t, c.fact, c.main ? label(c.main) : undefined) : undefined,
       reward: rewardFor(week),
       insight,
       insightOther: c.insight ? t("game.withoutA", { k: c.insight.otherK, count: c.insight.otherN }) : undefined,

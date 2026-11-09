@@ -6,6 +6,11 @@
 // - Australia: Lifeline 13 11 14 (24/7);
 // - Russia: no federal adult line found; Moscow psychological help 051 (+7 495 051 from a mobile).
 // Everywhere else: findahelpline.com lists free lines by country.
+// Afraid at home (persona walk, Nov 9 2026; checked Nov 9 2026, 2+ sources each):
+// - Russia: Center ANNA all-Russia line 8 800 7000 600 (free; hours given as 9–21 or 24/7);
+// - UK: National Domestic Abuse Helpline (Refuge) 0808 2000 247 (free, 24/7);
+// - UAE: Dubai Foundation for Women and Children 800 111 (free, 24/7);
+// - US: National Domestic Violence Hotline 1-800-799-7233, or text START to 88788 (24/7).
 // Plan: marketing/research/when-to-act.md ("thoughts of self-harm → country-specific numbers").
 
 export type SupportLines = {
@@ -14,6 +19,8 @@ export type SupportLines = {
   urgent?: string;
   /** a free line to talk to someone */
   talk?: { name: string; nameRu: string; number: string; tel: string };
+  /** a free line when someone is afraid at home */
+  safe?: { name: string; nameRu: string; number: string; tel: string };
   web: string;
 };
 
@@ -28,16 +35,21 @@ export const supportLines = (): SupportLines => {
   const tz = zone();
   const web = "https://findahelpline.com";
   if (/^Asia\/(Dubai|Muscat)/.test(tz)) {
-    return { emergency: "998 / 999", web, talk: { name: "National Mental Support Line", nameRu: "Национальная линия психологической поддержки", number: "800 4673", tel: "8004673" } };
+    return { emergency: "998 / 999", web, talk: { name: "National Mental Support Line", nameRu: "Национальная линия психологической поддержки", number: "800 4673", tel: "8004673" },
+      ...(tz.startsWith("Asia/Dubai") ? { safe: { name: "Dubai Foundation for Women and Children", nameRu: "Фонд защиты женщин и детей, Дубай", number: "800 111", tel: "800111" } } : {}) };
   }
   if (RUSSIA.test(tz)) {
-    return { emergency: "112 / 103", web, talk: { name: "Psychological help, Moscow", nameRu: "Психологическая помощь, Москва", number: "+7 495 051", tel: "+7495051" } };
+    return { emergency: "112 / 103", web, talk: { name: "Psychological help, Moscow", nameRu: "Психологическая помощь, Москва", number: "+7 495 051", tel: "+7495051" },
+      safe: { name: "Center ANNA, all of Russia", nameRu: "Центр «АННА», вся Россия", number: "8 800 7000 600", tel: "88007000600" } };
   }
   if (/^Europe\/(London|Dublin|Belfast)/.test(tz)) {
-    return { emergency: "999", urgent: tz.endsWith("Dublin") ? undefined : "111", web, talk: { name: "Samaritans", nameRu: "Samaritans", number: "116 123", tel: "116123" } };
+    return { emergency: "999", urgent: tz.endsWith("Dublin") ? undefined : "111", web, talk: { name: "Samaritans", nameRu: "Samaritans", number: "116 123", tel: "116123" },
+      ...(tz.endsWith("Dublin") ? {} : { safe: { name: "National Domestic Abuse Helpline", nameRu: "National Domestic Abuse Helpline", number: "0808 2000 247", tel: "08082000247" } }) };
   }
   if (US_CANADA.test(tz)) {
-    return { emergency: "911", web, talk: { name: "988 Suicide & Crisis Lifeline", nameRu: "Линия 988", number: "988", tel: "988" } };
+    const canada = /Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson|Iqaluit|Yellowknife|Swift_Current|Creston|Fort_Nelson|Rankin_Inlet|Resolute|Cambridge_Bay|Inuvik|Atikokan|Blanc-Sablon/.test(tz);
+    return { emergency: "911", web, talk: { name: "988 Suicide & Crisis Lifeline", nameRu: "Линия 988", number: "988", tel: "988" },
+      ...(canada ? {} : { safe: { name: "National Domestic Violence Hotline", nameRu: "National Domestic Violence Hotline", number: "1-800-799-7233", tel: "18007997233" } }) };
   }
   if (/^America\//.test(tz)) return { emergency: "911", web };
   if (/^Australia\//.test(tz)) {
@@ -52,6 +64,10 @@ export const supportLines = (): SupportLines => {
  *  the red-flag list is about the body. A card has room for one chip: "panic-attack" moved to
  *  "Something worrying?" (bodyTemplates RED_FLAG_IDS), whose sheet shows this free line too.
  *  Never put an id in both sets. */
+/** A partner shouting or saying hurtful things: the sheet speaks to that, with a line for when someone
+ *  is afraid at home, and the evening doesn't end on "Great work today!" (persona walk, Nov 9 2026). */
+export const HOME_HARM_IDS = new Set(["partner-raised-voice", "partner-said-hurtful"]);
+
 export const MOOD_SUPPORT_IDS = new Set([
   "felt-depressed", "lost-interest", "felt-anxious", "felt-lonely",
   "partner-raised-voice", "partner-said-hurtful", "thought-about-leaving", "felt-lonely-with-partner", "thought-divorce",

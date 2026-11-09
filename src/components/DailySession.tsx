@@ -2,9 +2,10 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { RED_FLAG_IDS } from "@/lib/bodyTemplates";
 import { templateIdOf } from "@/lib/answerPhrases";
 import { followUpNotNeeded, pathModel } from "@/lib/pathSteps";
+import { getUiMode } from "@/lib/uiMode";
 import { RedFlagsSheet } from "./RedFlagsSheet";
 import { SupportSheet } from "./SupportSheet";
-import { MOOD_SUPPORT_IDS } from "@/lib/supportLines";
+import { HOME_HARM_IDS, MOOD_SUPPORT_IDS } from "@/lib/supportLines";
 import { createPortal } from "react-dom";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
@@ -549,10 +550,17 @@ export const DailySession = ({
   };
   const [flags, setFlags] = useState(false);
   const [support, setSupport] = useState(false);
+  // which question the support sheet speaks to, and the calm line after a hurtful "yes"
+  const [supportAbout, setSupportAbout] = useState<string | null>(null);
+  const [care, setCare] = useState<string | null>(null);
 
   const handleAnswer = (value: boolean) => {
     if (isAnimatingRef.current || !currentQuestion) return;
     sessionVals.current.set(currentQuestion.tracker.id, value);
+    // a partner shouted or said something hurtful: one calm line before the next card (persona walk, Nov 9 2026:
+    // the deck went straight on to "Great work today!")
+    const tid = templateIdOf(currentQuestion.tracker) ?? "";
+    if (value && HOME_HARM_IDS.has(tid)) setCare(tid);
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -812,7 +820,9 @@ export const DailySession = ({
     window.setTimeout(onComplete, 0);
     return null;
   }
-  if (completed && (onlyIds || includeAnswered)) {
+  // the new look always ends on its own "Done!" card (persona walk, Nov 9 2026: after answering for
+  // yesterday in the morning, the old look's streak sheet with confetti came up)
+  if (completed && (onlyIds || includeAnswered || getUiMode() === "new")) {
     return createPortal(
       <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center animate-fade-in">
         <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white shadow-[0_6px_0_hsl(var(--lip-teal))]">
@@ -1506,6 +1516,15 @@ export const DailySession = ({
             <ArrowRight className="h-4 w-4" strokeWidth={2.4} />
           </button>
         </div>
+        {care && (
+          <div className="surface mt-3 rounded-[18px] px-4 py-3 animate-fade-in" role="status">
+            <p className="text-[15px] font-semibold leading-snug">{t("support.careLine")}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <button type="button" onClick={() => { setSupportAbout(care); setSupport(true); }} className="raised-btn is-small px-4">{t("support.chip")}</button>
+              <button type="button" onClick={() => setCare(null)} className="h-10 px-3 text-[15px] font-semibold text-muted-foreground">{t("common.close")}</button>
+            </div>
+          </div>
+        )}
         <div className="mt-1 flex justify-center">
           <button
             type="button"
@@ -1523,13 +1542,13 @@ export const DailySession = ({
           )}
           {/* mood questions: a free line to talk to someone (safety round, Nov 7 2026) */}
           {MOOD_SUPPORT_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
-            <button type="button" onClick={() => setSupport(true)} className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => { setSupportAbout(templateIdOf(currentQuestion.tracker)); setSupport(true); }} className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground">
               {t("support.chip")}
             </button>
           )}
         </div>
         <RedFlagsSheet open={flags} onClose={() => setFlags(false)} about={currentQuestion ? templateIdOf(currentQuestion.tracker) : null} />
-        <SupportSheet open={support} onClose={() => setSupport(false)} />
+        <SupportSheet open={support} onClose={() => setSupport(false)} about={supportAbout} />
       </div>
       </div>
     </BottomSheet>

@@ -13,7 +13,7 @@
 import { ideasForQuestion } from "@/lib/topicIdeas";
 import { KindTag } from "./KindTag";
 import { track } from "@/lib/analytics";
-import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
+import { answerClause, answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, Check, ChevronDown, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
@@ -23,13 +23,14 @@ import { getNotificationSettings, requestNotificationPermissionDetailed, schedul
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { ruleCount } from "@/lib/lighthouses";
+import { ruleCount, quietContext } from "@/lib/lighthouses";
 import { ruleKeyOf } from "@/lib/rules";
 import { isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkSentence, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { toast } from "@/hooks/use-toast";
+import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
@@ -129,7 +130,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const rows = trackers
     .filter((tr) => !tr.archived && tr.threshold > 0)
     .map((tr) => ({ tr, k: ruleCount(tr, entries) }))
-    .map((r) => ({ ...r, lit: r.k >= r.tr.threshold }));
+    .map((r) => ({ ...r, lit: r.k >= r.tr.threshold && !quietContext(r.tr) }));
   const lit = rows.filter((r) => r.lit);
   const evenings = answeredEvenings(trackers, entries);
   const allWatching = rows.filter((r) => !r.lit).sort((a, b) => b.k / b.tr.threshold - a.k / a.tr.threshold);
@@ -202,7 +203,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
           <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("rules.evenings", { k: evenings, count: SHAPING_EVENINGS })}</p>
         </div>
       ) : (
-        <p className="surface rounded-[22px] px-5 py-4 text-[18px] font-bold">{t("rules.nothingNow")}</p>
+        // never "Nothing to do now" over a partner who shouted or said hurtful things (persona walk, Nov 9 2026)
+        !watching.some((r) => r.k > 0 && HOME_HARM_IDS.has(templateIdOf(r.tr) ?? "")) && <p className="surface rounded-[22px] px-5 py-4 text-[18px] font-bold">{t("rules.nothingNow")}</p>
       ))}
 
       {lit.length > 0 && <p className="px-1 pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.timeToAct")}</p>}

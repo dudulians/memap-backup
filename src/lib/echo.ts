@@ -19,7 +19,10 @@ export const echoLine = (t: TFunction, door: Door, counts: DoorCounts): string =
 };
 
 /** A question with no "after" words says nothing rather than its key (QA re-check, Nov 9 2026). */
-export const factLine = (t: TFunction, fact: ContextFact): string => {
+/** what: the thing counted ("Bad nights"), so the line has a subject (persona walk, Nov 9 2026:
+ *  «2 из 2 в день без тренировки» said nothing). */
+export const factLine = (t: TFunction, fact: ContextFact, what?: string): string => {
   const after = t(`doors.context.${fact.templateId}.after`, { defaultValue: "" });
-  return after ? t("doors.echo.fact", { k: fact.k, n: fact.n, after }) : "";
+  if (!after) return "";
+  return what ? t("doors.echo.factOf", { what, k: fact.k, n: fact.n, after }) : t("doors.echo.fact", { k: fact.k, n: fact.n, after });
 };

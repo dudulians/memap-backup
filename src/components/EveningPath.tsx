@@ -19,7 +19,7 @@ import { OBSERVE_TIPS } from "@/lib/observeTipsData";
 import { TipCard, markTip as markTipSeen, tipSeen } from "./Tips";
 import { switchToOld } from "./UpgradeInvite";
 import { SupportSheet } from "./SupportSheet";
-import { HEAVY_MOOD_IDS } from "@/lib/supportLines";
+import { HEAVY_MOOD_IDS, HOME_HARM_IDS } from "@/lib/supportLines";
 import { templateIdOf as moodTemplateOf } from "@/lib/answerPhrases";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -254,6 +254,8 @@ export const EveningPath = ({
   // card offers what's left, all optional — a card on tap, never one that stays
   // on the path ("не нравится эта табличка на постоянке").
   const eveningDone = steps.length > 0 && firstOpen < 0;
+  // a partner shouted or said something hurtful today
+  const hardHome = useMemo(() => { const d = isoDay(new Date()); return entries.some((e) => e.date === d && e.value === true && HOME_HARM_IDS.has(moodTemplateOf(trackers.find((x) => x.id === e.trackerId) ?? ({ id: "", title: "" } as Tracker)) ?? "")); }, [entries, trackers]);
   const openLeft = steps.filter((s) => isOpenStep(s) && s.kind !== "unload").length;
   const endNode = steps.length > 0 ? firstStep + steps.length : -1;
   const cur = firstOpen;
@@ -761,8 +763,10 @@ export const EveningPath = ({
       // "discover" steps instead). The calendar button is named for her question.
       return (
         <>
-          {head(t("path.eveningDone"), t("path.eveningDoneSub"))}
-          {button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
+          {/* a hurtful evening with a partner ends gently, no "Great work!" and no game (persona walk, Nov 9 2026) */}
+          {hardHome ? head(t("path.eveningSoft"), t("path.eveningSoftSub")) : head(t("path.eveningDone"), t("path.eveningDoneSub"))}
+          {hardHome && button(t("support.chip"), go(() => setSupport(true), "support"), "teal")}
+          {!hardHome && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
           {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"), "gold")}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}

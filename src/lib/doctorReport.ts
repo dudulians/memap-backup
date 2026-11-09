@@ -14,7 +14,7 @@
 import i18n from "@/lib/i18n";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
-import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, type IslandId } from "@/lib/islands";
+import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
 import { linkOther, linkSentence } from "@/lib/linkText";
 import { answerPhrase } from "@/lib/answerPhrases";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
@@ -169,7 +169,7 @@ const collect = (r: ReportInput): Data => {
   const qs = groups.flatMap((gr) => gr.qs.map((x) => x.q)).filter((q) => ids.has(q.id));
   const answeredDays = new Set(inPeriod.filter((e) => ids.has(e.trackerId)).map((e) => e.date)).size;
   // links only between the questions that go in
-  const pairs = computeCorrelations(qs, inPeriod.filter((e) => ids.has(e.trackerId)), 6).filter(linkWorthShowing);
+  const pairs = rankLinks(computeCorrelations(qs, inPeriod.filter((e) => ids.has(e.trackerId)), 6).filter(linkWorthShowing));
   return { days, first, last, qs, vals, answeredDays, pairs };
 };
 const linkLine = (c: CorrelationResult, pro: boolean) => {
@@ -199,7 +199,11 @@ const capFirst = (x: string) => x.charAt(0).toLocaleUpperCase() + x.slice(1);
  *  and the full report draws their calendars. */
 const hardTops = (data: Data) => {
   const rows = data.qs.filter((q) => !neutralQ(q)).map((q) => ({ q, ...countsOf(data, q) }));
-  const byHard = (x: typeof rows[number], y: typeof rows[number]) => y.hard - x.hard || y.hard / y.ans.length - x.hard / x.ans.length;
+  // the reason she came first: her main topic, then her other picked topics (persona walk, Nov 9 2026: a
+  // migraine report opened with racing thoughts and had no migraine calendar)
+  const door = getDoorState();
+  const rank = (q: Tracker) => (q.id === door?.trackerId ? 0 : (door?.extra ?? []).some((x) => x.trackerId === q.id) ? 1 : 2);
+  const byHard = (x: typeof rows[number], y: typeof rows[number]) => rank(x.q) - rank(y.q) || y.hard - x.hard || y.hard / y.ans.length - x.hard / x.ans.length;
   return { rows, bad: rows.filter((r) => r.hard > 0 && r.q.problemWhen === "yes").sort(byHard), missed: rows.filter((r) => r.hard > 0 && r.q.problemWhen !== "yes").sort(byHard) };
 };
 /** "In short": what the numbers say, in plain sentences — the most frequent hard things, whether they

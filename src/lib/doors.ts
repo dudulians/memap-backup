@@ -487,7 +487,8 @@ export const strongestContextFact = (
   const yesDates = new Set(
     entries.filter((e) => e.trackerId === state.trackerId && e.value).map((e) => e.date),
   );
-  if (yesDates.size < 2) return null;
+  // three times at least before saying "k of n" (persona walk, Nov 9 2026: "2 of 2")
+  if (yesDates.size < 3) return null;
   let best: ContextFact | null = null;
   state.contextTrackerIds.forEach((ctxId, i) => {
     const tracker = trackers.find((tr) => tr.id === ctxId && !tr.archived);

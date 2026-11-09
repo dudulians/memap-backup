@@ -409,7 +409,11 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     }
   };
 
+  // a past day moves a young path's start back only once an answer is saved for it (persona walk,
+  // Nov 9 2026: just opening "Answer for Saturday" and closing it changed "67 days" to "66")
+  const pendingStart = useRef<string | null>(null);
   const handleAnswer = async (trackerId: string, value: boolean) => {
+    if (pendingStart.current && pendingStart.current === selectedDate) { extendPathStart(selectedDate); pendingStart.current = null; }
     const existingEntry = getSelectedDateEntry(trackerId);
 
     if (existingEntry) {
@@ -1046,7 +1050,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
         onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
         onFillDay={(date, redo) => {
           if (redo) { setDayOpen({ date }); return; }
-          extendPathStart(date);
+          pendingStart.current = date;
           setStep(redo ? { redo: true } : null);
           setSelectedDate(date);
           setDailySessionOpen(true);
