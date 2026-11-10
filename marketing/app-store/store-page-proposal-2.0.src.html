@@ -1,0 +1,259 @@
+<title>MeMap Store Page 2.0</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one reading column of store fields, each a quiet sheet with a copy button; variants and Russian below. */
+:root {
+  --bg: #F3F6FB; --sheet: #FFFFFF; --ink: #24283A; --muted: #646B82; --line: #DCE2EE;
+  --teal: #2E8C84; --teal-soft: #E1F2EF; --sky: #DCE6FB; --warn: #9A5A12; --warn-soft: #FBEFD9;
+  --display: "Fraunces", Georgia, "Times New Roman", serif;
+  --body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141829; --sheet: #1D2238; --ink: #E8EBF5; --muted: #A2A9C2; --line: #2E3552;
+  --teal: #5CC3B8; --teal-soft: #1C3A3B; --sky: #232C4A; --warn: #F0C27A; --warn-soft: #3A2E1C; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141829; --sheet: #1D2238; --ink: #E8EBF5; --muted: #A2A9C2; --line: #2E3552;
+  --teal: #5CC3B8; --teal-soft: #1C3A3B; --sky: #232C4A; --warn: #F0C27A; --warn-soft: #3A2E1C; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; margin: 0; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 36px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.08; }
+h2 { font-size: 26px; line-height: 1.2; }
+h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 62ch; }
+.section { display: grid; gap: 14px; }
+.listing { display: flex; gap: 16px; align-items: center; background: var(--sheet); border: 1px solid var(--line); border-radius: 20px; padding: 18px; }
+.listing img { width: 76px; height: 76px; border-radius: 18px; flex: none; }
+.listing .t { font-weight: 800; font-size: 18px; }
+.listing .s { color: var(--muted); }
+.listing .c { font-size: 12px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 2px; }
+.field { background: var(--sheet); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; display: grid; gap: 8px; min-width: 0; }
+.field-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field-head h3 { flex: 1; }
+.count { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.count.ok::before { content: "✓ "; color: var(--teal); }
+.val { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; }
+.val.mono { font-family: var(--mono); font-size: 14px; }
+button.copy { font: 700 13px var(--body); color: var(--teal); background: var(--teal-soft); border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+button.copy:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.shot { background: var(--sky); border-radius: 16px; padding: 14px; display: grid; gap: 6px; align-content: start; min-height: 150px; }
+.shot .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.shot .h { font-family: var(--display); font-size: 19px; line-height: 1.2; font-weight: 600; }
+.shot .w { font-size: 13px; color: var(--muted); }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tabs button { font: 700 14px var(--body); border: 1px solid var(--line); background: var(--sheet); color: var(--ink); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.note { background: var(--warn-soft); color: var(--ink); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
+.note strong { color: var(--warn); }
+ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: var(--sheet); border-radius: 14px; overflow: hidden; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.why { font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="section">
+    <h3>MeMap 2.0 · App Store page · proposal</h3>
+    <h1>Your life is a whole world.</h1>
+    <p class="lede">Built from the brand strategy (Nov 2026): name stays, Concept A “Make Your World Brighter” leads, B and C are kept for creative tests. Every line below describes something that ships in build 2.0 (v128). Copy a field and paste it into App Store Connect.</p>
+  </header>
+
+  <section class="section" aria-labelledby="look">
+    <h2 id="look">How it reads in search</h2>
+    <div class="listing">
+      <img alt="MeMap icon: the night globe" src="{{ICON}}">
+      <div>
+        <div class="t">MeMap: Daily Life Tracker</div>
+        <div class="s" data-sub>Make Your World Brighter</div>
+        <div class="c">Health &amp; Fitness · Free</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="en">
+    <div class="field-head"><h2 id="en" style="flex:1">English page (Concept A)</h2></div>
+
+    <div class="field"><div class="field-head"><h3>App name</h3><span class="count" data-max="30"></span><button class="copy" type="button">Copy</button></div>
+      <div class="val">MeMap: Daily Life Tracker</div>
+      <p class="why">Today it is “MeMap Tracker”. Changing the name needs a new version, so it goes in with 2.0.</p></div>
+
+    <div class="field"><div class="field-head"><h3>Subtitle</h3><span class="count" data-max="30"></span><button class="copy" type="button">Copy</button></div>
+      <div class="val">Make Your World Brighter</div></div>
+
+    <div class="field"><div class="field-head"><h3>Promotional text</h3><span class="count" data-max="170"></span><button class="copy" type="button">Copy</button></div>
+      <div class="val">Your life is a whole world. Make it brighter, one small step at a time. Grow your islands, notice what matters, and choose what to change next.</div>
+      <p class="why">Can be changed any time without a new version.</p></div>
+
+    <div class="field"><div class="field-head"><h3>Description</h3><span class="count" data-max="4000"></span><button class="copy" type="button">Copy</button></div>
+<div class="val">Your life is a whole world. MeMap helps you notice its little details, see what repeats over time, and find your own way to make each day a little brighter.
+
+A few yes/no questions in the evening. That's all it takes.
+
+CREATE YOUR WORLD
+Each part of life — health, mood, love, work, family, pets — is an island on your globe. Your islands grow, evening by evening, as you answer.
+
+NOTICE THE EVERYDAY
+Pick the questions that matter to you, or write your own. Answer with a swipe, yes or no, or tap “Not sure”.
+
+SEE THE BIGGER PICTURE
+As your answers add up, MeMap shows what tends to happen together, in plain words: “On days you slept under 7 hours, you more often had a headache — 4 of 5 times.” These are patterns in your own days, not proof of a cause.
+
+FIND YOUR OWN NEXT STEP
+Set your own rule, like “3 hard days in a week”. When it's reached, a lighthouse lights up with a small step you can choose. Try one change for two weeks and see how it went.
+
+MAKE IT YOURS
+• A report of your week
+• Notes and reasons for the days you want to remember
+• A clear report to show a doctor, a therapist or a coach — or to keep for yourself
+• Gentle reminders at the time you choose
+• Day and night looks, English and Russian
+
+PRIVATE BY DESIGN
+No account. Your questions, answers and notes stay on your phone. We see only totals across everyone who uses the app, never your answers.
+
+Small moments matter. Your world is yours to shape.
+
+MeMap helps you notice patterns in everyday life. It doesn't diagnose medical conditions or replace professional advice.</div></div>
+
+    <div class="field"><div class="field-head"><h3>Keywords</h3><span class="count" data-max="100"></span><button class="copy" type="button">Copy</button></div>
+      <div class="val mono">habit,check in,reflection,wellbeing,behavior,relationship,family,child,pet,sleep,personal,mood</div>
+      <p class="why">From the strategy. Words already in the name and subtitle (daily, life, tracker, world, brighter) are left out: Apple counts them anyway.</p></div>
+
+    <div class="field"><div class="field-head"><h3>What's New in 2.0</h3><span class="count" data-max="4000"></span><button class="copy" type="button">Copy</button></div>
+<div class="val">MeMap 2.0 is a whole new look.
+• Your life as a world: islands that grow as you answer
+• One calm path each day: a few questions, then a small next step
+• Links in plain words: what tends to happen together in your days
+• Your own rules light a lighthouse; try a change for two weeks
+• A weekly report, notes and reasons
+All your answers from before are still here.</div></div>
+  </section>
+
+  <section class="section" aria-labelledby="shots">
+    <h2 id="shots">Screenshots: the story in six</h2>
+    <p class="lede">Real screens of build v128, 1320×2868, made by the screenshots session: <a href="https://claude.ai/artifact/ByFYrgEmfASZAzKv6YLPqo">see them here</a>. World first, then the everyday, the pattern and a step.</p>
+    <div class="shots">
+      <div class="shot"><span class="n">01 · World</span><span class="h">Your life is a whole world.</span><span class="w">The globe with the islands</span></div>
+      <div class="shot"><span class="n">02 · Today</span><span class="h">Watch your islands grow.</span><span class="w">Today’s path</span></div>
+      <div class="shot"><span class="n">03 · When to act</span><span class="h">Choose your next small step.</span><span class="w">Try it for 2 weeks / Not for me</span></div>
+      <div class="shot"><span class="n">04 · Evening</span><span class="h">Notice the everyday.</span><span class="w">A yes/no question</span></div>
+      <div class="shot"><span class="n">05 · Links</span><span class="h">See the bigger picture.</span><span class="w">A link in plain words, 12 of 16</span></div>
+      <div class="shot"><span class="n">06 · A finished test</span><span class="h">One small step at a time.</span><span class="w">3 of 14 before, 8 of 14 after</span></div>
+    </div>
+    <p class="why">First screenshots for the tests: B “Your world. Yours to shape.” (choosing islands at the start), C “The little things add up.” (a month calendar). Not done yet: the 6.5-inch size, the Russian set and a night version.</p>
+  </section>
+
+  <section class="section" aria-labelledby="ab">
+    <h2 id="ab">Variants B and C, for tests</h2>
+    <p class="lede">Apple's product page tests change screenshots and the icon; custom product pages can also change the promotional text. The subtitle changes only with a new version, so A goes live and B or C win only through screenshots.</p>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" aria-selected="true" data-v="B">B · Yours to shape</button>
+      <button type="button" role="tab" aria-selected="false" data-v="C">C · Discover patterns</button>
+    </div>
+    <div data-panel="B" class="section">
+      <div class="field"><div class="field-head"><h3>Subtitle</h3><span class="count" data-max="30"></span><button class="copy" type="button">Copy</button></div><div class="val">Your World, Yours to Shape</div></div>
+      <div class="field"><div class="field-head"><h3>Promotional text</h3><span class="count" data-max="170"></span><button class="copy" type="button">Copy</button></div><div class="val">Your world is yours to shape. Turn everyday observations into a clearer picture, explore your islands, and take the next small step on your own terms.</div></div>
+      <div class="field"><div class="field-head"><h3>Screenshot headlines</h3><button class="copy" type="button">Copy</button></div><div class="val">Your world. Yours to shape.
+Notice what matters to you.
+Take a step that feels right.</div></div>
+      <div class="field"><div class="field-head"><h3>Keywords</h3><span class="count" data-max="100"></span><button class="copy" type="button">Copy</button></div><div class="val mono">habit,behavior,reflection,relationship,child,pet,wellbeing,self awareness,check in,parent,mood</div></div>
+    </div>
+    <div data-panel="C" class="section" hidden>
+      <div class="field"><div class="field-head"><h3>Subtitle</h3><span class="count" data-max="30"></span><button class="copy" type="button">Copy</button></div><div class="val">See Patterns in Your Days</div></div>
+      <div class="field"><div class="field-head"><h3>Promotional text</h3><span class="count" data-max="170"></span><button class="copy" type="button">Copy</button></div><div class="val">Life is full of patterns that are easy to miss. Follow your days, discover meaningful connections, and use what you learn to shape a brighter world.</div></div>
+      <div class="field"><div class="field-head"><h3>Screenshot headlines</h3><button class="copy" type="button">Copy</button></div><div class="val">The little things add up.
+See patterns you might miss.
+Turn insight into a small step.</div></div>
+      <div class="field"><div class="field-head"><h3>Keywords</h3><span class="count" data-max="100"></span><button class="copy" type="button">Copy</button></div><div class="val mono">mood,habit,behavior,journal,relationship,child,pet,check in,wellbeing,insights,reflection</div></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="ru">
+    <h2 id="ru">Русская страница (концепция A)</h2>
+    <p class="lede">For the Russian storefront and phones set to Russian. Informal «ты», no gendered words.</p>
+
+    <div class="field"><div class="field-head"><h3>Название</h3><span class="count" data-max="30"></span><button class="copy" type="button">Copy</button></div><div class="val">MeMap: Трекер жизни</div></div>
+    <div class="field"><div class="field-head"><h3>Подзаголовок</h3><span class="count" data-max="30"></span><button class="copy" type="button">Copy</button></div><div class="val">Сделай свой мир ярче</div></div>
+    <div class="field"><div class="field-head"><h3>Рекламный текст</h3><span class="count" data-max="170"></span><button class="copy" type="button">Copy</button></div><div class="val">Твоя жизнь — целый мир. Делай его ярче шаг за шагом: пусть растут острова, замечай важное и выбирай, что изменить дальше.</div></div>
+    <div class="field"><div class="field-head"><h3>Описание</h3><span class="count" data-max="4000"></span><button class="copy" type="button">Copy</button></div>
+<div class="val">Твоя жизнь — целый мир. MeMap помогает замечать его детали, видеть, что повторяется со временем, и находить свой способ сделать каждый день чуть ярче.
+
+Пара вопросов «да / нет» вечером — и всё.
+
+СОЗДАЙ СВОЙ МИР
+Каждая часть жизни — здоровье, настроение, любовь, работа, семья, питомцы — это остров на твоём глобусе. Острова растут вечер за вечером, пока ты отвечаешь.
+
+ЗАМЕЧАЙ ПОВСЕДНЕВНОЕ
+Выбирай вопросы, которые важны тебе, или пиши свои. Отвечай свайпом, да или нет, или нажми «Не знаю».
+
+СМОТРИ НА ОБЩУЮ КАРТИНУ
+Когда ответов становится больше, MeMap показывает, что обычно бывает вместе, простыми словами: «В дни, когда сна было меньше 7 часов, чаще болела голова — 4 раза из 5». Это закономерности в твоих днях, а не доказательство причины.
+
+НАХОДИ СВОЙ СЛЕДУЮЩИЙ ШАГ
+Задай своё правило, например «3 трудных дня за неделю». Когда оно срабатывает, загорается маяк с маленьким шагом на выбор. Попробуй одно изменение две недели и посмотри, что получилось.
+
+ПОД СЕБЯ
+• Отчёт о неделе
+• Заметки и причины для дней, которые хочется запомнить
+• Понятный отчёт, который можно показать врачу, психологу или коучу — или оставить себе
+• Мягкие напоминания в удобное время
+• Дневная и ночная тема, английский и русский
+
+ПРИВАТНО
+Без аккаунта. Твои вопросы, ответы и заметки хранятся на телефоне. Мы видим только общие цифры по всем пользователям и никогда — твои ответы.
+
+Маленькие моменты важны. Твой мир — тебе его и строить.
+
+MeMap помогает замечать закономерности в повседневной жизни. Приложение не ставит медицинских диагнозов и не заменяет консультацию специалиста.</div></div>
+    <div class="field"><div class="field-head"><h3>Ключевые слова</h3><span class="count" data-max="100"></span><button class="copy" type="button">Copy</button></div><div class="val mono">привычки,настроение,сон,дневник,самочувствие,отношения,семья,ребенок,питомец,рефлексия,чек-ин</div></div>
+    <div class="field"><div class="field-head"><h3>Что нового в 2.0</h3><span class="count" data-max="4000"></span><button class="copy" type="button">Copy</button></div>
+<div class="val">MeMap 2.0 — совсем новый вид.
+• Твоя жизнь как мир: острова растут, пока ты отвечаешь
+• Один спокойный путь на день: пара вопросов, потом маленький шаг
+• Связи простыми словами: что обычно бывает вместе в твоих днях
+• Свои правила зажигают маяк; попробуй изменение на две недели
+• Отчёт о неделе, заметки и причины
+Все твои прежние ответы на месте.</div></div>
+  </section>
+
+  <section class="section" aria-labelledby="check">
+    <h2 id="check">Before it goes to review</h2>
+    <div class="note">
+      <ul>
+        <li><strong>Screenshots</strong> from real screens of build v128 only (the screenshots session is making them).</li>
+        <li><strong>App Privacy</strong> in App Store Connect: Usage Data, Coarse Location, Device ID, Crash and Diagnostics, all “not linked”, no tracking. Health is no longer needed (topics left the statistics in v122).</li>
+        <li><strong>Privacy policy</strong> on the site: drag the docs folder to Netlify once more.</li>
+        <li><strong>The App Enhancements nomination</strong> (sent Nov 7) still mentions a “When to see a doctor” list that the app no longer has.</li>
+        <li><strong>Category</strong>: stays Health &amp; Fitness, as in the strategy. Lifestyle would sound less medical; it's your call.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+// character counts against Apple's limits, and copy buttons
+document.querySelectorAll(".field").forEach((f) => {
+  const val = f.querySelector(".val"); const c = f.querySelector(".count");
+  if (c && val) { const n = [...val.textContent].length, max = +c.dataset.max; c.textContent = `${n} / ${max}`; if (n <= max) c.classList.add("ok"); }
+  const b = f.querySelector("button.copy");
+  if (b && val) b.addEventListener("click", async () => {
+    const text = val.textContent;
+    try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
+    catch { const r = document.createRange(); r.selectNodeContents(val); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected — press Copy"; }
+    setTimeout(() => (b.textContent = "Copy"), 1600);
+  });
+});
+document.querySelectorAll('.tabs [role="tab"]').forEach((t) => t.addEventListener("click", () => {
+  document.querySelectorAll('.tabs [role="tab"]').forEach((x) => x.setAttribute("aria-selected", String(x === t)));
+  document.querySelectorAll("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== t.dataset.v));
+}));
+</script>
