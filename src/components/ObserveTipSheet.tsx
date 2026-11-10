@@ -47,9 +47,10 @@ export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: (
               <p className="mt-0.5 text-[17px] font-bold leading-snug">{question}</p>
             </div>
           )}
-          <a href={tip.source.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-[14px] font-semibold text-[hsl(var(--coin-teal))] underline-offset-2 hover:underline">
+          {/* the source as quiet small print, not a link (her note, Nov 10 2026) */}
+          <p data-tip-source className="mt-3 text-[12px] font-medium leading-snug text-muted-foreground opacity-60">
             {t("tipDay.source", { name: tip.source.name })}
-          </a>
+          </p>
           {added ? (
             <>
               <p className="mt-5 flex items-center gap-2 text-[17px] font-bold"><Check className="h-5 w-5 text-[hsl(var(--balanced))]" strokeWidth={3} /> {t("tipDay.added")}</p>
