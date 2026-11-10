@@ -71,6 +71,17 @@ for (const lang of ["en", "ru"]) {
     out[`${lang}.steps`] = [step1, step2];
     ok(`${lang}.the next step takes its place`, !!step2 && step2 !== step1, { step1, step2 });
     out[`${lang}.step1`] = step1;
+    // the step just done says so right in its card (her note, Nov 10 2026: "не показалось, что это куда-то ушло")
+    const inCard = (await cardOf(W.voice).locator("[data-just-done]").innerText().catch(() => "")).replace(/\s+/g, " ");
+    out[`${lang}.inCard`] = inCard;
+    ok(`${lang}.in the card: the step just done`, inCard.includes(step1.replace(/[.!]+$/, "")) && inCard.includes(W.saved), inCard);
+    // the second step too: now the card leaves, and the line above says where it went
+    await cardOf(W.voice).getByRole("button", { name: W.done }).click(); await p.waitForTimeout(1500);
+    await shot("voice-all-done");
+    ok(`${lang}.all steps done: the partner card left`, (await cardOf(W.voice).count()) === 0);
+    const top = (await p.locator("[data-just-done]").innerText().catch(() => "")).replace(/\s+/g, " ");
+    ok(`${lang}.all steps done: the line says it`, top.includes(step2.replace(/[.!]+$/, "")), top);
+    out[`${lang}.step2`] = step2;
   } else ok(`${lang}.partner card lit`, false);
 
   // 3. "See": What helps, Done list
@@ -80,7 +91,7 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.doneList`] = list;
   ok(`${lang}.What helps: Done list`, list.startsWith(W.head) || list.toUpperCase().startsWith(W.head), list.slice(0, 80));
   ok(`${lang}.the task is in it, with its day`, list.includes(plan) && /\d{1,2}\s?\S+/.test(list), list);
-  ok(`${lang}.the partner step is in it`, !out[`${lang}.step1`] || list.includes(out[`${lang}.step1`]), list);
+  ok(`${lang}.the partner steps are in it`, !out[`${lang}.step1`] || (list.includes(out[`${lang}.step1`]) && list.includes(out[`${lang}.step2`])), list);
   ok(`${lang}.before and after: when it comes`, W.soon.test(list), list);
   await ctx.close();
 }
@@ -114,6 +125,44 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.week-on`] = row;
   ok(`${lang}.4 a week on: did it help, in words`, verdict === (lang === "ru" ? "С тех пор тяжёлых ответов меньше. Возможно, это помогает." : "Fewer hard answers since. It may be helping."), row);
   await p.screenshot({ path: `${D}/${lang}-05-week-on.png` });
+  await ctx.close();
+}
+// 5. her phone (Nov 10 2026): "Tell someone you trust…" marked done in an earlier version hung on with a "Done" pill and
+// no button. Now it moves on: one step left → that step; none left → the card leaves and both are in the history.
+for (const lang of ["en", "ru"]) for (const both of [false, true]) {
+  const W = lang === "ru" ? { place: "Заранее решить, куда можно отойти", tell: "Рассказать человеку, которому доверяешь", voice: /голос/i }
+    : { place: "Decide where you can go when it gets loud", tell: "Tell someone you trust how often", voice: /voice/i };
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: "Europe/London" });
+  const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${lang}: ${e.message}`));
+  await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
+  await p.evaluate(async ({ lang, both }) => {
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"])); localStorage.setItem("memap_tour_seen", "true");
+    localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_first_link_seen", "before");
+    localStorage.setItem("memap_ab_onb", "A");
+    const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
+    const i18n = (await import("/src/lib/i18n.ts")).default;
+    const [voice, sleep] = await dz.ensureTemplates(["partner-raised-voice", "slept-enough"]);
+    const E = [];
+    for (let d = 1; d <= 30; d++) { E.push({ id: `v-${d}`, trackerId: voice, date: dz.daysAgoIso(d), value: d % 4 === 0 }); E.push({ id: `s-${d}`, trackerId: sleep, date: dz.daysAgoIso(d), value: true }); }
+    await st.saveEntries(E);
+    const T = await st.getTrackers();
+    await st.saveTrackers(T.map((t) => (t.id === voice ? { ...t, adviceAboveThreshold: i18n.t("rules.home.voiceTell"), planKind: "once" } : t)));
+    localStorage.setItem("memap_home_steps", JSON.stringify({ [voice]: both ? ["rules.home.voicePlace", "rules.home.voiceTell"] : ["rules.home.voiceTell"] }));
+    localStorage.setItem("memap_path_start", dz.daysAgoIso(30));
+  }, { lang, both });
+  await p.reload(); await p.waitForTimeout(2500);
+  await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } })));
+  await p.waitForTimeout(2600);
+  const card = p.locator("[role=dialog] div.surface.scroll-mt-4", { hasText: W.voice }).first();
+  const text = (await card.innerText().catch(() => "")).replace(/\s+/g, " ");
+  await p.screenshot({ path: `${D}/${lang}-06-old-done-${both ? "both" : "one"}.png` });
+  if (!both) ok(`${lang}.5 one step done before: the card moves to the other step`, text.includes(W.place) && !text.includes(W.tell), text.slice(0, 200));
+  else {
+    ok(`${lang}.5 both done before: the card leaves`, (await card.count()) === 0, text.slice(0, 200));
+    const log = await p.evaluate(() => JSON.parse(localStorage.getItem("memap_actions_done") || "[]").map((a) => a.plan));
+    ok(`${lang}.5 both done before: in the history`, log.includes("rules.home.voiceTell"), log);
+  }
   await ctx.close();
 }
 console.log(JSON.stringify({ fails, out, errs }, null, 1));

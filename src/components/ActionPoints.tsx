@@ -14,7 +14,7 @@ import { homeHarmLit, ideasForQuestion } from "@/lib/topicIdeas";
 import { KindTag } from "./KindTag";
 import { track } from "@/lib/analytics";
 import { answerClause, answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, Check, ChevronDown, ChevronRight, FlaskConical, RotateCcw } from "lucide-react";
 import { cardQuestion } from "@/lib/cardText";
@@ -76,6 +76,11 @@ const homeStepOf = (tid: string, plan: string): string =>
 const HOME_STEPS_FIRST = "partner-raised-voice";
 const HOME_DONE_KEY = "memap_home_steps";
 const homeDone = (): Record<string, string[]> => { try { return JSON.parse(localStorage.getItem(HOME_DONE_KEY) ?? "{}"); } catch { return {}; } };
+const clearHomeDone = (id: string) => {
+  const all = homeDone();
+  delete all[id];
+  try { localStorage.setItem(HOME_DONE_KEY, JSON.stringify(all)); } catch { /* fine */ }
+};
 const markHomeDone = (id: string, plan: string) => {
   const all = homeDone();
   all[id] = [...new Set([...(all[id] ?? []), plan])];
@@ -237,11 +242,15 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const openTest = (x: Experiment) => { haptics.tap(); if (experimentOver(x)) setResultOf(x); else setTestOpen(x); };
   // where a done task went (her notes, Nov 10 2026: "оно будет так висеть? или куда-то пойдёт" — no pop-up "Noted."):
   // the card leaves Time to act, this quiet line stays in its place, and the task is in What helps under "Done"
-  const [justDone, setJustDone] = useState<{ plan: string; home: boolean } | null>(null);
+  // her note (Nov 10 2026, again: "у меня вроде не показалось, что это куда-то ушло"): the card that stays (the next
+  // partner step) says it in the card itself; a card that left leaves the line at the top, scrolled into view
+  const [justDone, setJustDone] = useState<{ trackerId: string; plan: string; home: boolean } | null>(null);
+  const doneTop = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (justDone) window.setTimeout(() => doneTop.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 120); }, [justDone]);
   const didOnce = async (tr: Tracker, k: number) => {
     haptics.success();
     logDone({ trackerId: tr.id, plan: tr.adviceAboveThreshold || planOf(tr), kind: "once" });
-    setJustDone({ plan: planOf(tr), home: false });
+    setJustDone({ trackerId: tr.id, plan: planOf(tr), home: false });
     await countFromToday(tr.id, k, { planKind: "once" });
   };
   // a partner-harm step: noted, no praise; on "partner raised their voice" the next step becomes the task
@@ -256,10 +265,35 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
     const done = homeDone()[tr.id] ?? [];
     const nextKey = tid === "partner-raised-voice" ? (HOME_STEPS[tid] ?? []).find((key) => key !== step && !done.includes(key)) : undefined;
     if (nextKey) await patchTracker(tr.id, (x) => ({ ...x, adviceAboveThreshold: t(nextKey), planKind: "once" }));
-    else await countFromToday(tr.id, k);
-    setJustDone({ plan: shown, home: true });
+    else await finishHome(tr, tid, k);
+    setJustDone({ trackerId: tr.id, plan: shown, home: true });
     setHomeTick((n) => n + 1);
   };
+  // every step done: the card leaves (the count starts again), and if it comes back it starts from the first step
+  const finishHome = async (tr: Tracker, tid: string, k: number) => {
+    const firstStep = (HOME_STEPS[tid] ?? [])[0];
+    await countFromToday(tr.id, k, firstStep ? { adviceAboveThreshold: t(firstStep), planKind: "once" } : {});
+    clearHomeDone(tr.id);
+  };
+  // a step marked done before Nov 10 2026 kept its card on screen with a "Done" pill and no button: move it on now
+  useEffect(() => {
+    void (async () => {
+      let moved = false;
+      for (const r of lit) {
+        const tid = templateIdOf(r.tr) ?? "";
+        if (!HOME_HARM_IDS.has(tid)) continue;
+        const step = homeStepOf(tid, planOf(r.tr));
+        const done = homeDone()[r.tr.id] ?? [];
+        if (!done.includes(step)) continue;
+        if (!doneActions().some((a) => a.trackerId === r.tr.id && a.plan === step)) logDone({ trackerId: r.tr.id, plan: step, kind: "home" });
+        const nextKey = tid === "partner-raised-voice" ? (HOME_STEPS[tid] ?? []).find((key) => !done.includes(key)) : undefined;
+        if (nextKey) await patchTracker(r.tr.id, (x) => ({ ...x, adviceAboveThreshold: t(nextKey), planKind: "once" }));
+        else await finishHome(r.tr, tid, r.k);
+        moved = true;
+      }
+      if (moved) setHomeTick((n) => n + 1);
+    })();
+  }, [litKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
   const tryIt = (tr: Tracker, k: number) => {
@@ -279,8 +313,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
   return (
     <div className="space-y-2.5 animate-fade-in">
-      {justDone && (
-        <div data-just-done role="status" className="surface flex items-center gap-3 rounded-[22px] px-4 py-3.5 animate-fade-in">
+      {justDone && !lit.some((r) => r.tr.id === justDone.trackerId) && (
+        <div ref={doneTop} data-just-done role="status" className="surface flex items-center gap-3 rounded-[22px] px-4 py-3.5 animate-fade-in">
           <span className="icon-dot h-11 w-11 shrink-0"><Check className="h-5 w-5" strokeWidth={2.6} /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: TEAL }}>{t("helps.doneTag")}</span>
@@ -355,6 +389,17 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <p className="mt-3 text-[17px] font-bold leading-snug">{t("rules.partnerPaused")}</p>
             ) : plan ? (
               <div className="mt-3">
+                {/* the step just done, right here; the next one under it */}
+                {justDone?.trackerId === tr.id && (
+                  <div ref={doneTop} data-just-done role="status" className="mb-3 flex items-start gap-2.5 animate-fade-in">
+                    <Check className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.8} style={{ color: TEAL }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-bold leading-snug">{t("helps.doneStep", { plan: justDone.plan.replace(/[.!]+$/, "") })}</span>
+                      <span className="block text-[14px] font-semibold leading-snug text-muted-foreground">{t("helps.savedHome")}</span>
+                    </span>
+                    <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new Event("memap-open-helps")); }} className="shrink-0 text-[15px] font-bold" style={{ color: TEAL }}>{t("helps.see")}</button>
+                  </div>
+                )}
                 <KindTag kind="task" />
                 <p className="mt-0.5 text-[21px] font-bold leading-snug tracking-tight">{plan}</p>
                 {/* her answers say she already does it (Nov 10 2026: "я же отмечал, что сплю хорошо"): said honestly */}
@@ -499,7 +544,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
       {current && sheet?.mode === "show" && (
         <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} st={current.st} entries={entries} name={cardQuestion(current.tr)} onClose={() => setSheet(null)}
-          onTry={() => tryIt(current.tr, current.k)} onDid={(p) => setJustDone({ plan: p, home: false })} blocked={(() => { const o = tests.find((x) => x.from === current.tr.id && !experimentOver(x)); return o ? t("rules.testing", { k: experimentDay(o), count: EXPERIMENT_DAYS }) : null; })()} />
+          onTry={() => tryIt(current.tr, current.k)} onDid={(p) => setJustDone({ trackerId: current.tr.id, plan: p, home: false })} blocked={(() => { const o = tests.find((x) => x.from === current.tr.id && !experimentOver(x)); return o ? t("rules.testing", { k: experimentDay(o), count: EXPERIMENT_DAYS }) : null; })()} />
       )}
       {current && sheet?.mode === "change" && (
         <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} couplesOff={couplesOff} trackers={trackers} entries={entries} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />

@@ -2276,6 +2276,7 @@ const en = {
     beforeLine: "Hard days during it: {{a}} of {{b}} · the two weeks before: {{c}} of {{d}}",
     done: "Done",
     doneTag: "Done",
+    doneStep: "Done: {{plan}}",
     savedOnce: "It's saved in What helps. In a week, see your answers before and after.",
     savedHome: "It's saved in What helps.",
     see: "See",
