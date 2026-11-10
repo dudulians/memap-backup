@@ -383,9 +383,11 @@ export const EveningPath = ({
     }
     if (n.kind === "chest") {
       if (quietChest) return { look: "locked", icon: null, title: t("path.quietWeek") };
-      if (chestHere && !m.weekComplete) return { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.weekReport") };
+      // gold only once it's been opened: gold is what's done (her note, Nov 10 2026: "Report ready сразу жёлтая — это
+      // путает, жёлтые я вообще не хочу открывать"); ready and not opened looks like a step to do
+      if (chestHere) return { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.weekReport") };
       return m.weekComplete
-        ? { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.reportReady"), action: currentNode < 0 ? t("path.openReport") : undefined }
+        ? { look: currentNode < 0 ? "current" : "todo", hue: "var(--coin-teal)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.reportReady"), action: currentNode < 0 ? t("path.openReport") : undefined }
         : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
     }
     if (n.kind === "end") {
@@ -851,7 +853,8 @@ export const EveningPath = ({
       return m.weekComplete ? (
         <>
           {head(t("path.reportReady"))}
-          {button(t("path.openReport"), () => { setOpen(null); openThisChest(); }, "gold")}
+          {/* teal like any step to do: gold is for what's done (Nov 10 2026) */}
+          {button(t("path.openReport"), () => { setOpen(null); openThisChest(); })}
         </>
       ) : (
         head(reportLabel, t("path.toGo", { count: toGo }))
@@ -875,7 +878,7 @@ export const EveningPath = ({
           {hardHome && button(t("support.chip"), go(() => setSupport("home"), "support"), "teal")}
           {!hardHome && playful && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
           {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
-          {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"), "gold")}
+          {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"))}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}
           {hasLinks && button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap, "links"), "plain")}
           {m.totalDays >= 7 && button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => onTask("calendar"), "calendar"), "plain")}
@@ -919,7 +922,7 @@ export const EveningPath = ({
       return (
         <>
           {head(t("path.lastReport"), t("path.lastReportLine"))}
-          {button(t("path.openReport"), () => startStep(s), "gold")}
+          {button(t("path.openReport"), () => startStep(s))}
         </>
       );
     }

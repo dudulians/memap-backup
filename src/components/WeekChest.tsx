@@ -364,7 +364,8 @@ export const WeekChest = ({
               <p className="mt-6 text-[30px] font-bold tracking-tight">{t("path.chest.ready")}</p>
               <p className="mt-1 text-[17px] font-medium text-muted-foreground">{t("path.weekN", { n: week + 1 })}</p>
             </div>
-            <Pressable tone="gold" haptic="none" onClick={open} className="h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+            {/* teal, not gold: gold is for what is done (her note, Nov 10 2026) */}
+            <Pressable tone="teal" haptic="none" onClick={open} className="h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
               {t("path.chest.open")}
             </Pressable>
           </>
@@ -377,7 +378,7 @@ export const WeekChest = ({
             ))}
             <div className="mt-6 w-full max-w-sm">
               {shown < cards(rec).length ? (
-                <Pressable tone="gold" haptic="none" onClick={() => {
+                <Pressable tone="teal" haptic="none" onClick={() => {
                   // The world-grew card sparkles, the others land.
                   const nextIsWorld = playful && !!rec.fresh && shown === cards(rec).length - (rec.mission ? 3 : 2);
                   if (nextIsWorld) { haptics.sparkle(); playSparkle(); } else { haptics.land(); playThump(); }
@@ -389,7 +390,7 @@ export const WeekChest = ({
                 // Nothing is promised a place on the map that isn't drawn: a
                 // new treasure goes to her shelf, the rest to the map.
                 <>
-                <Pressable tone="gold" haptic="none" onClick={hasTreasure ? toTreasures : place} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+                <Pressable tone="teal" haptic="none" onClick={hasTreasure ? toTreasures : place} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                   {hasTreasure ? t("path.chest.seeTreasures") : t("path.chest.seeMap")}
                 </Pressable>
                 {/* her week as a picture to share (Nov 6 2026) */}
