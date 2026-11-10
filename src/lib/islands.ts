@@ -218,6 +218,12 @@ export const linkWorthShowing = (c: CorrelationResult): boolean => {
   if (isTestQuestion(c.trackerA) || isTestQuestion(c.trackerB)) return false;
   const l = linkOf(c);
   if (l.n < LINK_MIN_SIDE || l.other.n < LINK_MIN_SIDE) return false;
+  // a side told by its absence is only ever a good thing that was missing ("no workout", "short night"): never the
+  // absence of a hard or a neutral thing (her note, Nov 10 2026: "Not drained → back pain the next day" — "что это
+  // вообще за вопрос такой? … явно что-то не так"; the same with "No wish to quit → …"). Such pairs (drained days
+  // had less back pain) say nothing a person can use, and with this many pairs they are mostly chance.
+  if (!l.firstYes && trackerPolarity(l.first) !== "good") return false;
+  if (!l.secondYes && trackerPolarity(l.second) !== "good") return false;
   // never her own drinking, stress or sleep before a partner shouting or saying hurtful things (Refuge: only the
   // abuser is to blame; Nov 9 2026). What it does to her after is still shown.
   const home = (t: Tracker) => HOME_HARM_IDS.has(matchTemplateIdByTitle(t.title) ?? "");

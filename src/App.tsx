@@ -1,6 +1,7 @@
 import { useEffect } from "react";
+// The pop-up toaster stays only for the old screens (src/classic); the new ones show
+// feedback in place (her note, Nov 10 2026: no technical pop-up windows).
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -188,7 +189,6 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
-          <Sonner />
           <BrowserRouter>
             <Routes>
               {/* Old users keep the 1.7.9 screens (src/lib/uiMode.ts) */}

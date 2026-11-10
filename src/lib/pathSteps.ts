@@ -7,7 +7,7 @@
 // path start make a week (since Nov 9 2026; before, seven answered ones). Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top note).
 import { FOLLOW_UPS } from "./bodyTemplates";
 import { templateIdOf } from "./answerPhrases";
-import { Tracker, TrackerEntry } from "@/types/tracker";
+import { Tracker, TrackerEntry, askedOn } from "@/types/tracker";
 import { buildIslands, buildRoutes, islandOf, type IslandId } from "@/lib/islands";
 import { firstLinkState } from "@/lib/firstLink";
 import { grewToday } from "@/lib/globeArt";
@@ -151,7 +151,8 @@ export interface PathModel {
 
 const ISLAND_ORDER: IslandId[] = ["me", "love", "kids", "health", "body", "pet", "parents", "work", "world", "mine", "other"];
 
-export const activeQuestions = (trackers: Tracker[]) => trackers.filter((t) => !t.archived && t.source !== "play");
+// a night test's question from its second evening (askedOn, Nov 10 2026)
+export const activeQuestions = (trackers: Tracker[]) => { const today = isoLocal(new Date()); return trackers.filter((t) => !t.archived && t.source !== "play" && askedOn(t, today)); };
 
 export interface QuestionGroup {
   island?: IslandId;

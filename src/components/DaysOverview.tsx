@@ -18,6 +18,7 @@ import { Spline, Sprout } from "lucide-react";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments, runningExperiments } from "@/lib/experiments";
 import { cn } from "@/lib/utils";
 import { smooth } from "./ChartViews";
+import { doneActions } from "@/lib/actionLog";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -51,6 +52,8 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
   /** What helps: the try now, or pick one */
   onHelps?: () => void;
 }) => {
+  // tasks marked Done (Nov 10 2026): What helps keeps them, the tile counts them when no test is there to tell
+  const doneN = doneActions().length;
   const { t } = useTranslation();
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
 
@@ -171,9 +174,9 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
         {head("world4.whatHelps")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[15px] font-bold tabular-nums">
           <Sprout className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
-          {running.length > 1 ? running.length : test ? null : tried > 0 ? tried : null}
+          {running.length > 1 ? running.length : test ? null : tried > 0 ? tried : doneN > 0 ? doneN : null}
         </span>
-        {sub(running.length > 1 ? t("world4.nextEnds", { count: endsIn }) : test ? t("world4.testDay", { k: Math.min(experimentDay(test), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : tried > 0 ? t("world4.tried", { count: tried }) : t("world4.tryOne"))}
+        {sub(running.length > 1 ? t("world4.nextEnds", { count: endsIn }) : test ? t("world4.testDay", { k: Math.min(experimentDay(test), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }) : tried > 0 ? t("world4.tried", { count: tried }) : doneN > 0 ? t("world4.doneSteps", { count: doneN }) : t("world4.tryOne"))}
       </button>
     </div>
   );

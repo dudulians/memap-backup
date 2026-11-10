@@ -34,6 +34,8 @@ import { LinkSheet } from "./LinkSheet";
 import { PlanetGlobe } from "./PlanetGlobe";
 import { AnswerNow, GrowthLadder, IslandMore, IslandTreasures, IslandWeek, type IslandView } from "./IslandStats";
 import { PatternsTab } from "./PatternsTab";
+import { reopenLink } from "./FindingsView";
+import { ChevronLeft } from "lucide-react";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
 import { DaysOverview } from "./DaysOverview";
@@ -67,8 +69,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   useEffect(() => {
     const set = (e: Event) => { const v = (e as CustomEvent).detail; if (v === "map" || v === "globe") setView(v); };
     window.addEventListener("memap-set-map-view", set);
-    // a link's "See the days": both questions on the chart (QA: it opened one question's calendar under "Links")
-    const linkDays = (e: Event) => { const ids = (e as CustomEvent).detail as string[]; if (!ids?.length) return; setOnlyIsland(null); setOnlyIds(ids); setOnly("trends"); };
+    // a link's "See the days": both questions on the chart (QA: it opened one question's calendar under "Links");
+    // back (or closing the chart) returns to that link in the list (her note, Nov 10 2026)
+    const linkDays = (e: Event) => { const ids = (e as CustomEvent).detail as string[]; if (!ids?.length) return; backTo.current = { links: ids }; setOnlyIsland(null); setOnlyIds(ids); setOnly("trends"); };
     window.addEventListener("memap-link-days", linkDays);
     return () => { window.removeEventListener("memap-set-map-view", set); window.removeEventListener("memap-link-days", linkDays); };
   }, []);
@@ -80,6 +83,18 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [link, setLinkRaw] = useState<Route | null>(null);
   const setLink = (r: Route | null) => { if (r) track("link_opened", { next_day: r.nextDay }); setLinkRaw(r); };
   const [onlyIds, setOnlyIds] = useState<string[] | null>(null);
+  // The link a chart was opened from ("See the days"): from the Links list or from a link's own sheet. Back, or
+  // closing the chart, goes to that link again (her note, Nov 10 2026: "когда перешла по ссылке посмотреть график,
+  // то обратно уже не смогла выйти на эту связь").
+  const backTo = useRef<{ links?: string[]; route?: Route } | null>(null);
+  const backToLink = () => {
+    const b = backTo.current;
+    backTo.current = null;
+    if (!b) return false;
+    if (b.links) { reopenLink(b.links); setOnlyIds(null); setOnly("findings"); return true; }
+    if (b.route) { const r = b.route; setOnly(null); setOnlyIds(null); window.setTimeout(() => setLink(r), 250); return true; }
+    return false;
+  };
   // "+ New island": topics first, then their questions; or her own.
   const [newOpen, setNewOpen] = useState(false);
   // A sheet opened from elsewhere (a step on Today): closing it goes back there.
@@ -88,7 +103,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     if (!initialOpen) return;
     // her week and treasures live in You now; its close takes her back (Index)
     if (initialOpen === "all") window.dispatchEvent(new CustomEvent("memap-open-you", { detail: { trip: true } }));
-    else { fromOutside.current = true; setOnlyIsland(null); setOnlyIds(null); setOnly(initialOpen); }
+    else { fromOutside.current = true; backTo.current = null; setOnlyIsland(null); setOnlyIds(null); setOnly(initialOpen); }
     onOpened?.();
   }, [initialOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -229,6 +244,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // when that island wasn't there)
   const [helpsOpen, setHelpsOpen] = useState(false);
   const onHelps = () => setHelpsOpen(true);
+  // "See" under a done task (Nov 10 2026): from When to act straight to What helps, where it is now kept
+  useEffect(() => {
+    const go = () => { backTo.current = null; setOnly(null); setOnlyIds(null); window.setTimeout(() => setHelpsOpen(true), 250); };
+    window.addEventListener("memap-open-helps", go);
+    return () => window.removeEventListener("memap-open-helps", go);
+  }, []);
   const pickTest = () => {
     const first = mainIsland && islands.some((i) => i.id === mainIsland) ? mainIsland : islands.find((i) => i.trackerIds.length > 0)?.id;
     if (first) setTestFor(first);
@@ -250,7 +271,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       </div>
       {loaded && islands.length > 0 && (
         <div className="relative z-[6] mt-1">
-          <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { setOnlyIsland(null); setOnly(v); }} />
+          <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { backTo.current = null; setOnlyIsland(null); setOnly(v); }} />
           {worldTip && <TipCard id="block:world" onClose={() => setWorldTip(false)} className="mx-4 mt-2 !bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" title={t("tour.world.title")} line={t("tour.world.line")} />}
         </div>
       )}
@@ -325,16 +346,22 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
                 <IslandMore island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []} islands={islands} entries={entries}
                   days={islandDays(trackers, entries).get(island.id) ?? 0}
                   onTest={() => { const id = island.id; fromOutside.current = false; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }}
-                  onView={(v: IslandView) => { const id = island.id; setOpen(null); window.setTimeout(() => { setOnlyIsland(id); setOnly(v); }, 250); }} />
+                  onView={(v: IslandView) => { const id = island.id; setOpen(null); window.setTimeout(() => { backTo.current = null; setOnlyIsland(id); setOnly(v); }, 250); }} />
               )}
             </>
           ) : null}
         </div>
       </BottomSheet>
       {/* Calendar / chart / lighthouses for everything, straight away. */}
-      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
+      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { if ((only === "overview" || only === "trends") && backToLink()) return; backTo.current = null; setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
         ariaTitle={only ? onlyTitle(only) : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
+          {backTo.current && (only === "overview" || only === "trends") && (
+            <button type="button" data-back-to-link onClick={() => { haptics.tap(); backToLink(); }}
+              className="-ml-1 mb-1 flex h-10 items-center gap-1 self-start pr-3 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.6} />{t("map.backToLink")}
+            </button>
+          )}
           <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
           {only && !tourCompleted() && (
             <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={null}
@@ -369,12 +396,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {only && (
             <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only} pair={!!onlyIds}
               focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)}
-              onTry={(x) => { setOnly(null); window.setTimeout(() => setTrying(x), 250); }} />
+              onTry={(x) => { backTo.current = null; setOnly(null); window.setTimeout(() => setTrying(x), 250); }} />
           )}
         </div>
       </BottomSheet>
       <LinkSheet route={link} trackers={trackers} days={dayCount} onClose={() => setLink(null)}
-        onChart={(ids) => { setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
+        onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
       {helpsResult && (
         <ExperimentSheet mode="result" experiment={helpsResult} trackers={trackers} entries={entries} onClose={() => setHelpsResult(null)} />
       )}

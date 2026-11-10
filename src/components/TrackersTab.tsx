@@ -25,8 +25,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { AddTrackerModal } from "./AddTrackerModal";
 import { TrackerDetails } from "./TrackerDetails";
 import { TrackerSettingsModal } from "./TrackerSettingsModal";
-import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import {
   DropdownMenu,
@@ -47,7 +45,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const TrackersTab = () => {
-  const { toast } = useToast();
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -132,28 +129,13 @@ export const TrackersTab = () => {
   const handleDeleteTracker = async () => {
     if (!trackerToDelete) return;
     const deleted = trackerToDelete;
-    const previousTrackers = trackers;
     const updatedTrackers = trackers.filter(t => t.id !== deleted.id);
     await saveTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
     setDeleteDialogOpen(false);
     setTrackerToDelete(null);
-
-    toast({
-      title: "Tracker deleted",
-      description: `"${deleted.title}" was removed.`,
-      action: (
-        <ToastAction
-          altText="Undo"
-          onClick={async () => {
-            await saveTrackers(previousTrackers);
-            setTrackers(previousTrackers);
-          }}
-        >
-          Undo
-        </ToastAction>
-      ),
-    });
+    // No pop-up (Nov 10 2026): the confirm dialog asked first and the row is gone.
+    // (This old screen isn't shown in the app; My questions on Today has the "Undo" line.)
   };
 
   const handleSaveTrackerSettings = async (updatedTracker: Tracker) => {

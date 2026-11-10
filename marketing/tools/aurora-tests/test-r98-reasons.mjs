@@ -131,7 +131,22 @@ for (const lang of ["en", "ru"]) {
         sawVoice = true;
         const n = await p.locator("p[data-why-later][role=status]").count();
         ok(`${lang}.A partner yes: no later line`, n === 0, String(n));
+        // the calm line is a window of its own, once (her note, Nov 10 2026: under the buttons it squeezed the cards)
+        const win = p.locator("[data-care-window]");
+        const careTxt = await text(win);
+        ok(`${lang}.A partner yes: the calm window`, careTxt.startsWith(lang === "ru" ? "Это тяжело." : "That sounds hard."), careTxt);
+        const fixed = await p.evaluate(() => { const w = document.querySelector("[data-care-window]")?.parentElement; return !!w && getComputedStyle(w).position === "fixed" && Number(getComputedStyle(w).zIndex) > 60; });
+        ok(`${lang}.A calm window: over the cards and the Done card`, fixed, String(fixed));
         await p.screenshot({ path: `${D}/${lang}-A2-deck-partner-yes.png` });
+        // "Talk to someone" closes the window and opens the support sheet on top
+        await win.getByRole("button", { name: lang === "ru" ? /^Поговорить с кем-то$/ : /^Talk to someone$/ }).click(); await p.waitForTimeout(1200);
+        const sheetOnTop = await p.evaluate(() => {
+          const d = [...document.querySelectorAll("[role=dialog]")].pop();
+          return !!d && !d.hasAttribute("data-care-window") && /Talk to someone|Поговорить с кем-то/.test(d.textContent || "") && !document.querySelector("[data-care-window]");
+        });
+        ok(`${lang}.A Talk to someone: the window closes, the sheet opens`, sheetOnTop, String(sheetOnTop));
+        await p.screenshot({ path: `${D}/${lang}-A2b-support.png` });
+        await p.keyboard.press("Escape"); await p.waitForTimeout(900);
       } else {
         await p.getByRole("button", { name: W.no }).last().click(); await p.waitForTimeout(900);
       }
@@ -144,20 +159,8 @@ for (const lang of ["en", "ru"]) {
     out[`${lang}.A.doneCard`] = done.slice(0, 200);
     ok(`${lang}.A Done card: no reason line after a partner-harm yes`, done.length > 0 && !done.includes(W.doneLater) && (await doneCard.locator("[data-why-later]").count()) === 0, done);
     await p.screenshot({ path: `${D}/${lang}-A3-done-card.png` });
-    // the partner card was the last one: its calm line is on the Done card (Nov 10 2026), and "Talk to someone" opens above it
-    const careTxt = await text(doneCard.locator("[data-care-done]"));
-    ok(`${lang}.A Done card: the calm line after a last-card partner yes`, careTxt.startsWith(lang === "ru" ? "Это тяжело." : "That sounds hard."), careTxt);
-    await doneCard.getByRole("button", { name: lang === "ru" ? /^Поговорить с кем-то$/ : /^Talk to someone$/ }).click(); await p.waitForTimeout(1200);
-    // by z-index: while a sheet is open the page under it takes no pointer events, so a hit test can't tell
-    const sheetOnTop = await p.evaluate(() => {
-      const d = [...document.querySelectorAll("[role=dialog]")].pop();
-      const done = document.querySelector("[data-care-done]")?.closest("div.fixed.inset-0");
-      if (!d || !done) return false;
-      return Number(getComputedStyle(d).zIndex) > Number(getComputedStyle(done).zIndex);
-    });
-    ok(`${lang}.A Talk to someone opens above the Done card`, sheetOnTop, String(sheetOnTop));
-    await p.screenshot({ path: `${D}/${lang}-A3b-done-support.png` });
-    await p.keyboard.press("Escape"); await p.waitForTimeout(800);
+    // the window was shown once, under the cards; the Done card doesn't repeat it
+    ok(`${lang}.A Done card: no second calm window`, (await p.locator("[data-care-window]").count()) === 0);
     await p.getByRole("button", { name: W.cont }).last().click(); await p.waitForTimeout(2200);
 
     // 2. the path: "Why?"
@@ -243,7 +246,7 @@ for (const lang of ["en", "ru"]) {
     await p.reload(); await p.waitForTimeout(2600);
     await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "overview", back: true } }))); await p.waitForTimeout(2200);
     // "Love life island grew!" may come first (the evening's answers): close it, then My days again
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       const grow = p.locator(".tour[role=dialog]");
       if (!(await grow.count())) break;
       await grow.locator("button").first().click().catch(() => {}); await p.waitForTimeout(1200);

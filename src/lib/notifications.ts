@@ -4,7 +4,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackerEmoji } from "@/lib/categoryHelpers";
 import i18n from "@/lib/i18n";
-import { keptExperiments, runningExperiments, EXPERIMENT_DAYS, fixDefaultReminders, smartRemindTime, type Experiment } from "@/lib/experiments";
+import { doneBy, keptExperiments, runningExperiments, EXPERIMENT_DAYS, fixDefaultReminders, smartRemindTime, type Experiment } from "@/lib/experiments";
 import { ideaOf, testNameOf, testTodayOf } from "@/lib/testWords";
 import { getTrackers, getEntries } from "@/lib/storage";
 import { getNotes } from "@/lib/notes";
@@ -347,12 +347,14 @@ export const scheduleNotification = async (
  *  нормальные красивые ответы, мотивации"): the first day, the days between (four turns of words,
  *  a weekly goal its own), a week done, two days left, the last day. Her step in her words. */
 const tryWords = (x: Experiment, k: number): { title: string; body: string; key: string } => {
-  const key = k === 1 ? "start" : k === EXPERIMENT_DAYS ? "last" : k === EXPERIMENT_DAYS - 1 ? "twoLeft" : k === 8 ? "half"
+  const key0 = k === 1 ? "start" : k === EXPERIMENT_DAYS ? "last" : k === EXPERIMENT_DAYS - 1 ? "twoLeft" : k === 8 ? "half"
     : x.perWeek && k % 2 === 0 ? "goal" : `mid${(k % 4) + 1}`;
+  // a night step is asked about the next evening (Nov 10 2026): "tomorrow evening", not "this evening"
+  const key = x.night && (key0 === "start" || key0 === "mid3") ? `${key0}Night` : key0;
   const o = { k, count: EXPERIMENT_DAYS, left: EXPERIMENT_DAYS + 1 - k, n: x.perWeek ?? 0 };
   const day = i18n.t(`notifications.try.${key}`, o);
   // today's step on top ("Не забудь потренироваться сегодня"); her own plan in her words under a kind title
-  const today = testTodayOf(x.change);
+  const today = testTodayOf(x.change, x);
   return today
     ? { title: today, body: day, key }
     : { title: i18n.t("notifications.try.ownTitle"), body: `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${day}`, key };
@@ -368,11 +370,12 @@ export const tryPlan = (entries: TrackerEntry[] = [], homeIds: Set<string> = new
   const now = new Date(), todayIso = localISODate(now);
   const monday = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)));
   const sunday = localISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + (6 - ((now.getDay() + 6) % 7))));
-  const yesOn = (id: string, from: string, to: string) => entries.filter((e) => e.trackerId === id && e.value === true && e.date >= from && e.date <= to).length;
+  const yesOn = (x: Experiment, from: string, to: string) => entries.filter((e) => e.trackerId === x.trackerId && doneBy(x, e.value) && e.date >= from && e.date <= to).length;
   const skip = (x: Experiment, at: Date) => {
     const d = localISODate(at);
-    if (d === todayIso && yesOn(x.trackerId, todayIso, todayIso) > 0) return true;
-    return !!x.perWeek && d >= monday && d <= sunday && yesOn(x.trackerId, monday, todayIso) >= x.perWeek;
+    // a night test's "yes" today is about last night: tonight's push still comes
+    if (!x.night && d === todayIso && yesOn(x, todayIso, todayIso) > 0) return true;
+    return !!x.perWeek && d >= monday && d <= sunday && yesOn(x, monday, todayIso) >= x.perWeek;
   };
   fixDefaultReminders((x) => smartRemindTime(ideaOf(x.change), testNameOf(x.change)));
   // every running test (one per island); each its own id range
@@ -394,8 +397,9 @@ export const tryPlan = (entries: TrackerEntry[] = [], homeIds: Set<string> = new
     for (let d = 0; d < 7; d++) {
       const at = new Date(); at.setDate(at.getDate() + d); at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now() || skip(x, at)) continue;
-      const body = i18n.t(`notifications.try.keep${(at.getDate() % 4) + 1}`);
-      const today = testTodayOf(x.change);
+      const kk = `keep${(at.getDate() % 4) + 1}`;
+      const body = i18n.t(`notifications.try.${x.night && kk === "keep3" ? "keep3Night" : kk}`);
+      const today = testTodayOf(x.change, x);
       const quiet = homeTest(x) ? neutral() : null;
       out.push({
         id: dateToNotificationId(at) + TRY_ID_OFFSET + (8 + i) * 50_000_000,

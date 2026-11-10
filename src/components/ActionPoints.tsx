@@ -29,18 +29,19 @@ import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWo
 import { computeCorrelations } from "@/lib/correlations";
 import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
-import { toast } from "@/hooks/use-toast";
+import { doneActions, fillDoneFrom, logDone } from "@/lib/actionLog";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { markActSeen } from "@/lib/pathSteps";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
-import { experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
+import { MIN_SIDE, experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
 import i18nInstance from "@/lib/i18n";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RuleChips } from "@/components/RuleChips";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { SupportSheet } from "@/components/SupportSheet";
 import { isPlayful } from "@/lib/playful";
+import { alreadyDoing } from "@/lib/alreadyDoing";
 
 /** "I'll try": the week's test to start, for the screen that holds the sheets. */
 export interface TryAction { island: IslandId; plan: string; trackerId: string; k: number }
@@ -95,6 +96,13 @@ const beforeAfter = (tr: Tracker, entries: TrackerEntry[]): { k1: number; n1: nu
   const b = ruleState({ ...tr, cycleStartDate: last.startDate }, entries, new Date(last.endDate + "T12:00:00"));
   if (s.n === 0 || b.n === 0) return null;
   return { k1: b.k, n1: b.n, k2: s.k, n2: s.n };
+};
+/** A done task, a week on: fewer hard answers since, about the same, more, or too few answers to tell (5 a side,
+ *  as for the tests; a change of 15 points or more counts). Never a promise. */
+const doneVerdict = (ba: { k1: number; n1: number; k2: number; n2: number }): "better" | "same" | "worse" | "few" => {
+  if (ba.n1 < MIN_SIDE || ba.n2 < MIN_SIDE) return "few";
+  const d = ba.k2 / ba.n2 - ba.k1 / ba.n1;
+  return d <= -0.15 ? "better" : d >= 0.15 ? "worse" : "same";
 };
 /** A test on this question's island blocks a second one there; it says why. */
 const blockedLine = (t: (k: string, o?: Record<string, unknown>) => string, x: Experiment | null) => {
@@ -227,19 +235,30 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   // a finished test opens its result here (QA: "Your test is done: see it on Today" led nowhere)
   const [resultOf, setResultOf] = useState<Experiment | null>(null);
   const openTest = (x: Experiment) => { haptics.tap(); if (experimentOver(x)) setResultOf(x); else setTestOpen(x); };
-  // a word that it worked, and what happens next (QA, Nov 8 2026: the card just moved away)
-  const didOnce = async (tr: Tracker, k: number) => { haptics.success(); await countFromToday(tr.id, k, { planKind: "once" }); toast({ title: t(isPlayful() ? "rules.didToast" : "rules.didToastPlain"), description: t("rules.didToastLine") }); };
+  // where a done task went (her notes, Nov 10 2026: "оно будет так висеть? или куда-то пойдёт" — no pop-up "Noted."):
+  // the card leaves Time to act, this quiet line stays in its place, and the task is in What helps under "Done"
+  const [justDone, setJustDone] = useState<{ plan: string; home: boolean } | null>(null);
+  const didOnce = async (tr: Tracker, k: number) => {
+    haptics.success();
+    logDone({ trackerId: tr.id, plan: tr.adviceAboveThreshold || planOf(tr), kind: "once" });
+    setJustDone({ plan: planOf(tr), home: false });
+    await countFromToday(tr.id, k, { planKind: "once" });
+  };
   // a partner-harm step: noted, no praise; on "partner raised their voice" the next step becomes the task
   // (telling the partner, the last choice on "hurtful words", is never offered as a next step)
-  const didHome = async (tr: Tracker, tid: string) => {
+  // the last step done: the card leaves too, and comes back only if it happens often again
+  const didHome = async (tr: Tracker, tid: string, k: number) => {
     haptics.tap();
-    const step = homeStepOf(tid, planOf(tr));
+    const shown = planOf(tr);
+    const step = homeStepOf(tid, shown);
     markHomeDone(tr.id, step);
+    logDone({ trackerId: tr.id, plan: step, kind: "home" });
     const done = homeDone()[tr.id] ?? [];
     const nextKey = tid === "partner-raised-voice" ? (HOME_STEPS[tid] ?? []).find((key) => key !== step && !done.includes(key)) : undefined;
     if (nextKey) await patchTracker(tr.id, (x) => ({ ...x, adviceAboveThreshold: t(nextKey), planKind: "once" }));
+    else await countFromToday(tr.id, k);
+    setJustDone({ plan: shown, home: true });
     setHomeTick((n) => n + 1);
-    toast({ title: t("rules.homeToast") });
   };
   const current = rows.find((r) => r.tr.id === sheet?.id);
   const open = (id: string, mode: "show" | "change") => { haptics.tap(); setSheet({ id, mode }); };
@@ -260,7 +279,18 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
   return (
     <div className="space-y-2.5 animate-fade-in">
-      {lit.length === 0 && (evenings < SHAPING_EVENINGS ? (
+      {justDone && (
+        <div data-just-done role="status" className="surface flex items-center gap-3 rounded-[22px] px-4 py-3.5 animate-fade-in">
+          <span className="icon-dot h-11 w-11 shrink-0"><Check className="h-5 w-5" strokeWidth={2.6} /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: TEAL }}>{t("helps.doneTag")}</span>
+            <span className="block text-[16px] font-bold leading-snug">{justDone.plan}</span>
+            <span className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{t(justDone.home ? "helps.savedHome" : "helps.savedOnce")}</span>
+          </span>
+          <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new Event("memap-open-helps")); }} className="shrink-0 px-1 text-[15px] font-bold" style={{ color: TEAL }}>{t("helps.see")}</button>
+        </div>
+      )}
+      {lit.length === 0 && !justDone && (evenings < SHAPING_EVENINGS ? (
         // Too early to say anything is calm (GPT review, Nov 5 2026).
         <div className="surface rounded-[22px] px-5 py-4">
           <p className="text-[19px] font-bold leading-snug">{t("rules.shaping")}</p>
@@ -327,6 +357,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <div className="mt-3">
                 <KindTag kind="task" />
                 <p className="mt-0.5 text-[21px] font-bold leading-snug tracking-tight">{plan}</p>
+                {/* her answers say she already does it (Nov 10 2026: "я же отмечал, что сплю хорошо"): said honestly */}
+                {(() => { const d = alreadyDoing(ideaOf(tr.adviceAboveThreshold || plan), trackers, entries); return d ? <p data-already className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{t("rules.alreadyDoing", { k: d.k, count: d.n })}</p> : null; })()}
               </div>
             ) : null}
             {partnerPaused ? (
@@ -337,7 +369,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                   <Check className="h-5 w-5" strokeWidth={2.6} />{t("rules.homeDone")}
                 </p>
               ) : (
-                <button type="button" onClick={() => void didHome(tr, tid)} className="raised-btn is-small mt-3.5 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
+                <button type="button" onClick={() => void didHome(tr, tid, k)} className="raised-btn is-small mt-3.5 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
               )
             ) : !plan ? (
               <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.noPlan")}</button>
@@ -356,7 +388,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                 </p>
               );
             })() : (
-              <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.tryDaily")}</button>
+              // the plan is done already by her answers: another change, not this one again
+              <button type="button" onClick={() => tryIt(tr, k)} className="raised-btn is-small mt-3.5 w-full justify-center">{t(alreadyDoing(ideaOf(tr.adviceAboveThreshold || plan), trackers, entries) ? "rules.tryOther" : "rules.tryDaily")}</button>
             )}
             {/* a free helpline and the emergency words, one tap away on these two cards */}
             {home && <button type="button" onClick={() => { haptics.tap(); setSupportFor(tid); }} className={cn(quietBtn, "mt-2")}>{t("support.chip")}</button>}
@@ -466,10 +499,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 
       {current && sheet?.mode === "show" && (
         <ShowSheet key={current.tr.id} tracker={current.tr} k={current.k} st={current.st} entries={entries} name={cardQuestion(current.tr)} onClose={() => setSheet(null)}
-          onTry={() => tryIt(current.tr, current.k)} blocked={(() => { const o = tests.find((x) => x.from === current.tr.id && !experimentOver(x)); return o ? t("rules.testing", { k: experimentDay(o), count: EXPERIMENT_DAYS }) : null; })()} />
+          onTry={() => tryIt(current.tr, current.k)} onDid={(p) => setJustDone({ plan: p, home: false })} blocked={(() => { const o = tests.find((x) => x.from === current.tr.id && !experimentOver(x)); return o ? t("rules.testing", { k: experimentDay(o), count: EXPERIMENT_DAYS }) : null; })()} />
       )}
       {current && sheet?.mode === "change" && (
-        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} couplesOff={couplesOff} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
+        <ChangeSheet key={current.tr.id} tracker={current.tr} k={current.k} couplesOff={couplesOff} trackers={trackers} entries={entries} name={cardQuestion(current.tr)} why={why(current.tr, current.k)} onClose={() => setSheet(null)} />
       )}
       {testOpen && <TestSheet test={testOpen} trackers={trackers} entries={entries} line={lineOf(testOpen)} onClose={() => setTestOpen(null)} />}
       <SupportSheet open={!!supportFor} onClose={() => setSupportFor(null)} about={supportFor} />
@@ -483,7 +516,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
 };
 
 /** "Show": the days behind an action point, then her plan and rule to change. */
-const ShowSheet = ({ tracker, k, st, entries, name, onClose, onTry, blocked }: { tracker: Tracker; k: number; st: RuleState; entries: TrackerEntry[]; name: string; onClose: () => void; onTry: () => void; blocked: string | null }) => {
+const ShowSheet = ({ tracker, k, st, entries, name, onClose, onTry, blocked, onDid }: { tracker: Tracker; k: number; st: RuleState; entries: TrackerEntry[]; name: string; onClose: () => void; onTry: () => void; blocked: string | null; onDid?: (plan: string) => void }) => {
   const { t } = useTranslation();
   const [plan, setPlan] = useState(planOf(tracker));
   const [kind, setKind] = useState<"once" | "daily">(planKindOf(tracker));
@@ -511,7 +544,10 @@ const ShowSheet = ({ tracker, k, st, entries, name, onClose, onTry, blocked }: {
   // "Done": she did it; the count starts again from today.
   const did = async () => {
     haptics.success();
-    await countFromToday(tracker.id, k, keep(tracker));
+    const kept = keep(tracker);
+    logDone({ trackerId: tracker.id, plan: kept.adviceAboveThreshold || planOf(tracker), kind: "once" });
+    await countFromToday(tracker.id, k, kept);
+    onDid?.(plan.trim() || planOf(tracker));
     onClose();
   };
   const lit = tracker.threshold > 0 && k >= st.need;
@@ -646,6 +682,12 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
   const running = runningExperiments();
   const tried = [...finishedExperiments()].reverse();
   const since = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" });
+  // the history of what she did (her note, Nov 10 2026: "надо, чтоб человек где-то видел историю своих действий"):
+  // one-time tasks and partner steps marked Done, newest first; the 2-week tests are above
+  useEffect(() => { fillDoneFrom(trackers); }, [trackers]);
+  const done = [...doneActions()].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  const today = isoLocal(new Date());
+  const daysSince = (iso: string) => Math.round((new Date(today + "T12:00:00").getTime() - new Date(iso + "T12:00:00").getTime()) / 86_400_000) + 1;
   const lineOf = (x: Experiment) => (x.reviewed && x.kept ? t("experiment.keptSince", { date: since(x.reviewed) }) : t("rules.testing", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }));
   const stop = async (x: Experiment) => {
     track("experiment_stopped", { goal: !!x.same });
@@ -679,7 +721,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
         </button>
       ))}
-      {running.length === 0 && tried.length === 0 && (
+      {running.length === 0 && tried.length === 0 && done.length === 0 && (
         <p className="surface rounded-[22px] px-5 py-4 text-[17px] font-semibold leading-snug">{t("helps.empty")}</p>
       )}
       <button type="button" onClick={() => { haptics.tap(); onPick(); }} className="raised-btn w-full justify-center gap-2">
@@ -714,20 +756,45 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
           </div>
         </div>
       ))}
+      {done.length > 0 && (
+        <div data-done-list>
+          <p className="px-1 pb-2.5 pt-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("helps.done")}</p>
+          <div className="surface divide-y divide-foreground/[0.06] rounded-[22px]">
+            {done.map((a) => {
+              const tr = trackers.find((x) => x.id === a.trackerId);
+              const words = a.kind === "home" ? (i18n.exists(a.plan) ? t(a.plan) : a.plan) : localizeTrackerAdvice(a.plan);
+              // before and after: for the newest task of a question whose count started again that day
+              const latest = !!tr && a.kind === "once" && tr.cycleStartDate === a.date && done.find((d) => d.trackerId === a.trackerId && d.kind === "once") === a;
+              const ba = latest && tr ? beforeAfter(tr, entries) : null;
+              const left = latest && !ba ? Math.max(1, 7 - daysSince(a.date)) : 0;
+              return (
+                <div key={a.id} data-done-row className="px-4 py-3">
+                  <p className="flex items-start gap-2 text-[16px] font-bold leading-snug"><Check className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={3} style={{ color: TEAL }} />{words}</p>
+                  <p className="mt-0.5 pl-6 text-[14px] font-semibold leading-snug text-muted-foreground">{[tr ? localizeTrackerTitle(tr.title) : null, since(a.date)].filter(Boolean).join(" · ")}</p>
+                  {ba && <p className="mt-0.5 pl-6 text-[14px] font-semibold leading-snug text-muted-foreground">{t("rules.beforeAfter", { ...ba, count: ba.n2 })}</p>}
+                  {/* did it help? in words, like a test's result (her note, Nov 10 2026: "непонятно, помогло это или нет") */}
+                  {ba && <p data-done-verdict className="mt-0.5 pl-6 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{t(`helps.ba.${doneVerdict(ba)}`)}</p>}
+                  {left > 0 && <p className="mt-0.5 pl-6 text-[14px] font-semibold leading-snug text-muted-foreground">{t("helps.doneSoon", { count: left })}</p>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {open && <TestSheet test={open} trackers={trackers} entries={entries} line={lineOf(open)} onClose={() => setOpen(null)} onStop={open.reviewed && open.kept ? () => void stop(open) : undefined} />}
     </div>
   );
 };
 
 /** "Not for me" (or no plan yet): another plan, or turn it off. */
-const ChangeSheet = ({ tracker, name, why, onClose, couplesOff }: { tracker: Tracker; k: number; name: string; why: string; onClose: () => void; couplesOff?: boolean }) => {
+const ChangeSheet = ({ tracker, name, why, onClose, couplesOff, trackers = [], entries = [] }: { tracker: Tracker; k: number; name: string; why: string; onClose: () => void; couplesOff?: boolean; trackers?: Tracker[]; entries?: TrackerEntry[] }) => {
   const { t } = useTranslation();
   const had = planOf(tracker);
   // changes on this question's own topic (her note, Nov 9 2026: the island's ones were about other things);
   // a partner shouting or saying hurtful things: its own steps, telling the partner last
   const busy = busyIdeas();
   const homeSteps = HOME_STEPS[templateIdOf(tracker) ?? ""];
-  const ideas = (homeSteps ? homeSteps.map((key) => t(key)) : ideasForQuestion(tracker, couplesOff).filter((id) => !busy.has(id)).map((id) => t(`experiment.idea.${id}.change`))).filter((s) => s !== had);
+  const ideas = (homeSteps ? homeSteps.map((key) => t(key)) : ideasForQuestion(tracker, couplesOff).filter((id) => !busy.has(id) && !alreadyDoing(id, trackers, entries)).map((id) => t(`experiment.idea.${id}.change`))).filter((s) => s !== had);
   const [pick, setPick] = useState<string | null>(null);
   const [own, setOwn] = useState("");
   const next = pick ?? own.trim();

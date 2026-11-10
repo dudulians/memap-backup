@@ -12,7 +12,6 @@ import { Note, getNotes, addNote, updateNote, deleteNote } from "@/lib/notes";
 import { Tracker } from "@/types/tracker";
 import { getTrackers } from "@/lib/storage";
 import { format, parseISO } from "date-fns";
-import { toast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 
@@ -61,25 +60,14 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
     setLoading(false);
   };
 
+  // No pop-ups (Nov 10 2026): Save waits until there's text, and the list shows the change.
   const handleAddNote = async () => {
-    if (!newNote.text.trim()) {
-      toast({
-        title: "Note is empty",
-        description: "Please write something before saving.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!newNote.text.trim()) return;
 
     await addNote({
       date: newNote.date,
       text: newNote.text,
       linkedPatternId: newNote.linkedPatternId || undefined,
-    });
-
-    toast({
-      title: "Note added",
-      description: "Your note has been saved.",
     });
 
     setNewNote({ date: today, text: "", linkedPatternId: "" });
@@ -96,11 +84,6 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
       date: editingNote.date,
     });
 
-    toast({
-      title: "Note updated",
-      description: "Your changes have been saved.",
-    });
-
     setEditingNote(null);
     loadData();
   };
@@ -109,11 +92,6 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
     if (!noteToDelete) return;
     
     await deleteNote(noteToDelete.id);
-    
-    toast({
-      title: "Note deleted",
-      description: "The note has been removed.",
-    });
 
     setDeleteDialogOpen(false);
     setNoteToDelete(null);
@@ -211,7 +189,7 @@ export const NotesModal = ({ open, onClose, initialDate }: NotesModalProps) => {
                     />
                   </div>
 
-                  <Button onClick={handleAddNote} className="w-full rounded-xl">
+                  <Button onClick={handleAddNote} disabled={!newNote.text.trim()} className="w-full rounded-xl">
                     Save Note
                   </Button>
                 </CardContent>

@@ -8,7 +8,6 @@ import { getCategoryColor, getTrackerIcon } from "@/lib/categoryHelpers";
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from "recharts";
 import { generateRandomEntriesForLastNDays, clearAllEntries } from "@/lib/demoData";
 import { Sparkles, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
 
 export const InsightsTab = () => {
@@ -16,7 +15,6 @@ export const InsightsTab = () => {
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     loadData();
@@ -60,30 +58,18 @@ export const InsightsTab = () => {
     return { answerDays, problemDays, ratio, status };
   };
 
+  // Dev test tools (this screen isn't shown in the app). No pop-ups (Nov 10 2026):
+  // the cards below show the new data; failures go to the console.
   const handleGenerateDemoData = async () => {
-    if (trackers.length === 0) {
-      toast({
-        title: "No trackers found",
-        description: "Please add some trackers first before generating demo data.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // the tools only show when there are questions
+    if (trackers.length === 0) return;
 
     setGenerating(true);
     try {
       await generateRandomEntriesForLastNDays(60);
       await loadData();
-      toast({
-        title: "Demo data generated!",
-        description: "Created 60 days of random entries for all trackers.",
-      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate demo data",
-        variant: "destructive",
-      });
+      console.error("generateRandomEntriesForLastNDays failed:", error);
     } finally {
       setGenerating(false);
     }
@@ -98,16 +84,8 @@ export const InsightsTab = () => {
     try {
       await clearAllEntries();
       await loadData();
-      toast({
-        title: "All entries cleared",
-        description: "All tracker entries have been deleted.",
-      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to clear entries",
-        variant: "destructive",
-      });
+      console.error("clearAllEntries failed:", error);
     } finally {
       setGenerating(false);
     }

@@ -25,7 +25,6 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Trash2, Download, Volume2, HelpCircle, FileSpreadsheet, Upload, Lock, Sparkles, ChevronLeft, ChevronRight, Database, FlaskConical, Mail, FileText, Star, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimePickerField } from "@/components/TimePickerField";
-import { useToast } from "@/hooks/use-toast";
 import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { resetTourSeen } from "@/components/OnboardingTour";
 import { resetCoachmarkSeen, resetTourKey } from "@/components/CoachmarkTour";
@@ -208,7 +207,34 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     window.dispatchEvent(new Event("memap-language-changed"));
   };
   const { t } = useTranslation();
-  const { toast } = useToast();
+
+  // No pop-up windows (her note, Nov 10 2026). Feedback stays in place: the row that was tapped
+  // says "Saved" for a moment, a plain line under the row says what went wrong (until the next try).
+  const [notifErr, setNotifErr] = useState<string | null>(null);
+  const [flash, setFlash] = useState<"backup" | "csv" | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashRow = (row: "backup" | "csv") => {
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    setFlash(row);
+    flashTimer.current = setTimeout(() => setFlash(null), 2500);
+  };
+  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
+  const [dataErr, setDataErr] = useState<{ row: "backup" | "csv" | "restore"; text: string } | null>(null);
+  // owner tools only (test data, demo packs): what happened, under their buttons
+  const [ownerNote, setOwnerNote] = useState<string | null>(null);
+  const [restoredNow, setRestoredNow] = useState(false);
+  useEffect(() => {
+    if (!open) { setNotifErr(null); setDataErr(null); setOwnerNote(null); }
+  }, [open]);
+  const savedMark = (
+    <span className="flex items-center gap-1 text-[15px] font-semibold text-[hsl(var(--coin-teal))] animate-fade-in">
+      <Check className="h-5 w-5" strokeWidth={2.6} />
+      {t("settings.savedShort")}
+    </span>
+  );
+  const errLine = (text: string) => (
+    <p role="alert" data-settings-error className="px-4 pb-3 -mt-1 text-[15px] font-medium leading-snug text-destructive">{text}</p>
+  );
 
   const handleLanguageChange = (lng: SupportedLanguage) => {
     setCurrentLang(lng);
@@ -281,29 +307,13 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   };
 
   const handleNotificationToggle = async (enabled: boolean) => {
+    setNotifErr(null);
     if (enabled) {
       const result = await requestNotificationPermissionDetailed();
       if (!result.granted) {
-        const messages: Record<string, { title: string; description: string }> = {
-          "insecure-origin": {
-            title: t("permissions.insecureOriginTitle"),
-            description: t("permissions.insecureOriginDesc"),
-          },
-          unsupported: {
-            title: t("permissions.unsupportedTitle"),
-            description: t("permissions.unsupportedDesc"),
-          },
-          denied: {
-            title: t("permissions.deniedTitle"),
-            description: t("permissions.deniedDesc"),
-          },
-          unknown: {
-            title: t("permissions.unknownTitle"),
-            description: t("permissions.unknownDesc"),
-          },
-        };
-        const msg = messages[result.reason ?? "unknown"] ?? messages.unknown;
-        toast({ ...msg, variant: "destructive" });
+        // the switch stays off; the line under it says why, in plain words
+        const r = result.reason;
+        setNotifErr(t(r === "denied" ? "permissions.lineDenied" : r === "unsupported" || r === "insecure-origin" ? "permissions.lineNoApp" : "permissions.lineUnknown"));
         return;
       }
     }
@@ -312,18 +322,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     setNotificationSettings(newSettings);
     saveNotificationSettings(newSettings);
 
-    if (enabled) {
-      scheduleNotification(newSettings);
-      toast({
-        title: t("settings.notificationsEnabled"),
-        description: t("settings.notificationsEnabledDesc", { time: newSettings.time }),
-      });
-    } else {
-      toast({
-        title: t("settings.notificationsDisabled"),
-        description: t("settings.notificationsDisabledDesc"),
-      });
-    }
+    // no pop-up: the switch moves and the time shows in the row
+    if (enabled) scheduleNotification(newSettings);
   };
 
   const handleTimeChange = (time: string) => {
@@ -331,13 +331,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     setNotificationSettings(newSettings);
     saveNotificationSettings(newSettings);
 
-    if (notificationSettings.enabled) {
-      scheduleNotification(newSettings);
-      toast({
-        title: t("settings.timeUpdated"),
-        description: t("settings.timeUpdatedDesc", { time }),
-      });
-    }
+    // no pop-up: the picker shows the new time
+    if (notificationSettings.enabled) scheduleNotification(newSettings);
   };
 
   const handleSessionSettingsChange = (key: keyof SessionSettings, value: number | boolean) => {
@@ -409,10 +404,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       ]);
       const result = generateDevData(trackersData, entriesData);
       if (result.trackerCount === 0) {
-        toast({
-          title: t("settings.devDataNoTrackersTitle"),
-          description: t("settings.devDataNoTrackersDesc"),
-        });
+        setOwnerNote(t("settings.devDataNoTrackersDesc"));
         return;
       }
       // Persist trackers first (cycleStartDate shifted back) so when
@@ -420,24 +412,17 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       // re-pull they see the new cycle window.
       await saveTrackers(result.newTrackers);
       await saveEntries(result.newEntries);
-      toast({
-        title: t("settings.devDataGeneratedTitle"),
-        description: t("settings.devDataGeneratedDesc", {
-          count: result.generatedCount,
-          trackers: result.trackerCount,
-          days: result.daysCount,
-        }),
-      });
+      setOwnerNote(t("settings.devDataGeneratedDesc", {
+        count: result.generatedCount,
+        trackers: result.trackerCount,
+        days: result.daysCount,
+      }));
       // Notify other tabs (Today / Patterns) that entries changed so
       // their views re-pull. Same event other write paths use.
       window.dispatchEvent(new CustomEvent("memap-settings-changed"));
     } catch (err) {
       console.error("generateDevData failed:", err);
-      toast({
-        variant: "destructive",
-        title: t("settings.devDataFailedTitle"),
-        description: String((err as Error)?.message ?? err),
-      });
+      setOwnerNote(t("settings.devDataFailedTitle"));
     } finally {
       setDevGenRunning(false);
       setDevGenDialogOpen(false);
@@ -466,21 +451,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       await saveTrackers(result.newTrackers);
       await saveEntries(result.newEntries);
       setTrackers(result.newTrackers);
-      toast({
-        title: t("settings.demoDataGeneratedTitle"),
-        description: t("settings.demoDataGeneratedDesc", {
-          trackers: result.trackerCount,
-          days: result.daysCount,
-        }),
-      });
+      setOwnerNote(t("settings.demoDataGeneratedDesc", {
+        trackers: result.trackerCount,
+        days: result.daysCount,
+      }));
       window.dispatchEvent(new CustomEvent("memap-settings-changed"));
     } catch (err) {
       console.error("generateDemoData failed:", err);
-      toast({
-        variant: "destructive",
-        title: t("settings.demoDataFailedTitle"),
-        description: String((err as Error)?.message ?? err),
-      });
+      setOwnerNote(t("settings.demoDataFailedTitle"));
     } finally {
       setDemoGenRunning(false);
       setDemoGenDialogOpen(false);
@@ -506,14 +484,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       }
       setDemoUnlocked(newState);
       setVersionTapCount(0);
-      toast({
-        title: newState
-          ? t("settings.demoUnlockedTitle")
-          : t("settings.demoLockedTitle"),
-        description: newState
-          ? t("settings.demoUnlockedDesc")
-          : t("settings.demoLockedDesc"),
-      });
+      // no pop-up: the DEMO mark by the version and the demo buttons show (or go)
+      haptics.success();
       return;
     }
     setVersionTapCount(next);
@@ -521,6 +493,16 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   };
 
   const handleExportData = async () => {
+    setDataErr(null);
+    try {
+      await exportCsv();
+    } catch (err) {
+      captureError(err, { source: "handleExportData" });
+      setDataErr({ row: "csv", text: t("settings.exportFailed") });
+    }
+  };
+
+  const exportCsv = async () => {
     const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
     const notes: { id: string; date: string; text: string }[] = JSON.parse(
       localStorage.getItem("memap_notes") ?? "[]"
@@ -585,13 +567,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     a.click();
     URL.revokeObjectURL(url);
 
-    toast({
-      title: t("settings.exportReady"),
-      description: t("settings.exportReadyDesc"),
-    });
+    // the row itself says "Saved" for a moment
+    flashRow("csv");
   };
 
   const handleBackupJSON = async () => {
+    setDataErr(null);
     try {
       const [trackersData, entriesData] = await Promise.all([getTrackers(), getEntries()]);
       const notes = JSON.parse(localStorage.getItem("memap_notes") ?? "[]");
@@ -661,17 +642,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       URL.revokeObjectURL(url);
 
       track("data_exported", { platform: "web_download" });
-      toast({ title: t("settings.backupSaved"), description: t("settings.backupSavedDesc") });
+      // the row itself says "Saved" for a moment
+      flashRow("backup");
     } catch (err) {
-      // Log so we know if export breaks for real users — share-sheet
-      // failures (e.g. user cancels) shouldn't crash UI but ARE worth
-      // knowing about if they get common.
+      // Closing the share sheet without picking a place isn't a failure: nothing to say.
+      if (/cancel/i.test(String((err as Error)?.message ?? err))) return;
+      // Log so we know if export breaks for real users.
       captureError(err, { source: "handleBackupJSON" });
-      toast({
-        title: t("settings.backupSaved"),
-        description: String((err as Error)?.message ?? err),
-        variant: "destructive",
-      });
+      setDataErr({ row: "backup", text: t("settings.backupFailed") });
     }
   };
 
@@ -679,6 +657,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setDataErr(null);
 
     try {
       const text = await file.text();
@@ -694,16 +673,13 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
       setPendingImport(parsed as BackupPayload);
       setImportDialogOpen(true);
     } catch {
-      toast({
-        title: t("settings.invalidBackup"),
-        description: t("settings.invalidBackupDesc"),
-        variant: "destructive",
-      });
+      // a plain line under "Restore from backup", until the next file
+      setDataErr({ row: "restore", text: t("settings.notABackup") });
     }
   };
 
   const confirmImport = async () => {
-    if (!pendingImport) return;
+    if (!pendingImport || restoredNow) return;
 
     await saveTrackers(pendingImport.trackers);
     await saveEntries(pendingImport.entries);
@@ -725,19 +701,16 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         : -1,
     });
 
-    setImportDialogOpen(false);
-    setPendingImport(null);
-    toast({ title: t("settings.dataRestored"), description: t("settings.dataRestoredDesc") });
-    setTimeout(() => window.location.reload(), 800);
+    // no pop-up: the Restore button itself says "Restored" with a tick, then the app restarts
+    haptics.success();
+    setRestoredNow(true);
+    setTimeout(() => window.location.reload(), 900);
   };
 
   const handleResetData = () => {
     localStorage.clear();
     setResetDialogOpen(false);
-    toast({
-      title: t("settings.dataCleared"),
-      description: t("settings.dataClearedDesc"),
-    });
+    // the app restarts empty right away: that is the feedback
     window.location.reload();
   };
 
@@ -821,20 +794,23 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <>
                       <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                         {/* no avatar row (Nov 8 2026): the animal in You has its own "Change" */}
-                        <div className={row}>
-                          <button type="button" onClick={() => setScreen("notifications")} className="flex-1 min-w-0 text-left text-[17px] font-medium">
-                            {t("settings.eveningReminder")}
-                          </button>
-                          {notificationSettings.enabled && (
-                            <button type="button" onClick={() => setScreen("notifications")} className="text-[16px] text-muted-foreground tabular-nums">
-                              {notificationSettings.time}
+                        <div>
+                          <div className={row}>
+                            <button type="button" onClick={() => setScreen("notifications")} className="flex-1 min-w-0 text-left text-[17px] font-medium">
+                              {t("settings.eveningReminder")}
                             </button>
-                          )}
-                          <Switch
-                            checked={notificationSettings.enabled}
-                            onCheckedChange={handleNotificationToggle}
-                            aria-label={t("settings.eveningReminder")}
-                          />
+                            {notificationSettings.enabled && (
+                              <button type="button" onClick={() => setScreen("notifications")} className="text-[16px] text-muted-foreground tabular-nums">
+                                {notificationSettings.time}
+                              </button>
+                            )}
+                            <Switch
+                              checked={notificationSettings.enabled}
+                              onCheckedChange={handleNotificationToggle}
+                              aria-label={t("settings.eveningReminder")}
+                            />
+                          </div>
+                          {notifErr && errLine(notifErr)}
                         </div>
                         <div className={row}>
                           <span className="flex-1 text-[17px] font-medium">{t("settings.theme")}</span>
@@ -968,9 +944,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             {screen === "notifications" && (
               <div className="space-y-4">
                 <div className={card}>
-                  <div className={row}>
-                    <span className="flex-1 text-[17px] font-medium">{t("settings.eveningReminder")}</span>
-                    <Switch id="notifications-toggle" checked={notificationSettings.enabled} onCheckedChange={handleNotificationToggle} />
+                  <div>
+                    <div className={row}>
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.eveningReminder")}</span>
+                      <Switch id="notifications-toggle" checked={notificationSettings.enabled} onCheckedChange={handleNotificationToggle} />
+                    </div>
+                    {notifErr && errLine(notifErr)}
                   </div>
                   {notificationSettings.enabled && (
                     <div className={cn(row, "animate-fade-in")}>
@@ -1111,25 +1090,34 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   <p className="text-[17px] font-semibold">{t("settings.dataOnPhone")}</p>
                 </div>
                 <div className={card}>
-                  <button type="button" onClick={handleBackupJSON} className={rowBtn}>
-                    <span className="flex-1 text-[17px] font-medium">{t("settings.backupFull")}</span>
-                    <Download className="h-5 w-5 text-muted-foreground/60" />
-                  </button>
-                  <div className={cn(rowBtn, "relative")}>
-                    <input
-                      type="file"
-                      accept="application/json,.json"
-                      onChange={handleFileSelected}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      aria-label={t("settings.importBackupLabel")}
-                    />
-                    <span className="flex-1 text-[17px] font-medium">{t("settings.restoreBackup")}</span>
-                    <Upload className="h-5 w-5 text-muted-foreground/60" />
+                  <div>
+                    <button type="button" data-row="backup" onClick={handleBackupJSON} className={rowBtn}>
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.backupFull")}</span>
+                      {flash === "backup" ? savedMark : <Download className="h-5 w-5 text-muted-foreground/60" />}
+                    </button>
+                    {dataErr?.row === "backup" && errLine(dataErr.text)}
                   </div>
-                  <button type="button" onClick={handleExportData} className={rowBtn}>
-                    <span className="flex-1 text-[17px] font-medium">{t("settings.exportCsv")}</span>
-                    <FileSpreadsheet className="h-5 w-5 text-muted-foreground/60" />
-                  </button>
+                  <div>
+                    <div className={cn(rowBtn, "relative")}>
+                      <input
+                        type="file"
+                        accept="application/json,.json"
+                        onChange={handleFileSelected}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        aria-label={t("settings.importBackupLabel")}
+                      />
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.restoreBackup")}</span>
+                      <Upload className="h-5 w-5 text-muted-foreground/60" />
+                    </div>
+                    {dataErr?.row === "restore" && errLine(dataErr.text)}
+                  </div>
+                  <div>
+                    <button type="button" data-row="csv" onClick={handleExportData} className={rowBtn}>
+                      <span className="flex-1 text-[17px] font-medium">{t("settings.exportCsv")}</span>
+                      {flash === "csv" ? savedMark : <FileSpreadsheet className="h-5 w-5 text-muted-foreground/60" />}
+                    </button>
+                    {dataErr?.row === "csv" && errLine(dataErr.text)}
+                  </div>
                   <button
                     type="button"
                     onClick={() => window.open("https://memap-tracker.netlify.app/PRIVACY_POLICY.html", "_blank", "noopener,noreferrer")}
@@ -1173,6 +1161,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       ))}
                     </div>
                   </div>
+                )}
+                {/* owner tools only: what the test / demo data did */}
+                {ownerNote && showDemoButtons && (
+                  <p className="px-1 text-[15px] font-medium leading-snug text-muted-foreground animate-fade-in">{ownerNote}</p>
                 )}
 
                 <div className={card}>
@@ -1258,7 +1250,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+      <AlertDialog open={importDialogOpen} onOpenChange={(v) => { if (!restoredNow) setImportDialogOpen(v); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("settings.restoreConfirmTitle")}</AlertDialogTitle>
@@ -1271,9 +1263,12 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingImport(null)}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImport}>
-              {t("settings.restoreBtn")}
+            <AlertDialogCancel disabled={restoredNow} onClick={() => setPendingImport(null)}>{t("common.cancel")}</AlertDialogCancel>
+            {/* stays open: the button itself says "Restored", then the app restarts */}
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void confirmImport(); }}>
+              {restoredNow ? (
+                <span className="inline-flex items-center gap-1.5"><Check className="h-5 w-5" strokeWidth={2.6} />{t("settings.restoredShort")}</span>
+              ) : t("settings.restoreBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { localizeTrackerQuestion, localizeTrackerAdvice, localizeTrackerTitle, localizeGroupTitle } from "@/lib/trackerLocalize";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
@@ -73,8 +72,9 @@ const trackerSettingsSchema = z.object({
 });
 
 export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: TrackerSettingsModalProps) => {
-  const { toast } = useToast();
   const { t } = useTranslation();
+  // a save that didn't go through: a plain line above Save, until the next try (no pop-ups, Nov 10 2026)
+  const [saveFailed, setSaveFailed] = useState(false);
   const [formData, setFormData] = useState({
     questionText: "",
     answerType: "boolean" as Tracker["answerType"],
@@ -119,11 +119,13 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       setThresholdRaw(String(tracker.threshold));
       setErrors({});
       setMoreOpen(false);
+      setSaveFailed(false);
     }
   }, [tracker]);
 
   const handleSave = async () => {
     if (!tracker) return;
+    setSaveFailed(false);
 
     try {
       const questionTextToValidate = formData.questionText.trim() || tracker.questionText;
@@ -148,11 +150,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
 
       await onSave(updatedTracker);
 
-      toast({
-        title: t("trackerSettings.updated"),
-        description: t("trackerSettings.updatedDesc"),
-      });
-
+      // no pop-up: the sheet closes and the question shows its new words
       onClose();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -163,6 +161,9 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
           }
         });
         setErrors(fieldErrors);
+      } else {
+        console.warn("[TrackerSettings] save failed", error);
+        setSaveFailed(true);
       }
     } finally {
       setSaving(false);
@@ -338,6 +339,9 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
         className="flex-shrink-0 px-6 pt-3 bg-background"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
       >
+        {saveFailed && (
+          <p role="alert" className="pb-2.5 text-center text-[15px] font-medium leading-snug text-destructive">{t("trackerSettings.saveFailed")}</p>
+        )}
         <Button
           onClick={handleSave}
           disabled={saving || !periodDaysRaw || !thresholdRaw}

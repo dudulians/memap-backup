@@ -8,7 +8,7 @@ import { SupportSheet } from "./SupportSheet";
 import { HOME_HARM_IDS, MOOD_SUPPORT_IDS } from "@/lib/supportLines";
 import { reasonAskedLater, reasonTemplate } from "@/lib/reasons";
 import { createPortal } from "react-dom";
-import { Tracker, TrackerEntry } from "@/types/tracker";
+import { Tracker, TrackerEntry, askedOn } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,9 @@ import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { islandDef, islandName, islandOf, mapPic } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
 import { cardQuestion } from "@/lib/cardText";
-import { Flame, Clock } from "lucide-react";
+import { Flame, Clock, Moon } from "lucide-react";
+import { experimentOver, runningExperiments } from "@/lib/experiments";
+import { testTodayOf } from "@/lib/testWords";
 import { maybeRequestRating } from "@/lib/appRating";
 import { getDoorState, getDoor, doorCounts, strongestContextFact, isoLocal } from "@/lib/doors";
 import { echoLine, factLine } from "@/lib/echo";
@@ -370,7 +372,7 @@ export const DailySession = ({
     // cards stay out of the evening until she keeps them.
     const only = onlyIds ? new Set(onlyIds) : null;
     const unansweredQuestions = trackers
-      .filter(tracker => !tracker.archived && tracker.source !== "play" && (!only || only.has(tracker.id)))
+      .filter(tracker => !tracker.archived && tracker.source !== "play" && askedOn(tracker, selectedDate) && (!only || only.has(tracker.id)))
       .map(tracker => {
         const existingEntry = entries.find(
           e => e.trackerId === tracker.id && e.date === selectedDate
@@ -474,9 +476,8 @@ export const DailySession = ({
   // a fresh deck via the parent's `key` change, not this effect.
   useEffect(() => {
     if (playMode) return;
-    // another day: the calm line after a partner-harm "yes" stays with that day's cards (Nov 10 2026 check)
+    // another day: the calm window after a partner-harm "yes" stays with that day's cards (Nov 10 2026 check)
     setCare(null);
-    careSeen.current = false;
     const newDeck = buildDeck();
     setDeck(newDeck);
     setCurrentIndex(0);
@@ -557,11 +558,12 @@ export const DailySession = ({
   const [support, setSupport] = useState(false);
   // which question the support sheet speaks to, and the calm line after a hurtful "yes"
   const [supportAbout, setSupportAbout] = useState<string | null>(null);
+  // the calm line after a partner-harm "yes" is a window of its own, once a sitting (her note, Nov 10 2026: under
+  // the buttons it squeezed the cards — "можно просто как разовое окно сделать?"): the question it is about, or null
   const [care, setCare] = useState<string | null>(null);
+  const careShown = useRef(false);
   // after such a "yes" the evening doesn't celebrate (persona walk, Nov 9 2026: the calm line came up under falling confetti)
   const hurtTonight = useRef(false);
-  /** the calm line was on screen under a card (a partner-harm yes on the last card goes straight to Done) */
-  const careSeen = useRef(false);
   // "Why?" (her answer, Nov 9 2026: "чтоб это было очевидно при ответе — типа сможешь добавить причину позже"):
   // a "yes" to a fight or a headache gets one quiet line under the buttons, nothing to tap; the path asks later.
   // It stays a few seconds (it stands under the next card by then, so it names its answer: "Fight: you can add
@@ -577,8 +579,7 @@ export const DailySession = ({
   }, [whyLater]);
 
   const handleAnswer = (value: boolean) => {
-    if (isAnimatingRef.current || !currentQuestion) return;
-    if (care) careSeen.current = true;
+    if (isAnimatingRef.current || !currentQuestion || care) return;
     sessionVals.current.set(currentQuestion.tracker.id, value);
     const why = value && !playMode && reasonAskedLater(currentQuestion.tracker, selectedDate, isoLocal(new Date()));
     const whyId = why ? reasonTemplate(currentQuestion.tracker) : null;
@@ -587,7 +588,10 @@ export const DailySession = ({
     // a partner shouted or said something hurtful: one calm line before the next card (persona walk, Nov 9 2026:
     // the deck went straight on to "Great work today!")
     const tid = templateIdOf(currentQuestion.tracker) ?? "";
-    if (value && HOME_HARM_IDS.has(tid)) { setCare(tid); careSeen.current = false; hurtTonight.current = true; confetti.reset(); }
+    if (value && HOME_HARM_IDS.has(tid)) {
+      hurtTonight.current = true; confetti.reset();
+      if (!careShown.current) { careShown.current = true; setCare(tid); }
+    }
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -671,9 +675,8 @@ export const DailySession = ({
   };
 
   const handleSkip = () => {
-    if (isAnimatingRef.current || !currentQuestion) return;
+    if (isAnimatingRef.current || !currentQuestion || care) return;
     setWhyLater(null);
-    if (care) careSeen.current = true;
 
     isAnimatingRef.current = true;
     setIsAnimating(true);
@@ -845,16 +848,39 @@ export const DailySession = ({
     currentDy.current = 0;
   };
 
+  // A night test's step for tonight, said on the Done card of today's check-in.
+  const tonightSteps = completed && !playMode && selectedDate === isoLocal(new Date())
+    ? runningExperiments().filter((x) => x.night && !experimentOver(x)).map((x) => testTodayOf(x.change, x)).filter((s): s is string => !!s).slice(0, 2)
+    : [];
+
+  // The calm window after a partner-harm "yes": over the next card, or over Done when it was the last one.
+  // Above the Done card (z-60); "Talk to someone" opens the support sheet above both (z-[80]).
+  const carePopup = care ? createPortal(
+    <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] animate-fade-in sm:items-center" role="presentation">
+      <div data-care-window role="dialog" aria-modal="true" aria-label={t("support.chip")} className="surface w-full max-w-sm rounded-[24px] px-5 pb-5 pt-6 text-left shadow-[0_22px_40px_-18px_rgba(16,42,56,0.45)]">
+        <p className="text-[19px] font-bold leading-snug tracking-tight">{t("support.careLine")}</p>
+        <div className="mt-5 flex flex-col gap-2">
+          <Pressable tone="teal" haptic="tap" onClick={() => { setSupportAbout(care); setCare(null); setSupport(true); }} className="h-[52px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold">
+            {t("support.chip")}
+          </Pressable>
+          <button type="button" onClick={() => setCare(null)} className="h-11 w-full text-[16px] font-semibold text-muted-foreground">{t("common.close")}</button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  ) : null;
+
   // A step (one topic) ends on a small card: what was done, then back to
-  // the path, where the next step is waiting.
+  // the path, where the next step is waiting (after the calm window, when one is open).
   if (completed && autoComplete) {
+    if (care) return carePopup;
     window.setTimeout(onComplete, 0);
     return null;
   }
   // the new look always ends on its own "Done!" card (persona walk, Nov 9 2026: after answering for
   // yesterday in the morning, the old look's streak sheet with confetti came up)
   if (completed && (onlyIds || includeAnswered || getUiMode() === "new")) {
-    return createPortal(
+    return <>{createPortal(
       <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-background px-6 text-center animate-fade-in">
         <span className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white shadow-[0_6px_0_hsl(var(--lip-teal))]">
           <Check className="h-12 w-12" strokeWidth={3.2} />
@@ -865,20 +891,24 @@ export const DailySession = ({
         </p>
         {/* a fight or a headache this sitting: the reasons can come later, on the path ("Why?") */}
         {whyAsked.current && !hurtTonight.current && <p data-why-later className="mt-3 text-[16px] font-semibold text-muted-foreground">{t("why.later")}</p>}
-        {/* a partner-harm yes on the last card: the calm line it would have had under the next card (Nov 10 2026 check) */}
-        {care && !careSeen.current && (
-          <div data-care-done className="surface mt-5 w-full max-w-sm rounded-[18px] px-4 py-3 text-left" role="status">
-            <p className="text-[15px] font-semibold leading-snug">{t("support.careLine")}</p>
-            <button type="button" onClick={() => { setSupportAbout(care); setSupport(true); }} className="raised-btn is-small mt-2 px-4">{t("support.chip")}</button>
+        {/* tonight's step of a night test (her note, Nov 10 2026: "не забудь сегодня лечь так, чтоб было 8 часов"): its
+            question comes tomorrow evening, about last night */}
+        {tonightSteps.length > 0 && (
+          <div data-tonight className="mt-5 w-full max-w-sm space-y-2">
+            {tonightSteps.map((s) => (
+              <p key={s} className="flex items-start justify-center gap-2 text-[17px] font-bold leading-snug">
+                <Moon className="mt-0.5 h-5 w-5 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{s}
+              </p>
+            ))}
           </div>
         )}
         <Pressable tone="teal" haptic="medium" onClick={onComplete} className="mt-8 h-[58px] w-full max-w-sm rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("path.continue")}
         </Pressable>
-        <SupportSheet open={support} onClose={() => setSupport(false)} about={supportAbout} layer="z-[70]" />
+        <SupportSheet open={support} onClose={() => setSupport(false)} about={supportAbout} layer="z-[80]" />
       </div>,
       document.body,
-    );
+    )}{carePopup}</>;
   }
 
   if (completed) {
@@ -1332,10 +1362,10 @@ export const DailySession = ({
                   // passed by sits in between (audit, Nov 7 2026)
                   if (last) {
                     sessionVals.current.delete(last.trackerId);
-                    // a partner-harm "yes" taken back: its calm line goes too, unless another one stands (Nov 10 2026 check)
+                    // a partner-harm "yes" taken back: the evening may celebrate again, unless another one stands (Nov 10 2026 check)
                     const harm = (id: string) => { const tr = trackers.find((x) => x.id === id); return !!tr && HOME_HARM_IDS.has(templateIdOf(tr) ?? ""); };
                     if (harm(last.trackerId) && ![...sessionVals.current].some(([id, v]) => v === true && harm(id))) {
-                      setCare(null); careSeen.current = false; hurtTonight.current = false;
+                      setCare(null); hurtTonight.current = false;
                     }
                   }
                   setCurrentIndex((prev) => (last ? last.index : Math.max(0, prev - 1)));
@@ -1568,15 +1598,7 @@ export const DailySession = ({
         {whyLater && !care && !HOME_HARM_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
           <p key={whyLater.at} data-why-later role="status" className="mt-2.5 text-center text-[15px] font-semibold leading-snug text-muted-foreground animate-fade-in">{t("why.laterOne", { name: t(`why.one.${whyLater.id}`) })}</p>
         )}
-        {care && (
-          <div className="surface mt-3 rounded-[18px] px-4 py-3 animate-fade-in" role="status">
-            <p className="text-[15px] font-semibold leading-snug">{t("support.careLine")}</p>
-            <div className="mt-2 flex items-center gap-2">
-              <button type="button" onClick={() => { setSupportAbout(care); setSupport(true); }} className="raised-btn is-small px-4">{t("support.chip")}</button>
-              <button type="button" onClick={() => setCare(null)} className="h-10 px-3 text-[15px] font-semibold text-muted-foreground">{t("common.close")}</button>
-            </div>
-          </div>
-        )}
+        {carePopup}
         <div className="mt-1 flex justify-center">
           <button
             type="button"

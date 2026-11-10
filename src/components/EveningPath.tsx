@@ -53,7 +53,7 @@ import { WeekChest } from "@/components/WeekChest";
 import { HunchGame } from "@/components/HunchGame";
 import { hunchTarget, readyHunch } from "@/lib/hunches";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
-import { Tracker, TrackerEntry } from "@/types/tracker";
+import { Tracker, TrackerEntry, askedOn } from "@/types/tracker";
 import { track, onbVariant } from "@/lib/analytics";
 
 const PATH_MAX = 440;
@@ -166,7 +166,7 @@ export const EveningPath = ({
     return pathModel(trackers, entries);
   }, [trackers, entries, noteDays, tick, playful]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const active = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
+  const active = useMemo(() => { const today = isoLocal(new Date()); return trackers.filter((tr) => !tr.archived && tr.source !== "play" && askedOn(tr, today)); }, [trackers]);
   // low mood or no interest on 12 of the last 14 days: a doctor or therapist (when-to-act.md). Days she
   // answered are what count (answered-days rule, Nov 9 2026: at 3–4 evenings a week this card never came;
   // now 6 of 6 or 7 of 8 answers, the same share)

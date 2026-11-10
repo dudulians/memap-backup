@@ -28,7 +28,6 @@ import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { Search, Plus, X, Check, ArrowUp, ArrowLeft, ChevronDown } from "lucide-react";
 import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
-import { toast } from "@/hooks/use-toast";
 import { uuid } from "@/lib/uuid";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -697,10 +696,7 @@ export const AddTrackerModal = ({
           // Surface the restored tracker so caller can navigate.
           if (onNavigateToTracker) onNavigateToTracker(duplicateTracker);
           onClose();
-          toast({
-            title: t("today.restoredFromArchive"),
-            description: t("today.restoredFromArchiveDesc"),
-          });
+          // no pop-up: the restored question opens (or is back in My questions)
         }}
       />
     );
@@ -1049,10 +1045,7 @@ export const AddTrackerModal = ({
           // Surface the restored tracker so caller can navigate.
           if (onNavigateToTracker) onNavigateToTracker(duplicateTracker);
           onClose();
-          toast({
-            title: t("today.restoredFromArchive"),
-            description: t("today.restoredFromArchiveDesc"),
-          });
+          // no pop-up: the restored question opens (or is back in My questions)
         }}
       />
     </>,

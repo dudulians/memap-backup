@@ -6,7 +6,6 @@ import { clearThresholdNotification } from "@/lib/notifications";
 import { ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
 import { OverviewCard } from "./OverviewCard";
 import { FindingsView } from "./FindingsView";
 import { CalendarAnswerEditor } from "./CalendarAnswerEditor";
@@ -27,8 +26,7 @@ export const PatternsTab = ({ focusIds, only, onTry, pair = false }: { focusIds?
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  
+
   // Day picked on the calendar (its notes show under the month)
   const [selectedDate, setSelectedDate] = useState(() => 
     isoLocal(new Date())

@@ -12,7 +12,7 @@ import type { Tracker } from "@/types/tracker";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { localizeTrackerAdvice } from "@/lib/trackerLocalize";
-import { IDEAS, OLD_IDEAS, PLAN_IDEAS, QUESTION_IDEAS, TOPIC_IDEAS, getExperiments, replaceExperiments, type Experiment } from "@/lib/experiments";
+import { BED_FROM_WAKE, IDEAS, OLD_IDEAS, PLAN_IDEAS, QUESTION_IDEAS, TOPIC_IDEAS, bedtimeFrom, getExperiments, replaceExperiments, type Experiment } from "@/lib/experiments";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import { templateQuestion } from "@/lib/cardText";
 import { LEGACY_IDEA_NAMES } from "@/lib/ideaNames";
@@ -84,10 +84,20 @@ const planAsQuestion = (plan: string): string => {
   return i18n.t("experiment.planQ", { plan: p });
 };
 
+/** A step done in the morning ("Spend 10 minutes outside in the morning"): started in the afternoon, its first
+ *  evening is tomorrow — today's morning is gone (Nov 10 2026). */
+export const morningStep = (k: string): boolean => {
+  const s = `${i18n.t(`experiment.idea.${k}.change`, { lng: "en" })} ${i18n.t(`experiment.idea.${k}.q`, { lng: "en" })}`;
+  return MORNING.test(s) && !/tomorrow/i.test(s);
+};
+const MORNING = /\b(this morning|in the morning|morning light|after waking|first (work )?hour|before noon)\b/i;
+
 /** Today's step for a test's push (her note, Nov 8 2026: not the plan, but "не забудь
  *  потренироваться сегодня"): an idea's or a goal's own line, else null (her own words go in the body). */
-export const testTodayOf = (change: string): string | null => {
+export const testTodayOf = (change: string, x?: Pick<Experiment, "wake">): string | null => {
   const k = ideaOf(change);
+  // a bedtime counted back from the wake-up time: "Tonight: in bed by 23:00" (her note, Nov 10 2026: "во сколько надо лечь?")
+  if (k && BED_FROM_WAKE[k] && x?.wake) return i18n.t(`experiment.idea.${k}.todayAt`, { time: clockTime(bedtimeFrom(x.wake, BED_FROM_WAKE[k])), wake: clockTime(x.wake) });
   if (k) return i18n.t(`experiment.idea.${k}.today`);
   const g = goalTemplateOf(change);
   return g ? i18n.t(`experiment.goalToday.${g}`) : null;
@@ -95,13 +105,14 @@ export const testTodayOf = (change: string): string | null => {
 
 /** Plans that are a weekly goal for the question itself: how many a week. The rule of
  *  the question matches the goal (fewer than that in 7 days → time to act). */
-export const GOALS: Record<string, number> = { exercised: 3, "strength-training": 2, "time-in-nature": 2 };
+export const GOALS: Record<string, number> = { exercised: 3, "strength-training": 2, "time-in-nature": 2, "hobby-time": 2 };
 const TEMPLATES = new Map(LIFE_STREAMS.flatMap((s) => s.templates).map((t) => [t.id, t]));
 /** The weekly goals' words, now and before Nov 8 2026, in both languages. */
 const OLD_GOAL_WORDS: Record<string, string[]> = {
   exercised: ["Book 3 workout slots in calendar this week", "Внести 3 тренировки в календарь на эту неделю"],
   "strength-training": ["Put 2 strength sessions in the calendar this week", "Внести в календарь 2 силовые тренировки на эту неделю"],
   "time-in-nature": ["Plan two nature walks this week", "Запланировать на неделе две прогулки на природе"],
+  "hobby-time": ["Put the hobby in the calendar twice a week", "Поставить хобби в календарь два раза в неделю"],
 };
 /** The library question a weekly-goal plan is about, from its words (new or old, either language). */
 export const goalTemplateOf = (change: string): string | null => {

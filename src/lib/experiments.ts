@@ -39,16 +39,47 @@ export interface Experiment {
   same?: boolean;
   /** the goal a week, for "This week: 2 of 3" */
   perWeek?: number;
+  /** the step happens at bedtime or at night: its question is about last night, from the second evening (Nov 10 2026) */
+  night?: boolean;
+  /** "HH:MM" she gets up (a bedtime test counts back from it: "In bed by 23:00") */
+  wake?: string;
+  /** the answer that means the step was done: "no" when the test watches a hard question ("Smoked hookah?" — no) */
+  doneWhen?: boolean;
 }
+/** The step was done on this answer. */
+export const doneBy = (x: Pick<Experiment, "doneWhen">, value: unknown): boolean => value === (x.doneWhen ?? true);
+
+/** Steps that happen after the evening check-in, at bedtime or at night (her note, Nov 10 2026: a bedtime test asked
+ *  "Did you set a reminder to go to bed…?" every evening — "вопрос на след день в карточках"). Their question is about
+ *  last night and comes from the test's second evening; the evening before, the push and the Done card say tonight's
+ *  step. */
+export const NIGHT_IDEAS = new Set<string>([
+  "bed23", "phoneAway", "noSocialBed", "worryList", "sameWake", "sameSleepTimes", "sideSleep", "noDrinksBed2h", "coolBedroom", "relaxJaw", "antiperspirantNight", "softSound", "earplugs", "alarmClock", "chargeOutside", "readInstead", "dimLights", "gamesStopBed", "lightLate", "postStay", "bed8h", "nightAwakeUp", "windDown30", "fallAsleepUp",
+]);
+/** A plan whose habit is just the good answer of its own question ("Go to bed 8 hours before you get up" for "Did you sleep
+ *  7+ hours last night?"): the test watches that question, no second one is added ("если его ещё не было", Nov 10 2026). */
+export const WATCH_IDEAS: Record<string, string[]> = {
+  warmMoment: ["felt-close-to-partner"], kindStranger: ["complimented-stranger"], bed8h: ["slept-enough"], stretchShower: ["stretched"], morningLight: ["saw-daylight"], pillsWithHabit: ["took-meds"], sameWake: ["same-wake-time"], squeezeBrushing: ["pelvic-floor-exercises"], hookahWeekdays: ["smoked-hookah"], dayCap: ["stayed-on-budget"], cookOne: ["cooked-myself"], vegNeverSkip: ["ate-vegetables"], workEndFixed: ["worked-overtime"], petWhenNear: ["petted-an-animal"], talkOutLoud: ["talked-to-pet"], meditate5: ["meditated"], learn15: ["studied-language","practiced-skill"], episodeOnTheGo: ["listened-podcast"], askLocal: ["spoke-local-language"], localLang15: ["studied-local-language"], kidOutside30: ["child-physical-activity"],
+};
+/** Tests that count bedtime back from the wake-up time: hours in bed. */
+export const BED_FROM_WAKE: Record<string, number> = { bed8h: 8 };
+const hhmm = (min: number) => { const m = ((min % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`; };
+const minutes = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+/** "23:00" from a 07:00 wake-up and 8 hours in bed. */
+export const bedtimeFrom = (wake: string, hours: number) => hhmm(minutes(wake) - hours * 60);
+/** Half an hour before bedtime: the push that says tonight's step. */
+export const beforeBed = (bed: string) => hhmm(minutes(bed) - 30);
+/** Save the wake-up time a bedtime test counts back from. */
+export const setExperimentWake = (id: string, wake: string) => save(getExperiments().map((x) => (x.id === id ? { ...x, wake } : x)));
 
 /** A time that fits the change (board 65): bedtime ones in the evening, morning ones early. Her own
  *  plan too, by its words (Nov 8 2026: "Go to bed by 23:00" came at 9:00 in the morning). */
 export const smartRemindTime = (idea: string | null, text = ""): string => {
-  const at: Record<string, string> = { bed23: "22:00", phoneAway: "21:30", noNewsEvening: "20:30", noMailEvening: "19:00", stop19: "18:30", noSweetsEvening: "19:30",
-    noCoffee14: "13:30", water: "10:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "20:00",
+  const at: Record<string, string> = { bed23: "21:30", phoneAway: "21:00", noNewsEvening: "18:30", noMailEvening: "19:00", stop19: "18:30", noSweetsEvening: "19:30",
+    noCoffee14: "13:30", water: "10:00", lunchBreak: "12:30", walk20: "08:00", outsideMorning: "08:00", stretch: "08:00", screenFreeHour: "18:00", bedtimeSame: "19:00",
     threeLines: "20:30", talkNoPhones: "19:00", thankYou: "18:00", walkTogether: "17:30", playTogether: "17:30", extraWalk: "17:00", playTime: "18:00",
     sameFoodTime: "08:00", callParents: "18:00", visitWeekend: "18:00", shortMessage: "12:00", nauseaLog: "12:00",
-    socialLimit: "12:00", noSocialMorning: "07:30", noSocialBed: "21:30", gladLine: "20:30", noPhoneMorning: "07:30", screenBreaks: "10:00", newsOnce: "09:00", sameWake: "21:30", worryList: "21:00", coffeeTwo: "11:00", regularMeals: "08:00", dinnerEarly: "18:30", vegOne: "12:00", noAlcohol: "18:00", drinkLimit: "17:30", urgeNote: "12:00", delayTen: "10:00", waitDay: "12:00", spendLog: "20:30", noShopApps: "19:30", moveBreak: "10:00", symptomNote: "20:00", foodLog: "20:00", breathe: "13:00", smallJoy: "17:00", angerNote: "12:00", myTime: "17:00", doneList: "20:30", textFriend: "13:00", callOne: "18:00", outAmongPeople: "16:00", noPhoneMeal: "18:30", focusFirst: "08:30", oneThing: "20:00", learn15: "18:00", read10: "21:00", hobby20: "18:00", pauseYes: "09:00", tidy10: "18:00", askLocal: "11:00",
+    socialLimit: "12:00", noSocialMorning: "07:30", noSocialBed: "21:30", gladLine: "20:30", noPhoneMorning: "07:30", screenBreaks: "10:00", newsOnce: "09:00", sameWake: "21:30", worryList: "21:00", coffeeTwo: "11:00", regularMeals: "08:00", dinnerEarly: "18:30", vegOne: "12:00", noAlcohol: "18:00", drinkLimit: "17:30", urgeNote: "12:00", delayTen: "10:00", waitDay: "12:00", spendLog: "20:30", noShopApps: "19:30", moveBreak: "10:00", symptomNote: "20:00", foodLog: "20:00", breathe: "13:00", smallJoy: "17:00", angerNote: "12:00", myTime: "17:00", doneList: "20:30", textFriend: "13:00", callOne: "18:00", outAmongPeople: "16:00", noPhoneMeal: "18:30", focusFirst: "08:30", oneThing: "20:00", learn15: "18:00", read10: "19:00", hobby20: "18:00", pauseYes: "09:00", tidy10: "18:00", askLocal: "11:00",
     // a question's own changes (Nov 9 2026, QUESTION_IDEAS)
     pauseHeated: "18:00", sayHurt: "18:00", handTask: "17:00", askPartnerDay: "19:00", warnFive: "16:00", askChildDay: "18:00", readTogether: "19:30", handChildTask: "10:00", askHelp: "10:00", tableMeal: "18:00", kidMealTimes: "08:00", newFoodNext: "12:00", kidOutside30: "16:00", walkPartWay: "08:00", washHands: "16:00", airRoom: "19:30",
     pauseSorry: "10:00", sorryThanks: "12:00", thankByName: "12:00", kindStranger: "12:00", sweatWorkout: "17:30", strength10: "17:30", kettleSquats: "08:00", warmPad: "20:00", sameCoffee: "09:00", sameSleepTimes: "21:30", sideSleep: "21:30", noAlcoholBed: "18:00", drinkFreeDays: "17:30", coffeeLess: "11:00", waterWaking: "07:30", waterMeals: "12:00", bottleNear: "09:00",
@@ -60,7 +91,9 @@ export const smartRemindTime = (idea: string | null, text = ""): string => {
     funny10: "19:00", funnyPerson: "17:00", songMove: "18:00", animalWalk: "17:00", likeLook: "20:30", worryTime: "18:00", smallNo: "10:00", waitReply: "09:00", caredTask: "09:00", workWin: "17:30", balanceOnce: "19:00", make15: "18:00", words5: "18:00", decisionLines: "20:30",
     calmWalks: "08:00", noTreats: "18:00", petFoodLog: "20:00", petEveningPlay: "19:00", petEarlyMeal: "18:00", parentWater: "11:00", parentRoutine: "09:00", parentTalk15: "18:00", parentMeal: "12:30", parentSnacks: "10:00", parentDaylight: "09:00", parentNoLateNap: "14:30", nightLight: "20:00", parentShoes: "09:00", pillCheck: "09:00", askPain: "18:00",
     wellDone: "20:30", kindPerson: "17:00", muteChat: "18:30", kidsMessage: "12:00", kidsShare: "18:00", billsSameDay: "19:00", messageHome: "13:00", localThing: "16:00", cookHome: "17:30", localDish: "12:30", localProduct: "11:00", daylight20: "11:00", homeSounds: "20:00", localChat: "12:00", messageExpat: "13:00", goodHardHere: "20:30",
-    earplugs: "21:30", leaveEarly15: "07:30", easyTimeOut: "07:30", localLang15: "18:00", localListen10: "18:00" };
+    earplugs: "21:30", leaveEarly15: "07:30", easyTimeOut: "07:30", localLang15: "18:00", localListen10: "18:00",
+    // each daily library plan's own step (Nov 10 2026)
+    warmMoment: "18:00", partnerTriggerNote: "12:00", flirtAfterFeel: "12:00", kidTime15: "17:30", nauseaNote: "09:00", bed8h: "21:00", nightAwakeUp: "21:30", stretchShower: "08:00", walkingCall: "09:00", morningLight: "07:30", bottleTwice: "09:00", windDown30: "21:30", pillsWithHabit: "08:00", napShort: "12:30", fallAsleepUp: "21:30", warmBodyGloves: "08:00", hookahWeekdays: "16:00", coffeeByNoon: "11:00", gamesHourDay: "17:00", dayCap: "08:00", saleFullPrice: "10:00", walkAfterLunch: "12:00", vegNeverSkip: "08:00", angerMissing: "12:00", workBotherNote: "17:30", workEndFixed: "17:00", mainThingFirst: "08:30", smallPromise: "07:30", smallStart: "09:00", petWhenNear: "10:00", talkOutLoud: "10:00", bossNote: "12:00", drainWho: "12:00", waitHourNews: "09:00", meditate5: "08:00", goodThingEvening: "19:00", notifOffHour: "09:00", episodeOnTheGo: "08:00", noiseTimes: "12:00", paperworkTreat: "09:00", petSameRoutine: "08:00", petPlayMore: "18:00", badNightNote: "08:00", screenFreeActivity: "16:00", brightMomentNote: "18:00", bedtimeRoutineEarly: "18:30" };
   if (idea && at[idea]) return at[idea];
   const s = text.toLowerCase();
   // eating or drinking hours before bed: early evening; anything else about bed: an hour before it
@@ -105,7 +138,7 @@ export const IDEAS: Record<string, string[]> = {
 };
 export const ideasFor = (island: string): string[] => IDEAS[island] ?? IDEAS.other;
 /** Plans with their own test words (a question and today's line) that aren't island ideas (Nov 8 2026). */
-export const PLAN_IDEAS = ["nauseaLog"];
+export const PLAN_IDEAS = ["nauseaLog", "warmMoment", "partnerTriggerNote", "flirtAfterFeel", "kidTime15", "nauseaNote", "bed8h", "nightAwakeUp", "stretchShower", "walkingCall", "morningLight", "bottleTwice", "windDown30", "pillsWithHabit", "napShort", "fallAsleepUp", "warmBodyGloves", "hookahWeekdays", "coffeeByNoon", "gamesHourDay", "dayCap", "saleFullPrice", "walkAfterLunch", "vegNeverSkip", "angerMissing", "workBotherNote", "workEndFixed", "mainThingFirst", "smallPromise", "smallStart", "petWhenNear", "talkOutLoud", "bossNote", "drainWho", "waitHourNews", "meditate5", "goodThingEvening", "notifOffHour", "episodeOnTheGo", "noiseTimes", "paperworkTreat", "petSameRoutine", "petPlayMore", "badNightNote", "screenFreeActivity", "brightMomentNote", "bedtimeRoutineEarly"];
 /** Ideas no longer offered (content review, Nov 9 2026), kept so the tests already running keep their
  *  name, question and reminder: "No alcohol for two weeks" (a sudden stop is unsafe for someone who
  *  drinks every day → drinkFreeDays), "No more than 2 coffees" (halving at once gives withdrawal
@@ -336,10 +369,11 @@ export const overlapping = (x: Experiment): Experiment[] => {
 };
 /** Start a test: adds "Did you…?" to the island, from today (a weekly goal adds nothing:
  *  it watches the question she has). */
-export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number } = {}): Promise<Experiment> => {
-  track("experiment_started", { from: from ? "action_point" : "pick", goal: !!opts.same });
+export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number; night?: boolean; later?: boolean; wake?: string; doneWhen?: boolean } = {}): Promise<Experiment> => {
+  track("experiment_started", { from: from ? "action_point" : "pick", goal: !!opts.same, night: !!opts.night });
+  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}) };
   if (opts.same && from) {
-    const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}) };
+    const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}), ...extra };
     save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), g]);
     window.dispatchEvent(new Event("memap-settings-changed"));
     return g;
@@ -359,9 +393,12 @@ export const startExperiment = async (island: string, change: string, question: 
     createdAt: new Date().toISOString(),
     sortIndex: -1,
     island,
+    // a night step is asked about the night before, a morning step started in the afternoon about tomorrow's morning:
+    // from tomorrow evening
+    ...(opts.night || opts.later ? { askFrom: (() => { const d = new Date(); d.setDate(d.getDate() + 1); return isoLocal(d); })() } : {}),
   };
   await saveTrackers([...existing, tracker]);
-  const x: Experiment = { id: tracker.id, island, trackerId: tracker.id, change, start: isoLocal(new Date()), ...(from ? { from } : {}) };
+  const x: Experiment = { id: tracker.id, island, trackerId: tracker.id, change, start: isoLocal(new Date()), ...(from ? { from } : {}), ...extra };
   // several at once, even on one island (Nov 8 2026); the same change twice restarts it
   save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), x]);
   window.dispatchEvent(new Event("memap-settings-changed"));
@@ -417,7 +454,7 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
   // (isHardAnswer: YES to a hard question, NO to a good one).
   const own = new Map(trackers.filter((t) => !t.archived && !isTestQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island).map((t) => [t.id, t]));
   const did = new Map<string, boolean>();
-  for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date)) did.set(e.date, e.value === true);
+  for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date)) did.set(e.date, doneBy(x, e.value));
   // a hard day by the islands' rule (QA re-check, Nov 9 2026: one hard answer made the day hard here while
   // the island counted half): her topic's question hard, or at least half of that day's answers hard
   const door = getDoorState(), lead = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((y) => y.trackerId)] : []);
@@ -478,7 +515,7 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
 export const weekDone = (x: Experiment, entries: TrackerEntry[], today = new Date()): number => {
   const mon = new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((today.getDay() + 6) % 7));
   const from = isoLocal(mon), to = isoLocal(today);
-  return entries.filter((e) => e.trackerId === x.trackerId && e.value === true && e.date >= from && e.date <= to).length;
+  return entries.filter((e) => e.trackerId === x.trackerId && doneBy(x, e.value) && e.date >= from && e.date <= to).length;
 };
 
 /** Its own test question goes to the archive (answers stay); a weekly goal's question is hers and stays. */

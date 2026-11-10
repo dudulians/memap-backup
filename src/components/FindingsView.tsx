@@ -3,7 +3,7 @@
 // two strips of the last 14 days so you can see it, and "Holds up · 6 of
 // 8" instead of phi, co-occurrences and stage badges. Canvas "MeMap:
 // новая версия", page 6, "Как надо: паттерны начинаются с находки".
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
@@ -126,6 +126,11 @@ export const FindingsView = ({
   );
 };
 
+/** The link whose "See the days" was tapped: open again, in view, when the chart goes back to the list (her note,
+ *  Nov 10 2026: "когда перешла по ссылке посмотреть график, то обратно уже не смогла выйти на эту связь"). */
+let reopen: string | null = null;
+export const reopenLink = (ids: string[]) => { reopen = ids.join("|"); };
+
 /** One link: its sentence and the other days; a tap opens its last 14 days as dots (her note, Nov 8
  *  2026: "есть «ещё», там не клацается"). The strongest one is open from the start. */
 const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
@@ -133,12 +138,15 @@ const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
   daysWith: (id: string, yes: boolean) => (boolean | undefined)[]; onSeeDays: () => void;
 }) => {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(first);
   const r = routeOf(c);
+  const again = useRef(reopen === [r.first, r.second].join("|"));
+  const [open, setOpen] = useState(first || again.current);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!again.current) return; reopen = null; box.current?.scrollIntoView({ block: "center" }); }, []);
   const solid = c.stage === "emerging" || c.stage === "stable";
   const a = of(r.first), b = of(r.second);
   return (
-    <div className="surface rounded-[22px]">
+    <div ref={box} data-link-card className="surface rounded-[22px]">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-start gap-2 px-[18px] pb-3 pt-4 text-left">
         <span className="min-w-0 flex-1">
           {first && <span className="mb-1.5 block text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{t("patterns.findStrongest")}</span>}

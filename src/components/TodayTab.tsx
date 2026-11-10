@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { isoLocal } from "@/lib/doors";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { getTrackers, getEntries, saveEntries, saveTrackers } from "@/lib/storage";
+import { getTrackers, getEntries, saveEntries, saveVisibleTrackers } from "@/lib/storage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
@@ -26,8 +26,6 @@ import { getTrackerIcon } from "@/lib/categoryHelpers";
 import { getRandomIdeas } from "@/lib/lifeStreams";
 import { localizeTrackerTitle, localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { cardQuestion } from "@/lib/cardText";
-import { useToast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { DuplicateTrackerDialog } from "./DuplicateTrackerDialog";
 import { TrackerDetails } from "./TrackerDetails";
@@ -78,7 +76,27 @@ import { uuid } from "@/lib/uuid";
 export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questions"; onBack?: () => void } = {}) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
-  const { toast } = useToast();
+  // No pop-up windows (her note, Nov 10 2026: "все тех окна уберем"). What a pop-up used to say
+  // now shows in place: a quiet "Deleted: … · Undo" line in the list, a plain line when an answer
+  // couldn't be saved, the reminder card itself saying it's on.
+  const [undoLine, setUndoLine] = useState<{ text: string; undo: () => Promise<void> } | null>(null);
+  const undoTimer = useRef<number | null>(null);
+  const offerUndo = (text: string, undo: () => Promise<void>) => {
+    if (undoTimer.current) window.clearTimeout(undoTimer.current);
+    setUndoLine({ text, undo });
+    undoTimer.current = window.setTimeout(() => setUndoLine(null), 12000);
+  };
+  useEffect(() => () => { if (undoTimer.current) window.clearTimeout(undoTimer.current); }, []);
+  const runUndo = async () => {
+    const line = undoLine;
+    if (!line) return;
+    if (undoTimer.current) window.clearTimeout(undoTimer.current);
+    setUndoLine(null);
+    haptics.tap();
+    await line.undo();
+  };
+  // stays until the next answer saves
+  const [saveFailed, setSaveFailed] = useState(false);
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [entries, setEntries] = useState<TrackerEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +120,9 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   const [notifsEnabled, setNotifsEnabled] = useState(
     () => getNotificationSettings().enabled
   );
+  // the card answers in place: why it couldn't turn on, or "on · 20:00" for a moment
+  const [notifErr, setNotifErr] = useState<string | null>(null);
+  const [notifJustOn, setNotifJustOn] = useState<string | null>(null);
 
   // Drives the soft halo pulse on the floating "+" FAB. Fires ONLY on
   // the user's first day if they haven't yet created their own
@@ -364,7 +385,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
       }));
 
       setTrackers(trackersWithIndex);
-      await saveTrackers(trackersWithIndex);
+      await saveVisibleTrackers(trackersWithIndex);
     }
   };
 
@@ -382,7 +403,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   // smart Undo button — popping the saved Yes/No so the day reads
   // as truly un-answered (notifications fire later, calendar dot
   // disappears, threshold count decrements). Best-effort error
-  // handling: any storage failure surfaces as a toast but doesn't
+  // handling: a storage failure shows a plain line on Today but doesn't
   // block the UI which has already optimistically updated.
   // One day's answers, changed one at a time (DaySheet): set, or clear with null.
   const [dayOpen, setDayOpen] = useState<{ date: string; ids?: string[] } | null>(null);
@@ -391,7 +412,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     const rest = entries.filter((e) => e !== old);
     const next = value === null ? rest : [...rest, { ...(old ?? { id: uuid(), trackerId, date }), value }];
     setEntries(next);
-    try { await saveEntries(next); } catch (err) { console.warn("[DaySheet] save failed", err); }
+    try { await saveEntries(next); setSaveFailed(false); } catch (err) { console.warn("[DaySheet] save failed", err); setSaveFailed(true); }
   };
 
   const handleClearEntryForDate = async (trackerId: string, date: string) => {
@@ -401,12 +422,10 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     setEntries(updatedEntries);
     try {
       await saveEntries(updatedEntries);
-    } catch (err: any) {
-      toast({
-        title: t("today.saveFailed"),
-        description: String(err?.message || err),
-        variant: "destructive",
-      });
+      setSaveFailed(false);
+    } catch (err) {
+      console.warn("[Today] clear failed", err);
+      setSaveFailed(true);
     }
   };
 
@@ -422,10 +441,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
         e.id === existingEntry.id ? { ...e, value } : e
       );
       setEntries(updatedEntries);
-      try { await saveEntries(updatedEntries); }
-      catch (err: any) {
-        toast({ title: t("today.saveFailed"), description: String(err?.message || err), variant: "destructive" });
-      }
+      try { await saveEntries(updatedEntries); setSaveFailed(false); }
+      catch (err) { console.warn("[Today] save failed", err); setSaveFailed(true); }
     } else {
       const newEntry: TrackerEntry = {
         id: uuid(),
@@ -435,10 +452,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
       };
       const updatedEntries = [...entries, newEntry];
       setEntries(updatedEntries);
-      try { await saveEntries(updatedEntries); }
-      catch (err: any) {
-        toast({ title: t("today.saveFailed"), description: String(err?.message || err), variant: "destructive" });
-      }
+      try { await saveEntries(updatedEntries); setSaveFailed(false); }
+      catch (err) { console.warn("[Today] save failed", err); setSaveFailed(true); }
 
       if (isViewingToday) {
         const streak = calculateStreak(trackerId, updatedEntries);
@@ -496,75 +511,37 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   const restoreFromArchive = async (id: string) => {
     const all = await getTrackers();
     const restored = all.map((t) => (t.id === id ? { ...t, archived: false } : t));
-    await saveTrackers(restored);
+    await saveVisibleTrackers(restored);
     setTrackers(restored.filter((t) => !t.archived));
     haptics.success();
-    toast({
-      title: t("today.restoredFromArchive"),
-      description: t("today.restoredFromArchiveDesc"),
-    });
+    // no pop-up: the question is back in the list
   };
 
   // Enable daily reminders inline from the Cards-screen banner. Asks
   // for permission, saves the default 20:00 time + enabled flag, and
-  // schedules. On failure, surfaces a toast and leaves the banner so
-  // the user can try again or go to Settings.
+  // schedules. On failure the banner itself says why, in plain words,
+  // until the next try; on success it shows "on · 20:00" for a moment.
   const handleEnableNotifs = async () => {
+    setNotifErr(null);
     const result = await requestNotificationPermissionDetailed();
     if (!result.granted) {
-      const messages: Record<string, { title: string; description: string }> = {
-        "insecure-origin": {
-          title: t("permissions.insecureOriginTitle"),
-          description: t("permissions.insecureOriginDesc"),
-        },
-        unsupported: {
-          title: t("permissions.unsupportedTitle"),
-          description: t("permissions.unsupportedDesc"),
-        },
-        denied: {
-          title: t("permissions.deniedTitle"),
-          description: t("permissions.deniedDesc"),
-        },
-        unknown: {
-          title: t("permissions.unknownTitle"),
-          description: t("permissions.unknownDesc"),
-        },
-      };
-      const msg = messages[result.reason ?? "unknown"] ?? messages.unknown;
-      toast({ ...msg, variant: "destructive" });
+      const r = result.reason;
+      setNotifErr(t(r === "denied" ? "permissions.lineDenied" : r === "unsupported" || r === "insecure-origin" ? "permissions.lineNoApp" : "permissions.lineUnknown"));
       return;
     }
     const current = getNotificationSettings();
     const next = { ...current, enabled: true };
     saveNotificationSettings(next);
     scheduleNotification(next);
+    haptics.success();
+    setNotifJustOn(next.time);
     setNotifsEnabled(true);
-    toast({ title: t("today.notifBannerEnabled") });
+    window.setTimeout(() => setNotifJustOn(null), 3000);
   };
 
   const handleDismissNotifBanner = () => {
     localStorage.setItem("memap_notif_banner_dismissed", "true");
     setNotifBannerDismissed(true);
-  };
-
-  const handleDismissIdeas = () => {
-    localStorage.setItem("memap_ideas_dismissed", "true");
-    setIdeasDismissed(true);
-    toast({
-      title: t("today.ideasHidden"),
-      description: t("today.ideasHiddenDesc"),
-      action: (
-        <ToastAction
-          altText={t("today.restore")}
-          onClick={() => {
-            localStorage.setItem("memap_ideas_dismissed", "false");
-            setIdeasDismissed(false);
-          }}
-        >
-          {t("today.restore")}
-        </ToastAction>
-      ),
-    });
   };
 
   // Shared helper: records the "user has created a tracker" flag and
@@ -593,7 +570,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
 
   const createTrackerDirectly = async (newTracker: Tracker) => {
     const updatedTrackers = [...trackers, newTracker];
-    await saveTrackers(updatedTrackers);
+    await saveVisibleTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
     markTrackerAdded();
   };
@@ -604,16 +581,13 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     const updated = trackers.map((t) =>
       t.id === tracker.id ? { ...t, source: undefined } : t
     );
-    await saveTrackers(updated);
+    await saveVisibleTrackers(updated);
     setTrackers(updated);
-    toast({
-      title: t("today.playCardKept"),
-      description: t("today.playCardKeptDesc", { title: localizeTrackerTitle(tracker.title) }),
-    });
+    // no pop-up: the card moves up into the regular list
   };
 
   // Bulk-delete all play-marked trackers + their entries. Heavy hammer,
-  // confirmed via toast undo so accidental taps are recoverable.
+  // so an "Undo" line stays in the list for a while.
   const deleteAllPlayCards = async () => {
     const playIds = new Set(
       trackers.filter((t) => t.source === "play").map((t) => t.id)
@@ -625,57 +599,29 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     const updatedEntries = entries.filter((e) => !playIds.has(e.trackerId));
     setTrackers(updatedTrackers);
     setEntries(updatedEntries);
-    await saveTrackers(updatedTrackers);
+    await saveVisibleTrackers(updatedTrackers);
     await saveEntries(updatedEntries);
-    toast({
-      title: t("today.playRoundCleared"),
-      description: t("today.playRoundClearedDesc", { count: playIds.size }),
-      action: (
-        <ToastAction
-          altText={t("today.undo")}
-          onClick={async () => {
-            await saveTrackers(previousTrackers);
-            await saveEntries(previousEntries);
-            setTrackers(previousTrackers);
-            setEntries(previousEntries);
-          }}
-        >
-          {t("today.undo")}
-        </ToastAction>
-      ),
+    offerUndo(t("today.playRoundClearedDesc", { count: playIds.size }), async () => {
+      await saveVisibleTrackers(previousTrackers);
+      await saveEntries(previousEntries);
+      setTrackers(previousTrackers);
+      setEntries(previousEntries);
     });
   };
 
   // Bulk-promote: drop the source="play" marker from every play-round
   // tracker so they all join the regular cards in one tap. Mirror image
-  // of deleteAllPlayCards. Snapshot previous trackers so the toast can
-  // offer Undo.
+  // of deleteAllPlayCards. No pop-up: the cards visibly join the list.
   const keepAllPlayCards = async () => {
     const playIds = new Set(
       trackers.filter((t) => t.source === "play").map((t) => t.id)
     );
     if (playIds.size === 0) return;
-    const previousTrackers = trackers;
     const updatedTrackers = trackers.map((t) =>
       playIds.has(t.id) ? { ...t, source: undefined } : t
     );
     setTrackers(updatedTrackers);
-    await saveTrackers(updatedTrackers);
-    toast({
-      title: t("today.playRoundKept"),
-      description: t("today.playRoundKeptDesc", { count: playIds.size }),
-      action: (
-        <ToastAction
-          altText={t("today.undo")}
-          onClick={async () => {
-            await saveTrackers(previousTrackers);
-            setTrackers(previousTrackers);
-          }}
-        >
-          {t("today.undo")}
-        </ToastAction>
-      ),
-    });
+    await saveVisibleTrackers(updatedTrackers);
   };
 
   const handleAddIdea = async (idea: any) => {
@@ -747,36 +693,21 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     const updatedTrackers = trackers.map((t) =>
       t.id === archivedId ? { ...t, archived: true } : t,
     );
-    await saveTrackers(updatedTrackers);
+    await saveVisibleTrackers(updatedTrackers);
     setTrackers(updatedTrackers.filter((t) => !t.archived));
 
-    // Toast with undo. Archive feels destructive ("my card disappeared!")
-    // and the storage location (Settings → Trackers, eye toggle) isn't
-    // discoverable on its own. The toast does double duty: tells the
-    // user where it lives now, and gives a one-tap undo so an
-    // accidental archive doesn't require hunting through Settings.
-    toast({
-      title: t("today.archivedToastTitle", { title: archivedTitle }),
-      description: t("today.archivedToastDesc"),
-      action: (
-        <ToastAction
-          altText={t("today.archivedToastUndo")}
-          onClick={async () => {
-            // Restore the same tracker from the most recent saved
-            // copy. We re-read from storage rather than relying on
-            // closures so the undo works even if other edits happened
-            // in the meantime.
-            const fresh = await getTrackers();
-            const restored = fresh.map((tr) =>
-              tr.id === archivedId ? { ...tr, archived: false } : tr,
-            );
-            await saveTrackers(restored);
-            setTrackers(restored.filter((tr) => !tr.archived));
-          }}
-        >
-          {t("today.archivedToastUndo")}
-        </ToastAction>
-      ),
+    // Archive feels destructive ("my card disappeared!"), so a quiet
+    // "Archived: … · Undo" line stays in the list for a while (it used
+    // to be a pop-up). Settings → My questions can bring it back later.
+    offerUndo(t("today.archivedToastTitle", { title: archivedTitle }), async () => {
+      // Re-read from storage so the undo works even if other edits
+      // happened in the meantime.
+      const fresh = await getTrackers();
+      const restored = fresh.map((tr) =>
+        tr.id === archivedId ? { ...tr, archived: false } : tr,
+      );
+      await saveVisibleTrackers(restored);
+      setTrackers(restored.filter((tr) => !tr.archived));
     });
   };
 
@@ -791,30 +722,19 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   };
 
   // Core delete flow. Removes the tracker, persists, shows the
-  // undo toast. Used by both the confirm-dialog path (regular cards)
+  // "Undo" line in the list. Used by both the confirm-dialog path (regular cards)
   // and the no-confirm path (play-round cards — see deletePlayCard).
   const performTrackerDelete = async (deleted: Tracker) => {
     const previousTrackers = trackers;
     const updatedTrackers = trackers.filter(t => t.id !== deleted.id);
-    await saveTrackers(updatedTrackers);
+    await saveVisibleTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
 
-    toast({
-      title: t("today.trackerDeleted"),
-      description: t("today.trackerDeletedDesc", { title: localizeTrackerTitle(deleted.title) }),
-      action: (
-        <ToastAction
-          altText={t("today.undo")}
-          onClick={async () => {
-            const allTrackers = await getTrackers();
-            const restored = [...allTrackers.filter(t => t.id !== deleted.id), deleted];
-            await saveTrackers(restored);
-            setTrackers(previousTrackers);
-          }}
-        >
-          {t("today.undo")}
-        </ToastAction>
-      ),
+    offerUndo(t("today.deletedLine", { title: localizeTrackerTitle(deleted.title) }), async () => {
+      const allTrackers = await getTrackers();
+      const restored = [...allTrackers.filter(t => t.id !== deleted.id), deleted];
+      await saveVisibleTrackers(restored);
+      setTrackers(previousTrackers);
     });
   };
 
@@ -831,7 +751,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
   // Play-card delete: skip the confirmation dialog entirely. Random-
   // round cards are throwaway by design — the user's mental model is
   // "swipe-discard"; an "Are you sure?" dialog after every X-tap was
-  // friction. The undo toast is the safety net (5s window to bring
+  // friction. The "Undo" line in the list is the safety net (12 s to bring
   // it back), which mirrors how the bulk "Clear all" works.
   const deletePlayCard = async (tracker: Tracker) => {
     await performTrackerDelete(tracker);
@@ -858,43 +778,34 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     const previousTrackers = trackers;
     const deleted = trackers.filter((t) => idSet.has(t.id));
     const updatedTrackers = trackers.filter((t) => !idSet.has(t.id));
-    await saveTrackers(updatedTrackers);
+    await saveVisibleTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
     exitSelectionMode();
 
-    toast({
-      title:
-        ids.length === 1
-          ? t("today.trackerDeleted")
-          : t("today.bulkDeletedTitle", { count: ids.length }),
-      description: t("today.bulkDeletedDesc"),
-      action: (
-        <ToastAction
-          altText={t("today.undo")}
-          onClick={async () => {
-            const allTrackers = await getTrackers();
-            // Restore by union with what's currently saved (in case
-            // entries were edited in the meantime).
-            const stillThere = new Set(allTrackers.map((tr) => tr.id));
-            const restored = [
-              ...allTrackers,
-              ...deleted.filter((tr) => !stillThere.has(tr.id)),
-            ];
-            await saveTrackers(restored);
-            setTrackers(previousTrackers);
-          }}
-        >
-          {t("today.undo")}
-        </ToastAction>
-      ),
-    });
+    offerUndo(
+      ids.length === 1 && deleted[0]
+        ? t("today.deletedLine", { title: localizeTrackerTitle(deleted[0].title) })
+        : t("today.bulkDeletedTitle", { count: ids.length }),
+      async () => {
+        const allTrackers = await getTrackers();
+        // Restore by union with what's currently saved (in case
+        // entries were edited in the meantime).
+        const stillThere = new Set(allTrackers.map((tr) => tr.id));
+        const restored = [
+          ...allTrackers,
+          ...deleted.filter((tr) => !stillThere.has(tr.id)),
+        ];
+        await saveVisibleTrackers(restored);
+        setTrackers(previousTrackers);
+      },
+    );
   };
 
   const handleUpdateTracker = async (updatedTracker: Tracker) => {
     const updatedTrackers = trackers.map(t =>
       t.id === updatedTracker.id ? updatedTracker : t
     );
-    await saveTrackers(updatedTrackers);
+    await saveVisibleTrackers(updatedTrackers);
     setTrackers(updatedTrackers);
     setSelectedTrackerForDetails(updatedTracker);
   };
@@ -925,6 +836,16 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
     );
   }
 
+  // "Deleted: … · Undo" in place of the old pop-up: part of the list, no box around it
+  const undoRow = undoLine && (
+    <div data-undo-line className="flex items-center gap-3 animate-fade-in">
+      <p className="flex-1 min-w-0 text-[16px] font-medium leading-snug text-muted-foreground">{undoLine.text}</p>
+      <button type="button" onClick={runUndo} className="h-10 shrink-0 px-1 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
+        {t("today.undo")}
+      </button>
+    </div>
+  );
+
   if (trackers.length === 0) {
     const emptyAvatar = avatarUrl(getAvatar());
     return (
@@ -944,7 +865,9 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
           <Plus className="h-5 w-5" strokeWidth={2.6} />
           {t("today.addFirst")}
         </button>
-        
+        {/* the last question just deleted: the way back stays right here */}
+        {undoRow && <div className="mt-6 w-full max-w-xs text-left">{undoRow}</div>}
+
         <AddTrackerModal
           open={addTrackerModalOpen}
           onClose={() => setAddTrackerModalOpen(false)}
@@ -959,6 +882,12 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
 
   return (
     <div className="space-y-6">
+      {/* An answer that didn't save: a plain line, until the next one saves */}
+      {saveFailed && (
+        <p role="alert" data-save-failed className="text-[16px] font-semibold leading-snug text-destructive">
+          {t("today.saveFailedLine")}
+        </p>
+      )}
       {/* Daily Session Mode. The "see my patterns" exit on the completion
           screen needs Index to swap the active tab — we dispatch
           `memap-switch-tab` and Index listens. */}
@@ -1146,7 +1075,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Direct delete: throwaway play cards; the undo toast is the safety net.
+                      // Direct delete: throwaway play cards; the "Undo" line is the safety net.
                       deletePlayCard(tracker);
                     }}
                     aria-label={t("today.deletePlayCard")}
@@ -1194,18 +1123,34 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
                 </button>
               </div>
             )}
-            {/* The daily reminder lives here now, not under the path. */}
-            {!notifsEnabled && !notifBannerDismissed && regularTrackers.length > 0 && (
-              <div className="surface rounded-[20px] pl-4 pr-2 py-2.5 flex items-center gap-3 animate-fade-in">
-                <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />
-                <p className="flex-1 min-w-0 text-base font-semibold leading-snug">{t("today.notifBannerShort")}</p>
-                <Button size="sm" onClick={handleEnableNotifs} className="rounded-full h-9 px-4 text-[15px] font-semibold">
-                  {t("today.notifBannerEnable")}
-                </Button>
-                <button onClick={handleDismissNotifBanner} aria-label={t("today.notifBannerDismiss")}
-                  className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
+            {undoRow}
+            {/* The daily reminder lives here now, not under the path. It answers
+                in place (no pop-ups, Nov 10 2026): why it couldn't turn on, or
+                "Reminder on · 20:00" for a moment before it goes. */}
+            {((!notifsEnabled && !notifBannerDismissed && regularTrackers.length > 0) || notifJustOn) && (
+              <div data-notif-card className="surface rounded-[20px] pl-4 pr-2 py-2.5 animate-fade-in">
+                <div className="flex min-h-9 items-center gap-3">
+                  {notifJustOn
+                    ? <Check className="h-5 w-5 text-[hsl(var(--coin-teal))] flex-shrink-0" strokeWidth={2.6} />
+                    : <Bell className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={1.75} />}
+                  <p className="flex-1 min-w-0 text-base font-semibold leading-snug">
+                    {notifJustOn ? t("today.reminderOnAt", { time: notifJustOn }) : t("today.notifBannerShort")}
+                  </p>
+                  {!notifJustOn && (
+                    <>
+                      <Button size="sm" onClick={handleEnableNotifs} className="rounded-full h-9 px-4 text-[15px] font-semibold">
+                        {t("today.notifBannerEnable")}
+                      </Button>
+                      <button onClick={handleDismissNotifBanner} aria-label={t("today.notifBannerDismiss")}
+                        className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+                {notifErr && !notifJustOn && (
+                  <p data-notif-error className="mt-1.5 pl-8 pr-2 pb-1 text-[15px] font-medium leading-snug text-destructive">{notifErr}</p>
+                )}
               </div>
             )}
             {listShown && regularTrackers.length > 0 && (

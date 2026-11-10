@@ -237,10 +237,13 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
     });
     return (
       <div className="animate-fade-in">
-        <button type="button" onClick={() => { haptics.tap(); setDetail(null); }}
-          className="mb-2 inline-flex h-10 items-center gap-1.5 text-[15px] font-semibold text-muted-foreground">
-          <ArrowLeft className="h-4 w-4" /> {t("charts.back")}
-        </button>
+        {/* a link's own chart (its "See the days") goes back to the link from the sheet's top, not to a list (Nov 10 2026) */}
+        {!pair && (
+          <button type="button" onClick={() => { haptics.tap(); setDetail(null); }}
+            className="mb-2 inline-flex h-10 items-center gap-1.5 text-[15px] font-semibold text-muted-foreground">
+            <ArrowLeft className="h-4 w-4" /> {t("charts.back")}
+          </button>
+        )}
         <div className="surface rounded-[24px] px-4 pb-4 pt-4">
           <p className="text-[19px] font-bold leading-snug">{detail.title}</p>
           {detail.sub && <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{detail.sub}</p>}

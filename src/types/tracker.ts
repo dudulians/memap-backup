@@ -48,7 +48,13 @@ export interface Tracker {
   // Her own question in words (Nov 7 2026): how MeMap says her yes and no in links
   // ("No walk → migraine"). Library questions have theirs in answerPhrases.ts.
   words?: { yes?: string; no?: string };
+  // YYYY-MM-DD: the first evening this question is asked. A night test's question is about last night
+  // ("Last night, were you in bed by 23:00?"), so its first evening is the day after the test starts (Nov 10 2026).
+  askFrom?: string;
 }
+
+/** Asked on this day (a night test's question waits for its first night to be over). */
+export const askedOn = (t: Pick<Tracker, "askFrom">, date: string): boolean => !t.askFrom || date >= t.askFrom;
 
 export interface TrackerEntry {
   id: string;

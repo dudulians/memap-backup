@@ -17,7 +17,7 @@ import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
-import { comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
+import { BED_FROM_WAKE, NIGHT_IDEAS, WATCH_IDEAS, beforeBed, bedtimeFrom, comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
 import { answerPhrase, templateIdOf } from "@/lib/answerPhrases";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
@@ -25,7 +25,8 @@ import { countFromToday } from "@/lib/actionPoints";
 import { art, artOf, islandEvenings } from "@/lib/globeArt";
 import { Pressable } from "@/components/ui/pressable";
 import { cardQuestion } from "@/lib/cardText";
-import { busyIdeas, goalOf, ideaOf, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
+import { busyIdeas, clockTime, goalOf, ideaOf, morningStep, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
+import { alreadyDoing } from "@/lib/alreadyDoing";
 
 /* Chosen: a teal ring and a teal tick (the Aurora kit, Nov 5 2026: no
    tinted backgrounds, one accent colour). */
@@ -51,7 +52,9 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   // The stormiest island first: that's where a change can show.
   const first = startIsland ?? [...islands].sort((a, b) => b.hardDays - a.hardDays)[0]?.id;
   const [island, setIsland] = useState<IslandId | undefined>(first);
-  const [idea, setIdea] = useState<string | null>(plan ? PLAN : null);
+  // a plan her answers say she already does isn't picked for her (Nov 10 2026: "я же отмечал, что сплю хорошо")
+  const planDoing = plan ? alreadyDoing(ideaOf(plan), trackers, entries) : null;
+  const [idea, setIdea] = useState<string | null>(plan && !planDoing ? PLAN : null);
   const [own, setOwn] = useState("");
   const [started, setStarted] = useState<Experiment | null>(null);
   // "Remind me?" (board 65): on, at a time that fits the change
@@ -71,13 +74,27 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const source = from ? trackers.find((x) => x.id === from.trackerId) : undefined;
   const goal = idea === PLAN && source ? goalOf(source) : null;
   const change = idea === PLAN ? plan!.trim() : idea ? t(`experiment.idea.${idea}.change`) : own.trim();
-  const question = goal && source ? cardQuestion(source) : idea === PLAN ? testQuestionOf(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? testQuestionOf(own) : "";
+  // her note (Nov 10 2026, a bedtime test asked "Did you set a reminder…?" every evening): a night step is asked the
+  // next evening about last night; a plan that is just the good answer of its own question watches that question
+  // (no second one); a bedtime counts back from when she gets up ("во сколько надо лечь?")
+  const ideaKey = idea === PLAN ? ideaOf(plan!) : idea;
+  const night = !!ideaKey && NIGHT_IDEAS.has(ideaKey);
+  // the plan or idea is just the good answer of this very question (from its plan or from its own list of ideas)
+  const watch = !!source && !!ideaKey && (WATCH_IDEAS[ideaKey] ?? []).includes(templateIdOf(source) ?? "");
+  const bedHours = ideaKey ? BED_FROM_WAKE[ideaKey] : undefined;
+  const [wake, setWake] = useState("07:00");
+  const question = (goal || watch) && source ? cardQuestion(source) : idea === PLAN ? testQuestionOf(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? testQuestionOf(own) : "";
   const start = async () => {
     if (!island || !change) return;
     haptics.rise();
-    const x = await startExperiment(island, change, question, from?.trackerId, goal ? { same: true, perWeek: goal } : {});
+    // a morning step started in the afternoon: this morning is gone, its first evening is tomorrow
+    const later = !night && !!ideaKey && morningStep(ideaKey) && new Date().getHours() >= 12;
+    const more = { ...(night ? { night: true } : {}), ...(later ? { later: true } : {}), ...(bedHours ? { wake } : {}) };
+    // a hard question watched ("Smoked hookah?"): its "no" is the step done
+    const watched = watch && source ? { same: true, ...(source.problemWhen === "yes" ? { doneWhen: false } : {}) } : null;
+    const x = await startExperiment(island, change, question, from?.trackerId, goal ? { same: true, perWeek: goal } : watched ? { ...watched, ...more } : more);
     if (from) await countFromToday(from.trackerId, from.k);
-    setRemindAt(smartRemindTime(idea === PLAN ? ideaOf(plan!) : idea, change));
+    setRemindAt(bedHours ? beforeBed(bedtimeFrom(wake, bedHours)) : smartRemindTime(ideaKey, change));
     setStarted(x);
   };
   // what already runs on this island keeps running (Nov 8 2026), and isn't offered twice
@@ -87,7 +104,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : []) : island ? ideasForIsland(island, trackers, entries) : [];
   const planIdea = plan ? ideaOf(plan) : null;
   const busy = busyIdeas();
-  const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !busy.has(k))];
+  // never a change her own answers say she already does (alreadyDoing.ts)
+  const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries))];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
@@ -137,7 +155,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                   return (
                     <button key={k} type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={on}
                       className={cn("surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3 text-left text-[17px] outline-none transition-shadow duration-150 active:scale-[0.99]", on ? "pick-on font-bold" : "font-semibold")}>
-                      <span className="min-w-0 flex-1">{label(k)}</span>
+                      <span className="min-w-0 flex-1">{label(k)}{k === PLAN && planDoing && <span data-already className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{t("rules.alreadyDoing", { k: planDoing.k, count: planDoing.n })}</span>}</span>
                       <span aria-hidden="true" className={cn("tick", on && "is-on")}>
                         {on && <Check className="h-4 w-4" strokeWidth={3} />}
                       </span>
@@ -152,9 +170,17 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               {question ? (
                 // what MeMap will ask every evening, before it starts
                 <div className="mb-4 text-center">
-                  <KindTag kind="question" extra={t("kind.everyEvening")} className="justify-center" />
+                  <KindTag kind="question" extra={t(night && !watch ? "kind.nextEvening" : "kind.everyEvening")} className="justify-center" />
                   <p className="mt-0.5 text-[18px] font-bold leading-snug">{question}</p>
                   {goal && <p className="mt-1 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("experiment.goal", { count: goal })}</p>}
+                  {bedHours && (
+                    <div data-wake className="surface mx-auto mt-4 flex w-full max-w-sm items-center gap-3 rounded-[18px] px-4 py-3 text-left">
+                      <span className="min-w-0 flex-1 text-[16px] font-bold">{t("experiment.wakeAsk")}</span>
+                      <input type="time" value={wake} onChange={(e) => setWake(e.target.value || "07:00")} aria-label={t("experiment.wakeAsk")}
+                        className="h-10 w-[124px] rounded-[12px] bg-foreground/[0.05] px-2 text-center text-[15px] font-bold tabular-nums outline-none" />
+                    </div>
+                  )}
+                  {bedHours && <p data-bed-at className="mt-2 text-[16px] font-bold text-[hsl(var(--coin-teal))]">{t("experiment.bedAt", { time: clockTime(bedtimeFrom(wake, bedHours)), hours: bedHours })}</p>}
                 </div>
               ) : (
                 <p className="mb-3 text-center text-[15px] font-medium text-muted-foreground">{t("experiment.how")}</p>
