@@ -313,7 +313,8 @@ export const DoorPickerScreen = ({ onPick, branch = "pain", onBack }: { onPick: 
       return;
     }
     if (picked.length === 0) return;
-    picked.forEach((d) => track("door_selected", { door: d, count: picked.length }));
+    // how many topics, never which (Nov 10 2026)
+    track("door_selected", { count: picked.length });
     if (picked.length === 1) {
       onPick({ kind: "doors", ids: picked });
       return;
@@ -499,10 +500,9 @@ export const DoorFlow = ({
         }
         await logDoorEntry({ trackerId: ensured[0].trackerId, date: daysAgoIso(entryOffset), tags, value, context: ctx });
       }
+      // no topic and no answer (Nov 10 2026): how many topics and reasons only
       track("first_entry_logged", {
-        door: main.id,
         doors: doors.length,
-        when: isMood ? feeling ?? "none" : when ?? "none",
         reasons: tags.length,
         context: Object.values(context).filter((v) => typeof v === "boolean").length,
       });

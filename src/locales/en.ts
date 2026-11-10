@@ -2614,6 +2614,11 @@ const en = {
     trustPhone: "Answers stay on your phone",
     getStarted: "Get started",
     startSimple: "Not sure yet? Start simple",
+    // consent on the first screen (her yes, Nov 10 2026; Apple 5.1.1: consent to collect usage data)
+    agreeA: "By continuing, you agree to the",
+    agreeTerms: "Terms of Use",
+    agreeAnd: "and the",
+    agreePrivacy: "Privacy Policy",
     topicTitle: "What would you like to understand?",
     topicSub: "Start with up to 3. Add more anytime.",
     topicMax: "Up to 3 to start — add more anytime.",

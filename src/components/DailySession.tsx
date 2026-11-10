@@ -1707,7 +1707,7 @@ const EchoCard = ({
 }) => {
   const { t } = useTranslation();
   useEffect(() => {
-    track("echo_shown", { door: doorId, kind: fact ? "fact" : "count", surface: "evening" });
+    track("echo_shown", { kind: fact ? "fact" : "count", surface: "evening" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (

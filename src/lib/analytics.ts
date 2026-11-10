@@ -20,6 +20,9 @@
  * - We do NOT log tracker titles, question text, answers, or notes
  *   content — those are private user data.
  * - We log the FACT of actions, never the CONTENT.
+ * - No topic names either (her yes, Nov 10 2026): which topics someone picked ("migraine", "sleep"), a tip's id or
+ *   a first answer are health facts — the Flo case (FTC 2021, jury 2025) was "anonymous" analytics events like these.
+ *   Counts and kinds of steps only; islands (life areas: health, love, work…) stay.
  *
  * This keeps Apple's Privacy Nutrition Label at "Data Not Linked to
  * You" — anonymous analytics, the lowest disclosure tier.
@@ -204,6 +207,12 @@ export const setUserProperty = (
   } catch {
     // Best-effort.
   }
+};
+
+/** Take a property off the profile (the old "topic", Nov 10 2026). */
+export const unsetUserProperty = (key: string): void => {
+  if (import.meta.env.DEV || !initialised) return;
+  try { mixpanel.people.unset(key); } catch { /* best effort */ }
 };
 
 // Centralised event name registry — keeps autocomplete + typo-proofs

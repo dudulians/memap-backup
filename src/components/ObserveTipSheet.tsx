@@ -28,12 +28,12 @@ export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: (
     haptics.success?.();
     await ensureTemplates([tip.templateId]);
     markTip(tip.id, "added");
-    track("observe_tip_added", { tip: tip.id });
+    track("observe_tip_added"); // which tip names a topic: not sent (Nov 10 2026)
     setAdded(true);
   };
-  const later = () => { if (tip) { markTip(tip.id, "later"); track("observe_tip_later", { tip: tip.id }); } haptics.tap(); close(); };
+  const later = () => { if (tip) { markTip(tip.id, "later"); track("observe_tip_later"); } haptics.tap(); close(); };
   return (
-    <BottomSheet open={!!tip} onOpenChange={(o) => { if (!o) { if (tip && !added) { markTip(tip.id, "later"); track("observe_tip_later", { tip: tip.id }); } close(); } }} ariaTitle={t("tipDay.step")}>
+    <BottomSheet open={!!tip} onOpenChange={(o) => { if (!o) { if (tip && !added) { markTip(tip.id, "later"); track("observe_tip_later"); } close(); } }} ariaTitle={t("tipDay.step")}>
       {tip && words && (
         <div className="px-5 pb-8 pt-1">
           <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">

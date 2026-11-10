@@ -191,7 +191,7 @@ export const DoorHero = ({
           if (!logging) return;
           await logDoorEntry({ trackerId: logging.trackerId, date: daysAgoIso(offset), tags });
           haptics.success();
-          track("hero_logged", { door: logging.door.id, offset, reasons: tags.length });
+          track("hero_logged", { offset, reasons: tags.length });
           setLogging(null);
         }}
       />
@@ -248,7 +248,7 @@ export const DoorQuickLog = ({ trackers }: { trackers: Tracker[] }) => {
           if (!logging) return;
           await logDoorEntry({ trackerId: logging.trackerId, date: daysAgoIso(offset), tags });
           haptics.success();
-          track("hero_logged", { door: logging.door.id, offset, reasons: tags.length, from: "quicklog" });
+          track("hero_logged", { offset, reasons: tags.length, from: "quicklog" });
           setLogging(null);
         }}
       />

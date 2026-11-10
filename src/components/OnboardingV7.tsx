@@ -90,6 +90,8 @@ const DEMO_ISLANDS: Island[] = DEMO_IDS.map(demoIsland);
 const DEMO_DAYS: Record<DemoId, number> = { health: 22, me: 16, love: 9, kids: 6, work: 12, body: 4, pet: 2 };
 const route = (a: DemoId, b: DemoId) => ({ a, b, k: 4, n: 5, first: "x", second: "y", nextDay: false, firstYes: true, secondYes: true, other: { k: 1, n: 9 }, secondHard: true });
 const DEMO_ROUTES = [route("health", "me"), route("love", "me"), route("work", "health")] as unknown as Route[];
+/** The terms or the privacy policy on the site (the same pages as Settings → About). */
+const openDoc = (page: "TERMS" | "PRIVACY_POLICY") => { haptics.tap(); window.open(`https://memap-tracker.netlify.app/${page}.html`, "_blank", "noopener,noreferrer"); };
 export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple: () => void }) => {
   const { t } = useTranslation();
   const [lang, setLang] = useState<SupportedLanguage>(getLanguage() === "ru" ? "ru" : "en");
@@ -116,7 +118,7 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
         )}
       </div>
       {/* her world as it will be: the same globe as on World, three islands, a link, the boat */}
-      <div className="relative -mx-5 mt-1 h-[370px]" aria-hidden="true">
+      <div className="relative -mx-5 mt-1 h-[300px]" aria-hidden="true">
         <PlanetGlobe decor sky={false} islands={DEMO_ISLANDS} routes={DEMO_ROUTES} avatar={who} days={DEMO_DAYS} labels={["health", "me", "love", "work", "body"]} onOpen={() => undefined} />
       </div>
       <div className="min-h-4 flex-1" />
@@ -129,7 +131,14 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
           </span>
         ))}
       </div>
-      <div className="h-5" />
+      {/* consent to the terms and the policy, before either button (her yes, Nov 10 2026; App Store 5.1.1: consent
+          to collect usage data). Above the buttons, so it's on screen whenever they are. */}
+      <p data-agree className="mb-1.5 mt-3.5 text-center text-[13px] font-semibold leading-snug text-muted-foreground">
+        {t("onb7.agreeA")}{" "}
+        <button type="button" data-onb-interactive onClick={() => openDoc("TERMS")} className="font-bold text-foreground underline underline-offset-2">{t("onb7.agreeTerms")}</button>{" "}
+        {t("onb7.agreeAnd")}{" "}
+        <button type="button" data-onb-interactive onClick={() => openDoc("PRIVACY_POLICY")} className="font-bold text-foreground underline underline-offset-2">{t("onb7.agreePrivacy")}</button>.
+      </p>
       <button type="button" onClick={() => { haptics.tap(); onSimple(); }} data-onb-interactive className="mb-2 h-11 text-[16px] font-bold text-muted-foreground">{t("onb7.startSimple")}</button>
       <Main onClick={() => { setLanguage(lang); onStart(); }}>{t("onb7.getStarted")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
     </Page>
@@ -220,7 +229,7 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own,
         <H1 className="mt-5">{t(tone === "all" ? "onb7.topicTitle" : tone === "good" ? "doors.goodTitle" : "doors.pickTitle")}</H1>
         <p className={cn("mt-1.5 pb-3 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
       </>}
-      foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { door: sel.join(",") || "own", count: sel.length + (own ? 1 : 0), tone }); onPick(sel); }}>{t("doors.continue")}</Main>}>
+      foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { own: !!own, count: sel.length + (own ? 1 : 0), tone }); onPick(sel); }}>{t("doors.continue")}</Main>}>
       <div className="mt-1 flex flex-col gap-2">
         {groups.map((g) => {
           const isOpen = opened.includes(g.island);
@@ -350,7 +359,8 @@ const saveSetup = async (pick: V7Pick, { doors, mains, aroundTpls }: Plan, texts
   const byDoor = mains.flatMap((m, i) => (m.door ? [{ id: m.door.id, trackerId: mainIds[i] }] : []));
   const lead = pick.kind === "simple" ? { id: "energy" as DoorId, trackerId: mainIds[0] } : byDoor[0] ?? null;
   if (lead) saveDoorState({ id: lead.id, trackerId: lead.trackerId, contextTrackerIds: [...aroundIds, ...ownIds], startedAt: isoLocal(new Date()), extra: byDoor.slice(1) });
-  track("onboarding_questions", { topic: doors.map((d) => d.id).join(",") || (pick.kind === "simple" ? "energy" : "own"), topics: mains.length, around: aroundIds.length + ownIds.length, edited: edited.size > 0, quick });
+  // how many topics, never which (Nov 10 2026)
+  track("onboarding_questions", { simple: pick.kind === "simple", topics: mains.length, around: aroundIds.length + ownIds.length, edited: edited.size > 0, quick });
   return { ids: [...mainIds, ...aroundIds, ...ownIds], mainId: lead?.trackerId ?? mainIds[0], doorId: lead?.id ?? null };
 };
 /** Variant C (Nov 8 2026): no questions screen — the questions a pick starts with are saved straight away. */

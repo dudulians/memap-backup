@@ -18,7 +18,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { maybeRequestRating } from "@/lib/appRating";
-import { track, setUserProperty, currentScreen, noteActive, registerProps, onbLabel } from "@/lib/analytics";
+import { track, setUserProperty, unsetUserProperty, currentScreen, noteActive, registerProps, onbLabel } from "@/lib/analytics";
 import { getTheme } from "@/lib/theme";
 import { getLanguage } from "@/lib/i18n";
 
@@ -121,15 +121,17 @@ const App = () => {
     // 2.0: where she is (counts and kinds only, never content)
     void (async () => {
       try {
-        const [{ getTrackers, getEntries }, { countedDays, pathModel }, { buildIslands }, { getDoorState }] = await Promise.all([
-          import("@/lib/storage"), import("@/lib/pathSteps"), import("@/lib/islands"), import("@/lib/doors"),
+        const [{ getTrackers, getEntries }, { countedDays, pathModel }, { buildIslands }] = await Promise.all([
+          import("@/lib/storage"), import("@/lib/pathSteps"), import("@/lib/islands"),
         ]);
         const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
         setUserProperty("days_answered", countedDays(trackers, entries).length);
         setUserProperty("questions", trackers.filter((x) => !x.archived).length);
         setUserProperty("islands", buildIslands(trackers, entries).length);
         setUserProperty("week", pathModel(trackers, entries).week + 1);
-        setUserProperty("topic", getDoorState()?.id ?? "none");
+        // no topic names in statistics (her yes, Nov 10 2026: health topics are health data — the Flo case); the old
+        // "topic" comes off the profile
+        unsetUserProperty("topic");
         setUserProperty("onb_variant", onbLabel());
         // on every later event: the path's week and the day since she started (Nov 8 2026)
         const start = localStorage.getItem("memap_path_start") ?? localStorage.getItem("memap_first_open")?.slice(0, 10);
