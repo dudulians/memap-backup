@@ -30,7 +30,7 @@ const data = await page.evaluate(async () => {
   const rq = await import("/src/lib/relatedQuestions.ts");
   const { OBSERVE_TIPS } = await import("/src/lib/observeTipsData.ts");
   const { MOOD_SUPPORT_IDS } = await import("/src/lib/supportLines.ts");
-  const { RED_FLAG_IDS } = await import("/src/lib/bodyTemplates.ts");
+  const RED_FLAG_IDS = new Set(); // the "Something worrying?" chip was removed Nov 10 2026
   const { DOORS } = await import("/src/lib/doors.ts");
 
   const streams = ls.LIFE_STREAMS;

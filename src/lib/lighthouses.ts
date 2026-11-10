@@ -5,12 +5,12 @@
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
-import { RED_FLAG_IDS } from "@/lib/bodyTemplates";
+import { DOCTOR_RULE_IDS } from "@/lib/bodyTemplates";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
 
-/** Onboarding-added questions that still light: the body and red-flag ones (a doctor rule), harm at home,
+/** Onboarding-added questions that still light: the body ones (a doctor rule), harm at home,
  *  an older parent's falls or medicines, a pet that stops eating or limps. */
-const ALWAYS_LIGHT = new Set([...RED_FLAG_IDS, ...HOME_HARM_IDS, "parent-took-meds", "pet-skipped-food", "pet-limped"]);
+const ALWAYS_LIGHT = new Set([...DOCTOR_RULE_IDS, ...HOME_HARM_IDS, "parent-took-meds", "pet-skipped-food", "pet-limped"]);
 
 /** The day a window of `days` calendar days ending on `end` begins: 7 days ending Tuesday begin on Wednesday
  *  (Nov 10 2026: the window began a day earlier, so "3 of the last 7 days" counted a day 8 days back). */

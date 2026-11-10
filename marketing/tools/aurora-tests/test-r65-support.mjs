@@ -49,7 +49,8 @@ for (const [tz, lang] of [["Asia/Dubai", "en"], ["Europe/Berlin", "en"], ["Europ
   await p.screenshot({ path: `${D}/today-card.png` });
   const go = p.getByRole("button", { name: "Talk to someone" });
   if (await go.count()) { await go.first().click(); await p.waitForTimeout(1300); out.cardSheet = await p.evaluate(() => [...document.querySelectorAll("[role=dialog]")].pop()?.innerText.replace(/\s+/g, " ").slice(0, 300)); await p.screenshot({ path: `${D}/today-support.png` }); }
-  out.flags = await p.evaluate(async () => { const { default: i18n } = await import("/src/lib/i18n.ts"); return ["now", "today", "soon"].map((k) => i18n.t(`redFlags.${k}`, { returnObjects: true }).filter((x) => /heart|Palpitation/i.test(x))); });
+  // the red-flag list was removed (her content audit, Nov 10 2026)
+  out.flagsRemoved = await p.evaluate(async () => { const { default: i18n } = await import("/src/lib/i18n.ts"); return !i18n.exists("redFlags.now"); });
   await ctx.close();
 }
 // 3. no card without a heavy two weeks

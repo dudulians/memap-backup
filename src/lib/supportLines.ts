@@ -14,8 +14,8 @@
 /** Mood questions whose card offers "Need to talk?". Content review (Nov 9 2026): also the
  *  hard partner, parenting, self-worth, homesick and drinking questions; a partner shouting or
  *  saying hurtful things gets this one too (someone to talk to, the emergency number), since
- *  the red-flag list is about the body. A card has room for one chip: "panic-attack" moved to
- *  "Something worrying?" (bodyTemplates RED_FLAG_IDS), whose sheet shows this free line too.
+ *  nothing else on the card speaks to that. A panic attack has it too (Nov 10 2026, when the
+ *  "Something worrying?" list it had moved to was removed).
  *  Never put an id in both sets. */
 /** A partner shouting or saying hurtful things: the sheet speaks to that, with a line for when someone
  *  is afraid at home, and the evening doesn't end on "Great work today!" (persona walk, Nov 9 2026). */
@@ -35,6 +35,8 @@ export const MOOD_SUPPORT_IDS = new Set([
   "isolated-at-home", "felt-useless", "felt-not-like-others", "cried-today",
   "missed-home-country", "felt-foreigner",
   "drank-alcohol", "alcohol-3-plus",
+  // back from the removed "Something worrying?" list (Nov 10 2026): a panic attack keeps "Talk to someone"
+  "panic-attack",
 ]);
 /** Hard on 12 of the last 14 days → suggest a doctor or therapist (when-to-act.md: PHQ "nearly every day"). */
 export const HEAVY_MOOD_IDS = new Set(["felt-depressed", "lost-interest"]);

@@ -1,6 +1,7 @@
 // "Worth watching" (her note, Nov 8 2026: "давай добавим какие-то советы или статьи… что мы думаем
 // будет полезно понаблюдать"): one short tip a day on the path, about a question from the library
-// she doesn't ask yet, with the source it comes from and a button that adds the question.
+// she doesn't ask yet and a button that adds the question. (Its source was shown under it until Nov 10 2026; now
+// it stays in observeTipsData.ts for checks only.)
 import { Tracker } from "@/types/tracker";
 import { findTemplate, isoLocal } from "@/lib/doors";
 import { templateIdOf } from "@/lib/answerPhrases";
@@ -12,8 +13,12 @@ export interface ObserveTip {
   templateId: string;
   en: { title: string; line: string };
   ru: { title: string; line: string };
+  /** where it comes from: kept for checks, not shown in the app (her content audit, Nov 10 2026) */
   source: { name: string; url: string };
+  /** how the tip was checked; "held" = not shown until a directly relevant source is found */
+  review?: { status: "rewritten" | "needs-source-check" | "held"; limits?: string; date?: string };
 }
+const shown = (x: ObserveTip) => x.review?.status !== "held";
 
 const KEY = "memap_observe_tip";
 interface TipState { day: string; id: string; done?: "added" | "later"; used: string[] }
@@ -34,12 +39,12 @@ export const tipForToday = (trackers: Tracker[], today = isoLocal(new Date())): 
   const byId = (id: string) => OBSERVE_TIPS.find((x) => x.id === id);
   if (s?.day === today) {
     const tip = byId(s.id);
-    if (tip && (s.done || !asked.has(tip.templateId))) return { tip, done: !!s.done };
+    if (tip && shown(tip) && (s.done || !asked.has(tip.templateId))) return { tip, done: !!s.done };
   }
   const used = new Set(s?.used ?? []);
   // the period tip only for someone who already watches a cycle
   const cycle = trackers.some((t) => !t.archived && /period|cycle|pms|месячн|цикл|пмс/i.test(t.title));
-  const fits = OBSERVE_TIPS.filter((x) => !asked.has(x.templateId) && findTemplate(x.templateId) && (x.templateId !== "period-day" || cycle));
+  const fits = OBSERVE_TIPS.filter((x) => shown(x) && !asked.has(x.templateId) && findTemplate(x.templateId) && (x.templateId !== "period-day" || cycle));
   if (fits.length === 0) return null;
   // her own islands first: a tip about a part of life she already watches
   const mine = new Set(trackers.filter((t) => !t.archived).map(islandOf));

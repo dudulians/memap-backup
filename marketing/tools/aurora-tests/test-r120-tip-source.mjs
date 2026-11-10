@@ -29,18 +29,15 @@ await p.reload(); await p.waitForTimeout(2500);
 await p.locator('[data-path-stop][aria-label="Worth watching"]').first().click(); await p.waitForTimeout(600);
 await p.getByRole("button", { name: "Read" }).first().click(); await p.waitForTimeout(900);
 const sheet = p.locator('[role="dialog"]').last();
-const src = sheet.locator("[data-tip-source]");
-const info = await src.evaluate((el) => {
-  const cs = getComputedStyle(el);
-  return { tag: el.tagName, text: el.textContent, size: cs.fontSize, opacity: cs.opacity, color: cs.color, inLink: !!el.closest("a") };
-}).catch((e) => ({ error: String(e) }));
+const info = { sourceLines: await sheet.locator("[data-tip-source]").count() };
 const links = await sheet.locator("a[href*='doi.org']").count();
 await p.screenshot({ path: `${SHOTS}/tip-sheet.png` });
+// since her content audit (Nov 10 2026) no source line at all; the source stays in observeTipsData.ts
+const sheetText = await sheet.innerText();
 const check = {
-  sourceShown: /^Source: /.test(info.text ?? ""),
-  notALink: info.tag === "P" && !info.inLink && links === 0,
-  small: info.size === "12px",
-  faint: Number(info.opacity) <= 0.6,
+  noSourceLine: (await sheet.locator("[data-tip-source]").count()) === 0 && !/Source:|Источник:/.test(sheetText),
+  noLink: links === 0,
+  newCopy: /Late coffee/.test(sheetText),
 };
 console.log(JSON.stringify({ check, info, errs }, null, 1));
 await b.close();

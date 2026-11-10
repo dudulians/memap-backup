@@ -58,11 +58,10 @@ export const isNaturalPair = (a: string | null, b: string | null) => !!a && !!b 
 /** A question already asked inside another one is not suggested next to it ("PMS signs" asks about sore breasts). */
 export const COVERED_BY: Record<string, string[]> = { "breast-tender": ["pms-signs"] };
 export const isCovered = (tplId: string, have: Iterable<string>) => { const by = COVERED_BY[tplId]; if (!by) return false; const h = new Set(have); return by.some((x) => h.has(x)); };
-/** Questions whose card offers "Something worrying?" (the red-flag list). Content review (Nov 9 2026):
- *  added where the list already has the question's signs (panic attack: chest pain, a racing heart;
- *  the headache questions; an older parent's confusion, fall or pain: stroke and chest-pain signs);
- *  not on an exercise habit (pelvic floor), not on pets (the list is about people). */
-export const RED_FLAG_IDS = new Set([
+/** Body questions with a doctor rule: they light even when onboarding added them (lighthouses ALWAYS_LIGHT).
+ *  Until Nov 10 2026 their cards also offered "Something worrying?", a list of signs by urgency; that list was
+ *  removed (her content audit: MeMap is self-tracking, not medical triage). */
+export const DOCTOR_RULE_IDS = new Set([
   ...BODY_TEMPLATES.map((x) => x.id).filter((id) => id !== "pelvic-floor-exercises"),
   "headache", "migraine", "stomach-issues", "felt-nauseous", "heart-palpitations", "period-symptoms", "period-day", "eye-strain", "back-or-neck-pain",
   "panic-attack", "snored-or-gasped", "neck-pain", "headache-stopped-me", "took-painkiller", "felt-fatigued",

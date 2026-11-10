@@ -1,5 +1,7 @@
 // Generated from the tips research (Nov 8 2026): marketing/research/sources.md and the studies it lists.
 // Each tip points at a library question (lifeStreams / research / body templates).
+// The source stays here for checks and is not shown in the app (her content audit, Nov 10 2026); `review` says
+// how a tip was checked: rewritten, needs-source-check, or held (not shown until a direct source is found).
 import type { ObserveTip } from "@/lib/observeTips";
 
 export const OBSERVE_TIPS: ObserveTip[] = [
@@ -7,16 +9,21 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "id": "coffee-after-2pm",
     "templateId": "coffee-late",
     "en": {
-      "title": "Coffee after 2 pm",
-      "line": "Caffeine can cut sleep even when you don't feel it. A week of answers shows if late cups matter for you."
+      "title": "Late coffee",
+      "line": "Caffeine close to bedtime can affect sleep, even if you don't notice it. Compare nights after late coffee."
     },
     "ru": {
-      "title": "Кофе после 14:00",
-      "line": "Кофеин может сокращать сон, даже когда этого не замечаешь. Неделя ответов покажет, мешает ли тебе поздний кофе."
+      "title": "Кофе ближе к вечеру",
+      "line": "Кофеин незадолго до сна может влиять на его качество, даже если ты этого не замечаешь. Сравни ночи после позднего кофе."
     },
     "source": {
       "name": "Drake et al., J Clin Sleep Med 2013",
       "url": "https://doi.org/10.5664/jcsm.3170"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "The study timed caffeine against bedtime (0, 3 and 6 hours before), not a clock time: no universal 2 pm cutoff. The question still asks about caffeine after 2 pm.",
+      "date": "2026-11-10"
     }
   },
   {
@@ -24,15 +31,20 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "same-wake-time",
     "en": {
       "title": "Same wake-up time",
-      "line": "Waking at very different times goes with worse sleep and mood for many people. Weekends count too."
+      "line": "Irregular sleep and wake times are linked to poorer sleep. See whether a steadier routine makes a difference for you."
     },
     "ru": {
       "title": "Подъём в одно время",
-      "line": "Когда время подъёма сильно скачет, сон и настроение часто страдают. Выходные тоже считаются."
+      "line": "Нестабильный режим сна связан с его худшим качеством. Посмотри, как спится при более постоянном времени подъёма."
     },
     "source": {
       "name": "Bei et al., Sleep Med Rev 2016",
       "url": "https://doi.org/10.1016/j.smrv.2015.06.003"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Review of observational studies: irregular sleep goes with poorer sleep; no proven effect of wake time alone on mood.",
+      "date": "2026-11-10"
     }
   },
   {
@@ -40,47 +52,62 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "racing-thoughts-in-bed",
     "en": {
       "title": "Worries at bedtime",
-      "line": "In one study, stress and worry at bedtime were the main signs of a poor night. See if it's true for you."
+      "line": "Stress and worries at bedtime have been linked to poorer sleep. Notice how your nights go after restless evenings."
     },
     "ru": {
-      "title": "Мысли перед сном",
-      "line": "В одном исследовании плохую ночь лучше всего предсказывали стресс и тревожные мысли перед сном. Проверь, так ли у тебя."
+      "title": "Тревожные мысли перед сном",
+      "line": "Стресс и тревожные мысли перед сном связаны с худшим сном. Посмотри, как проходят ночи после беспокойных вечеров."
     },
     "source": {
       "name": "Åkerstedt et al., Sleep Med 2012",
       "url": "https://doi.org/10.1016/j.sleep.2011.12.013"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "One diary study; not a universal predictor.",
+      "date": "2026-11-10"
     }
   },
   {
     "id": "morning-daylight",
     "templateId": "saw-daylight",
     "en": {
-      "title": "Daylight before noon",
-      "line": "More daylight early in the day went with better sleep that night. A short walk outside is an easy test."
+      "title": "Morning daylight",
+      "line": "Earlier daylight exposure has been linked to some aspects of sleep. Notice whether nights after mornings outdoors feel different."
     },
     "ru": {
       "title": "Дневной свет утром",
-      "line": "У тех, кто получал больше дневного света в первой половине дня, сон ночью обычно был лучше. Короткая прогулка поможет это проверить."
+      "line": "Утренний дневной свет может быть связан с особенностями сна. Посмотри, отличаются ли ночи после времени на улице утром."
     },
     "source": {
       "name": "Wams et al., Sleep 2017",
       "url": "https://doi.org/10.1093/sleep/zsx165"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Small study; no general improvement in sleep quality shown. Check that the question asks about morning daylight.",
+      "date": "2026-11-10"
     }
   },
   {
     "id": "short-nights-mood",
     "templateId": "slept-enough",
     "en": {
-      "title": "Short nights and mood",
-      "line": "Sleep tends to shape the next day's mood more than mood shapes sleep. Compare your short nights with the day after."
+      "title": "Sleep and mood",
+      "line": "How you sleep and how you feel the next day are closely connected. Compare your mood after nights when you felt you had enough sleep."
     },
     "ru": {
-      "title": "Короткий сон и настроение",
-      "line": "Сон обычно сильнее влияет на настроение назавтра, чем настроение на сон. Сравни дни после коротких ночей с остальными."
+      "title": "Сон и настроение",
+      "line": "Сон и настроение на следующий день тесно связаны. Сравни своё настроение после ночей, когда удалось выспаться."
     },
     "source": {
       "name": "Triantafillou et al., JMIR Mental Health 2019",
       "url": "https://doi.org/10.2196/12613"
+    },
+    "review": {
+      "status": "needs-source-check",
+      "limits": "The cited study looked mainly at sleep quality, not short sleep: check that the source still matches the question.",
+      "date": "2026-11-10"
     }
   },
   {
@@ -88,31 +115,41 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "hobby-time",
     "en": {
       "title": "Time for a hobby",
-      "line": "Doing one small thing you enjoy each day can lift low mood. Health guidelines name it among the first things to try."
+      "line": "Making time for something you enjoy may support your well-being. Notice how days with a hobby feel."
     },
     "ru": {
       "title": "Время на хобби",
-      "line": "Одно маленькое любимое дело каждый день может помочь, когда настроение на нуле. Медицинские рекомендации называют это среди первых шагов."
+      "line": "Время на любимое дело может положительно влиять на самочувствие. Посмотри, как проходят дни, когда находится время на хобби."
     },
     "source": {
       "name": "NICE guideline NG222",
       "url": "https://www.nice.org.uk/guidance/ng222"
+    },
+    "review": {
+      "status": "held",
+      "limits": "The NICE guideline does not directly support this tip: not shown until a directly relevant source is found.",
+      "date": "2026-11-10"
     }
   },
   {
     "id": "green-places",
     "templateId": "time-in-nature",
     "en": {
-      "title": "Time in green places",
-      "line": "Time near trees, water or open sky lifted mood in a phone study, and the lift was still there later."
+      "title": "Time in nature",
+      "line": "Spending time around natural surroundings has been linked to better mood. Notice how days outdoors feel for you."
     },
     "ru": {
       "title": "Время на природе",
-      "line": "Деревья, вода и открытое небо рядом поднимали настроение в одном исследовании, и эффект держался ещё какое-то время."
+      "line": "Время среди природы связано с более хорошим настроением. Замечай, как проходят дни, когда удаётся побыть на свежем воздухе."
     },
     "source": {
       "name": "Bakolis et al., BioScience 2018",
       "url": "https://doi.org/10.1093/biosci/bix149"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Association, not proof that nature itself lifts mood.",
+      "date": "2026-11-10"
     }
   },
   {

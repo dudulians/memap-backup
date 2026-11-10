@@ -591,7 +591,7 @@ export const LIFE_STREAMS: LifeStream[] = [
         threshold: 5,
         problemWhen: "yes",
         // her note, Nov 8 2026: "давай попробуем отслеживать, что за тошнотой" (its test: experiment.idea.nauseaLog);
-        // said without "let's" (content review, Nov 9 2026). The doctor step is on the "Something worrying?" sheet.
+        // said without "let's" (content review, Nov 9 2026). (The "Something worrying?" sheet was removed Nov 10 2026.)
         adviceAboveThreshold: "Note the time and what came before each time nausea comes",
         adviceAboveThresholdRu: "Записывать время и что было перед этим, когда тошнит",
       },

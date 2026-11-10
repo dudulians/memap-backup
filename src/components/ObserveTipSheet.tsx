@@ -1,5 +1,4 @@
-// "Worth watching": today's tip, the question it would add, where it comes from, and one button
-// that adds the question (Nov 8 2026).
+// "Worth watching": today's tip, the question it would add, and one button that adds the question (Nov 8 2026).
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BookOpen, Check } from "lucide-react";
@@ -47,10 +46,7 @@ export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: (
               <p className="mt-0.5 text-[17px] font-bold leading-snug">{question}</p>
             </div>
           )}
-          {/* the source as quiet small print, not a link (her note, Nov 10 2026) */}
-          <p data-tip-source className="mt-3 text-[12px] font-medium leading-snug text-muted-foreground opacity-60">
-            {t("tipDay.source", { name: tip.source.name })}
-          </p>
+          {/* no source line (her content audit, Nov 10 2026): the source stays in observeTipsData.ts for checks */}
           {added ? (
             <>
               <p className="mt-5 flex items-center gap-2 text-[17px] font-bold"><Check className="h-5 w-5 text-[hsl(var(--balanced))]" strokeWidth={3} /> {t("tipDay.added")}</p>

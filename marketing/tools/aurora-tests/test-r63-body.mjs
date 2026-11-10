@@ -1,5 +1,5 @@
 // Body questions (research round 2, Nov 7 2026): a follow-up comes only after "yes" to its
-// question; one day without a poo isn't a hard day; "Something worrying?" opens the red flags.
+// question; one day without a poo isn't a hard day; no "Something worrying?" chip since Nov 10 2026.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
 const D = `./aurora-tests/work/r63`; mkdirSync(D, { recursive: true });
@@ -36,9 +36,8 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
 await p.evaluate(async () => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); const dz = await import("/src/lib/doors.ts"); await dz.ensureTemplates(["pooped-today", "heartburn"]); });
 await p.reload(); await p.waitForTimeout(2200);
 await p.locator(".path-start").first().click(); await p.waitForTimeout(1500);
-await p.getByRole("button", { name: /Something worrying/ }).click(); await p.waitForTimeout(1200);
-await p.screenshot({ path: `${D}/redflags.png` });
-out.sheet = await p.evaluate(() => [...document.querySelectorAll("[role=dialog]")].pop()?.innerText.replace(/\s+/g, " ").slice(0, 300));
+// the red-flag list was removed (her content audit, Nov 10 2026): no chip
+out.noFlagsChip = (await p.getByRole("button", { name: /Something worrying/ }).count()) === 0;
 // quiet no
 out.quiet = await p.evaluate(async () => { const I = await import("/src/lib/islands.ts"); const S = await import("/src/lib/storage.ts"); const T = await S.getTrackers(); const poo = T.find((x) => /poop/i.test(x.title)); const hb = T.find((x) => /heartburn/i.test(x.title)); return { pooNoHard: I.isHardAnswer(poo, false), heartburnYesHard: I.isHardAnswer(hb, true) }; });
 console.log(JSON.stringify({ out, errs }, null, 1));

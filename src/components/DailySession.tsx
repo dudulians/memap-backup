@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { RED_FLAG_IDS } from "@/lib/bodyTemplates";
 import { templateIdOf } from "@/lib/answerPhrases";
 import { followUpNotNeeded, pathModel } from "@/lib/pathSteps";
 import { getUiMode } from "@/lib/uiMode";
-import { RedFlagsSheet } from "./RedFlagsSheet";
 import { SupportSheet } from "./SupportSheet";
 import { HOME_HARM_IDS, MOOD_SUPPORT_IDS } from "@/lib/supportLines";
 import { reasonAskedLater, reasonTemplate } from "@/lib/reasons";
@@ -554,7 +552,6 @@ export const DailySession = ({
     }
     return -1;
   };
-  const [flags, setFlags] = useState(false);
   const [support, setSupport] = useState(false);
   // which question the support sheet speaks to, and the calm line after a hurtful "yes"
   const [supportAbout, setSupportAbout] = useState<string | null>(null);
@@ -1610,12 +1607,8 @@ export const DailySession = ({
           >
             {t("dailySession.notSure")}
           </button>
-          {/* body questions: signs that mean a doctor, never counted (research round 2) */}
-          {RED_FLAG_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
-            <button type="button" onClick={() => setFlags(true)} className="h-10 px-4 text-[15px] font-medium text-muted-foreground hover:text-foreground">
-              {t("redFlags.chip")}
-            </button>
-          )}
+          {/* (the "Something worrying?" red-flag list was removed Nov 10 2026: MeMap is self-tracking, not medical
+              triage — her content audit) */}
           {/* mood questions: a free line to talk to someone (safety round, Nov 7 2026) */}
           {/* not twice: the calm line above already has it */}
           {!care && MOOD_SUPPORT_IDS.has(templateIdOf(currentQuestion.tracker) ?? "") && (
@@ -1624,7 +1617,6 @@ export const DailySession = ({
             </button>
           )}
         </div>
-        <RedFlagsSheet open={flags} onClose={() => setFlags(false)} about={currentQuestion ? templateIdOf(currentQuestion.tracker) : null} />
         <SupportSheet open={support} onClose={() => setSupport(false)} about={supportAbout} />
       </div>
       </div>
