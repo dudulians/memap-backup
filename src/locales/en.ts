@@ -743,7 +743,7 @@ const en = {
   },
   // Action points in plain words; the island in plain words (Nov 3 2026)
   // what a line is (Nov 9 2026, KindTag.tsx)
-  kind: { finding: "Finding", task: "Task", question: "Question", everyEvening: "every evening", nextEvening: "every evening, about the night before" },
+  kind: { finding: "Finding", task: "Task", question: "Question", everyEvening: "every evening", nextEvening: "every evening, about the night before", fromTomorrow: "every evening, from tomorrow" },
   rules: {
     title: "When to act",
     yourPlan: "Your plan",
@@ -1440,6 +1440,8 @@ const en = {
       // under today's step (the title): a kind line for the day of the test
       start: "Your 2-week test starts today. This evening MeMap will ask how it went.",
       // a night step (Nov 10 2026): asked the next evening
+      // started once the day's answers were in (Nov 10 2026)
+      startLater: "Your 2-week test starts. From tomorrow evening MeMap will ask how it went.",
       startNight: "Your 2-week test starts tonight. Tomorrow evening MeMap will ask how the night went.",
       mid1: "Day {{k}} of {{count}}: every day you try makes the picture clearer.",
       mid2: "Even a “no” tonight helps: it shows what a day without it is like.",

@@ -43,9 +43,16 @@ export interface Experiment {
   night?: boolean;
   /** "HH:MM" she gets up (a bedtime test counts back from it: "In bed by 23:00") */
   wake?: string;
+  /** its question starts tomorrow evening (started late in the day, Nov 10 2026) */
+  later?: boolean;
   /** the answer that means the step was done: "no" when the test watches a hard question ("Smoked hookah?" — no) */
   doneWhen?: boolean;
 }
+/** Today's answers are in: a question that isn't a test's has an answer dated today. */
+export const answeredToday = (trackers: Tracker[], entries: TrackerEntry[], today = isoLocal(new Date())): boolean => {
+  const own = new Set(trackers.filter((t) => !t.archived && !isTestQuestion(t)).map((t) => t.id));
+  return entries.some((e) => e.date === today && own.has(e.trackerId));
+};
 /** The step was done on this answer. */
 export const doneBy = (x: Pick<Experiment, "doneWhen">, value: unknown): boolean => value === (x.doneWhen ?? true);
 
@@ -371,7 +378,7 @@ export const overlapping = (x: Experiment): Experiment[] => {
  *  it watches the question she has). */
 export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number; night?: boolean; later?: boolean; wake?: string; doneWhen?: boolean } = {}): Promise<Experiment> => {
   track("experiment_started", { from: from ? "action_point" : "pick", goal: !!opts.same, night: !!opts.night });
-  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}) };
+  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.later ? { later: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}) };
   if (opts.same && from) {
     const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}), ...extra };
     save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), g]);

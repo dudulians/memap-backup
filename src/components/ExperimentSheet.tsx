@@ -17,7 +17,7 @@ import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
-import { BED_FROM_WAKE, NIGHT_IDEAS, WATCH_IDEAS, beforeBed, bedtimeFrom, comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
+import { BED_FROM_WAKE, NIGHT_IDEAS, WATCH_IDEAS, answeredToday, beforeBed, bedtimeFrom, comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
 import { answerPhrase, templateIdOf } from "@/lib/answerPhrases";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
@@ -27,6 +27,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { cardQuestion } from "@/lib/cardText";
 import { busyIdeas, clockTime, goalOf, ideaOf, morningStep, testNameOf, testQuestionOf, quotedTestName } from "@/lib/testWords";
 import { alreadyDoing } from "@/lib/alreadyDoing";
+import { EVENING_AT } from "@/lib/pathSteps";
 
 /* Chosen: a teal ring and a teal tick (the Aurora kit, Nov 5 2026: no
    tinted backgrounds, one accent colour). */
@@ -83,12 +84,15 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const watch = !!source && !!ideaKey && (WATCH_IDEAS[ideaKey] ?? []).includes(templateIdOf(source) ?? "");
   const bedHours = ideaKey ? BED_FROM_WAKE[ideaKey] : undefined;
   const [wake, setWake] = useState("07:00");
+  const startedAfterAnswers = new Date().getHours() >= EVENING_AT && answeredToday(trackers, entries);
   const question = (goal || watch) && source ? cardQuestion(source) : idea === PLAN ? testQuestionOf(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? testQuestionOf(own) : "";
   const start = async () => {
     if (!island || !change) return;
     haptics.rise();
-    // a morning step started in the afternoon: this morning is gone, its first evening is tomorrow
-    const later = !night && !!ideaKey && morningStep(ideaKey) && new Date().getHours() >= 12;
+    // its first evening is tomorrow: a morning step started in the afternoon (this morning is gone), or any step
+    // started in the evening once today's answers are in (her yes, Nov 10 2026: "Walk 20 minutes" started at 21:00
+    // asked about a day it couldn't be done)
+    const later = !night && !watch && !goal && (startedAfterAnswers || (!!ideaKey && morningStep(ideaKey) && new Date().getHours() >= 12));
     const more = { ...(night ? { night: true } : {}), ...(later ? { later: true } : {}), ...(bedHours ? { wake } : {}) };
     // a hard question watched ("Smoked hookah?"): its "no" is the step done
     const watched = watch && source ? { same: true, ...(source.problemWhen === "yes" ? { doneWhen: false } : {}) } : null;
@@ -170,7 +174,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
               {question ? (
                 // what MeMap will ask every evening, before it starts
                 <div className="mb-4 text-center">
-                  <KindTag kind="question" extra={t(night && !watch ? "kind.nextEvening" : "kind.everyEvening")} className="justify-center" />
+                  <KindTag kind="question" extra={t(night && !watch ? "kind.nextEvening" : !watch && !goal && startedAfterAnswers ? "kind.fromTomorrow" : "kind.everyEvening")} className="justify-center" />
                   <p className="mt-0.5 text-[18px] font-bold leading-snug">{question}</p>
                   {goal && <p className="mt-1 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("experiment.goal", { count: goal })}</p>}
                   {bedHours && (

@@ -350,7 +350,7 @@ const tryWords = (x: Experiment, k: number): { title: string; body: string; key:
   const key0 = k === 1 ? "start" : k === EXPERIMENT_DAYS ? "last" : k === EXPERIMENT_DAYS - 1 ? "twoLeft" : k === 8 ? "half"
     : x.perWeek && k % 2 === 0 ? "goal" : `mid${(k % 4) + 1}`;
   // a night step is asked about the next evening (Nov 10 2026): "tomorrow evening", not "this evening"
-  const key = x.night && (key0 === "start" || key0 === "mid3") ? `${key0}Night` : key0;
+  const key = x.night && (key0 === "start" || key0 === "mid3") ? `${key0}Night` : x.later && key0 === "start" ? "startLater" : key0;
   const o = { k, count: EXPERIMENT_DAYS, left: EXPERIMENT_DAYS + 1 - k, n: x.perWeek ?? 0 };
   const day = i18n.t(`notifications.try.${key}`, o);
   // today's step on top ("Не забудь потренироваться сегодня"); her own plan in her words under a kind title
