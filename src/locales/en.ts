@@ -454,6 +454,7 @@ const en = {
       sorryThanks: { change: "Swap one sorry for a thank you", q: "Did you swap one sorry for a thank you today?", today: "Swap one sorry for a thank you today" },
       thankByName: { change: "Thank one person by name: a barista, a driver, a cashier", q: "Did you thank someone by name today?", today: "Thank one person by name today" },
       kindStranger: { change: "Say one kind thing to someone outside your circle", q: "Did you say something kind to a stranger today?", today: "Say one kind thing to someone new today" },
+      smallHelp: { change: "Help someone with one small thing each day", q: "Did you help someone with a small thing today?", today: "Help someone with one small thing today" },
       sweatWorkout: { change: "Do one 20-minute workout that makes you sweat", q: "Did you have a workout that made you sweat?", today: "Fit in a 20-minute workout that makes you sweat today" },
       strength10: { change: "Do 10 minutes of squats, push-ups or band work", q: "Did you do 10 minutes of strength exercises?", today: "Do 10 minutes of squats, push-ups or band work today" },
       kettleSquats: { change: "Do a few squats or push-ups while the kettle boils", q: "Did you do a few squats or push-ups?", today: "Do a few squats or push-ups while the kettle boils today" },

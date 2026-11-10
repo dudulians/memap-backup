@@ -8,7 +8,7 @@ export const RU_CARD: Record<string, string> = {
   "thought-about-leaving": "Была мысль уйти из этих отношений?",
   "apologized-first": "Было «прости» не за свою вину?",
   "didnt-like-friend-post": "Был пост, нарочно оставленный без лайка?",
-  "complimented-stranger": "Было приятное слово кому-то не из своих?",
+  "complimented-stranger": "Удалось кому-то помочь или кого-то порадовать?",
   "missed-ex": "Была тоска по бывшему партнёру?",
   "felt-bad-parent": "Была мысль «я плохой родитель»?",
   "trained-hard": "Была тренировка с настоящей нагрузкой?",
@@ -51,7 +51,7 @@ export const RU_CARD: Record<string, string> = {
   "isolated-at-home": "Весь день прошёл дома без живого общения?",
   "said-yes-when-meant-no": "Было «да», когда хотелось сказать «нет»?",
   "cried-from-something-small": "Были слёзы от чего-то «несерьёзного»?",
-  "laughed-uncontrollably": "Был смех до слёз?",
+  "laughed-uncontrollably": "Удалось посмеяться?",
   "envied-on-social": "Была зависть при виде чужого профиля?",
   "felt-not-like-others": "Был момент «у всех получается, а у меня нет»?",
   "danced-or-sang-alone": "Удалось подурачиться, пока никто не видит?",
@@ -107,7 +107,7 @@ export const RU_TITLE: Record<string, string> = {
   "thought-about-leaving": "Мысль расстаться",
   "apologized-first": "Извинения",
   "didnt-like-friend-post": "Пост друга без лайка",
-  "complimented-stranger": "Комплимент незнакомцу",
+  "complimented-stranger": "Доброе дело для другого",
   "missed-ex": "Тоска по бывшему партнёру",
   "felt-bad-parent": "Мысль «я плохой родитель»",
   "trained-hard": "Серьёзная тренировка",
@@ -147,7 +147,7 @@ export const RU_TITLE: Record<string, string> = {
   "isolated-at-home": "Изоляция дома весь день",
   "said-yes-when-meant-no": "Согласие против желания",
   "cried-from-something-small": "Слёзы от фильма или песни",
-  "laughed-uncontrollably": "Смех до слёз",
+  "laughed-uncontrollably": "Смех",
   "envied-on-social": "Зависть в соцсетях",
   "felt-not-like-others": "Чувство «не как все»",
   "danced-or-sang-alone": "Танцы или песни в одиночку",
@@ -220,4 +220,10 @@ export const RU_TITLE: Record<string, string> = {
   "doomscrolled-news": "Слишком много новостей или спорта",
   "ate-fast-food": "Фастфуд и быстрые углеводы",
   "wanted-learn-new": "Хотелось учиться или сменить профессию"
+};
+/** The short title in Russian of a question re-meant in the library, for people who still track the old one
+ *  (template.legacy): their answers were to the old question (Nov 10 2026). */
+export const RU_TITLE_OLD: Record<string, string> = {
+  "laughed-uncontrollably": "Смех до слёз",
+  "complimented-stranger": "Комплимент незнакомцу",
 };

@@ -2,6 +2,7 @@ import { Tracker, ProblemWhen, AnswerType } from "@/types/tracker";
 import { BODY_TEMPLATES } from "./bodyTemplates";
 import { RESEARCH_TEMPLATES } from "./researchTemplates";
 import { applyMinimalMedicine } from "./medicalArchive";
+import { applyNicheArchive } from "./nicheArchive";
 import { getLanguage } from "@/lib/i18n";
 
 export interface LifeStreamTemplate {
@@ -341,18 +342,20 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "complimented-stranger",
-        title: "Complimented a stranger",
-        titleRu: "Сделал(а) комплимент незнакомому человеку",
-        questionText: "Did you say something kind to someone outside your circle?",
-        questionTextRu: "Сказал(а) кому-то приятное вне круга своих?",
+        // her pick, Nov 10 2026: a kind word to a stranger was niche; who already tracks it keeps the old words
+        title: "Did something kind for someone",
+        titleRu: "Сделал(а) доброе дело для кого-то",
+        questionText: "Did you help someone or make someone happy today?",
+        questionTextRu: "Удалось сегодня кому-то помочь или кого-то порадовать?",
+        legacy: { title: "Complimented a stranger", titleRu: "Сделал(а) комплимент незнакомому человеку", questionText: "Did you say something kind to someone outside your circle?", questionTextRu: "Сказал(а) кому-то приятное вне круга своих?" },
         category: "Connections",
         subcategory: "Strangers",
         answerType: "boolean",
         periodDays: 30,
         threshold: 27,
         problemWhen: "no",
-        adviceAboveThreshold: "Say one kind thing to someone outside your circle",
-        adviceAboveThresholdRu: "Говорить одно доброе слово кому-то не из своих",
+        adviceAboveThreshold: "Help someone with one small thing each day",
+        adviceAboveThresholdRu: "Каждый день помогать кому-то в одной мелочи",
       },
       {
         id: "flirted",
@@ -1844,10 +1847,13 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "laughed-uncontrollably",
-        title: "Couldn't stop laughing",
-        titleRu: "Смеялся(ась) до слёз",
-        questionText: "Did you laugh so hard you couldn't stop today?",
-        questionTextRu: "Сегодня было «ржал(а) до слёз»?",
+        // her pick, Nov 10 2026: laughing to tears was too narrow ("Laughed today… или как-то почеловечнее");
+        // who already tracks it keeps the old words and meaning
+        title: "Laughed today",
+        titleRu: "Смеялся(ась) сегодня",
+        questionText: "Did you laugh today?",
+        questionTextRu: "Удалось сегодня посмеяться?",
+        legacy: { title: "Couldn't stop laughing", titleRu: "Смеялся(ась) до слёз", questionText: "Did you laugh so hard you couldn't stop today?", questionTextRu: "Сегодня было «ржал(а) до слёз»?" },
         category: "Emotions",
         subcategory: "Joy",
         answerType: "boolean",
@@ -3305,6 +3311,8 @@ for (const { stream, ...tpl } of RESEARCH_TEMPLATES) LIFE_STREAMS.find((s) => s.
 for (const { stream, ...tpl } of BODY_TEMPLATES) LIFE_STREAMS.find((s) => s.id === stream)?.templates.push(tpl);
 // "minimum medicine" (her pick, Nov 10 2026): a calmer layer over the library — nothing deleted (medicalArchive.ts)
 applyMinimalMedicine(LIFE_STREAMS);
+// niche questions (her note, Nov 10 2026): not offered to new people, kept for those who have them (nicheArchive.ts)
+applyNicheArchive(LIFE_STREAMS);
 
 export interface LocalizedTemplate {
   id: string;

@@ -22,7 +22,9 @@ const lib = await p.evaluate(async ({ QUIET, KEEP }) => {
   const related = new Set(rq.getRelatedQuestions(all.filter((t) => !QUIET.includes(t.id)).map((t) => t.title)).map((r) => r.id));
   for (const t of all.slice(0, 120)) for (const r of rq.getRelatedQuestions([t.title])) related.add(r.id);
   const calm = all.filter((t) => ma.CALM_PLANS[t.id]).map((t) => ({ id: t.id, en: t.adviceAboveThreshold, ru: t.adviceAboveThresholdRu, kind: t.planKind }));
-  return { on: ma.MINIMAL_MEDICINE, quiet: all.filter((t) => t.quiet).map((t) => t.id).sort(), doctorPlans, ideasQuiet: QUIET.filter((id) => ideas.has(id)), relatedQuiet: QUIET.filter((id) => related.has(id)), calm, archived: ma.ARCHIVED_PLANS.size };
+  const niche = (await import("/src/lib/nicheArchive.ts")).NICHE_IDS;
+  // v131: the niche questions are quiet too (nicheArchive.ts); this test checks the medical ones
+  return { on: ma.MINIMAL_MEDICINE, quiet: all.filter((t) => t.quiet && !niche.has(t.id)).map((t) => t.id).sort(), doctorPlans, ideasQuiet: QUIET.filter((id) => ideas.has(id)), relatedQuiet: QUIET.filter((id) => related.has(id)), calm, archived: ma.ARCHIVED_PLANS.size };
 }, { QUIET, KEEP: [...KEEP_THERAPIST] });
 ok("the switch is on", lib.on === true);
 ok("the 11 clinical questions are quiet", lib.quiet.join() === [...QUIET].sort().join(), lib.quiet);

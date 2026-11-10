@@ -28,7 +28,7 @@ const P: Record<string, [string, string, string, string]> = {
   "saw-friends": ["friends in person", "no friends in person", "встреча с друзьями", "без встреч с друзьями"],
   "apologized-first": ["an apology when not at fault", "no apology when not at fault", "извинение не за свою вину", "без лишних извинений"],
   "didnt-like-friend-post": ["a like skipped on purpose", "likes as usual", "нарочно пропущенный лайк", "лайки как обычно"],
-  "complimented-stranger": ["kind words to a stranger", "no kind words to strangers", "комплимент незнакомцу", "без комплиментов незнакомцам"],
+  "complimented-stranger": ["a kind deed", "no kind deed", "доброе дело", "без доброго дела"],
   "flirted": ["flirting", "no flirting", "флирт", "без флирта"],
   "thought-about-someone-else": ["thoughts of someone else", "no thoughts of someone else", "мысли о другом человеке", "без мыслей о другом человеке"],
   "missed-ex": ["missing an ex", "not missing an ex", "тоска по бывшим", "без тоски по бывшим"],
@@ -121,7 +121,7 @@ const P: Record<string, [string, string, string, string]> = {
   "isolated-at-home": ["whole day home without people", "time with people", "весь день дома без людей", "живое общение"],
   "said-yes-when-meant-no": ["an unwanted yes", "no unwanted yes", "согласие против желания", "без согласия против желания"],
   "cried-from-something-small": ["tears over small things", "no tears over small things", "слёзы от мелочей", "без слёз от мелочей"],
-  "laughed-uncontrollably": ["laughing to tears", "no big laugh", "смех до слёз", "без смеха до слёз"],
+  "laughed-uncontrollably": ["laughing", "no laughing", "смех", "без смеха"],
   "envied-on-social": ["envy online", "no envy online", "зависть в соцсетях", "без зависти в соцсетях"],
   "felt-not-like-others": ["feeling left behind", "not feeling left behind", "чувство «не как все»", "без чувства «не как все»"],
   "danced-or-sang-alone": ["dancing or singing alone", "no dancing or singing", "танцы или пение", "без танцев и пения"],
@@ -292,6 +292,9 @@ export const templateIdOf = (tr: Tracker): string | null => {
 // A question someone had before the Nov 7 2026 rewordings keeps the words that fit it
 // ("back or neck pain", not "back pain").
 const P_OLD: Record<string, [string, string, string, string]> = {
+  // re-meant Nov 10 2026 (her pick): who still tracks the old question keeps its words
+  "laughed-uncontrollably": ["laughing to tears", "no big laugh", "смех до слёз", "без смеха до слёз"],
+  "complimented-stranger": ["kind words to a stranger", "no kind words to strangers", "комплимент незнакомцу", "без комплиментов незнакомцам"],
   // re-meant Nov 9 2026 (content review): who still tracks the old question keeps its words
   "apologized-first": ["apologizing first", "not apologizing first", "первый шаг с извинением", "без первого извинения"],
   "ate-sweets": ["sweets", "no sweets", "сладкое", "без сладкого"],
@@ -305,6 +308,8 @@ const P_OLD: Record<string, [string, string, string, string]> = {
   "skin-allergy": ["skin reaction", "no skin reaction", "реакция кожи", "без реакции кожи"],
 };
 const S_OLD: Record<string, [string, string, string, string]> = {
+  "laughed-uncontrollably": ["you ~laugh to tears", "there's ~no big laugh", "ты ~смеёшься до слёз", "смеха до слёз ~нет"],
+  "complimented-stranger": ["you ~say something kind to a stranger", "you ~don't compliment strangers", "ты ~говоришь приятное незнакомцу", "ты ~не делаешь комплиментов незнакомцам"],
   "apologized-first": ["you ~make the first move to make up", "there's ~no first move", "ты ~делаешь первый шаг к примирению", "первого шага ~нет"],
   "ate-sweets": ["you ~eat sweets", "you ~skip sweets", "ты ~ешь сладкое", "ты ~не ешь сладкое"],
   "period-symptoms": ["cycle symptoms are ~strong", "cycle symptoms are ~mild", "симптомы цикла ~сильные", "симптомы цикла ~мягкие"],

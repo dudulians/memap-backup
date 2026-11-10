@@ -93,6 +93,9 @@ const CARD_TEXT_OLD: Record<string, { en: string; ru: string }> = {
   "ate-sweets": { en: "Did you eat sweets?", ru: "Было сладкое?" },
   "apologized-first": { en: "Did you apologise to someone first?", ru: "Первое «прости» было от тебя?" },
   "good-time-together": { en: "Did you share a good moment as a couple?", ru: "Был приятный момент вдвоём?" },
+  // re-meant Nov 10 2026 (her pick): "Laughed today", "Did something kind for someone"
+  "laughed-uncontrollably": { en: "Did you laugh so hard you couldn't stop?", ru: "Был смех до слёз?" },
+  "complimented-stranger": { en: "Did you say something kind to someone outside your circle?", ru: "Было приятное слово кому-то не из своих?" },
 };
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");

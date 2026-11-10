@@ -5,7 +5,7 @@ import { matchTemplateIdByTitle } from "./relatedQuestions";
 import enLocale from "@/locales/en";
 import ruLocale from "@/locales/ru";
 import { LEGACY_IDEA_NAMES } from "./ideaNames";
-import { RU_TITLE } from "./ruNeutral";
+import { RU_TITLE, RU_TITLE_OLD } from "./ruNeutral";
 
 /**
  * Display-time English → Russian mapping for tracker titles & question text.
@@ -506,6 +506,10 @@ export const localizeTrackerTitle = (title: string): string => {
   // an older Russian wording of a library title, still with gender endings: the neutral one by template
   if (/[а-яё]\((а|ась|ла|ой|на|ы|ая|легла|прошла|одна|довольна)\)/i.test(raw)) {
     const id = matchTemplateIdByTitle(title);
+    // the old question of a re-meant library one keeps its own short title (Nov 10 2026)
+    const tpl = id && RU_TITLE_OLD[id] ? LIFE_STREAMS.flatMap((s) => s.templates).find((t) => t.id === id) : undefined;
+    const isOld = !!tpl?.legacy && [tpl.legacy.title, tpl.legacy.titleRu].some((x) => !!x && [title, raw].includes(x));
+    if (id && isOld) return RU_TITLE_OLD[id];
     if (id && RU_TITLE[id]) return RU_TITLE[id];
   }
   return out;

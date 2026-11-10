@@ -66,7 +66,7 @@ export const NIGHT_IDEAS = new Set<string>([
 /** A plan whose habit is just the good answer of its own question ("Go to bed 8 hours before you get up" for "Did you sleep
  *  7+ hours last night?"): the test watches that question, no second one is added ("если его ещё не было", Nov 10 2026). */
 export const WATCH_IDEAS: Record<string, string[]> = {
-  warmMoment: ["felt-close-to-partner"], kindStranger: ["complimented-stranger"], bed8h: ["slept-enough"], stretchShower: ["stretched"], pillsWithHabit: ["took-meds"], sameWake: ["same-wake-time"], squeezeBrushing: ["pelvic-floor-exercises"], hookahWeekdays: ["smoked-hookah"], dayCap: ["stayed-on-budget"], cookOne: ["cooked-myself"], workEndFixed: ["worked-overtime"], petWhenNear: ["petted-an-animal"], meditate5: ["meditated"], learn15: ["studied-language","practiced-skill"], episodeOnTheGo: ["listened-podcast"], askLocal: ["spoke-local-language"], localLang15: ["studied-local-language"], kidOutside30: ["child-physical-activity"],
+  warmMoment: ["felt-close-to-partner"], kindStranger: ["complimented-stranger"], smallHelp: ["complimented-stranger"], bed8h: ["slept-enough"], stretchShower: ["stretched"], pillsWithHabit: ["took-meds"], sameWake: ["same-wake-time"], squeezeBrushing: ["pelvic-floor-exercises"], hookahWeekdays: ["smoked-hookah"], dayCap: ["stayed-on-budget"], cookOne: ["cooked-myself"], workEndFixed: ["worked-overtime"], petWhenNear: ["petted-an-animal"], meditate5: ["meditated"], learn15: ["studied-language","practiced-skill"], episodeOnTheGo: ["listened-podcast"], askLocal: ["spoke-local-language"], localLang15: ["studied-local-language"], kidOutside30: ["child-physical-activity"],
 };
 /** Tests that count bedtime back from the wake-up time: hours in bed. */
 export const BED_FROM_WAKE: Record<string, number> = { bed8h: 8 };
@@ -100,7 +100,7 @@ export const smartRemindTime = (idea: string | null, text = ""): string => {
     wellDone: "20:30", kindPerson: "17:00", muteChat: "18:30", kidsMessage: "12:00", kidsShare: "18:00", billsSameDay: "19:00", messageHome: "13:00", localThing: "16:00", cookHome: "17:30", localDish: "12:30", localProduct: "11:00", daylight20: "11:00", homeSounds: "20:00", localChat: "12:00", messageExpat: "13:00", goodHardHere: "20:30",
     earplugs: "21:30", leaveEarly15: "07:30", easyTimeOut: "07:30", localLang15: "18:00", localListen10: "18:00",
     // simple ones for niche ideas (Nov 10 2026)
-    noChatShare: "12:00", noGum: "10:00", quieterSound: "09:00", squatsDaily: "08:00", smallestStep: "09:00",
+    noChatShare: "12:00", noGum: "10:00", quieterSound: "09:00", squatsDaily: "08:00", smallestStep: "09:00", smallHelp: "09:00",
     // each daily library plan's own step (Nov 10 2026)
     warmMoment: "18:00", partnerTriggerNote: "12:00", flirtAfterFeel: "12:00", kidTime15: "17:30", nauseaNote: "09:00", bed8h: "21:00", nightAwakeUp: "21:30", stretchShower: "08:00", walkingCall: "09:00", morningLight: "07:30", bottleTwice: "09:00", windDown30: "21:30", pillsWithHabit: "08:00", napShort: "12:30", fallAsleepUp: "21:30", warmBodyGloves: "08:00", hookahWeekdays: "16:00", coffeeByNoon: "11:00", gamesHourDay: "17:00", dayCap: "08:00", saleFullPrice: "10:00", walkAfterLunch: "12:00", vegNeverSkip: "08:00", angerMissing: "12:00", workBotherNote: "17:30", workEndFixed: "17:00", mainThingFirst: "08:30", smallPromise: "07:30", smallStart: "09:00", petWhenNear: "10:00", talkOutLoud: "10:00", bossNote: "12:00", drainWho: "12:00", waitHourNews: "09:00", meditate5: "08:00", goodThingEvening: "19:00", notifOffHour: "09:00", episodeOnTheGo: "08:00", noiseTimes: "12:00", paperworkTreat: "09:00", petSameRoutine: "08:00", petPlayMore: "18:00", badNightNote: "08:00", screenFreeActivity: "16:00", brightMomentNote: "18:00", bedtimeRoutineEarly: "18:30" };
   if (idea && at[idea]) return at[idea];
@@ -221,7 +221,7 @@ export const QUESTION_IDEAS: Record<string, string[]> = {
   // love: others
   "called-parent": ["shortMessage", "visitWeekend"],
   "apologized-first": ["pauseSorry", "sorryThanks"],
-  "complimented-stranger": ["kindStranger", "outAmongPeople"],
+  "complimented-stranger": ["kindStranger", "smallHelp"],
   // kids
   "quality-time-kid": ["playTogether", "askChildDay", "readTogether"],
   "got-help-with-kids": ["handChildTask", "askHelp", "myTime"],
