@@ -1,6 +1,6 @@
 // r94 (Nov 9 2026, her decision): the two partner-harm questions are never offered — not in the library, a new
 // island, the demo or ideas — and come up only when someone types about it ("my partner yelled at me"). The help
-// sheets show no phone numbers and no Find A Helpline link (its terms); "afraid at home" keeps the NO MORE directory.
+// sheets show no phone numbers and no Find A Helpline link (its terms); since Nov 10 2026 "afraid at home" has no link either, only words.
 // Run from marketing/tools.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
@@ -29,7 +29,8 @@ out.modules = await p.evaluate(async () => {
     ideasWithHarm: ideas,
     demoHasHarm: pack.newTrackers.some((t) => harm.has(t.title)),
     typed: ["My partner yelled at me", "Муж кричал на меня", "My child screams at bedtime", "Была ссора"].map((t) => [t, sl.writesAboutHomeHarm(t)]),
-    links: sl.helpLinks("en"),
+    // no helpline links at all since Nov 10 2026 (her note: "ссылок не будет, только инструкция")
+    noLinkCode: !("helpLinks" in sl),
   };
 });
 // the add-question sheet

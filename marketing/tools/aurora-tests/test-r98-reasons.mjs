@@ -88,11 +88,11 @@ const WEEK1 = {
 for (const lang of ["en", "ru"]) {
   const RU = lang === "ru";
   const W = RU
-    ? { yes: /^Да$/, no: /^Нет$/, later: "Ссора: причину можно добавить потом.", doneLater: "Причину можно добавить потом.", step: "Почему?", add: /^Добавить$/, skip: /^Пропустить$/, save: /^Сохранить$/, fightQ: /ссор/i, voiceQ: /голос/i, cont: /^Дальше$/,
+    ? { yes: /^Да$/, no: /^Нет$/, later: "Ссора: причину можно добавить потом — шаг «Почему?» на пути.", doneLater: "Причину можно добавить потом: шаг «Почему?» на пути.", step: "Почему?", add: /^Добавить$/, skip: /^Пропустить$/, save: /^Сохранить$/, fightQ: /ссор/i, voiceQ: /голос/i, cont: /^Дальше$/,
       sub: "Ссора · Головная боль", heads: ["Сегодня · Ссора", "Вчера · Головная боль", "Суббота · Ссора"], money: "Деньги", together: "Время вместе", stress: "Стресс", chores: "Быт", kids: "Дети",
       headChips: "Плохой сон|Стресс|Пропуск еды|Месячные|Другое|Не знаю", words: "Из-за праздников", reasons: "ПРИЧИНЫ", report: "Отчёт прошлой недели", openReport: /^Открыть$/, seeReport: /Смотреть отчёт/i, next: /^Дальше$/,
       line: "Ссоры — чаще всего: деньги (3 из 3)", skipped: "Пропущено" }
-    : { yes: /^Yes$/, no: /^No$/, later: "Fight: you can add the reason later.", doneLater: "You can add the reason later.", step: "Why?", add: /^Add$/, skip: /^Skip$/, save: /^Save$/, fightQ: /fight|argument/i, voiceQ: /voice/i, cont: /^Continue$/,
+    : { yes: /^Yes$/, no: /^No$/, later: "Fight: you can add the reason later — “Why?” on your path.", doneLater: "You can add the reason later: “Why?” on your path.", step: "Why?", add: /^Add$/, skip: /^Skip$/, save: /^Save$/, fightQ: /fight|argument/i, voiceQ: /voice/i, cont: /^Continue$/,
       sub: "Fight · Headache", heads: ["Today · Fight", "Yesterday · Headache", "Saturday · Fight"], money: "Money", together: "Time together", stress: "Stress", chores: "Chores", kids: "Kids",
       headChips: "Poor sleep|Stress|Skipped a meal|Period|Other|Don't know", words: "About the holidays", reasons: "REASONS", report: "Last week's report", openReport: /^Open$/, seeReport: /See the report/i, next: /^Next$/,
       line: "Fights — most often: money (3 of 3)", skipped: "Skipped" };

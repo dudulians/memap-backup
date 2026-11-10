@@ -6,52 +6,10 @@
 //   Russia and the UAE nothing was found (searched, not proven);
 // - a wrong number is a known risk: 6 of 69 mental-health apps showed a wrong crisis number (Martinengo et al.,
 //   BMC Medicine 2019); Samaritans' guidance asks to recheck numbers regularly;
-// - so: links to directories the helplines keep up to date, by the phone's time zone (no location asked), and
-//   "your local emergency number" in words.
-//   talk: no link (her note, Nov 9 2026: "мы можем без него обойтись?"): Find A Helpline's terms forbid
-//         referencing it for commercial purposes without written permission, so the sheet says in words that most
-//         countries have a free helpline and to talk to someone trusted or a doctor;
-//   safe: the NO MORE Global Directory (domestic and sexual violence; made with the UN and the World Bank, checked
-//         every quarter, invites sites to add it).
+// - so: no numbers and no links (her note, Nov 10 2026: "ссылок не будет, только инструкция"): the sheet says in words
+//   that most countries have a free helpline and how to search for one, to talk to someone trusted or a doctor, and
+//   "your local emergency number". (Until Nov 10 the afraid-at-home card linked the NO MORE directory.)
 // Plan: marketing/research/when-to-act.md ("thoughts of self-harm → country-specific numbers").
-
-export type HelpLinks = {
-  /** free lines for when someone is afraid at home */
-  safe: string;
-};
-
-const zone = () => {
-  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { return ""; }
-};
-
-const RUSSIA = /^Europe\/(Moscow|Kaliningrad|Samara|Volgograd|Kirov|Astrakhan|Saratov|Ulyanovsk)|^Asia\/(Yekaterinburg|Omsk|Novosibirsk|Barnaul|Tomsk|Novokuznetsk|Krasnoyarsk|Irkutsk|Chita|Yakutsk|Khandyga|Vladivostok|Ust-Nera|Magadan|Sakhalin|Srednekolymsk|Kamchatka|Anadyr)/;
-const CANADA = /^America\/(Toronto|Vancouver|Edmonton|Winnipeg|Halifax|St_Johns|Regina|Moncton|Glace_Bay|Goose_Bay|Whitehorse|Dawson|Iqaluit|Yellowknife|Swift_Current|Creston|Fort_Nelson|Rankin_Inlet|Resolute|Cambridge_Bay|Inuvik|Atikokan|Blanc-Sablon|Dawson_Creek)$/;
-const US = /^America\/(New_York|Chicago|Denver|Phoenix|Los_Angeles|Anchorage|Detroit|Boise|Juneau|Sitka|Metlakatla|Yakutat|Nome|Adak|Menominee|Indiana|Kentucky|North_Dakota)|^Pacific\/Honolulu/;
-
-/** The phone's country by its time zone, when it is clear (ISO code, lower case). */
-export const phoneCountry = (): string | null => {
-  const tz = zone();
-  if (RUSSIA.test(tz)) return "ru";
-  if (CANADA.test(tz)) return "ca";
-  if (US.test(tz)) return "us";
-  if (/^Europe\/(London|Belfast)$/.test(tz)) return "gb";
-  if (tz === "Europe/Dublin") return "ie";
-  if (tz === "Asia/Dubai") return "ae";
-  if (tz === "Europe/Berlin") return "de";
-  if (/^Australia\//.test(tz)) return "au";
-  return null;
-};
-
-/** NO MORE directory pages (checked Nov 9 2026); other countries get the directory's start page. */
-const NO_MORE: Record<string, string> = { ru: "russia", ae: "united-arab-emirates", gb: "united-kingdom", us: "usa", de: "germany", ca: "canada", ie: "ireland", au: "australia" };
-
-export const helpLinks = (lang?: string): HelpLinks => {
-  const c = phoneCountry();
-  void lang;
-  return {
-    safe: c && NO_MORE[c] ? `https://nomoredirectory.org/${NO_MORE[c]}/` : "https://nomoredirectory.org/",
-  };
-};
 
 /** Mood questions whose card offers "Need to talk?". Content review (Nov 9 2026): also the
  *  hard partner, parenting, self-worth, homesick and drinking questions; a partner shouting or

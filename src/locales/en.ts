@@ -224,8 +224,9 @@ const en = {
   // "Why?" reasons (Nov 10 2026, src/lib/reasons.ts): a skippable step, kept in Notes
   why: {
     step: "Why?",
-    later: "You can add the reason later.",
-    laterOne: "{{name}}: you can add the reason later.",
+    // where, not only "later" (her note, Nov 10 2026: "не понимаю, где их добавлять")
+    later: "You can add the reason later: “Why?” on your path.",
+    laterOne: "{{name}}: you can add the reason later — “Why?” on your path.",
     add: "Add",
     words: "In your own words (optional)",
     reasons: "Reasons",
@@ -1012,19 +1013,19 @@ const en = {
     talkTitle: "Someone to talk to",
     talkLine: "Talking to a friend or someone in your family helps too.",
     findTalk: "Most countries have a free, confidential helpline. Search for one with your country's name.",
-    findHome: "Find a helpline in your country",
+    // words, not a link (her note, Nov 10 2026: "мы вроде договорились, что ссылок не будет, только инструкция")
+    homeHow: "To find one, search the internet for “domestic abuse helpline” and your country's name.",
     dangerTitle: "Not safe right now?",
     dangerLine: "If you might hurt yourself, or you're afraid of someone at home, call your local emergency number now.",
     homeLine: "Shouting and hurtful words are not okay, and they are not your fault. You don't have to carry this alone.",
     homeTitle: "If you feel afraid at home",
     careLine: "That sounds hard. It's not your fault, and you don't have to carry it alone.",
     homeFind: "A free, confidential helpline can listen and help you think about what to do. You can call even if it seems small.",
-    homePrivate: "Call when you're on your own. After, you can delete the call from your call list and this page from your browser history.",
+    homePrivate: "Call when you're on your own. After, you can delete the call from your call list and the search from your browser history.",
     doctorTitle: "A doctor or therapist can help",
     doctorLine: "Show them your days. It makes the first talk easier.",
     report: "Make a report",
     source: "MeMap doesn't diagnose.",
-    sourceHome: "Helplines from the NO MORE directory, checked every few months. MeMap doesn't diagnose.",
   },
   // tips over time, from Malu (Nov 7 2026)
   tips: {

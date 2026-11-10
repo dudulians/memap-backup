@@ -822,9 +822,14 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // A calm day (her "а что ты предлагаешь", Nov 8 2026; QA C16: the morning after week 1 jumped to
   // 8 steps): besides the questions, at most three things a day, the most important first. The rest
   // wait for another day; what was done today stays.
-  const extras = steps.filter((s) => EXTRA_ORDER.includes(s.kind));
+  // A "Why?" for an answer given today is always there: the deck promised it ("Fight: you can add the reason later")
+  // and on a busy day it fell behind report, test, act and link (her note, Nov 10 2026: "свайпнула, что поссорилась…
+  // а ничего не вышло, не понимаю, где их добавлять").
+  const promised = (s: Step) => s.kind === "why" && !s.done && why.some((e) => e.date === today);
+  const extras = steps.filter((s) => EXTRA_ORDER.includes(s.kind) && !promised(s));
   const room = Math.max(0, MAX_EXTRAS - extras.filter((s) => s.done).length);
   const keep = new Set(extras.filter((s) => !s.done).sort((a, b) => EXTRA_ORDER.indexOf(a.kind) - EXTRA_ORDER.indexOf(b.kind)).slice(0, room));
+  for (const s of steps) if (promised(s)) keep.add(s);
   for (let i = steps.length - 1; i >= 0; i--) if (EXTRA_ORDER.includes(steps[i].kind) && !steps[i].done && !keep.has(steps[i])) steps.splice(i, 1);
 
   // Before the evening (her note, Nov 8 2026: after yesterday's answers "предложить что-то поделать

@@ -856,7 +856,9 @@ export const DailySession = ({
   // The calm window after a partner-harm "yes": over the next card, or over Done when it was the last one.
   // Above the Done card (z-60); "Talk to someone" opens the support sheet above both (z-[80]).
   const carePopup = care ? createPortal(
-    <div className="fixed inset-0 z-[75] flex items-end justify-center bg-black/40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] animate-fade-in sm:items-center" role="presentation">
+    // pointer-events-auto: the deck's sheet turns pointer events off on <body> while it is open, and this window lives in
+    // <body> too — on a phone every tap went through it to the cards (her note, Nov 10 2026: "Talk to someone не работает")
+    <div className="pointer-events-auto fixed inset-0 z-[75] flex items-end justify-center bg-black/40 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] animate-fade-in sm:items-center" role="presentation">
       <div data-care-window role="dialog" aria-modal="true" aria-label={t("support.chip")} className="surface w-full max-w-sm rounded-[24px] px-5 pb-5 pt-6 text-left shadow-[0_22px_40px_-18px_rgba(16,42,56,0.45)]">
         <p className="text-[19px] font-bold leading-snug tracking-tight">{t("support.careLine")}</p>
         <div className="mt-5 flex flex-col gap-2">
