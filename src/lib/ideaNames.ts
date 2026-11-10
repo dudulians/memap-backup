@@ -168,4 +168,21 @@ export const LEGACY_IDEA_NAMES: Record<string, { en?: string; ru?: string }> = {
   "outsideMorning__ru2": { "ru": "Утром 10 минут побыть на улице" },
   // content review, Nov 9 2026: "в своей жизни" was filler
   "gladLine": { "ru": "Записывать одну вещь, которая радует в своей жизни" },
+  // before the review of Nov 10 2026 (clearer words; marketing/research/test-ideas-review-2026-11-10.md)
+  "sameCoffee__nov10": {"en":"Have the same amount of coffee every day, weekends too","ru":"Пить столько же кофе, сколько обычно, и в выходные"},
+  "parentShoes__nov10": {"en":"Have your parent wear proper shoes at home, not slippers","ru":"Следить, чтобы родитель ходил дома в нормальной обуви, а не в тапочках"},
+  "warmPad__nov10": {"en":"Put a warm pad on the belly in the evening","ru":"Вечером класть тёплую грелку на живот"},
+  "drainWho__nov10": {"en":"Notice who drains you most often and plan less time with them","ru":"Замечать, кто выматывает чаще всего, и планировать с этим человеком меньше времени"},
+  "paperworkTreat__nov10": {"en":"Treat yourself to a coffee afterwards: it's done","ru":"Порадовать себя кофе после: дело сделано"},
+  "flirtAfterFeel__nov10": {"en":"Notice how you feel afterwards: about yourself, not about them","ru":"Замечать, что чувствуешь после: про себя, не про других"},
+  "bossNote__nov10": {"en":"Write down what exactly happened: it will help in a later conversation","ru":"Записывать, что именно произошло: пригодится для разговора потом"},
+  "waitHourNews__nov10": {"en":"Wait an hour before deciding anything","ru":"Подождать час, прежде чем что-то решать"},
+  "petSameRoutine__nov10": {"en":"Keep the daily routine the same, and notice what sets it off: noises, new people","ru":"Держать режим дня одинаковым и замечать, после чего это начинается: звуки, новые люди"},
+  "calmWalks__nov10": {"en":"Only short, calm walks until the vet visit","ru":"Гулять с питомцем только коротко и спокойно до визита к ветеринару"},
+  "petPlayMore__nov10": {"en":"Notice what makes your pet playful and do more of it. If the quiet is new, mention it to the vet.","ru":"Замечать, что радует питомца, и делать этого больше. Если питомец раньше был активнее, сказать об этом ветеринару."},
+  "talkNoPhones__nov10": {"en":"Talk for 10 minutes without phones","ru":"Говорить 10 минут без телефонов"},
+  "supportBra__nov10": {"en":"Wear a soft supportive bra, at night too on sore days","ru":"Носить мягкий поддерживающий бюстгальтер, в болезненные дни и ночью"},
+  "threeLines__nov10": {"en":"Write 3 lines in the evening","ru":"Вечером писать 3 строчки"},
+  "extraWalk__nov10": {"ru":"Гулять с питомцем лишний раз"},
+  "regularMeals__nov10": {"ru":"Есть три раза в день в одно время"},
 };

@@ -40,7 +40,7 @@ for (const lang of ["en", "ru"]) for (const answered of [true, false]) {
   await p.locator("[role=dialog]").last().getByRole("button", { name: W.title }).click(); await p.waitForTimeout(1500);
   const sheet = p.locator("div[role=dialog].fixed").last();
   // a daytime step (a night step starts tomorrow anyway)
-  await sheet.locator("button[aria-pressed]", { hasText: lang === "ru" ? "Есть три раза в день в одно время" : "Eat three meals at regular times" }).click();
+  await sheet.locator("button[aria-pressed]", { hasText: lang === "ru" ? "Есть три раза в день, в привычные часы" : "Eat three meals at regular times" }).click();
   await p.waitForTimeout(500);
   const tagText = (await sheet.innerText()).replace(/\s+/g, " ");
   await p.screenshot({ path: `${D}/${tag}-1-picker.png` });

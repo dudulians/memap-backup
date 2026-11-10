@@ -59,6 +59,33 @@ const getCtx = (): AudioContext | null => {
 };
 
 /**
+ * iOS leaves the context "interrupted" (not "suspended") after Control Center, a call or another app's sound, and
+ * it may not come back by itself: the bubbles stayed silent after she unmuted the phone until the app was
+ * restarted (her note, Nov 10 2026). Any state but "running" is woken; a context still stuck a moment later is
+ * replaced by a new one (decoded sounds are kept; the sea starts again in the new one).
+ */
+let stuckSince = 0;
+const onNewCtx = new Set<() => void>();
+const wake = (): AudioContext | null => {
+  const ctx = getCtx();
+  if (!ctx) return null;
+  if (ctx.state === "running") { stuckSince = 0; return ctx; }
+  ctx.resume().catch(() => { /* ignore */ });
+  if (ctx.state === "suspended") return ctx;
+  // "interrupted" or "closed"
+  if (!stuckSince) stuckSince = Date.now();
+  if (ctx.state === "closed" || Date.now() - stuckSince > 600) {
+    try { void ctx.close(); } catch { /* already closed */ }
+    audioCtx = null;
+    stuckSince = 0;
+    const fresh = getCtx();
+    if (fresh) { fresh.resume().catch(() => { /* ignore */ }); onNewCtx.forEach((f) => f()); }
+    return fresh;
+  }
+  return ctx;
+};
+
+/**
  * Mobile browsers (and most WebViews) require a user gesture before an
  * AudioContext can make sound. Attaching unlock handlers to the first
  * pointerdown/touchstart/keydown resumes the context so the very first
@@ -67,16 +94,16 @@ const getCtx = (): AudioContext | null => {
 export const primeAudio = () => {
   if ((SOUNDS_PAUSED && !BUBBLE_SOUNDS) || unlockAttached || typeof window === "undefined") return;
   unlockAttached = true;
-  const unlock = () => {
-    const ctx = getCtx();
-    if (ctx && ctx.state === "suspended") {
-      ctx.resume().catch(() => { /* ignore */ });
-    }
-  };
+  const unlock = () => { wake(); };
   const opts: AddEventListenerOptions = { once: false, passive: true };
   window.addEventListener("pointerdown", unlock, opts);
   window.addEventListener("touchstart", unlock, opts);
   window.addEventListener("keydown", unlock, opts);
+  // back from Control Center, a call or another app: wake the sound at once (no new context without a tap)
+  const back = () => { if (document.visibilityState === "visible" && audioCtx && audioCtx.state !== "running") audioCtx.resume().catch(() => { /* ignore */ }); };
+  document.addEventListener("visibilitychange", back);
+  window.addEventListener("focus", back);
+  window.addEventListener("pageshow", back);
 };
 
 const envelope = (
@@ -140,13 +167,9 @@ const playSkip = (ctx: AudioContext) => {
 
 export const playSwipeSound = (kind: FeedbackKind) => {
   if (!soundOn()) return;
-  const ctx = getCtx();
+  // woken on every call: "suspended" after a tab switch, "interrupted" after Control Center (wake above)
+  const ctx = wake();
   if (!ctx) return;
-  // Try to resume on every call — the AudioContext may be in "suspended"
-  // state after a tab switch on iOS WebView.
-  if (ctx.state === "suspended") {
-    ctx.resume().catch(() => { /* ignore */ });
-  }
   try {
     const name = kind === "yes" ? "swipeYes" : kind === "no" ? "swipeNo" : "swipeSkip";
     if (sample(ctx, name, { rate: vary(0.04), pan: kind === "yes" ? 0.35 : kind === "no" ? -0.35 : 0 })) return;
@@ -181,14 +204,11 @@ export const soundOn = (): boolean => {
 const bubbleSoundOn = (): boolean => BUBBLE_SOUNDS || soundOn();
 
 const ready = (): AudioContext | null => {
-  const ctx = getCtx();
-  if (!ctx) return null;
   try {
     const nav = navigator as unknown as { audioSession?: { type: string } };
     if (nav.audioSession && nav.audioSession.type !== "ambient") nav.audioSession.type = "ambient";
   } catch { /* older WebViews */ }
-  if (ctx.state === "suspended") ctx.resume().catch(() => { /* ignore */ });
-  return ctx;
+  return wake();
 };
 
 /** Where a sound sits, left (-1) to right (1); plain output where panning isn't there. */
@@ -419,11 +439,17 @@ export const startSea = (): (() => void) => {
   if (!ctx) return () => undefined;
   let stop: (() => void) | null = null;
   let stopped = false;
-  void load(ctx, "sea").then((buf) => {
-    if (stopped) return;
-    try { stop = buf ? seaFrom(ctx, buf) : madeSea(ctx); } catch { /* no sea, the game goes on */ }
-  });
-  return () => { stopped = true; stop?.(); };
+  const play = (c: AudioContext) => {
+    void load(c, "sea").then((buf) => {
+      if (stopped) return;
+      try { stop = buf ? seaFrom(c, buf) : madeSea(c); } catch { /* no sea, the game goes on */ }
+    });
+  };
+  play(ctx);
+  // the old context was replaced (wake): the sea goes on in the new one
+  const again = () => { if (stopped || !audioCtx) return; try { stop?.(); } catch { /* old one is gone */ } play(audioCtx); };
+  onNewCtx.add(again);
+  return () => { stopped = true; onNewCtx.delete(again); stop?.(); };
 };
 /** A thought kept for later: a small sparkle. */
 export const playKeep = () => {
