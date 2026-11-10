@@ -22,9 +22,10 @@ import { daysAgoIso, getDoorState } from "@/lib/doors";
 import { Tracker } from "@/types/tracker";
 import { track } from "@/lib/analytics";
 
-export type NoteDraft = { id?: string; date: string; text: string; linkedPatternId: string };
+/** linkedPatternIds: the questions it is about, any number (her note, Nov 10 2026: "множественный выбор") */
+export type NoteDraft = { id?: string; date: string; text: string; linkedPatternIds: string[] };
 
-export const newDraft = (date = daysAgoIso(0)): NoteDraft => ({ date, text: "", linkedPatternId: "" });
+export const newDraft = (date = daysAgoIso(0)): NoteDraft => ({ date, text: "", linkedPatternIds: [] });
 
 /** A question's name the way notes show it (door questions by their door name). */
 export const useQuestionName = (trackers: Tracker[]) => {
@@ -77,10 +78,10 @@ export const NoteSheet = ({
     if (!draft) return;
     const text = draft.text.trim();
     if (!text) return;
-    if (draft.id) await updateNote(draft.id, { text, date: draft.date, linkedPatternId: draft.linkedPatternId || undefined });
-    else await addNote({ date: draft.date, text, linkedPatternId: draft.linkedPatternId || undefined });
+    if (draft.id) await updateNote(draft.id, { text, date: draft.date, linkedPatternIds: draft.linkedPatternIds });
+    else await addNote({ date: draft.date, text, linkedPatternIds: draft.linkedPatternIds });
     haptics.success();
-    track("note_saved", { edited: !!draft.id });
+    track("note_saved", { edited: !!draft.id, questions: draft.linkedPatternIds.length });
     setDraft(null);
     window.dispatchEvent(new CustomEvent("memap-notes-changed"));
     onSaved();
@@ -148,9 +149,10 @@ export const NoteSheet = ({
             {trackers.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {trackers.map((tr) => {
-                  const on = draft.linkedPatternId === tr.id;
+                  const on = draft.linkedPatternIds.includes(tr.id);
                   return (
-                    <button key={tr.id} type="button" onClick={() => setDraft({ ...draft, linkedPatternId: on ? "" : tr.id })}
+                    <button key={tr.id} type="button" aria-pressed={on} data-note-q
+                      onClick={() => setDraft({ ...draft, linkedPatternIds: on ? draft.linkedPatternIds.filter((x) => x !== tr.id) : [...draft.linkedPatternIds, tr.id] })}
                       className={cn(chip(on), "block max-w-[240px] truncate leading-[38px]")}>
                       {nameOf(tr.id)}
                     </button>

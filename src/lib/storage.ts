@@ -514,10 +514,23 @@ const migrateRules = async (): Promise<void> => {
   if (seen.size !== before) localStorage.setItem(RULE_MOVES_KEY, JSON.stringify([...seen]));
 };
 
+// A library title reworded with the same meaning: the question she has gets the new name too
+// (her note, Nov 10 2026: "Said yes when meant no" still showed in New note).
+const RENAMED_TITLES: Record<string, string> = {
+  "said yes when meant no": "Agreed to something I didn't want",
+};
+const migrateTitles = async (): Promise<void> => {
+  const trackers = await getTrackers();
+  const now = (t: Tracker) => RENAMED_TITLES[t.title.trim().toLowerCase()];
+  if (!trackers.some(now)) return;
+  await saveTrackers(trackers.map((t) => (now(t) ? { ...t, title: now(t) } : t)));
+};
+
 // Public — call once on app startup. Wraps in try/catch so a
 // corrupted entry can't break the whole app boot.
 export const runStartupMigrations = async (): Promise<void> => {
   try {
+    await migrateTitles();
     await migrateLegacyAdvice();
     await migrateRules();
     await archiveRemoved();

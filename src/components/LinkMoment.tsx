@@ -12,12 +12,11 @@ import { Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { getEntries, getTrackers } from "@/lib/storage";
-import { buildIslands, buildRoutes, mapPicFor, type Route } from "@/lib/islands";
+import { buildIslands, buildRoutes, type Route } from "@/lib/islands";
 import { linkCount, linkHead } from "@/lib/linkText";
 import { firstLinkState, markFirstLinkSeen } from "@/lib/firstLink";
 import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import { track } from "@/lib/analytics";
-import { isPlayful } from "@/lib/playful";
 
 const delay = (s: number): React.CSSProperties => ({ animationDelay: `${s}s` });
 
@@ -145,10 +144,8 @@ export const LinkMoment = () => {
           <p className="mt-1.5 text-[17px] font-bold leading-snug">{head}</p>
           <p className="mt-0.5 text-[15px] font-medium leading-snug text-muted-foreground">{count}</p>
           <div className="mt-3 flex items-center gap-2.5 rounded-[16px] bg-foreground/[0.035] px-3 py-2">
-            {/* the first-link treasure, a camera; a plain link sign with "Games and rewards" off */}
-            {isPlayful()
-              ? <img aria-hidden="true" className="h-9 w-9 object-contain" src={mapPicFor("camera", false)} alt="" />
-              : <Link2 aria-hidden="true" className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />}
+            {/* a link sign: a link is never a gift, and the camera picture here read as one (Nov 10 2026) */}
+            <Link2 aria-hidden="true" className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
             <span className="text-[15px] font-bold">{t("firstLink.found")}</span>
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">

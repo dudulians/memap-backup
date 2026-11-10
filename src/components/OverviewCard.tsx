@@ -6,7 +6,7 @@
 // (one answer for many days at once).
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Tracker, TrackerEntry } from "@/types/tracker";
-import { Note, getNotes } from "@/lib/notes";
+import { Note, getNotes, noteQuestionIds } from "@/lib/notes";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, FileText, ListChecks } from "lucide-react";
 import { cardQuestion } from "@/lib/cardText";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameMonth, isSameDay, isFuture, getYear } from "date-fns";
@@ -19,6 +19,7 @@ import { haptics } from "@/lib/haptics";
 import { isNeutralQuestion } from "@/lib/islands";
 import { getDoorState } from "@/lib/doors";
 import { answerPhrase, cap } from "@/lib/answerPhrases";
+import { ExampleMonth } from "./Examples";
 
 interface OverviewCardProps {
   trackers: Tracker[];
@@ -85,13 +86,15 @@ export const OverviewCard = ({
   const neutral = !!activeTracker && isNeutralQuestion(activeTracker);
   const activeTrackerId = activeTracker?.id;
   const notesForActiveTracker = useMemo(
-    () => notes.filter(n => n.linkedPatternId === activeTrackerId),
+    () => notes.filter(n => noteQuestionIds(n).includes(activeTrackerId)),
     [notes, activeTrackerId]
   );
 
   // Every day with a note gets a dot, whatever the note is about (her
   // note: you should see on the calendar which days have notes).
   const noteDatesSet = useMemo(() => new Set(notes.map((n) => n.date)), [notes]);
+  // less than a week of answered days: an example month shows how it fills
+  const fewDays = useMemo(() => { const ids = new Set(trackers.map((x) => x.id)); return new Set(entries.filter((e) => ids.has(e.trackerId)).map((e) => e.date)).size < 7; }, [trackers, entries]);
 
   const notesForSelectedDate = useMemo(
     () => notesForActiveTracker.filter(n => n.date === selectedDate),
@@ -315,14 +318,14 @@ export const OverviewCard = ({
     <div className="animate-fade-in">
       {/* The question, whole (her note, Nov 8 2026: "в календаре иногда плохо читаются вопросы" —
           a row of chips cut them off at both edges): ‹ the question › and the list on a tap. */}
-      <div ref={chipsContainerRef} className="surface flex items-center gap-1 rounded-[20px] px-1.5 py-1.5" data-no-tabswipe>
+      <div ref={chipsContainerRef} className="surface flex items-center gap-1 rounded-[20px] px-1.5 py-1" data-no-tabswipe>
         {trackers.length > 1 && (
           <button type="button" onClick={() => stepQ(-1)} aria-label={t("overview.prevQ")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground">
             <ChevronLeft className="h-6 w-6" strokeWidth={2.4} />
           </button>
         )}
-        <button type="button" onClick={() => { haptics.tap(); setListOpen((o) => !o); }} aria-expanded={listOpen} className="min-w-0 flex-1 px-1 py-1.5 text-center">
-          <span className="block text-[18px] font-bold leading-snug">{cardQuestion(activeTracker)}</span>
+        <button type="button" onClick={() => { haptics.tap(); setListOpen((o) => !o); }} aria-expanded={listOpen} className="min-w-0 flex-1 px-1 py-1 text-center">
+          <span className="block text-[17px] font-bold leading-snug">{cardQuestion(activeTracker)}</span>
           <span className="mt-0.5 flex items-center justify-center gap-1 text-[13px] font-semibold text-muted-foreground">
             {t("overview.qOf", { k: activeTrackerIndex + 1, n: trackers.length })}
             <ChevronDown className={cn("h-4 w-4 transition-transform", listOpen && "rotate-180")} strokeWidth={2.4} />
@@ -349,16 +352,45 @@ export const OverviewCard = ({
         </div>
       )}
 
-      {/* Month or year. */}
-      <div className="mt-4 flex justify-center">
-        <div className="seg">
+      {/* The month (or the year) and Month | Year on one row, the switch in the same place in both
+          views (her note, Nov 10 2026: the calendar didn't fit — "сузить пространство наверху"). */}
+      <div className="mt-3 flex items-center gap-2">
+        {view === "month" ? (
+          <div className="flex min-w-0 flex-1 items-center">
+            <button
+              type="button"
+              onClick={() => { haptics.tap(); setDisplayMonth((prev) => subMonths(prev, 1)); }}
+              aria-label={t("overview.prevMonth")}
+              className="h-9 w-9 -ml-2 shrink-0 rounded-full flex items-center justify-center text-muted-foreground"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <p data-month-title className="min-w-0 flex-1 truncate text-center text-[15px] font-semibold text-muted-foreground">{monthTitle}</p>
+            <button
+              type="button"
+              onClick={() => { if (canGoNextMonth) { haptics.tap(); setDisplayMonth((prev) => addMonths(prev, 1)); } }}
+              disabled={!canGoNextMonth}
+              aria-label={t("overview.nextMonth")}
+              className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-muted-foreground disabled:opacity-30"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <p className="min-w-0 flex-1 text-center text-[15px] font-semibold text-muted-foreground">
+            {getYear(yearData[0]?.monthDate ?? today) === getYear(today)
+              ? getYear(today)
+              : `${getYear(yearData[0].monthDate)}–${getYear(today)}`}
+          </p>
+        )}
+        <div className="seg shrink-0">
           {(["month", "year"] as const).map((v) => (
             <button
               key={v}
               type="button"
               aria-pressed={view === v}
               onClick={() => { haptics.tap(); setView(v); setMulti(false); setPicked(new Set()); }}
-              className={cn("chip min-w-[96px]", view === v && "is-on")}
+              className={cn("chip min-w-[64px] !px-3", view === v && "is-on")}
             >
               {t(`overview.${v}`)}
             </button>
@@ -368,11 +400,6 @@ export const OverviewCard = ({
 
       {view === "year" && (
         <div className="animate-fade-in">
-          <p className="mt-5 text-center text-[15px] font-semibold text-muted-foreground">
-            {getYear(yearData[0]?.monthDate ?? today) === getYear(today)
-              ? getYear(today)
-              : `${getYear(yearData[0].monthDate)}–${getYear(today)}`}
-          </p>
           <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-4">
             {yearData.map(({ monthDate, label, days }) => (
               <button
@@ -408,41 +435,21 @@ export const OverviewCard = ({
 
       {view === "month" && (
       <div ref={swipeAreaRef} style={{ touchAction: "pan-y" }}>
-        {/* Month + the one number that matters */}
-        <div className="mt-4 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => { haptics.tap(); setDisplayMonth((prev) => subMonths(prev, 1)); }}
-            aria-label={t("overview.prevMonth")}
-            className="h-9 w-9 -ml-2 rounded-full flex items-center justify-center text-muted-foreground"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <p className="flex-1 text-center text-[15px] font-semibold text-muted-foreground">{monthTitle}</p>
-          <button
-            type="button"
-            onClick={() => { if (canGoNextMonth) { haptics.tap(); setDisplayMonth((prev) => addMonths(prev, 1)); } }}
-            disabled={!canGoNextMonth}
-            aria-label={t("overview.nextMonth")}
-            className="h-9 w-9 -mr-2 rounded-full flex items-center justify-center text-muted-foreground disabled:opacity-30"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        {/* the one number that matters (the month is on the row above) */}
         <p className="mt-2 flex items-baseline gap-2.5">
-          <span className="text-[56px] leading-none font-bold tracking-tight tabular-nums">{monthCount}</span>
+          <span className="text-[44px] leading-none font-bold tracking-tight tabular-nums">{monthCount}</span>
           <span className="text-xl font-semibold">{countLabel}</span>
         </p>
-        <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{countWhat}</p>
+        <p className="mt-0.5 text-[17px] font-semibold leading-snug text-muted-foreground">{countWhat}</p>
 
-        <div className="mt-5 grid grid-cols-7">
+        <div className="mt-2.5 grid grid-cols-7">
           {Array.from({ length: 7 }, (_, i) => (
             <span key={i} className="text-center text-[13px] font-semibold uppercase text-muted-foreground">
               {/* RU two letters: «В» and «С» were each two days (QA, Nov 8 2026) */}{format(addDays(MONDAY, i), dateLocale ? "EEEEEE" : "EEEEE", { locale: dateLocale })}
             </span>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-7 gap-y-2">
+        <div className="mt-1.5 grid grid-cols-7 gap-y-1.5">
           {calendarDays.map((day) => (
             <div key={day.dateStr} className="flex items-center justify-center">
               {day.isCurrentMonth ? (
@@ -486,6 +493,9 @@ export const OverviewCard = ({
             {t("overview.noteDayKey")}
           </p>
         )}
+
+        {/* how a month fills, marked as an example, while she has less than a week of answers (her note, Nov 10 2026) */}
+        {fewDays && <div className="mt-4"><ExampleMonth /></div>}
 
         {/* Select several days: one answer for many days at once. */}
         {onBulkAnswer && !multi && (

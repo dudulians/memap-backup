@@ -7,12 +7,14 @@ import { Pressable } from "@/components/ui/pressable";
 import { OBSERVE_TIPS } from "@/lib/observeTipsData";
 import { markTip } from "@/lib/observeTips";
 import { ensureTemplates, findTemplate } from "@/lib/doors";
-import { templateQuestion } from "@/lib/cardText";
+import { cardQuestion, templateQuestion } from "@/lib/cardText";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
 import { track, useScreen } from "@/lib/analytics";
+import type { Tracker } from "@/types/tracker";
 
-export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: () => void }) => {
+/** `because`: her question the tip is about (Nov 10 2026: she couldn't see why a coffee tip came) */
+export const ObserveTipSheet = ({ id, because, onClose }: { id: string | null; because?: Tracker; onClose: () => void }) => {
   const { t, i18n } = useTranslation();
   const [added, setAdded] = useState(false);
   useScreen("tip", !!id);
@@ -38,6 +40,11 @@ export const ObserveTipSheet = ({ id, onClose }: { id: string | null; onClose: (
           <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             <BookOpen className="h-4 w-4" strokeWidth={2.4} /> {t("tipDay.step")}
           </p>
+          {because && (
+            <p data-tip-because className="mt-2 text-[15px] font-semibold leading-snug text-muted-foreground">
+              {t("tipDay.because")} <span className="text-foreground">{cardQuestion(because)}</span>
+            </p>
+          )}
           <p className="mt-2 text-[24px] font-bold leading-tight tracking-tight">{words.title}</p>
           <p className="mt-2 text-[17px] font-medium leading-snug">{words.line}</p>
           {question && (

@@ -61,6 +61,42 @@ interface BottomSheetProps {
   layer?: string;
 }
 
+const NOT_TEXT = new Set(["checkbox", "radio", "range", "button", "submit", "reset", "file", "color", "image"]);
+const isTextField = (el: Element | null) =>
+  el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && !NOT_TEXT.has(el.type)) || (el instanceof HTMLElement && el.isContentEditable);
+
+/**
+ * vaul shrinks a sheet to the space above the keyboard with an inline height, and gives the height back
+ * only while a text field still has focus. So once the keyboard was put away the sheet stayed short until
+ * the text was tapped again (her note, Nov 10 2026, New note: "окно уменьшается и не вытягивается опять
+ * вверх"). With no text field in focus the sheet goes back to its own height.
+ */
+const useHeightBackAfterKeyboard = (open: boolean, ref: React.RefObject<HTMLDivElement>) => {
+  React.useEffect(() => {
+    if (!open) return;
+    let timer: number | undefined;
+    const back = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const el = ref.current;
+        if (!el || isTextField(document.activeElement)) return;
+        el.style.height = "";
+        el.style.bottom = "";
+      }, 120);
+    };
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", back);
+    window.addEventListener("resize", back);
+    document.addEventListener("focusout", back);
+    return () => {
+      window.clearTimeout(timer);
+      vv?.removeEventListener("resize", back);
+      window.removeEventListener("resize", back);
+      document.removeEventListener("focusout", back);
+    };
+  }, [open, ref]);
+};
+
 export const BottomSheet = ({
   open,
   onOpenChange,
@@ -71,7 +107,10 @@ export const BottomSheet = ({
   scaleBackground = false,
   ariaTitle,
   layer,
-}: BottomSheetProps) => (
+}: BottomSheetProps) => {
+  const contentRef = React.useRef<HTMLDivElement>(null);
+  useHeightBackAfterKeyboard(open, contentRef);
+  return (
   <DrawerPrimitive.Root
     open={open}
     onOpenChange={onOpenChange}
@@ -98,6 +137,7 @@ export const BottomSheet = ({
     <DrawerPrimitive.Portal>
       <DrawerPrimitive.Overlay className={cn("fixed inset-0 z-50 bg-black/40", layer)} />
       <DrawerPrimitive.Content
+        ref={contentRef}
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-background shadow-2xl outline-none",
           // Default cap. Consumer can override with `className` since
@@ -145,7 +185,8 @@ export const BottomSheet = ({
       </DrawerPrimitive.Content>
     </DrawerPrimitive.Portal>
   </DrawerPrimitive.Root>
-);
+  );
+};
 
 // Re-export some primitives in case a callsite needs more direct access
 // (e.g. a programmatic close button inside the body).

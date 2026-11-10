@@ -19,6 +19,7 @@ import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments,
 import { cn } from "@/lib/utils";
 import { smooth } from "./ChartViews";
 import { doneActions } from "@/lib/actionLog";
+import { glows, markGlowSeen, type GlowPart } from "@/lib/glowHints";
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -136,14 +137,23 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
   const tried = finishedExperiments().length;
   // the test that ends first: how many days it has left
   const endsIn = running.length ? Math.min(...running.map((x) => Math.max(0, EXPERIMENT_DAYS - experimentDay(x) + 1))) : 0;
+  // the parts glow until each is opened once, after the World tab itself (glowHints.ts, her note Nov 10 2026)
+  const [, setGlowTick] = useState(0);
+  useEffect(() => {
+    const on = () => setGlowTick((k) => k + 1);
+    window.addEventListener("memap-glow-changed", on);
+    return () => window.removeEventListener("memap-glow-changed", on);
+  }, []);
+  const answered = entries.length > 0;
+  const glowOf = (p: GlowPart) => (glows(p, answered) ? " glow-hint" : "");
   const card = "surface flex min-w-0 flex-1 flex-col items-start rounded-[16px] px-2 pb-2 pt-1.5 text-left active:scale-[0.97] transition-transform";
-  const open = (s: "overview" | "trends" | "signals" | "findings") => { haptics.tap(); onOpen(s); };
+  const open = (s: "overview" | "trends" | "signals" | "findings") => { haptics.tap(); markGlowSeen(s === "trends" ? "overview" : s); onOpen(s); };
   const head = (k: string) => <span className="line-clamp-2 min-h-[30px] text-[12.5px] font-bold leading-[1.2]">{t(k)}</span>;
   const sub = (s: string) => <span className="mt-0.5 line-clamp-3 w-full text-[11px] font-semibold leading-[1.2] text-muted-foreground [hyphens:auto]">{s}</span>;
 
   return (
     <div className="flex gap-1.5 px-4">
-      <button type="button" className={card} onClick={() => open("overview")} data-tour="calendar">
+      <button type="button" className={card + glowOf("overview")} onClick={() => open("overview")} data-tour="calendar">
         {head("world4.myDays")}
         <span className="mt-1 grid grid-cols-7 gap-[2.5px]" aria-hidden="true">
           {twoWeeks.map((m, i) => {
@@ -155,7 +165,7 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
         </span>
         {sub(t("world4.last2weeks"))}
       </button>
-      <button type="button" className={card} onClick={() => open("findings")} data-tour="links-card">
+      <button type="button" className={card + glowOf("findings")} onClick={() => open("findings")} data-tour="links-card">
         {head("world4.links")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
           <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links > 0 ? links : null}
@@ -163,14 +173,14 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
         {/* whole words, no "0 · …" or "12 found" (QA, Nov 8 2026) */}
         {sub(links > 0 ? t("world4.found", { count: links }) : t("world4.soon"))}
       </button>
-      <button type="button" className={card} onClick={() => open("signals")} data-tour="actions">
+      <button type="button" className={card + glowOf("signals")} onClick={() => open("signals")} data-tour="actions">
         {head("world4.whenToAct")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
           <img src={mapPic("lighthouse")} alt="" width={14} height={18} className={lit > 0 ? "drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" : "opacity-60 grayscale"} />{lit > 0 ? lit : null}
         </span>
         {sub(lit > 0 ? t("world4.needYou", { count: lit }) : shaping ? t("world4.shaping") : rules > 0 ? t("world4.noneYet") : t("world4.setRule"))}
       </button>
-      <button type="button" className={card} onClick={() => { haptics.tap(); onHelps?.(); }} data-tour="helps">
+      <button type="button" className={card + glowOf("helps")} onClick={() => { haptics.tap(); markGlowSeen("helps"); onHelps?.(); }} data-tour="helps">
         {head("world4.whatHelps")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[15px] font-bold tabular-nums">
           <Sprout className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />

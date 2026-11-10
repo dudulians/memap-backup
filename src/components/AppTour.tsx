@@ -295,7 +295,7 @@ const NoteExample = () => {
 const Treasures = () => (
   <Box>
     <div className="flex items-end justify-around" aria-hidden="true">
-      {["hot_air_balloon", "camera", "bicycle", "house", "moon_and_stars"].map((p, i) => <img key={p} className="tour-pop h-11 w-11 object-contain" style={delay(0.3 + i * 0.2)} src={mapPicFor(p, false)} alt="" />)}
+      {["moon_and_stars", "airplane", "chest_open_map", "rainbow", "zen_stones"].map((p, i) => <img key={p} className="tour-pop h-11 w-11 object-contain" style={delay(0.3 + i * 0.2)} src={mapPicFor(p, false)} alt="" />)}
     </div>
   </Box>
 );

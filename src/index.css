@@ -2480,7 +2480,10 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .planet-isle .treasure img { width: 100%; filter: drop-shadow(0 3px 4px rgba(20, 60, 100, .22)); }
 .planet-isle .treasure.stand { width: 15%; }
 .planet-isle .treasure.stand.it-bicycle { width: 18%; }
-.planet-isle .treasure.stand.it-balloon { width: 11%; }
+/* bigger (her note, Nov 10 2026: "воздушный шар можно побольше") */
+.planet-isle .treasure.stand.it-balloon { width: 16%; }
+/* the easel smaller (her note, Nov 10 2026: "картина какая-то странная, её можно подуменьшить") */
+.planet-isle .treasure.stand.it-easel { width: 10%; }
 .planet-isle .treasure.stand.it-books { width: 12%; }
 .planet-isle .treasure.stand.it-house { width: 24%; }
 .planet-isle .treasure.stand.it-tent { width: 21%; }
@@ -2490,10 +2493,21 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .planet-isle .treasure.stand.it-lavender { width: 13%; }
 /* her garden: a tree for each finished test, behind the rest */
 .planet-isle .stand.tree { width: 17%; }
-.planet-isle .treasure.t-sky.it-moon { left: 70%; top: -28%; width: 20%; }
+/* the sky items close over their island (her note, Nov 10 2026: "подарки влезают на остров красиво?"): the plane
+   flew far off, the moon touched the flag on the wide meadow */
+.planet-isle .treasure.t-sky.it-moon { left: 76%; top: -26%; width: 20%; }
 .planet-isle .treasure.t-sky { left: 40%; top: -40%; width: 18%; }
 .planet-isle .treasure.t-sky.it-rainbow { left: 4%; top: -30%; width: 92%; z-index: -1; }
-.planet-isle .treasure.t-sky.it-airplane { left: 58%; top: -52%; width: 22%; }
+.planet-isle .treasure.t-sky.it-airplane { left: 64%; top: -40%; width: 20%; }
+/* the stone arch has its lighthouse up top: the moon stays right of it */
+.planet-isle[data-art="14_stone_arch"] .treasure.t-sky.it-moon { left: 84%; }
+/* no flag on the top of these two: the plane can fly lower, closer to its island */
+.planet-isle:is([data-art="17_lavender_garden"], [data-art="19_grassy_terraces"]) .treasure.t-sky.it-airplane { top: -22%; }
+/* tall islands (a tree fills the top of the picture): the rainbow stands behind the tree with its feet on the
+   ground, the moon and the plane just over the crown, not far up in the air */
+.planet-isle:is([data-art="11_sakura"], [data-art="20_tropical_palms"], [data-art="24_oak_tree"]) .treasure.t-sky.it-rainbow { top: -16%; }
+.planet-isle:is([data-art="11_sakura"], [data-art="20_tropical_palms"], [data-art="24_oak_tree"]) .treasure.t-sky.it-moon { left: 76%; top: -6%; }
+.planet-isle:is([data-art="11_sakura"], [data-art="20_tropical_palms"], [data-art="24_oak_tree"]) .treasure.t-sky.it-airplane { left: 66%; top: -10%; }
 /* sparkles: a small glint low over the island, not up in the air */
 .planet-isle .treasure.t-sky.it-sparkles { left: 56%; top: 2%; width: 11%; }
 .planet-isle .treasure.is-ghost { opacity: .5; filter: grayscale(1); }
@@ -2570,3 +2584,12 @@ svg .tour-pop { transform-box: fill-box; transform-origin: center; }
 .kind-question { color: hsl(var(--data-a)); }
 .kind-finding { color: hsl(28 78% 42%); }
 html[data-theme="aurora"] .kind-finding { color: hsl(38 90% 62%); }
+
+/* A light tour without words (glowHints.ts, her note Nov 10 2026): after the first evening the World tab glows
+   until it is opened, then the World's four parts glow until each is opened once. Teal: something to do. */
+.glow-hint { position: relative; }
+.glow-hint::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2.5px hsl(var(--coin-teal) / .75), 0 0 18px 3px hsl(var(--coin-teal) / .5);
+  animation: glowHint 2.2s ease-in-out infinite; }
+@keyframes glowHint { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .glow-hint::after { animation: none; opacity: .85; } }

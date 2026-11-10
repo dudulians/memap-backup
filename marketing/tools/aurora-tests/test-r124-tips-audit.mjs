@@ -24,16 +24,20 @@ const TITLES = ["Late coffee", "Same wake-up time", "Worries at bedtime", "Morni
   const c = await p.evaluate(async () => {
     const d = await import("/src/lib/observeTipsData.ts"), o = await import("/src/lib/observeTips.ts");
     const T = d.OBSERVE_TIPS;
-    // 60 days of picks for someone with no questions: held tips never come
+    // 60 days of picks: held tips never come
     const picks = new Set();
-    for (let i = 0; i < 60; i++) { const day = new Date(2026, 10, 10 + i); const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`; const r = o.tipForToday([], iso); if (r) { picks.add(r.tip.templateId); o.markTip(r.tip.id, "later"); } }
+    const dz = await import("/src/lib/doors.ts");
+    // since v129 a tip comes only for a question of hers it talks about: someone with a wide set of questions
+    const W = ["woke-at-night", "felt-happy", "headache", "heartburn", "felt-anxious", "outside-30min", "felt-lonely", "felt-close-to-partner", "felt-overwhelmed-parenting", "main-thing-done", "smoked-hookah", "had-energy"]
+      .map((q) => { const f = dz.findTemplate(q); return { id: `w-${q}`, title: f.template.title, questionText: f.template.questionText, category: f.template.category, cluster: f.clusterId, archived: false }; });
+    for (let i = 0; i < 60; i++) { const day = new Date(2026, 10, 10 + i); const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`; const r = o.tipForToday(W, iso); if (r) { picks.add(r.tip.templateId); o.markTip(r.tip.id, "later"); } }
     return { n: T.length, titles: T.map((x) => x.en.title), reviewed: T.filter((x) => x.review?.status).length, held: T.filter((x) => x.review?.status === "held").map((x) => x.templateId),
       sources: T.every((x) => x.source?.name && x.source?.url), en: T.map((x) => `${x.en.title}. ${x.en.line}`).join(" | "), ru: T.map((x) => `${x.ru.title}. ${x.ru.line}`).join(" | "), picks: [...picks] };
   });
   ok("36 tips, in order, with the brief's titles", c.n === 36 && c.titles.join("|") === TITLES.join("|"), c.titles.filter((x, i) => x !== TITLES[i]));
   ok("every tip has a review status and keeps its source inside", c.reviewed === 36 && c.sources, { reviewed: c.reviewed, sources: c.sources });
   ok("tips 6 and 33 are held", c.held.join() === "hobby-time,stomach-issues", c.held);
-  ok("held tips are never picked (60 days)", !c.picks.includes("hobby-time") && !c.picks.includes("stomach-issues") && c.picks.length >= 30, c.picks.length);
+  ok("held tips are never picked (60 days)", !c.picks.includes("hobby-time") && !c.picks.includes("stomach-issues") && c.picks.length >= 25, c.picks.length);
   ok("no 2 pm / four-cup / 7,000-step / 400 mg numbers in the copy", !/\b2 ?pm\b|14:00|four cups|4 cups|7,?000|400 ?mg/i.test(c.en + c.ru), (c.en + c.ru).match(/\b2 ?pm\b|14:00|four cups|4 cups|7,?000|400 ?mg/i));
   ok("no cause words (proves / will improve / causes)", !/\bproves?\b|will improve|\bcauses\b/i.test(c.en), c.en.match(/\bproves?\b|will improve|\bcauses\b/i));
   ok("RU copy is gender-free", !/\((а|ась|ла|ой)\)/.test(c.ru), c.ru.match(/\S+\((а|ась|ла|ой)\)/));

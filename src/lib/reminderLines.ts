@@ -14,7 +14,8 @@ import { LINKS_AT, countedDays, reportInOn } from "@/lib/pathSteps";
 import { isPlayful } from "@/lib/playful";
 
 /** Treasures that come with evenings (the others need something else done). */
-const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house"];
+// the camera too since Nov 10 2026: it comes at 100 days now, the last treasure
+const DAILY: ItemId[] = ["balloon", "airplane", "tent", "suitcase", "bicycle", "moon", "house", "camera"];
 
 /** Progress lines, closest first (at most five). */
 export const progressLines = (trackers: Tracker[], entries: TrackerEntry[], notes: number, opts: { weekReport?: boolean; at?: Date } = {}): string[] => {

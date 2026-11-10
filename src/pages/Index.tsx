@@ -23,6 +23,8 @@ import { GrowMoment } from "@/components/GrowMoment";
 import { WorldBegun } from "@/components/WorldBegun";
 import { ShareWorld } from "@/components/ShareWorld";
 import { DoctorReport } from "@/components/DoctorReport";
+import { getEntries } from "@/lib/storage";
+import { glows, markGlowSeen } from "@/lib/glowHints";
 
 // "cards" is the Today tab (door hero, tonight's button, the question
 // list); Yes/No answers live only in the evening session. Since 1.8.0 the
@@ -47,6 +49,17 @@ const Index = () => {
   tabRef.current = activeTab;
   // the tab underneath, for "where she left" and the screens she opens (Nov 8 2026)
   useEffect(() => { setBaseScreen(`tab:${activeTab}`); track("screen_viewed", { screen: `tab:${activeTab}` }); }, [activeTab]);
+  // The World tab glows after her first evening until she opens it (glowHints.ts, her note Nov 10 2026)
+  const [worldGlow, setWorldGlow] = useState(false);
+  useEffect(() => {
+    if (activeTab === "patterns") markGlowSeen("world");
+    let live = true;
+    const check = async () => { const es = await getEntries(); if (live) setWorldGlow(glows("world", es.length > 0)); };
+    check();
+    window.addEventListener("memap-entries-changed", check);
+    window.addEventListener("memap-glow-changed", check);
+    return () => { live = false; window.removeEventListener("memap-entries-changed", check); window.removeEventListener("memap-glow-changed", check); };
+  }, [activeTab]);
   // Her questions open from the Map (her note, Nov 3 2026: in the tab bar
   // they looked like a place she must visit); Back returns there.
   const [questionsFrom, setQuestionsFrom] = useState<Tab>("patterns");
@@ -424,7 +437,9 @@ const Index = () => {
                 className={`
                   flex flex-col items-center justify-center py-2.5 px-2 m-1 rounded-[20px] transition-all duration-300 active:scale-90
                   ${(activeTab === "questions" ? questionsFrom : activeTab) === tab ? "text-foreground bg-muted shadow-sm" : "text-muted-foreground hover:text-foreground"}
+                  ${tab === "patterns" && worldGlow && activeTab !== "patterns" ? "glow-hint text-foreground" : ""}
                 `}
+                data-glow={tab === "patterns" && worldGlow && activeTab !== "patterns" ? "" : undefined}
               >
                 <Icon className="h-5 w-5 mb-0.5" />
                 <span className="text-[11px] font-medium">{label}</span>

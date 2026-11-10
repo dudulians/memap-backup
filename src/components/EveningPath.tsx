@@ -33,6 +33,7 @@ import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
+import { tipFor } from "@/lib/observeTips";
 import { buildIslands, buildRoutes } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -618,8 +619,52 @@ export const EveningPath = ({
       const d = box.getBoundingClientRect().top + stops[focus].y - (main.getBoundingClientRect().top + mid.current);
       if (firstTime) { main.scrollTop += d; frameRef.current(); }
       else if (Math.abs(d) > 2) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
+      if (!firstTime) return;
+      // On the phone what stands above the path (the week's card, pictures, the safe area) can still
+      // settle after this first placement and push her step below the middle, its card under the tabs
+      // (her note, Nov 10 2026: "делает не посередине, а чуть ниже… перекрывает нижняя плашка").
+      // For the first moments, until she scrolls herself, her step comes back to the middle.
+      const settle = () => {
+        if (modeRef.current === "hand") return;
+        const b2 = boxRef.current;
+        if (!b2) return;
+        measure(main);
+        const d2 = b2.getBoundingClientRect().top + stopsRef.current[focusIdxRef.current].y - (main.getBoundingClientRect().top + mid.current);
+        if (Math.abs(d2) > 6) { main.scrollTop += d2; frameRef.current(); }
+      };
+      const ro = new ResizeObserver(settle);
+      if (main.firstElementChild) ro.observe(main.firstElementChild);
+      ro.observe(main);
+      const timers = [250, 700, 1500].map((ms) => window.setTimeout(settle, ms));
+      window.setTimeout(() => { ro.disconnect(); timers.forEach(clearTimeout); }, 2500);
     });
   }, [hasPath, focus]); // eslint-disable-line react-hooks/exhaustive-deps
+  const stopsRef = useRef(stops);
+  stopsRef.current = stops;
+  const focusIdxRef = useRef(focus);
+  focusIdxRef.current = focus;
+
+  // An opened card stands whole between the header and the tabs: it was cut by the tab bar
+  // (her note, Nov 10 2026). Measured once it is drawn, its light included.
+  useEffect(() => {
+    if (typeof open !== "number") return;
+    const raf = requestAnimationFrame(() => {
+      const card = bubbleRef.current?.parentElement, main = boxRef.current?.closest("main");
+      const light = boxRef.current?.querySelector(`[data-path-stop="${open}"]`);
+      if (!card || !main) return;
+      const r = card.getBoundingClientRect(), l = light?.getBoundingClientRect();
+      const mr = main.getBoundingClientRect();
+      const top = Math.min(r.top, l?.top ?? r.top), bottom = Math.max(r.bottom, l?.bottom ?? r.bottom);
+      const roomTop = mr.top + 32;
+      // above the tabs and clear of the fade at the bottom of the screen (its last 120px, Index.tsx)
+      const roomBottom = mr.bottom - Math.max((parseFloat(getComputedStyle(main).scrollPaddingBottom) || 0) + 14, 124);
+      let d = 0;
+      if (bottom > roomBottom) d = bottom - roomBottom;
+      if (top - d < roomTop) d = top - roomTop;
+      if (Math.abs(d) > 4) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** How far a stop is from the middle of the screen. */
   const toMiddle = (i: number) => {
@@ -627,13 +672,7 @@ export const EveningPath = ({
     if (!box || !main) return null;
     return { main, d: box.getBoundingClientRect().top + stops[i].y - (main.getBoundingClientRect().top + mid.current) };
   };
-  // A light tapped low on the screen comes up, so its card isn't under the tabs.
-  const bringUp = (i: number) => {
-    const at = toMiddle(i);
-    if (!at || at.d < mid.current * 0.35) return;
-    modeRef.current = "auto";
-    at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
-  };
+  // (a light tapped low on the screen comes up: the opened-card effect above scrolls it whole into view)
   const backToStep = () => {
     const el = focusRef.current, at = toMiddle(focus);
     if (!el || !at) return;
@@ -717,7 +756,6 @@ export const EveningPath = ({
       setWiggle(i);
       window.setTimeout(() => setWiggle((w) => (w === i ? null : w)), 450);
     }
-    if (open !== i) bringUp(i);
     setOpen((o) => (o === i ? null : i));
   };
 
@@ -1310,7 +1348,7 @@ export const EveningPath = ({
           onClose={() => { setTestOpen(null); setTick((k) => k + 1); }} />
       )}
 
-      <ObserveTipSheet id={tipOpen} onClose={() => { setTipOpen(null); setTick((k) => k + 1); }} />
+      <ObserveTipSheet id={tipOpen} because={tipOpen ? trackers.find((tr) => tr.id === tipFor(tipOpen)) : undefined} onClose={() => { setTipOpen(null); setTick((k) => k + 1); }} />
 
       <ReasonSheet items={whyItems} mode="ask" trackers={trackers} entries={entries} onClose={() => { setWhyItems(null); setTick((k) => k + 1); }} />
 

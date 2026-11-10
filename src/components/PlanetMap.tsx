@@ -9,7 +9,7 @@ import { CloudLightning, CloudSun, Link2, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, mapPicFor } from "@/lib/islands";
 import { ASPECT, STAGE_SCALE, alongCurve, art, artOf, ringOrder, routeDots, stageOf, type RouteDot, type WakePoint } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
-import { standAt } from "@/lib/islandSpots";
+import { standAt, standsOn } from "@/lib/islandSpots";
 import type { PlacedTreasure } from "@/lib/growth";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
@@ -137,7 +137,7 @@ export const PlanetMap = ({ islands, routes, inner, width, lit, main = null, day
         return (
           <button key={isl.id} type="button" aria-label={islandName(t, isl.id)}
             onClick={(e) => { haptics.tap(); playBloop(Math.min(1, Math.max(0, x / W))); const el = e.currentTarget; el.classList.add("on"); window.setTimeout(() => { el.classList.remove("on"); onOpen(isl.id); }, 150); }}
-            data-isle={isl.id}
+            data-isle={isl.id} data-art={name}
             className={`planet-isle planet-map-isle island-press absolute z-[2]${isl.id === main ? " is-main" : ""}`} style={{ left: x - size / 2, top: y - h * 0.7, width: size }}>
             {isl.id === main && <span className="main-glow" aria-hidden="true" />}
             <span className="ring" />
@@ -149,7 +149,7 @@ export const PlanetMap = ({ islands, routes, inner, width, lit, main = null, day
             ))}
             {lit?.has(isl.id) && <span className="stand lighthouse" style={standAt(name, "light")}><img className="art-day" src={mapPicFor("lighthouse", false)} alt="" /><img className="art-night" src={mapPicFor("lighthouse", true)} alt="" /></span>}
             {stage === 4 && <span className="stand flag" style={standAt(name, "flag")}><img className="art-day" src={mapPicFor("marker_flag", false)} alt="" /><img className="art-night" src={mapPicFor("marker_flag", true)} alt="" /></span>}
-            {treasures?.get(isl.id)?.map((tr) => (
+            {treasures?.get(isl.id)?.filter((tr) => standsOn(name, tr.id)).map((tr) => (
               <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(name, tr.slot) : undefined}><img className="art-day" src={mapPicFor(tr.pic, false)} alt="" /><img className="art-night" src={mapPicFor(tr.pic, true)} alt="" /></span>
             ))}
             {inner?.get(isl.id) && (

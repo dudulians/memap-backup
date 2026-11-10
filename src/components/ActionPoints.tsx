@@ -42,6 +42,7 @@ import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { SupportSheet } from "@/components/SupportSheet";
 import { isPlayful } from "@/lib/playful";
 import { alreadyDoing } from "@/lib/alreadyDoing";
+import { ExampleRule, ExampleTest } from "./Examples";
 
 /** "I'll try": the week's test to start, for the screen that holds the sheets. */
 export interface TryAction { island: IslandId; plan: string; trackerId: string; k: number }
@@ -307,6 +308,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       <div className="surface rounded-[22px] px-5 py-5 animate-fade-in">
         <p className="text-[18px] font-bold leading-snug">{t("rules.noneTitle")}</p>
         <p className="mt-1 text-[15px] font-medium text-muted-foreground">{t("rules.noneLine")}</p>
+        <div className="mt-4"><ExampleRule /></div>
       </div>
     );
   }
@@ -334,6 +336,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             ))}
           </div>
           <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("rules.evenings", { k: evenings, count: SHAPING_EVENINGS })}</p>
+          {/* what a reached rule will look like, marked as an example (her note, Nov 10 2026) */}
+          <div className="mt-4"><ExampleRule /></div>
         </div>
       ) : (
         // never "Nothing to do now" over a partner who shouted or said hurtful things (persona walk, Nov 9 2026)
@@ -767,7 +771,10 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
         </button>
       ))}
       {running.length === 0 && tried.length === 0 && done.length === 0 && (
-        <p className="surface rounded-[22px] px-5 py-4 text-[17px] font-semibold leading-snug">{t("helps.empty")}</p>
+        <>
+          <p className="surface rounded-[22px] px-5 py-4 text-[17px] font-semibold leading-snug">{t("helps.empty")}</p>
+          <ExampleTest />
+        </>
       )}
       <button type="button" onClick={() => { haptics.tap(); onPick(); }} className="raised-btn w-full justify-center gap-2">
         <FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("experiment.title")}

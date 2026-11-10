@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { CloudLightning, CloudSun, Link2, Minus, Plus, Sun } from "lucide-react";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
-import { standAt } from "@/lib/islandSpots";
+import { standAt, standsOn } from "@/lib/islandSpots";
 import { playBloop } from "@/lib/feedback";
 import planetDay from "@/assets/globe/planet-day.webp";
 import planetNight from "@/assets/globe/planet-night.webp";
@@ -554,7 +554,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           const W = th.island?.weather ? WEATHER_ICON[th.island.weather] : null;
           return (
             <div key={th.key}>
-              <div ref={(el) => { elOf(th.key).el = el; }} data-isle={th.kind === "area" ? th.key : undefined}
+              <div ref={(el) => { elOf(th.key).el = el; }} data-isle={th.kind === "area" ? th.key : undefined} data-art={th.kind === "area" ? th.name : undefined}
                 className={`planet-isle ${th.kind === "boat" ? "planet-boat" : ""} ${th.kind === "sky" ? "planet-cloud" : ""} ${on === th.key ? "on" : ""} ${th.kind === "area" && th.key === main ? "is-main" : ""}`} style={{ opacity: 0 }}>
                 {th.kind === "area" && th.key === main && <span className="main-glow" aria-hidden="true" />}
                 {th.kind === "area" && <div className="ring" />}
@@ -568,7 +568,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
                 ))}
                 {th.lit && <span className="stand lighthouse" style={standAt(th.name, "light")}><img src={mapPic("lighthouse")} alt="" /></span>}
                 {th.flag && <span className="stand flag" style={standAt(th.name, "flag")}><img src={mapPic("marker_flag")} alt="" /></span>}
-                {th.island && treasures?.get(th.island.id)?.map((tr) => (
+                {th.island && treasures?.get(th.island.id)?.filter((tr) => standsOn(th.name, tr.id)).map((tr) => (
                   <span key={tr.id} className={`treasure t-${tr.slot} it-${tr.id}${tr.ghost ? " is-ghost" : ""}${tr.slot !== "sky" ? " stand" : ""}`} style={tr.slot !== "sky" ? standAt(th.name, tr.slot) : undefined}><img src={mapPic(tr.pic)} alt="" /></span>
                 ))}
               </div>

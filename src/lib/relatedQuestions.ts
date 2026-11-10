@@ -1680,7 +1680,7 @@ const TEMPLATE_KEYWORDS: Array<[string, string[]]> = [
   ["snapped-at-loved-ones", ["сорвал на близ", "повысил голос на близ", "snapped at"]],
   ["calm-day", ["без раздраж", "calm day", "no irritation"]],
   ["isolated-at-home", ["весь день один дома", "не выход", "isolated at home"]],
-  ["said-yes-when-meant-no", ["сказал да хотел нет", "согласил против", "said yes meant no"]],
+  ["said-yes-when-meant-no", ["сказал да хотел нет", "согласил против", "said yes meant no", "said yes when meant no", "agreed to something i didn't want"]],
   ["laughed-uncontrollably", ["ржал до слёз", "ржал до слез", "смеял до слёз", "laughed uncontrol", "couldn't stop laugh"]],
   ["envied-on-social", ["завид", "envy", "envied"]],
   ["felt-not-like-others", ["не как все", "not like everyone"]],

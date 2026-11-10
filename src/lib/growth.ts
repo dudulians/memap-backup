@@ -76,23 +76,26 @@ export const growthLand = (kinds: GrowthKind[], land: [string, number, number, n
 export type ItemId = "balloon" | "camera" | "signpost" | "books" | "sparkles" | "bicycle" | "easel" | "rainbow" | "airplane"
   // from her pack, Nov 5 2026 ("возьми все возможные трежерс")
   | "moon" | "chest" | "zen" | "lavender" | "house" | "tent" | "suitcase";
+// In the order they usually come. Her note, Nov 10 2026: the camera came first and made no sense ("не
+// понимаю, почему он… уж лучше радугу, самолетик, сундучок, камушки, звездочки, книжки… а не камеру"):
+// the first gifts are the moon and stars (3 evenings) and the plane (7 evenings); the camera is the last one.
 export const ITEMS: { id: ItemId; pic: string }[] = [
+  { id: "moon", pic: "moon_and_stars" }, // 3 evenings in a row (was 7; the camera's until Nov 10 2026)
   { id: "balloon", pic: "hot_air_balloon" }, // a first full week
-  { id: "camera", pic: "camera" }, // 3 evenings in a row (Nov 7 2026: never a gift for a link — "орали на ребёнка → камера")
-  { id: "signpost", pic: "wooden_signpost" }, // a new island opened
-  { id: "books", pic: "books" }, // 10 notes
-  { id: "sparkles", pic: "sparkles" }, // a first hunch checked
-  { id: "easel", pic: "art_easel" }, // a first test finished
-  { id: "bicycle", pic: "bicycle" }, // 14 days in a row
-  { id: "rainbow", pic: "rainbow" }, // a stormy island turned calm
-  { id: "airplane", pic: "airplane" }, // 60 days
-  { id: "moon", pic: "moon_and_stars" }, // 7 evenings in a row
+  { id: "airplane", pic: "airplane" }, // 7 evenings in a row (was 60 days)
   { id: "chest", pic: "chest_open_map" }, // a first week's report opened
   { id: "zen", pic: "zen_stones" }, // a calm week on an island
+  { id: "rainbow", pic: "rainbow" }, // a stormy island turned calm
+  { id: "sparkles", pic: "sparkles" }, // a first hunch checked
+  { id: "books", pic: "books" }, // 10 notes
+  { id: "signpost", pic: "wooden_signpost" }, // a new island opened
+  { id: "easel", pic: "art_easel" }, // a first test finished
   { id: "lavender", pic: "lavender" }, // bubbles popped on 7 days
+  { id: "bicycle", pic: "bicycle" }, // 14 days in a row
   { id: "house", pic: "house" }, // an island fully grown (21 evenings)
   { id: "tent", pic: "camping_tent" }, // 30 days
-  { id: "suitcase", pic: "travel_suitcase" }, // 100 days
+  { id: "suitcase", pic: "travel_suitcase" }, // 60 days (was 100)
+  { id: "camera", pic: "camera" }, // 100 days, the last one (was 3 evenings in a row; Nov 7 2026: never a gift for a link)
 ];
 
 export interface WorldFacts {
@@ -120,21 +123,21 @@ export interface WorldFacts {
 export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
   switch (id) {
     case "balloon": return f.days >= 7;
-    case "camera": return f.streak >= 3;
+    case "camera": return f.days >= 100;
     case "signpost": return f.ownIslands >= 1;
     case "books": return f.notes >= 10;
     case "sparkles": return f.hunches >= 1;
     case "easel": return f.tests >= 1;
     case "bicycle": return f.streak >= 14;
     case "rainbow": return f.cleared !== null;
-    case "airplane": return f.days >= 60;
-    case "moon": return f.streak >= 7;
+    case "airplane": return f.streak >= 7;
+    case "moon": return f.streak >= 3;
     case "chest": return f.reports >= 1;
     case "zen": return f.calm !== null;
     case "lavender": return f.unloads >= 7;
     case "house": return f.topDays >= 21;
     case "tent": return f.days >= 30;
-    case "suitcase": return f.days >= 100;
+    case "suitcase": return f.days >= 60;
   }
 };
 
@@ -182,21 +185,21 @@ export const markTreasuresSeen = (f: WorldFacts): void => {
 export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
   switch (id) {
     case "balloon": return [Math.min(f.days, 7), 7];
-    case "camera": return [Math.min(f.streak, 3), 3];
+    case "camera": return [Math.min(f.days, 100), 100];
     case "signpost": return [Math.min(f.ownIslands, 1), 1];
     case "books": return [Math.min(f.notes, 10), 10];
     case "sparkles": return [Math.min(f.hunches, 1), 1];
     case "easel": return [Math.min(f.tests, 1), 1];
     case "bicycle": return [Math.min(f.streak, 14), 14];
     case "rainbow": return [f.cleared ? 1 : 0, 1];
-    case "airplane": return [Math.min(f.days, 60), 60];
-    case "moon": return [Math.min(f.streak, 7), 7];
+    case "airplane": return [Math.min(f.streak, 7), 7];
+    case "moon": return [Math.min(f.streak, 3), 3];
     case "chest": return [Math.min(f.reports, 1), 1];
     case "zen": return [f.calm ? 1 : 0, 1];
     case "lavender": return [Math.min(f.unloads, 7), 7];
     case "house": return [Math.min(f.topDays, 21), 21];
     case "tent": return [Math.min(f.days, 30), 30];
-    case "suitcase": return [Math.min(f.days, 100), 100];
+    case "suitcase": return [Math.min(f.days, 60), 60];
   }
 };
 
@@ -228,7 +231,7 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
 // on its left or right shore (camera, signpost, books, easel, bicycle). The
 // island is the one it belongs to when there is one (the rainbow over the
 // island that turned calm, the easel where her test was, the signpost on her
-// own island, the camera where her first link starts, the stars where her
+// own island, the stars where her
 // hunch was); otherwise the island she answers most. Once chosen it is kept,
 // so a treasure never moves. The next one to come stands there pale, with how
 // to get it in the island's card.
@@ -264,7 +267,6 @@ export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
       case "rainbow": return facts.cleared ?? undefined;
       case "easel": return finishedExperiments()[0]?.island as IslandId | undefined;
       case "signpost": return getOwnIslands()[0]?.id;
-      case "camera": return routes[0]?.a;
       case "house": return facts.topDays >= 21 ? facts.top ?? undefined : undefined;
       case "zen": return facts.calm ?? undefined;
       case "sparkles": {

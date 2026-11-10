@@ -22,6 +22,7 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { isoLocal } from "@/lib/doors";
 import { islandOf } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
+import { ExampleBox, standIn } from "./Examples";
 
 const WEEKS = 8;
 const LONG = 26;
@@ -189,11 +190,30 @@ const Legend = ({ series }: { series: Series[] }) => (
   </p>
 );
 
+/** Made-up lines over 8 weeks inside the dashed "Example" frame: a link's two lines, or one question's line. */
+const ExampleLinkChart = ({ one = false }: { one?: boolean }) => {
+  const { t } = useTranslation();
+  const a = standIn("slept-enough"), b = standIn("felt-stressed");
+  if (!a || !b) return null;
+  const series = [
+    { color: PAIR_A, values: [4, 5, 3, 4, 3, 2, 2, 1], label: cap(answerPhrase(t, a, false)) },
+    { color: PAIR_B, values: [3, 4, 3, 3, 2, 2, 1, 1], label: cap(answerPhrase(t, b, true)) },
+  ].slice(0, one ? 1 : 2);
+  return (
+    <ExampleBox kind="chart" line={t("examples.chart")}>
+      <Chart series={series} height={110} />
+      <Legend series={series} />
+    </ExampleBox>
+  );
+};
+
 export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trackers: Tracker[]; entries: TrackerEntry[]; focusIds?: string[]; pair?: boolean }) => {
   const { t } = useTranslation();
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   const mine = useMemo(() => (focusIds ? live.filter((tr) => focusIds.includes(tr.id)) : live), [live, focusIds]);
   const name = (id: string) => localizeTrackerTitle(live.find((x) => x.id === id)?.title ?? "");
+  // less than two weeks of answered days
+  const fewDays = useMemo(() => { const ids = new Set(mine.map((x) => x.id)); return new Set(entries.filter((e) => ids.has(e.trackerId)).map((e) => e.date)).size < 14; }, [mine, entries]);
   /** the answer a line counts (weekly counts the hard one), in its own words: "Short night" */
   const hardWord = (tr: Tracker) => (templateIdOf(tr) ? cap(answerPhrase(t, tr, tr.problemWhen === "yes")) : localizeTrackerTitle(tr.title));
 
@@ -279,6 +299,8 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
       {view === "links" && (
         <div className="mt-3 space-y-3">
           {links.length === 0 && <p className="surface rounded-[22px] px-4 py-4 text-[16px] font-semibold">{t("charts.noLinks")}</p>}
+          {/* what a link's chart will look like, marked as an example (her note, Nov 10 2026) */}
+          {links.length === 0 && <ExampleLinkChart />}
           {links.map((l, i) => {
             // the headline, its count under it; the lines are named by the answer they count (QA, Nov 8 2026:
             // "Slept enough (7+ hours)" under "you usually sleep under 7 hours")
@@ -299,6 +321,8 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
         </div>
       )}
 
+      {/* the first weeks draw flat lines: what one will look like, marked as an example (her note, Nov 10 2026) */}
+      {view === "each" && fewDays && <div className="mt-3"><ExampleLinkChart one /></div>}
       {view === "each" && (
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {singles.map(({ tr, values }) => (

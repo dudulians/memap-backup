@@ -78,7 +78,11 @@ for (const lang of ["en", "ru"]) {
   await r.goto("http://localhost:8080/"); await r.waitForTimeout(1200);
   const picks = await r.evaluate(async () => {
     const o = await import("/src/lib/observeTips.ts"); const got = new Set();
-    for (let i = 0; i < 70; i++) { const d = new Date(2026, 10, 10 + i); const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const x = o.tipForToday([], iso); if (x) { got.add(x.tip.templateId); o.markTip(x.tip.id, "later"); } }
+    const dz = await import("/src/lib/doors.ts");
+    // since v129 a tip comes only for a question of hers it talks about: someone with a wide set of questions
+    const W = ["woke-at-night", "felt-happy", "headache", "heartburn", "felt-anxious", "outside-30min", "felt-lonely", "felt-close-to-partner", "felt-overwhelmed-parenting", "main-thing-done", "smoked-hookah", "had-energy"]
+      .map((q) => { const f = dz.findTemplate(q); return { id: `w-${q}`, title: f.template.title, questionText: f.template.questionText, category: f.template.category, cluster: f.clusterId, archived: false }; });
+    for (let i = 0; i < 70; i++) { const d = new Date(2026, 10, 10 + i); const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; const x = o.tipForToday(W, iso); if (x) { got.add(x.tip.templateId); o.markTip(x.tip.id, "later"); } }
     return [...got];
   });
   const banned = ["skipped-meal", "took-painkiller", "neck-pain", "period-day", "stomach-issues", "hobby-time"];

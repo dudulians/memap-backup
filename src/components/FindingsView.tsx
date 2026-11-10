@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { daysAgoIso, doorCounts, getDoor, getDoorState, strongestContextFact } from "@/lib/doors";
 import { factLine } from "@/lib/echo";
 import { LINKS_AT, countedDays } from "@/lib/pathSteps";
+import { ExampleLink } from "./Examples";
 
 const STRIP_DAYS = 14;
 
@@ -100,6 +101,8 @@ export const FindingsView = ({
           </p>
           </>}
         </div>
+        {/* what a link will look like, marked as an example (her note, Nov 10 2026) */}
+        <ExampleLink />
         {fact && counts && (
           <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] p-[18px]">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{t("doors.echo.soFar")}</p>

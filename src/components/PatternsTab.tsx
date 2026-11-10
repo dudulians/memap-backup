@@ -349,7 +349,8 @@ export const PatternsTab = ({ focusIds, only, onTry, pair = false }: { focusIds?
           carousel mounting all four at once). Tap a tab above to
           switch. Each section gets its own animate-fade-in for a
           subtle entrance without the carousel-mounting cost. */}
-      <div className="mt-4">
+      {/* no gap when it sits in a sheet with its own title (My days, Nov 10 2026: the calendar didn't fit) */}
+      <div className={only ? undefined : "mt-4"}>
         {section === "findings" && (
           <FindingsView trackers={trackers} entries={entries} focusIds={focusIds} onSeeDays={() => handleSectionChange("overview")} />
         )}

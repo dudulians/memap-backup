@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { NoteSheet, newDraft, useQuestionName, type NoteDraft } from "@/components/NoteSheet";
 import { Plus, X, ArrowLeft, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Note, getNotes } from "@/lib/notes";
+import { Note, getNotes, noteQuestionIds } from "@/lib/notes";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { ReasonSheet, useReasonDay, type ReasonItem } from "@/components/ReasonSheet";
@@ -103,8 +103,7 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
         if (note.text.toLowerCase().includes(q)) return true;
         // 1.7.9 searched note.trackerId, which never existed, so a
         // question name never matched.
-        const name = trackerName(note.linkedPatternId);
-        return !!name && name.toLowerCase().includes(q);
+        return noteQuestionIds(note).some((id) => !!trackerName(id)?.toLowerCase().includes(q));
       })
     : plainNotes;
   const hasReasons = reasonList.length > 0;
@@ -204,13 +203,15 @@ export const NotesTab = ({ targetDate, onBack, backLabel }: NotesTabProps) => {
                   <button
                     key={note.id}
                     type="button"
-                    onClick={() => setDraft({ id: note.id, date: note.date, text: note.text, linkedPatternId: note.linkedPatternId ?? "" })}
+                    onClick={() => setDraft({ id: note.id, date: note.date, text: note.text, linkedPatternIds: noteQuestionIds(note) })}
                     className="surface block w-full text-left rounded-[22px] px-[18px] py-4 active:scale-[0.99] transition-transform"
                   >
                     <p className="text-[17px] leading-snug whitespace-pre-line line-clamp-6">{note.text}</p>
-                    {note.linkedPatternId && trackerName(note.linkedPatternId) && (
-                      <span className="mt-3 inline-flex items-center h-8 px-3 rounded-full bg-foreground/[0.08] text-[14px] font-semibold">
-                        {trackerName(note.linkedPatternId)}
+                    {noteQuestionIds(note).some((id) => trackerName(id)) && (
+                      <span className="mt-3 flex flex-wrap gap-1.5">
+                        {noteQuestionIds(note).filter((id) => trackerName(id)).map((id) => (
+                          <span key={id} className="inline-flex items-center h-8 px-3 rounded-full bg-foreground/[0.08] text-[14px] font-semibold">{trackerName(id)}</span>
+                        ))}
                       </span>
                     )}
                   </button>

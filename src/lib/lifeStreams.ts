@@ -1812,7 +1812,9 @@ export const LIFE_STREAMS: LifeStream[] = [
       },
       {
         id: "said-yes-when-meant-no",
-        title: "Said yes when meant no",
+        // was "Said yes when meant no" (her note, Nov 10 2026: she saw it in New note); same question, so
+        // trackers that have it are renamed too (migrateTitles in storage.ts)
+        title: "Agreed to something I didn't want",
         titleRu: "Сказал(а) «да» когда хотел(а) «нет»",
         questionText: "Did you agree to something you didn't really want?",
         questionTextRu: "Согласился(ась) на что-то против своего желания?",

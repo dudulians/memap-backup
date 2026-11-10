@@ -43,6 +43,7 @@ import { SteadyCard } from "./SteadyCard";
 import { IslandQuestions } from "./IslandQuestions";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { track } from "@/lib/analytics";
+import { markGlowSeen } from "@/lib/glowHints";
 import { usePlayful } from "@/lib/playful";
 
 type Only = "overview" | "trends" | "signals" | "findings";
@@ -243,6 +244,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // What helps opens its own sheet (Nov 8 2026: it opened a test's island, and an empty "Week summary"
   // when that island wasn't there)
   const [helpsOpen, setHelpsOpen] = useState(false);
+  // a part opened from anywhere stops glowing (glowHints.ts)
+  useEffect(() => { if (only) markGlowSeen(only === "trends" ? "overview" : only); }, [only]);
+  useEffect(() => { if (helpsOpen) markGlowSeen("helps"); }, [helpsOpen]);
   const onHelps = () => setHelpsOpen(true);
   // "See" under a done task (Nov 10 2026): from When to act straight to What helps, where it is now kept
   useEffect(() => {
@@ -362,14 +366,15 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               <ChevronLeft className="h-5 w-5" strokeWidth={2.6} />{t("map.backToLink")}
             </button>
           )}
-          <h2 className="pb-2 pr-10 pt-1 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
+          {/* tighter top (her note, Nov 10 2026: the calendar didn't fit in My days) */}
+          <h2 className="pb-1.5 pr-10 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
           {only && !tourCompleted() && (
             <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={null}
               line={t(only === "findings" ? "tips.inLinks" : only === "signals" ? "tour.actions.line" : "tips.inMonth")} />
           )}
           {/* My days holds both the calendar and the chart (her note, Nov 6 2026) */}
           {(only === "overview" || only === "trends") && (
-            <div className="seg mb-3 w-full" role="tablist" aria-label={t("world4.myDays")}>
+            <div className="seg mb-2 w-full" role="tablist" aria-label={t("world4.myDays")}>
               {(["overview", "trends"] as const).map((v) => (
                 <button key={v} type="button" role="tab" aria-selected={only === v} onClick={() => { haptics.tap(); setOnly(v); }} className={`chip flex-1 ${only === v ? "is-on" : ""}`}>
                   {t(v === "overview" ? "overviewCards.calendar" : "overviewCards.chart")}
@@ -378,7 +383,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
             </div>
           )}
           {/* All islands, or one. */}
-          <div className="-mx-4 mb-3 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide" role="tablist" aria-label={t("map.filterAria")}>
+          <div className="-mx-4 mb-2 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide" role="tablist" aria-label={t("map.filterAria")}>
             {[null, ...islands.filter((i) => i.trackerIds.length > 0).map((i) => i.id)].map((id) => {
               const on = onlyIsland === id;
               const isl = id ? islands.find((i) => i.id === id) : undefined;
