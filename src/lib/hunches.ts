@@ -97,7 +97,7 @@ export const suspectsFor = (target: Tracker, trackers: Tracker[]): Suspect[] => 
   const byTemplate = new Map(act.map((t) => [matchTemplateIdByTitle(t.title), t]));
   // what may lead to THIS question, in its own order (content review, Nov 9 2026: lists mixed in
   // questions that only follow it, e.g. a short night as a suspect for itself)
-  const tpls = getTemplatesByIds(getSuspectTemplateIds(tid)).filter((tpl) => !tpl.sensitive && tpl.id !== tid);
+  const tpls = getTemplatesByIds(getSuspectTemplateIds(tid)).filter((tpl) => !tpl.sensitive && !tpl.quiet && tpl.id !== tid);
   const tracked = tpls.filter((tpl) => byTemplate.has(tpl.id)).map((tpl) => ({ kind: "tracked" as const, tracker: byTemplate.get(tpl.id)! }));
   // a partner-harm question is never offered as a new one (one she already has stays above)
   const fresh = tpls.filter((tpl) => !byTemplate.has(tpl.id) && !tpl.askOnly).map((template) => ({ kind: "template" as const, template }));

@@ -3,6 +3,11 @@
 Date: November 10, 2026 · branch `design/aurora-ux` · versions v123–v125 (VERSIONS.md)
 Brief: "MeMap — Scientific Content & Medical Safety Audit" (her paste, Nov 10 2026).
 
+> **Update, v126 (same day):** she chose "minimum medicine" — no doctor in When to act, 11 clinical body questions
+> not offered, 5 illness tips hidden — as a switch, nothing deleted: `src/lib/medicalArchive.ts`,
+> `marketing/archive/medical-content-2026-11-10.md`, tag `archive/medical-full-2026-11-10`. Items F1 (tip 33) and F4
+> (doctor plans) below are settled by that.
+
 ## A. Implementation summary
 
 **Removed**

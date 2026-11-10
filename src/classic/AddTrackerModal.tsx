@@ -348,7 +348,7 @@ export const AddTrackerModal = ({
   // "Show sensitive topics".
   // Never offered since Nov 7 2026 (her decision), whatever the old switch says.
   // and a partner shouting or saying hurtful things is never offered either (Nov 9 2026)
-  const filterSensitive = <T extends { sensitive?: boolean; askOnly?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive && !t.askOnly);
+  const filterSensitive = <T extends { sensitive?: boolean; askOnly?: boolean; quiet?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive && !t.askOnly && !t.quiet);
 
   // Get all templates for autocomplete dropdown
   const getAllTemplatesForDropdown = () => {

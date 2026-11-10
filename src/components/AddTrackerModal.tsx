@@ -264,9 +264,10 @@ export const AddTrackerModal = ({
 
   // Intimacy questions are never offered (Nov 7 2026), even if the old switch is on.
   // A partner shouting or saying hurtful things: never in the lists, only when the typed words are about it (Nov 9 2026)
-  const filterSensitive = <T extends { sensitive?: boolean; askOnly?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive && !t.askOnly);
-  const withAsked = <T extends { sensitive?: boolean; askOnly?: boolean }>(arr: T[], typed: string): T[] =>
-    arr.filter((t) => !t.sensitive && (!t.askOnly || writesAboutHomeHarm(typed)));
+  // "minimum medicine" (Nov 10 2026, medicalArchive.ts): clinical body questions not offered to new people
+  const filterSensitive = <T extends { sensitive?: boolean; askOnly?: boolean; quiet?: boolean }>(arr: T[]): T[] => arr.filter((t) => !t.sensitive && !t.askOnly && !t.quiet);
+  const withAsked = <T extends { sensitive?: boolean; askOnly?: boolean; quiet?: boolean }>(arr: T[], typed: string): T[] =>
+    arr.filter((t) => !t.sensitive && !t.quiet && (!t.askOnly || writesAboutHomeHarm(typed)));
 
   // Get all templates for autocomplete dropdown
   const getAllTemplatesForDropdown = () => {

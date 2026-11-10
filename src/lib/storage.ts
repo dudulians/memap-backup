@@ -4,6 +4,7 @@ import { checkThresholdAlerts } from "@/lib/notifications";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { isSwitchedPlan } from "@/lib/medicalArchive";
 import {
   isKnownLibraryTitle,
   isKnownAdvice,
@@ -381,6 +382,8 @@ const migrateLegacyAdvice = async (): Promise<void> => {
     // can share its words with a ready idea ("Write down 3 things you did today…"), so a known one is
     // refreshed too when it is retired (Nov 9 2026); one that is still its question's plan stays as is.
     const retired = RETIRED_ADVICE.has(tr.adviceAboveThreshold.trim())
+      // "minimum medicine" (Nov 10 2026): a doctor plan becomes the calm one, and back if the switch is turned off
+      || isSwitchedPlan(tr.adviceAboveThreshold.trim())
       // a couple idea she picked as the plan for a partner shouting or saying hurtful things (review, Nov 9 2026)
       || (HOME_HARM_IDS.has(matchTemplateIdByTitle(tr.title) ?? "") && HOME_COUPLE_PLANS.has(tr.adviceAboveThreshold.trim()));
     if (!retired && isKnownAdvice(tr.adviceAboveThreshold)) return tr;

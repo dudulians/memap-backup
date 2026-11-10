@@ -35,6 +35,7 @@ export interface TemplateGroup {
      *  default; user opts in via Settings → "Show sensitive topics". */
     sensitive?: boolean;
     askOnly?: boolean;
+    quiet?: boolean;
     /** Curated starter template for the cluster — shown first when
      *  the user expands a cluster, with the rest gated behind
      *  "Показать все N →". Three per cluster. */
@@ -62,6 +63,7 @@ export const TEMPLATE_GROUPS: TemplateGroup[] = LIFE_STREAMS.map((stream) => ({
     adviceAboveThreshold: t.adviceAboveThreshold,
     sensitive: t.sensitive,
     askOnly: t.askOnly,
+    quiet: t.quiet,
     featured: t.featured,
   })),
 }));

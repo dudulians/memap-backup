@@ -111,6 +111,7 @@ interface NormalizedTemplate {
   /** Sensitive (intimacy, libido, ex). Hidden unless user opts in. */
   sensitive?: boolean;
   askOnly?: boolean;
+  quiet?: boolean;
 }
 
 const normalizeAll = (): NormalizedTemplate[] => {
@@ -134,6 +135,7 @@ const normalizeAll = (): NormalizedTemplate[] => {
         streamId: stream.id,
         sensitive: tpl.sensitive,
         askOnly: tpl.askOnly,
+        quiet: tpl.quiet,
       });
     });
   });
@@ -679,7 +681,7 @@ export const generateStarterPack = (
   // topics" can opt the user in (writes a localStorage flag the
   // generator picks up via a separate path; for now: always hide
   // here, the broader catalog in AddTrackerModal exposes them).
-  candidates = candidates.filter((tpl) => !tpl.sensitive && !tpl.askOnly);
+  candidates = candidates.filter((tpl) => !tpl.sensitive && !tpl.askOnly && !tpl.quiet);
   const scored = candidates.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
   const picked = pickTop(scored, count, 2);
 

@@ -1797,5 +1797,5 @@ export const getRelatedQuestions = (
   if (userIds.length === 0) return [];
 
   const relatedIds = getRelatedTemplateIds(userIds);
-  return getTemplatesByIds(relatedIds).filter((tpl) => !tpl.sensitive && !tpl.askOnly && !isCovered(tpl.id, userIds));
+  return getTemplatesByIds(relatedIds).filter((tpl) => !tpl.sensitive && !tpl.askOnly && !tpl.quiet && !isCovered(tpl.id, userIds));
 };

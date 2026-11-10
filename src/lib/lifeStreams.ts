@@ -1,6 +1,7 @@
 import { Tracker, ProblemWhen, AnswerType } from "@/types/tracker";
 import { BODY_TEMPLATES } from "./bodyTemplates";
 import { RESEARCH_TEMPLATES } from "./researchTemplates";
+import { applyMinimalMedicine } from "./medicalArchive";
 import { getLanguage } from "@/lib/i18n";
 
 export interface LifeStreamTemplate {
@@ -43,6 +44,9 @@ export interface LifeStreamTemplate {
    *  about it (her note, Nov 9 2026: "никогда не показывать… и только если человек начнёт сам вписывать
    *  похожее"). People who already have it keep it, with all its support. */
   askOnly?: boolean;
+  /** "Minimum medicine" (Nov 10 2026, medicalArchive.ts): a clinical body question not offered to new people;
+   *  anyone who has it keeps it. Set at load from QUIET_IDS, never in the data. */
+  quiet?: boolean;
   /** Bowel, bladder, piles, sweating: not hidden like the sexual ones, but never in ideas,
    *  share cards or a recap (research round 2). */
   private?: boolean;
@@ -3297,6 +3301,8 @@ export const LIFE_STREAMS: LifeStream[] = [
 for (const { stream, ...tpl } of RESEARCH_TEMPLATES) LIFE_STREAMS.find((s) => s.id === stream)?.templates.push(tpl);
 // the body questions people rarely say out loud (research round 2, Nov 7 2026)
 for (const { stream, ...tpl } of BODY_TEMPLATES) LIFE_STREAMS.find((s) => s.id === stream)?.templates.push(tpl);
+// "minimum medicine" (her pick, Nov 10 2026): a calmer layer over the library — nothing deleted (medicalArchive.ts)
+applyMinimalMedicine(LIFE_STREAMS);
 
 export interface LocalizedTemplate {
   id: string;
@@ -3310,6 +3316,7 @@ export interface LocalizedTemplate {
   problemWhen: ProblemWhen;
   adviceAboveThreshold: string;
   askOnly?: boolean;
+  quiet?: boolean;
   sensitive?: boolean;
 }
 
@@ -3328,6 +3335,7 @@ export const localizeTemplate = (tpl: LifeStreamTemplate): LocalizedTemplate => 
     adviceAboveThreshold: isRu ? tpl.adviceAboveThresholdRu : tpl.adviceAboveThreshold,
     sensitive: tpl.sensitive,
     askOnly: tpl.askOnly,
+    quiet: tpl.quiet,
   };
 };
 
@@ -3349,7 +3357,7 @@ export const getRandomIdeas = (count: number = 4): (LocalizedTemplate & { stream
     .filter((stream) => !stream.gatedBy) // exclude expat cluster from random ideas
     .flatMap(stream =>
       stream.templates
-        .filter((t) => !t.sensitive && !t.private && !t.askOnly)
+        .filter((t) => !t.sensitive && !t.private && !t.askOnly && !t.quiet)
         .map(t => ({
           ...localizeTemplate(t),
           streamIcon: stream.icon,

@@ -7,6 +7,7 @@ import { findTemplate, isoLocal } from "@/lib/doors";
 import { templateIdOf } from "@/lib/answerPhrases";
 import { islandOf, type IslandId } from "@/lib/islands";
 import { OBSERVE_TIPS } from "@/lib/observeTipsData";
+import { MINIMAL_MEDICINE, QUIET_TIPS } from "@/lib/medicalArchive";
 
 export interface ObserveTip {
   id: string;
@@ -22,7 +23,8 @@ export interface ObserveTip {
     source?: "VERIFIED" | "PARTIAL" | "MISMATCH" | "UNVERIFIED"; sourceNote?: string;
   };
 }
-const shown = (x: ObserveTip) => x.review?.status !== "held";
+/** held for its source, or about an illness or a medicine while "minimum medicine" is on (medicalArchive.ts) */
+const shown = (x: ObserveTip) => x.review?.status !== "held" && !(MINIMAL_MEDICINE && QUIET_TIPS.has(x.templateId));
 
 const KEY = "memap_observe_tip";
 interface TipState { day: string; id: string; done?: "added" | "later"; used: string[] }

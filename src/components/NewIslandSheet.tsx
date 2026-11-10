@@ -31,7 +31,7 @@ const TOPICS: { island: BuiltinIsland; streams?: string[]; ids?: string[] }[] = 
 ];
 
 // intimacy questions are never offered (Nov 7 2026)
-const ALL = LIFE_STREAMS.flatMap((s) => s.templates.filter((tpl) => !tpl.sensitive && !tpl.askOnly).map((tpl) => ({ tpl, stream: s.id })));
+const ALL = LIFE_STREAMS.flatMap((s) => s.templates.filter((tpl) => !tpl.sensitive && !tpl.askOnly && !tpl.quiet).map((tpl) => ({ tpl, stream: s.id })));
 
 /** The library questions of an island's topic, starter ones first. */
 export const topicTemplates = (island: IslandId): LifeStreamTemplate[] => {
