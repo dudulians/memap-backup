@@ -69,6 +69,9 @@ interface BackupPayload {
   settings: Record<string, string | null>;
 }
 
+/** The CSV (Excel) export button: off since Nov 10 2026; the code stays. */
+const CSV_EXPORT = false;
+
 const SETTINGS_KEYS = [
   "memap_session_settings",
   "memap_notification_enabled",
@@ -572,14 +575,19 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           directory: Directory.Cache,
           encoding: Encoding.UTF8,
         });
-        await Share.share({
-          title: "MeMap Backup",
-          text: "MeMap data backup — save to restore later or on another device",
-          url: written.uri,
-          dialogTitle: t("settings.backupShareDialogTitle", {
-            defaultValue: "Save MeMap backup",
-          }),
-        });
+        try {
+          await Share.share({
+            title: "MeMap Backup",
+            text: "MeMap data backup — save to restore later or on another device",
+            url: written.uri,
+            dialogTitle: t("settings.backupShareDialogTitle", {
+              defaultValue: "Save MeMap backup",
+            }),
+          });
+        } finally {
+          // no copy left behind in the app's cache (Nov 10 2026)
+          await Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => undefined);
+        }
         track("data_exported", {
           platform: Capacitor.getPlatform(),
           size_bytes: json.length,
@@ -1384,14 +1392,17 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                 </Button>
               </div>
 
-              <Button
-                variant="outline"
-                onClick={handleExportData}
-                className="w-full justify-start"
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                {t("settings.exportCsv")}
-              </Button>
+              {/* CSV (Excel) export: off, kept in code (her note, Nov 10 2026: "экспорт эксель не нужно") */}
+              {CSV_EXPORT && (
+                <Button
+                  variant="outline"
+                  onClick={handleExportData}
+                  className="w-full justify-start"
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  {t("settings.exportCsv")}
+                </Button>
+              )}
 
               {/* Dev-only test data generator. Owner-facing tool to fill
                   60 days of biased fake entries so Trends and Correlations

@@ -76,6 +76,9 @@ interface BackupPayload {
   settings: Record<string, string | null>;
 }
 
+/** The CSV (Excel) export row: off since Nov 10 2026 ("экспорт эксель не нужно"); the code stays. */
+const CSV_EXPORT = false;
+
 const SETTINGS_KEYS = [
   "memap_session_settings",
   "memap_notification_enabled",
@@ -605,14 +608,20 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
           directory: Directory.Cache,
           encoding: Encoding.UTF8,
         });
-        await Share.share({
-          title: "MeMap Backup",
-          text: "MeMap data backup — save to restore later or on another device",
-          url: written.uri,
-          dialogTitle: t("settings.backupShareDialogTitle", {
-            defaultValue: "Save MeMap backup",
-          }),
-        });
+        try {
+          await Share.share({
+            title: "MeMap Backup",
+            text: "MeMap data backup — save to restore later or on another device",
+            url: written.uri,
+            dialogTitle: t("settings.backupShareDialogTitle", {
+              defaultValue: "Save MeMap backup",
+            }),
+          });
+        } finally {
+          // no copy left behind in the app's cache once it is saved where she chose (or the sheet was closed)
+          // (her question, Nov 10 2026: "это безопасно?")
+          await Filesystem.deleteFile({ path: filename, directory: Directory.Cache }).catch(() => undefined);
+        }
         track("data_exported", {
           platform: Capacitor.getPlatform(),
           size_bytes: json.length,
@@ -1111,13 +1120,16 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     </div>
                     {dataErr?.row === "restore" && errLine(dataErr.text)}
                   </div>
-                  <div>
-                    <button type="button" data-row="csv" onClick={handleExportData} className={rowBtn}>
-                      <span className="flex-1 text-[17px] font-medium">{t("settings.exportCsv")}</span>
-                      {flash === "csv" ? savedMark : <FileSpreadsheet className="h-5 w-5 text-muted-foreground/60" />}
-                    </button>
-                    {dataErr?.row === "csv" && errLine(dataErr.text)}
-                  </div>
+                  {/* CSV (Excel) export: off, kept in code (her note, Nov 10 2026: "экспорт эксель не нужно") */}
+                  {CSV_EXPORT && (
+                    <div>
+                      <button type="button" data-row="csv" onClick={handleExportData} className={rowBtn}>
+                        <span className="flex-1 text-[17px] font-medium">{t("settings.exportCsv")}</span>
+                        {flash === "csv" ? savedMark : <FileSpreadsheet className="h-5 w-5 text-muted-foreground/60" />}
+                      </button>
+                      {dataErr?.row === "csv" && errLine(dataErr.text)}
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => window.open("https://memap-tracker.netlify.app/PRIVACY_POLICY.html", "_blank", "noopener,noreferrer")}
