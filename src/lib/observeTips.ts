@@ -16,7 +16,11 @@ export interface ObserveTip {
   /** where it comes from: kept for checks, not shown in the app (her content audit, Nov 10 2026) */
   source: { name: string; url: string };
   /** how the tip was checked; "held" = not shown until a directly relevant source is found */
-  review?: { status: "rewritten" | "needs-source-check" | "held"; limits?: string; date?: string };
+  review?: {
+    status: "rewritten" | "needs-source-check" | "held"; limits?: string; date?: string;
+    /** the source check (Nov 10 2026): does it resolve and support the copy, and what limits it */
+    source?: "VERIFIED" | "PARTIAL" | "MISMATCH" | "UNVERIFIED"; sourceNote?: string;
+  };
 }
 const shown = (x: ObserveTip) => x.review?.status !== "held";
 

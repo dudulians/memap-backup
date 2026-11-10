@@ -23,7 +23,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "rewritten",
       "limits": "The study timed caffeine against bedtime (0, 3 and 6 hours before), not a clock time: no universal 2 pm cutoff. The question still asks about caffeine after 2 pm.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "RCT, n=12, 400 mg at 0/3/6 h before bed; subjective sleep not affected at 6 h. Question: after 2 pm is a wider proxy."
     }
   },
   {
@@ -44,7 +46,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "rewritten",
       "limits": "Review of observational studies: irregular sleep goes with poorer sleep; no proven effect of wake time alone on mood.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Systematic review of 53 mostly observational studies; reducing variability experimentally was inconclusive."
     }
   },
   {
@@ -65,7 +69,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "rewritten",
       "limits": "One diary study; not a universal predictor.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Diary study, n=50. Question mixes worry with the sleep outcome (kept you awake)."
     }
   },
   {
@@ -86,7 +92,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "rewritten",
       "limits": "Small study; no general improvement in sleep quality shown. Check that the question asks about morning daylight.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "n=20 students; measured first light >10 lux from any source, not outdoor daylight; causality unconfirmed."
     }
   },
   {
@@ -107,7 +115,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "needs-source-check",
       "limits": "The cited study looked mainly at sleep quality, not short sleep: check that the source still matches the question.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Study used self-rated sleep quality, not hours; the 7+ hours question needs a sleep-length source. 71% screened positive for depression/anxiety."
     }
   },
   {
@@ -128,7 +138,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "held",
       "limits": "The NICE guideline does not directly support this tip: not shown until a directly relevant source is found.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "MISMATCH",
+      "sourceNote": "NICE NG222 is a depression treatment guideline with nothing on hobbies. Candidate opened by the checker: Mak et al., Nat Med 2023, doi 10.1038/s41591-023-02506-1 (adults 65+ only, observational) — not applied."
     }
   },
   {
@@ -149,7 +161,9 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "review": {
       "status": "rewritten",
       "limits": "Association, not proof that nature itself lifts mood.",
-      "date": "2026-11-10"
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "n=108 self-selected, mostly university-educated; outcome was momentary well-being; 'by water' showed no consistent effect."
     }
   },
   {
@@ -157,15 +171,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "felt-grateful",
     "en": {
       "title": "Noticing good moments",
-      "line": "Noticing good things gives a small mood lift on average. It's worth checking whether it does more for you."
+      "line": "Taking a moment to appreciate good things may give a small boost to well-being. See if you notice a difference."
     },
     "ru": {
       "title": "Замечать хорошее",
-      "line": "Если замечать хорошее, настроение в среднем немного поднимается. Стоит проверить, не сильнее ли это работает у тебя."
+      "line": "Если уделять немного времени хорошим моментам и чувству благодарности, самочувствие может немного улучшиться. Проверь, замечаешь ли ты разницу."
     },
     "source": {
       "name": "Davis et al., J Couns Psychol 2016",
       "url": "https://doi.org/10.1037/cou0000107"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Evidence is about gratitude practices, not simply noticing something pleasant.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Meta-analysis of gratitude interventions (d=.31 vs controls); the question 'noticed something good' is a looser proxy."
     }
   },
   {
@@ -173,15 +194,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "drank-water",
     "en": {
       "title": "Water through the day",
-      "line": "Even mild dehydration can bring tiredness and a dull head. Hot days make it easy to fall behind."
+      "line": "Even mild dehydration can be linked to tiredness and headaches. Notice how you feel on days when you drink less water."
     },
     "ru": {
       "title": "Вода в течение дня",
-      "line": "Даже лёгкое обезвоживание может давать усталость и тяжёлую голову. В жару отстать от нормы особенно легко."
+      "line": "Даже лёгкое обезвоживание может сопровождаться усталостью и головной болью. Посмотри, как чувствуешь себя в дни, когда пьёшь меньше воды."
     },
     "source": {
       "name": "Armstrong et al., J Nutr 2012",
       "url": "https://doi.org/10.3945/jn.111.142000"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Not a universal personal hydration requirement.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Lab experiment, n=25 young women, exercise-induced dehydration; the 1.5 L threshold in the question is not from this study."
     }
   },
   {
@@ -189,111 +217,160 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "felt-fatigued",
     "en": {
       "title": "Drained days",
-      "line": "Tiredness often has everyday causes like sleep, stress or a busy life. Counting drained days shows what comes before them."
+      "line": "Sleep, stress and daily demands can all contribute to tiredness. Tracking low-energy days may help you notice patterns."
     },
     "ru": {
       "title": "Дни без сил",
-      "line": "У усталости часто обычные причины: сон, стресс, загруженная жизнь. Если отмечать дни без сил, станет видно, что им предшествует."
+      "line": "На усталость могут влиять сон, стресс и повседневная нагрузка. Отмечай дни без сил, чтобы замечать возможные закономерности."
     },
     "source": {
       "name": "NHS: Tiredness and fatigue",
       "url": "https://www.nhs.uk/symptoms/tiredness-and-fatigue/"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Tracking does not reveal the cause of fatigue.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "NHS page (reviewed June 2023) lists sleep, stress, life challenges as common causes."
     }
   },
   {
     "id": "late-naps",
     "templateId": "napped",
     "en": {
-      "title": "Late naps",
-      "line": "Naps late in the day can make the night more broken for some people. See how your nap days end."
+      "title": "Daytime naps",
+      "line": "The timing of a daytime nap may affect sleep later that night. See how nights after naps compare."
     },
     "ru": {
-      "title": "Дневной сон под вечер",
-      "line": "Дневной сон ближе к вечеру у некоторых делает ночь более прерывистой. Посмотри, как проходят ночи после таких дней."
+      "title": "Дневной сон",
+      "line": "Время дневного сна может влиять на ночной сон. Посмотри, отличаются ли ночи после дней, когда удаётся поспать днём."
     },
     "source": {
       "name": "Mograss et al., J Sleep Res 2022",
       "url": "https://doi.org/10.1111/jsr.13578"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Source is about late naps; the question records any nap.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Observational, n=62; about naps within 7 h of bedtime; the question doesn't record timing."
     }
   },
   {
     "id": "evening-drink",
     "templateId": "drank-alcohol",
     "en": {
-      "title": "A drink in the evening",
-      "line": "Alcohol can help you fall asleep faster but often breaks up the second half of the night. Compare the mornings after."
+      "title": "Alcohol in the evening",
+      "line": "Alcohol may make it easier to fall asleep but can disrupt sleep later in the night. Compare the mornings after."
     },
     "ru": {
       "title": "Алкоголь вечером",
-      "line": "Алкоголь может помочь быстрее уснуть, но часто делает вторую половину ночи прерывистой. Сравни, как проходят утра после таких вечеров."
+      "line": "Алкоголь может помочь быстрее уснуть, но нарушать сон во второй половине ночи. Сравни, как проходят утра после таких вечеров."
     },
     "source": {
       "name": "Ebrahim et al., Alcohol Clin Exp Res 2013",
       "url": "https://doi.org/10.1111/acer.12006"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "General information; alcohol is not a sleep aid.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Review of lab studies, all doses."
     }
   },
   {
     "id": "four-plus-coffees",
     "templateId": "caffeine-4-plus",
     "en": {
-      "title": "Four or more coffees",
-      "line": "Above about four coffees a day, caffeine is more likely to stir up anxiety. See how your heavy-coffee days feel."
+      "title": "Several coffees a day",
+      "line": "Higher doses of caffeine may increase anxiety for some people. Notice whether days with several coffees feel different."
     },
     "ru": {
-      "title": "Четыре чашки кофе и больше",
-      "line": "Когда кофе больше четырёх чашек в день, кофеин чаще усиливает тревогу. Посмотри, как ощущаются такие дни."
+      "title": "Несколько чашек кофе в день",
+      "line": "Большие дозы кофеина могут усиливать тревогу у некоторых людей. Посмотри, отличаются ли дни, когда пьёшь много кофе."
     },
     "source": {
       "name": "Liu et al., Front Psychol 2024",
       "url": "https://doi.org/10.3389/fpsyg.2024.1270246"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "The meta-analysis is about caffeine doses (around 400 mg), not four cups; the question counts 4+ coffees as a personal variable.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Meta-analysis of 8 small studies (546 people, I²≈95%), mostly single lab doses; strongest above 400 mg; 4 strong teas is well under that."
     }
   },
   {
     "id": "gaps-without-food",
     "templateId": "skipped-meal",
     "en": {
-      "title": "Long gaps without food",
-      "line": "Over half of people with migraine name skipped meals as a trigger. Your own days can show if that's true for you."
+      "title": "Skipped meals and headaches",
+      "line": "Some people with migraine report skipped meals as a possible trigger. Notice whether missed meals and headaches coincide for you."
     },
     "ru": {
-      "title": "Долго без еды",
-      "line": "Больше половины людей с мигренью называют пропуск еды своим триггером. Твои ответы покажут, верно ли это для тебя."
+      "title": "Пропуск еды и головная боль",
+      "line": "Некоторые люди с мигренью называют пропуск еды возможным триггером. Посмотри, совпадают ли у тебя такие дни с головной болью."
     },
     "source": {
       "name": "Kelman, Cephalalgia 2007",
       "url": "https://doi.org/10.1111/j.1468-2982.2007.01303.x"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Self-reported triggers, not causation; not everyone has migraine.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "n=1,207 migraine patients, 57% named not eating as a trigger (self-report)."
     }
   },
   {
     "id": "late-big-meals",
     "templateId": "ate-late",
     "en": {
-      "title": "Big meals before bed",
-      "line": "A big meal close to bedtime can bring on heartburn. Health advice is to stop eating 3 to 4 hours before bed."
+      "title": "Meals before bed",
+      "line": "Eating close to bedtime can make heartburn worse for some people. Notice whether the timing of your evening meal matters."
     },
     "ru": {
-      "title": "Плотный ужин перед сном",
-      "line": "Плотная еда незадолго до сна может вызывать изжогу. Обычно советуют не есть за 3–4 часа до сна."
+      "title": "Еда перед сном",
+      "line": "Еда незадолго до сна может усиливать изжогу. Посмотри, имеет ли для тебя значение время ужина."
     },
     "source": {
       "name": "NHS: Heartburn and acid reflux",
       "url": "https://www.nhs.uk/conditions/heartburn-and-acid-reflux/"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "NHS guidance on reflux and heartburn, not a universal 3–4 hour rule.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "NHS page (review due 20 Nov 2026) says 3–4 h; the EN question has no time limit while the RU question says <2 h."
     }
   },
   {
     "id": "about-7000-steps",
     "templateId": "walked-a-lot",
     "en": {
-      "title": "Around 7,000 steps",
-      "line": "In a large review, about 7,000 steps a day already went with clearly lower health risks. Ten thousand isn't a must."
+      "title": "Walking more",
+      "line": "Higher daily step counts have been linked to lower long-term health risks. Notice how often you make time to walk more."
     },
     "ru": {
-      "title": "Около 7000 шагов",
-      "line": "По большому обзору, уже около 7000 шагов в день связаны с заметно меньшим риском для здоровья. Десять тысяч не обязательны."
+      "title": "Больше ходьбы",
+      "line": "Большее количество шагов в день связано с меньшими долгосрочными рисками для здоровья. Посмотри, как часто получается больше ходить."
     },
     "source": {
       "name": "Ding et al., Lancet Public Health 2025",
       "url": "https://doi.org/10.1016/S2468-2667(25)00164-1"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "The study measured step counts; the question is about walking in general — no step number.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Meta-analysis of device-measured steps (erratum 2025;10(9):e731); usual daily average, not a single day."
     }
   },
   {
@@ -301,31 +378,45 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "exercised",
     "en": {
       "title": "Workouts and mood",
-      "line": "Mood and energy are often a bit better in the hours after moving. Watch how your workout days feel."
+      "line": "Physical activity is often followed by a more positive mood. Notice how you feel on days when you exercise."
     },
     "ru": {
       "title": "Тренировки и настроение",
-      "line": "В первые часы после движения настроение и энергия часто чуть выше. Посмотри, как проходят дни с тренировкой."
+      "line": "После физической активности настроение нередко становится лучше. Посмотри, как чувствуешь себя в дни с тренировкой."
     },
     "source": {
       "name": "Liao et al., Front Psychol 2015",
       "url": "https://doi.org/10.3389/fpsyg.2015.01975"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Energy claim removed.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Review of 14 everyday-life studies; positive mood over the next hours."
     }
   },
   {
     "id": "hard-workouts-late",
     "templateId": "trained-hard",
     "en": {
-      "title": "Hard workouts late",
-      "line": "Evening exercise is usually fine for sleep. Only hard workouts that end under an hour before bed tend to delay it."
+      "title": "Hard workouts and sleep",
+      "line": "How hard and how late you exercise may affect your sleep. Notice how you sleep after more intense workout days."
     },
     "ru": {
-      "title": "Тяжёлая тренировка поздно",
-      "line": "Вечерний спорт обычно не мешает сну. Исключение — тяжёлая тренировка, которая заканчивается меньше чем за час до сна."
+      "title": "Интенсивные тренировки и сон",
+      "line": "Интенсивность и время тренировки могут влиять на сон. Посмотри, как спится после дней с высокой нагрузкой."
     },
     "source": {
       "name": "Stutz et al., Sports Med 2019",
       "url": "https://doi.org/10.1007/s40279-018-1015-0"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "The question may not record workout timing.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Main finding: evening exercise did not harm sleep; only vigorous exercise ending ≤1 h before bed might; the question has no timing."
     }
   },
   {
@@ -333,15 +424,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "screens-before-bed",
     "en": {
       "title": "Screens before sleep",
-      "line": "Late phone use goes with shorter, poorer sleep, but it's not clear which causes which. Your own nights can tell."
+      "line": "Screen use before bed has been linked to poorer sleep, though cause and effect aren't clear. Look for patterns in your own nights."
     },
     "ru": {
       "title": "Экран перед сном",
-      "line": "Телефон поздно вечером связан с более коротким и плохим сном, но что здесь причина, пока неясно. Твои ночи подскажут."
+      "line": "Использование экрана перед сном связано с худшим сном, хотя причинная связь неясна. Понаблюдай, есть ли такая закономерность у тебя."
     },
     "source": {
       "name": "Brautsch et al., Sleep Med Rev 2023",
       "url": "https://doi.org/10.1016/j.smrv.2022.101742"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Causation unclear.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Review of 42 observational studies, ages 16–25 only; not for TV, consoles or tablets."
     }
   },
   {
@@ -349,15 +447,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "social-media-hour",
     "en": {
       "title": "Time on social media",
-      "line": "Cutting back on social media gave a small mood lift in trials, but results vary. See what it does for you."
+      "line": "Limiting social media use has shown small benefits for well-being in some studies. See if less scrolling makes a difference for you."
     },
     "ru": {
       "title": "Время в соцсетях",
-      "line": "Когда люди меньше сидели в соцсетях, настроение в исследованиях немного улучшалось, но не у всех. Проверь, как это у тебя."
+      "line": "В некоторых исследованиях ограничение соцсетей немного улучшало самочувствие. Проверь, замечаешь ли ты разницу, когда проводишь в них меньше времени."
     },
     "source": {
-      "name": "RTI: The effects of social media restriction (32 trials)",
-      "url": "https://www.rti.org/publication/the-effects-of-social-media-restriction-meta-analytic-evidence-fr"
+      "name": "Burnell et al., SSM – Mental Health 2025 (meta-analysis of 32 articles)",
+      "url": "https://doi.org/10.1016/j.ssmmh.2025.100459"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Small, mixed effects.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Meta-analysis of RCTs, g=0.17 (small), mean age 23; the 1-hour threshold was not studied."
     }
   },
   {
@@ -365,15 +470,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "doomscrolled-news",
     "en": {
       "title": "Too much news",
-      "line": "News that feels bad can pull mood down the same day. Notice how you feel after long news sessions."
+      "line": "News you experience as negative may be linked to a lower mood. Notice how you feel after following the news."
     },
     "ru": {
       "title": "Слишком много новостей",
-      "line": "Плохие новости могут портить настроение в тот же день. Заметь, как себя чувствуешь после долгого чтения новостей."
+      "line": "Новости, которые воспринимаются негативно, могут быть связаны с ухудшением настроения. Замечай, как чувствуешь себя после их чтения."
     },
     "source": {
       "name": "de Hoog & Verboon, Br J Psychol 2020",
       "url": "https://doi.org/10.1111/bjop.12389"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Not proof that longer news sessions cause low mood.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "n=63; effect of how negative news felt, not time spent; sports feeds not studied."
     }
   },
   {
@@ -381,15 +493,21 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "felt-stressed",
     "en": {
       "title": "Stress that lingers",
-      "line": "A stressful day can still weigh on mood the next day. Watch what tends to follow your hard days."
+      "line": "A stressful day can still affect how you feel the following day. Notice what tends to follow your harder days."
     },
     "ru": {
       "title": "Стресс, который не отпускает",
-      "line": "Стрессовый день может портить настроение и на следующий день. Посмотри, что обычно идёт за тяжёлыми днями."
+      "line": "Стрессовый день может влиять на настроение и на следующий день. Посмотри, что обычно следует за особенно напряжёнными днями."
     },
     "source": {
       "name": "Leger et al., Psychol Sci 2018",
       "url": "https://doi.org/10.1177/0956797618763097"
+    },
+    "review": {
+      "status": "rewritten",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "US national diary sample, N=1,155."
     }
   },
   {
@@ -397,15 +515,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "many-interruptions",
     "en": {
       "title": "Constant interruptions",
-      "line": "People work faster when interrupted, but feel more stress and frustration. See how you feel after broken-up days."
+      "line": "In one experiment, interruptions made people work faster but also feel more stressed and frustrated. Notice how interrupted days feel for you."
     },
     "ru": {
-      "title": "Постоянно отвлекают",
-      "line": "Когда постоянно отвлекают, работа идёт быстрее, но стресса и раздражения больше. Посмотри, какими получаются такие дни."
+      "title": "Постоянные отвлечения",
+      "line": "В одном эксперименте из-за отвлечений люди работали быстрее, но испытывали больше стресса и раздражения. Понаблюдай за своими днями с частыми отвлечениями."
     },
     "source": {
       "name": "Mark et al., CHI 2008",
-      "url": "https://www.ics.uci.edu/~gmark/chi08-mark.pdf"
+      "url": "https://doi.org/10.1145/1357054.1357072"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "One lab experiment.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Lab experiment, 48 mostly students, 20-minute email task; meetings and whole days not studied."
     }
   },
   {
@@ -413,15 +538,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "burned-out-after-work",
     "en": {
       "title": "Drained after work",
-      "line": "After a hard workday, people often pull back from family that evening. See how your evenings go after drained days."
+      "line": "A small study found that some parents withdrew more from their children after stressful workdays. Notice how work stress affects your evenings."
     },
     "ru": {
       "title": "Без сил после работы",
-      "line": "После тяжёлого рабочего дня на близких вечером часто не остаётся сил. Посмотри, как проходят такие вечера у тебя."
+      "line": "В небольшом исследовании после напряжённых рабочих дней некоторые родители меньше общались с детьми. Посмотри, как рабочий стресс отражается на твоих вечерах."
     },
     "source": {
       "name": "Repetti & Wood, J Fam Psychol 1997",
-      "url": "https://repettilab.psych.ucla.edu/wp-content/uploads/sites/302/2023/03/repetti-wood-1997.pdf"
+      "url": "https://doi.org/10.1037/0893-3200.11.1.90"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Small study of working mothers of preschool children.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "30 working mothers of preschoolers (1989–90); measured workload and work conflict, not feeling drained; only relevant to parents."
     }
   },
   {
@@ -429,15 +561,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "meditated",
     "en": {
       "title": "A few calm minutes",
-      "line": "Short daily meditation lowered stress in app trials. See if the days you practise feel calmer."
+      "line": "Mindfulness meditation apps have shown small reductions in stress in studies. Notice whether days with meditation feel calmer for you."
     },
     "ru": {
       "title": "Несколько спокойных минут",
-      "line": "Короткая ежедневная медитация снижала стресс в исследованиях приложений. Посмотри, спокойнее ли проходят дни с практикой."
+      "line": "В исследованиях приложения для медитации помогали немного снизить стресс. Посмотри, спокойнее ли проходят дни с медитацией."
     },
     "source": {
       "name": "Gál et al., J Affect Disord 2021",
       "url": "https://doi.org/10.1016/j.jad.2020.09.134"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Small effects; not guaranteed.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Meta-analysis of 34 RCTs of multi-week app programs (stress g≈0.46); one day of slow breathing was not tested."
     }
   },
   {
@@ -445,15 +584,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "saw-friends",
     "en": {
       "title": "Seeing people in person",
-      "line": "Face-to-face time eased loneliness more than other kinds of contact in one study. Notice how in-person days feel."
+      "line": "Positive in-person interactions have been linked to less loneliness. Notice how you feel after spending time with people."
     },
     "ru": {
       "title": "Встречи вживую",
-      "line": "В одном исследовании живые встречи сильнее всего уменьшали одиночество. Заметь, как проходят дни со встречами."
+      "line": "Приятное общение вживую связано с меньшим чувством одиночества. Посмотри, как чувствуешь себя после встреч с людьми."
     },
     "source": {
       "name": "Silva et al., J Soc Pers Relat 2023",
       "url": "https://doi.org/10.1177/02654075231181709"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Quality of the interaction matters.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "14-day diary, 269 adults; in-person contact with anyone."
     }
   },
   {
@@ -461,15 +607,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "deep-conversation",
     "en": {
       "title": "Real conversations",
-      "line": "Deeper talks, not just small talk, went with feeling happier in everyday life. Count how often you get one."
+      "line": "Meaningful conversations have been linked to greater well-being and connection. Notice how days with deeper conversations feel."
     },
     "ru": {
-      "title": "Разговор по душам",
-      "line": "Когда есть разговоры по душам, а не только болтовня, людям обычно лучше. Посчитай, как часто они бывают."
+      "title": "Разговоры по душам",
+      "line": "Содержательные разговоры связаны с лучшим самочувствием и ощущением близости. Посмотри, как проходят дни с разговорами по душам."
     },
     "source": {
       "name": "Sun, Harris & Vazire, JPSP 2020",
       "url": "https://doi.org/10.1037/pspp0000272"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Small talk is not bad.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "N=256, one week, likely students."
     }
   },
   {
@@ -477,15 +630,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "argued-with-partner",
     "en": {
       "title": "Arguments after bad nights",
-      "line": "Couples tend to argue more after a poor night. Hard talks may go better after a good one."
+      "line": "Poor sleep has been linked to more conflict and difficulties resolving disagreements. Notice how conversations go after restless nights."
     },
     "ru": {
       "title": "Ссоры после плохой ночи",
-      "line": "После плохой ночи пары обычно ссорятся чаще и мирятся труднее. Сложный разговор может пройти лучше после хорошей ночи."
+      "line": "Плохой сон связан с более частыми конфликтами и сложностями в разрешении разногласий. Посмотри, как проходят разговоры после беспокойных ночей."
     },
     "source": {
       "name": "Gordon & Chen, Soc Psychol Personal Sci 2014",
       "url": "https://doi.org/10.1177/1948550613488952"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Observational.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Diary + lab, young couples; sleep self-reported."
     }
   },
   {
@@ -493,15 +653,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "got-help-with-kids",
     "en": {
       "title": "Help with the kids",
-      "line": "Parents who get little help with the kids burn out more often. See how days with help compare."
+      "line": "Parenting burnout has been linked to high demands and insufficient support. Notice whether days with help feel different."
     },
     "ru": {
       "title": "Помощь с детьми",
-      "line": "Родители, которым почти не помогают с детьми, выгорают чаще. Сравни дни с помощью и без."
+      "line": "Родительское выгорание связано с высокой нагрузкой и недостатком поддержки. Посмотри, отличаются ли дни, когда есть помощь."
     },
     "source": {
       "name": "Mikolajczak et al., Curr Dir Psychol Sci 2023",
-      "url": "https://www.psychologicalscience.org/journals/current-directions/09637214221142777/"
+      "url": "https://doi.org/10.1177/09637214221142777"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Several factors, not lack of help alone.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Meta-analysis k=49, mostly cross-sectional; perceived support, not daily help."
     }
   },
   {
@@ -509,15 +676,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "took-painkiller",
     "en": {
       "title": "Painkiller days",
-      "line": "Headache pills on many days a month can keep headaches coming back. Counting the days makes this easy to spot."
+      "line": "Frequent use of headache medication can sometimes contribute to recurring headaches. Tracking medication days may help you notice a pattern worth discussing with a doctor."
     },
     "ru": {
       "title": "Дни с обезболивающим",
-      "line": "Таблетки от головной боли много дней в месяц могут сами поддерживать боль. Если считать такие дни, это легко заметить."
+      "line": "Частый приём лекарств от головной боли иногда может поддерживать повторяющиеся приступы. Отмечай дни приёма, чтобы замечать закономерности, которые стоит обсудить с врачом."
     },
     "source": {
       "name": "International Headache Society, ICHD-3",
       "url": "https://ichd-3.org/8-headache-attributed-to-a-substance-or-its-withdrawal/8-2-medication-overuse-headache-moh/"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Counting days does not diagnose medication-overuse headache; the question may include painkillers for other pain.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "ICHD-3 8.2 classification; 'discuss with a doctor' is the app's own line."
     }
   },
   {
@@ -525,15 +699,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "neck-pain",
     "en": {
       "title": "Neck pain and migraine",
-      "line": "Neck pain is among the things people log most around migraine. It can be an early sign, not only a cause."
+      "line": "Neck pain is often reported around migraine attacks. Sometimes it may be an early symptom rather than a trigger."
     },
     "ru": {
-      "title": "Шея и мигрень",
-      "line": "Боль в шее — среди того, что люди чаще всего отмечают рядом с мигренью. Она может быть ранним признаком, а не только причиной."
+      "title": "Боль в шее и мигрень",
+      "line": "Боль в шее часто отмечают рядом с приступами мигрени. Иногда она может быть ранним симптомом, а не триггером."
     },
     "source": {
       "name": "Goadsby et al., Eur J Neurol 2021 (Migraine Buddy data)",
       "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9291858"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "General education, not a personal interpretation.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "Migraine Buddy app data, 90% female, self-labelled episodes; 'early symptom' is the authors' speculation. Candidate opened: Giffin et al., Neurology 2003, doi 10.1212/01.wnl.0000052998.58526.a9 (n=97 with warning symptoms) — not applied."
     }
   },
   {
@@ -541,15 +722,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "period-day",
     "en": {
       "title": "Headaches and periods",
-      "line": "For many people with migraine, attacks bunch up in the two days before a period and its first days."
+      "line": "For some people with migraine, attacks are more common just before and during the first days of a period."
     },
     "ru": {
       "title": "Мигрень и месячные",
-      "line": "У многих людей с мигренью приступы учащаются за два дня до месячных и в первые их дни."
+      "line": "У некоторых людей с мигренью приступы чаще случаются незадолго до месячных и в первые дни цикла."
     },
     "source": {
       "name": "MacGregor & Hackshaw, Neurology 2004",
       "url": "https://doi.org/10.1212/01.wnl.0000133134.68143.2e"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Not every headache around a period is migraine.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "155 women, likely specialist clinic; the 2 days before a period are only visible looking back."
     }
   },
   {
@@ -557,31 +745,45 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "stomach-issues",
     "en": {
       "title": "Stress and your stomach",
-      "line": "For some people, stress and stomach trouble rise together on the same day. See if your days match up."
+      "line": "In a study of people with irritable bowel syndrome, stress and symptoms often increased together. Notice whether stress and stomach discomfort coincide for you."
     },
     "ru": {
       "title": "Стресс и живот",
-      "line": "У некоторых стресс и проблемы с животом усиливаются в один и тот же день. Посмотри, совпадает ли это у тебя."
+      "line": "В исследовании людей с синдромом раздражённого кишечника стресс и симптомы часто усиливались одновременно. Посмотри, совпадают ли у тебя стресс и дискомфорт в животе."
     },
     "source": {
       "name": "Yunusova et al., Clin Gastroenterol Hepatol 2026",
       "url": "https://doi.org/10.1016/j.cgh.2026.05.008"
+    },
+    "review": {
+      "status": "held",
+      "limits": "Study specific to irritable bowel syndrome: held until it can be shown without a misleadingly broad meaning (brief section 5).",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "IBS patients only (N=357), author with a declared conflict of interest; the question goes to everyone."
     }
   },
   {
     "id": "evening-nicotine",
     "templateId": "smoked",
     "en": {
-      "title": "Smoking or vaping at night",
-      "line": "Nicotine in the evening went with worse sleep that night in a large diary study. Compare your smoke-free evenings."
+      "title": "Nicotine and sleep",
+      "line": "Evening nicotine use has been linked to more disrupted sleep. Notice how nights after nicotine use compare."
     },
     "ru": {
-      "title": "Сигарета или вейп вечером",
-      "line": "В большом исследовании никотин вечером был связан с худшим сном в ту же ночь. Сравни с вечерами без него."
+      "title": "Никотин и сон",
+      "line": "Употребление никотина вечером связано с более прерывистым сном. Посмотри, отличаются ли ночи после вечеров с никотином."
     },
     "source": {
       "name": "Spadola et al., Sleep 2019",
       "url": "https://doi.org/10.1093/sleep/zsz136"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Not equally shown for all vaping products; the question may not separate evening use.",
+      "date": "2026-11-10",
+      "source": "PARTIAL",
+      "sourceNote": "785 African American adults, mean age 64; nicotine within 4 h of bed, small effects; the question counts any time of day; vaping not separate."
     }
   },
   {
@@ -589,15 +791,21 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "procrastinated",
     "en": {
       "title": "Putting things off",
-      "line": "Tasks that feel unpleasant or too hard are the ones people delay most. See what your put-off days have in common."
+      "line": "Tasks that feel unpleasant or difficult are often easier to postpone. Notice what your procrastination days have in common."
     },
     "ru": {
       "title": "Откладывание дел",
-      "line": "Чаще всего откладывают то, что кажется неприятным или слишком трудным. Посмотри, что общего у дней, когда всё откладывается."
+      "line": "Неприятные и сложные задачи часто хочется отложить. Посмотри, что общего у дней, когда дела постоянно откладываются."
     },
     "source": {
       "name": "Steel, Psychol Bull 2007",
       "url": "https://doi.org/10.1037/0033-2909.133.1.65"
+    },
+    "review": {
+      "status": "rewritten",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Meta-analysis of 691 correlations; 'difficult' fits only loosely."
     }
   },
   {
@@ -605,15 +813,22 @@ export const OBSERVE_TIPS: ObserveTip[] = [
     "templateId": "less-caffeine-than-usual",
     "en": {
       "title": "Less coffee than usual",
-      "line": "Cutting caffeine suddenly can bring a headache and tiredness for a few days, even if you usually have one cup."
+      "line": "Suddenly reducing caffeine can bring headaches and tiredness for a few days. Notice how you feel when your intake changes."
     },
     "ru": {
       "title": "Кофе меньше обычного",
-      "line": "Резкий отказ от кофеина может на несколько дней принести головную боль и усталость, даже если обычно пьёшь одну чашку."
+      "line": "Резкое сокращение кофеина может на несколько дней вызвать головную боль и усталость. Посмотри, как меняется самочувствие, когда пьёшь его меньше обычного."
     },
     "source": {
       "name": "Juliano & Griffiths, Psychopharmacology 2004",
       "url": "https://doi.org/10.1007/s00213-004-2000-x"
+    },
+    "review": {
+      "status": "rewritten",
+      "limits": "Withdrawal does not happen to everyone.",
+      "date": "2026-11-10",
+      "source": "VERIFIED",
+      "sourceNote": "Review of 57 experiments + 9 surveys; symptoms 2–9 days, mostly after stopping completely."
     }
   }
 ];

@@ -49,6 +49,11 @@ const HOME_COUPLE_PLANS = new Set<string>([
   "Говорить 10 минут без телефонов",
 ]);
 const RETIRED_ADVICE = new Set<string>([
+    // urgency lines out of When to act (her content audit, Nov 10 2026)
+    "Talk to the vet. If your pet has eaten nothing for a whole day, call today.",
+    "Поговорить с ветеринаром. Если питомец не ел целый день, позвонить сегодня.",
+    "Tell their doctor. If the confusion came on suddenly, call the doctor today.",
+    "Сказать об этом врачу. Если путаница началась внезапно, позвонить врачу сегодня.",
     // a plan's words as its own step (Nov 10 2026: "Set a reminder to go to bed…" asked "Did you set a reminder…?")
     "Find 20 minutes a day just for you: no kids, no tasks, no phone", "Найти 20 минут в день только для себя: без детей, дел и телефона", "Eat fruit or vegetables at every meal",
     "Text one friend today, no reason needed",

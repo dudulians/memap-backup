@@ -2943,8 +2943,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 7,
         threshold: 2,
         problemWhen: "yes",
-        adviceAboveThreshold: "Talk to the vet. If your pet has eaten nothing for a whole day, call today.",
-        adviceAboveThresholdRu: "Поговорить с ветеринаром. Если питомец не ел целый день, позвонить сегодня.",
+        // no "call today" (her content audit, Nov 10 2026: no urgency triage in When to act)
+        adviceAboveThreshold: "Talk to the vet and show these days",
+        adviceAboveThresholdRu: "Поговорить с ветеринаром и показать эти дни",
       },
       {
         id: "pet-low-energy",
@@ -3061,8 +3062,9 @@ export const LIFE_STREAMS: LifeStream[] = [
         periodDays: 30,
         threshold: 7,
         problemWhen: "yes",
-        adviceAboveThreshold: "Tell their doctor. If the confusion came on suddenly, call the doctor today.",
-        adviceAboveThresholdRu: "Сказать об этом врачу. Если путаница началась внезапно, позвонить врачу сегодня.",
+        // no "call the doctor today" (her content audit, Nov 10 2026: no urgency triage in When to act)
+        adviceAboveThreshold: "Tell their doctor and show these days",
+        adviceAboveThresholdRu: "Сказать об этом врачу и показать эти дни",
       },
       {
         id: "parent-skipped-meal",

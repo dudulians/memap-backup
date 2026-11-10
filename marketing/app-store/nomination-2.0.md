@@ -27,6 +27,8 @@ MeMap 2.0 — your days as a world
 
 **Type:** App Enhancements
 
+> **10 нояб. 2026:** список «When to see a doctor» убран из приложения (её аудит контента, v124). В отправленном тексте ниже он ещё упомянут — если номинацию можно поправить в App Store Connect, заменить конец пункта про 239 вопросов, например: «…including body topics people rarely mention.»
+
 **Description** (в форме лимит 1000 знаков; этот текст — 979, он и вписан в черновик 7 нояб.)
 ```
 MeMap 2.0 is a full redesign and our top-priority release. A few yes/no questions each evening show people what comes before their best and hardest days, and what to do about it.

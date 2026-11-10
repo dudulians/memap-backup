@@ -1077,8 +1077,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <FileText className="h-5 w-5 text-muted-foreground/60" />
                   </button>
                 </div>
-                {/* The one place the "not a medical app" note lives. */}
-                <p className="px-1 text-[15px] leading-snug text-muted-foreground">{t("patterns.disclaimer")}</p>
+                {/* The one place the "not a medical app" note lives (wording from her content audit, Nov 10 2026). */}
+                <p data-health-note className="px-1 text-[15px] leading-snug text-muted-foreground">{t("settings.healthNote")}</p>
               </div>
             )}
 

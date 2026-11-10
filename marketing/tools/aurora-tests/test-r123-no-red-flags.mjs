@@ -51,7 +51,8 @@ const t = await p.evaluate(async () => {
   return { held: d.OBSERVE_TIPS.filter((x) => x.review?.status === "held").map((x) => x.templateId), pick: pick?.tip.templateId ?? null,
     first7: d.OBSERVE_TIPS.slice(0, 7).map((x) => x.en.title), sources: d.OBSERVE_TIPS.every((x) => x.source?.name && x.source?.url), ru: d.OBSERVE_TIPS.slice(0, 7).map((x) => x.ru.line).join(" ") };
 });
-ok("the hobby tip is held", t.held.join() === "hobby-time" && t.pick !== "hobby-time", t);
+// since the full brief (v125) tip 33 (IBS) is held too
+ok("the hobby tip is held", t.held.includes("hobby-time") && t.pick !== "hobby-time", t);
 ok("tips 1–7 have the new titles", t.first7.join("|") === "Late coffee|Same wake-up time|Worries at bedtime|Morning daylight|Sleep and mood|Time for a hobby|Time in nature", t.first7);
 ok("every tip keeps its source inside", t.sources);
 ok("RU copy is gender-free", !/\((а|ась|ла)\)/.test(t.ru), t.ru);

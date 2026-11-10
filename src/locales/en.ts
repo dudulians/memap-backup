@@ -1312,6 +1312,8 @@ const en = {
     rateApp: "Rate MeMap",
     contactSupport: "Contact support",
     termsOfService: "Terms of Service",
+    // the one general health note (her content audit, Nov 10 2026), Settings → Help
+    healthNote: "MeMap helps you notice patterns in everyday life. It doesn't diagnose medical conditions or replace professional medical advice. If you have health concerns, consult a healthcare professional. In an emergency, seek immediate medical help.",
 
     dataPrivacyTitle: "Data & Privacy",
     dataPrivacyLock: "Your data lives only on this device — nothing is sent to a server or collected by us. Use Backup regularly to keep a safe copy, especially before changing devices.",
@@ -1866,8 +1868,6 @@ const en = {
     reflectionSuggested: "Time to act",
     patternBuildingOne: "Pattern is building — 1 more signal to the action signal",
     patternBuildingMany: "Pattern is building — {{count}} more signals to the action signal",
-    disclaimer: "MeMap is a self-reflection tool – not a diagnostic app.",
-    disclaimer2: "If your patterns feel overwhelming, consider talking to a professional.",
   },
 
   addTracker: {

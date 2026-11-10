@@ -1314,11 +1314,9 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   lives once here so users who want to know what
                   MeMap is and isn't have a stable place to find it. */}
               <div className="rounded-xl bg-muted/40 border border-border/30 p-3 space-y-2">
+                {/* her content audit (Nov 10 2026): one general health note, same words as the new look */}
                 <p className="text-xs leading-relaxed text-foreground/85">
-                  {t("patterns.disclaimer")}
-                </p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {t("patterns.disclaimer2")}
+                  {t("settings.healthNote")}
                 </p>
               </div>
             </div>
