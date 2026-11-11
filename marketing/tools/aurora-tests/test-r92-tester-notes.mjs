@@ -37,7 +37,7 @@ for (const lang of ["en", "ru"]) {
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } })));
   await p.waitForTimeout(2200);
   const dlg = p.locator("[role=dialog]").last();
-  const more = dlg.locator("button", { hasText: /more rules? (is|are) reached|правил[ао]? сработал/ });
+  const more = dlg.locator("button", { hasText: /more rules? (is|are) reached|more questions?: time to act|правил[ао]? сработал|вопрос\S*: пора действовать/ });
   if (await more.count()) { await more.first().click(); await p.waitForTimeout(400); }
   await shot(`${lang}-lit`);
   const lit = (await dlg.innerText()).replace(/\s+/g, " ");

@@ -37,7 +37,7 @@ await p.reload(); await p.waitForTimeout(2500);
 await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } })));
 await p.waitForTimeout(2200);
 const dlg = p.locator("[role=dialog]").last();
-const more = dlg.locator("button", { hasText: /more rules? (is|are) reached/ });
+const more = dlg.locator("button", { hasText: /more rules? (is|are) reached|more questions?: time to act/ });
 if (await more.count()) { await more.first().click(); await p.waitForTimeout(400); }
 await shot("act");
 const txt = (await dlg.innerText()).replace(/\s+/g, " ");

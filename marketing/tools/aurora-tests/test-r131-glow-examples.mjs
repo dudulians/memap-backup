@@ -65,7 +65,8 @@ for (const lang of ["en", "ru"]) {
   ok(`${lang}: My days shows an example month, labelled`, !!m && m.text.toUpperCase().includes(EX) && /\b30\b/.test(m.text) && !m.overflow, m);
   // Chart: an example link chart
   await p.locator("[role=dialog] .seg button", { hasText: lang === "ru" ? /^График$/ : /^Chart$/ }).first().click(); await p.waitForTimeout(1200);
-  m = await example(p, "chart");
+  // the Chart's own example is "chart-one" in its "each" view since v132 (each example folds on its own)
+  m = (await example(p, "chart")) ?? (await example(p, "chart-one"));
   await p.screenshot({ path: `${D}/${lang}-4-chart-example.png` });
   ok(`${lang}: Chart shows an example, labelled`, !!m && m.text.toUpperCase().includes(EX) && !m.overflow, m);
   await closeSheets(p);

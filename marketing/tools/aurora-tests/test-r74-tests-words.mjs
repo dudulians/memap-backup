@@ -34,7 +34,7 @@ const openAct = async () => { await p.evaluate(() => window.dispatchEvent(new Cu
 await openAct(); await shot("act-lit");
 // Try it for 2 weeks on "3 workouts a week": the question she has, with a goal
 // since v114 the cards are folded: the headline says what MeMap noticed, the plan shows once opened
-{ const more = p.locator("[role=dialog] button", { hasText: /more rules? (is|are) reached/ });
+{ const more = p.locator("[role=dialog] button", { hasText: /more rules? (is|are) reached|more questions?: time to act/ });
   if (await more.count()) { await more.first().click(); await p.waitForTimeout(500); }
   out.litText = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ").slice(0, 700);
   const card = p.locator("[role=dialog] .surface", { hasText: /don.t work out/ }).last();

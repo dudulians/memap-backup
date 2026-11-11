@@ -73,7 +73,7 @@ for (const lang of ["en", "ru"]) {
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } })));
   await p.waitForTimeout(2200);
   const dlg = p.locator("[role=dialog]").last();
-  const more = dlg.locator("button", { hasText: /more rules? (is|are) reached|ещё/ });
+  const more = dlg.locator("button", { hasText: /more rules? (is|are) reached|more questions?: time to act|ещё/ });
   if (await more.count()) { await more.first().click().catch(() => {}); await p.waitForTimeout(400); }
   await p.evaluate(() => [...document.querySelectorAll("[role=dialog] button[aria-expanded=false]")].find((x) => /headache|голов/i.test(x.textContent))?.click());
   await p.waitForTimeout(900);
