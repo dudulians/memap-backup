@@ -67,8 +67,6 @@ export const LinkMoment = () => {
       }
       const byId = new Map(trackers.map((x) => [x.id, x]));
       const of = (id: string) => byId.get(id);
-      // the camera that stands on the island (the first-link treasure) glows
-      ea.querySelector(".it-camera")?.classList.add("link-moment-new");
       setShown({ route, titles: [linkHead(t, route, of), linkCount(t, route)], rect: r });
       await frames(2);
       // the light along the route, on the open globe (it is turned to them already)

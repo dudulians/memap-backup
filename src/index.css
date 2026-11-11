@@ -2464,6 +2464,9 @@ html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: 
 /* its own layer: islands and clouds stay under the header, the tabs and the sheets */
 .planet-things { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
 .planet-isle { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+/* the same island in a card, the stage ladder or the new-island screen (IslandPicture, Nov 11 2026): it stands in the
+   flow instead of on the globe, everything on it placed the same way */
+.planet-isle.island-pic { position: relative; display: block; left: auto; top: auto; will-change: auto; }
 .planet-isle img { display: block; width: 100%; filter: drop-shadow(0 6px 8px rgba(20, 60, 100, .25)); }
 .planet-cloud img { filter: drop-shadow(0 14px 10px rgba(20, 60, 100, .18)); }
 /* Things that stand on an island (her note, Nov 5 2026: they "левитируют"): the

@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { GrowthLadder } from "./IslandStats";
 import { haptics } from "@/lib/haptics";
 import { ASPECT, LADDER_WIDTH, STAGE_AT, STAGE_SCALE, art, artOf, toNextStage, islandEvenings, type Stage } from "@/lib/globeArt";
 import { islandName, isNightMap, mapPicFor, type IslandId } from "@/lib/islands";
@@ -111,14 +112,8 @@ export const GrowMoment = () => {
         <div ref={cardRef} className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", !cardOn && "is-moving")}>
           <p className="text-[24px] font-bold leading-tight tracking-tight">{t("growMoment.title", { island: name })}</p>
           <p className="mt-1 text-[16px] font-semibold text-muted-foreground">{left === null ? t("path.stageFull", { stage: t(`path.stage${shown.stage}`) }) : t("path.stageLine", { stage: t(`path.stage${shown.stage}`), count: left })}</p>
-          {/* the four stages, the one now ringed */}
-          <div className="mt-3 grid grid-cols-4 items-end gap-1 rounded-[16px] bg-foreground/[0.035] px-2 py-2" aria-hidden="true">
-            {([1, 2, 3, 4] as const).map((s) => (
-              <span key={s} className={cn("flex h-[44px] items-end justify-center rounded-[12px]", s === shown.stage && "pick-on", s > shown.stage && "opacity-45 saturate-50")}>
-                <img className="max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(artOf(shown.island, STAGE_AT[s - 1]), night)} alt="" />
-              </span>
-            ))}
-          </div>
+          {/* the four stages, the one now ringed: the same ladder as the island's card (Nov 11 2026) */}
+          <div className="mt-3 rounded-[16px] bg-foreground/[0.035] px-1 py-2"><GrowthLadder island={shown.island} days={STAGE_AT[shown.stage - 1]} bare /></div>
           <div className="mt-4 flex items-center justify-between gap-3">
             <button type="button" onClick={() => close(false)} className="h-11 px-1 text-[15px] font-semibold text-muted-foreground">{t("firstLink.close")}</button>
             <button type="button" onClick={() => close(true)} className="raised-btn is-small shrink-0 px-6">{t("growMoment.see")}</button>

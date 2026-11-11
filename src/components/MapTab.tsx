@@ -33,6 +33,7 @@ import { PlanetMap } from "./PlanetMap";
 import { LinkSheet } from "./LinkSheet";
 import { PlanetGlobe } from "./PlanetGlobe";
 import { AnswerNow, GrowthLadder, IslandMore, IslandTreasures, IslandWeek, type IslandView } from "./IslandStats";
+import { IslandAsOnGlobe } from "./IslandAsOnGlobe";
 import { PatternsTab } from "./PatternsTab";
 import { reopenLink } from "./FindingsView";
 import { ChevronLeft } from "lucide-react";
@@ -317,10 +318,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           <div className="flex items-center gap-3 pb-3 pr-10 pt-1">
             {/* the island as it stands now, and how far its next stage is (WORLD-BIBLE, "Рост острова") */}
             {island ? (
-              <span aria-hidden="true" className="w-[76px] shrink-0">
-                <img className="art-day block w-full" src={art(artOf(island.id, dayCount[island.id] ?? 0), false)} alt="" />
-                <img className="art-night block w-full" src={art(artOf(island.id, dayCount[island.id] ?? 0), true)} alt="" />
-              </span>
+              // the island exactly as on the globe, with its treasures (Nov 11 2026)
+              <IslandAsOnGlobe island={island.id} days={dayCount[island.id] ?? 0} className="w-[76px] shrink-0"
+                treasures={treasures.get(island.id)} garden={garden.get(island.id)} lit={lit.has(island.id)} />
             ) : <img src={mapPic("icon_growth")} alt="" className="h-12 w-12" />}
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
@@ -340,7 +340,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               {/* In order (her note: "куча всего, дублируется"): this week in
                   words, what to answer today, the questions, then this
                   island's calendar / chart / action points, links, test, growth. */}
-              <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0} />
+              <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0}
+                real={{ treasures: treasures.get(island.id), garden: garden.get(island.id), lit: lit.has(island.id) }} />
               {playful && <IslandTreasures placed={treasures.get(island.id)} facts={facts}
                 onAll={() => { setOpen(null); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 260); }} />}
               {island.trackerIds.length > 0 && <IslandWeek island={island} trackers={trackers} />}
@@ -423,7 +424,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           onCreated={(id) => { setNewOpen(false); setOpen(id); }} />
       )}
       {editor && (
-        <IslandEditor editId={editor.id} islands={islands} onClose={() => setEditor(null)}
+        <IslandEditor editId={editor.id} days={editor.id ? dayCount[editor.id] ?? 0 : 0} islands={islands} onClose={() => setEditor(null)}
           onOpenIsland={(id) => { setEditor(null); setOpen(id); }} />
       )}
     </div>

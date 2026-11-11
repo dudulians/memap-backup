@@ -5,7 +5,8 @@
 //    field in focus the sheet takes its own height back (vaul's inline height and bottom cleared).
 // 3. Today: her step sat below the middle and an opened card was cut by the tabs → the step comes back to the
 //    middle when what stands above it settles late, and an opened card scrolls whole above the tabs.
-// 4. The camera came first as a gift → moon and stars at 3 evenings, the plane at 7, the camera last (100 days).
+// 4. The camera came first as a gift → moon and stars at 3 evenings, the plane at 7; since Nov 11 2026 no camera at all
+//    (her note: «меня бесит этот фотоаппарат… можем мы вообще убрать?»), the suitcase at 60 days is the last daily one.
 // 5. My days: the calendar didn't fit → a tighter top, the month and Month | Year on one row; the sheet keeps its height.
 // Run from marketing/tools: node aurora-tests/test-r130-notes-path-gifts.mjs
 import { chromium } from "playwright-core";
@@ -136,11 +137,11 @@ for (const [w, h] of [[390, 844], [375, 667]]) {
   });
   const en = await p.evaluate(async () => (await import("/src/locales/en.ts")).default?.items ?? (await import("/src/locales/en.ts")).en?.items);
   out.gifts = r;
-  ok("the camera is the last treasure", r.order[r.order.length - 1] === "camera", r.order);
+  ok("no camera among the treasures", !r.order.includes("camera"), r.order);
   ok("3 evenings in a row: moon and stars, no camera", r.d3.includes("moon") && !r.d3.includes("camera"), r.d3);
   ok("7 evenings in a row: the plane", r.d7.includes("airplane") && !r.d7.includes("camera"), r.d7);
-  ok("the camera comes at 100 days", !r.d99.includes("camera") && r.d100.includes("camera"), { d99: r.d99, d100: r.d100 });
-  if (en) ok("EN 'how' words match", en.camera.how === "100 days" && en.moon.how === "3 evenings in a row" && en.airplane.how === "7 evenings in a row" && en.suitcase.how === "60 days", { camera: en.camera, moon: en.moon, airplane: en.airplane, suitcase: en.suitcase });
+  ok("no camera at 100 days either", !r.d99.includes("camera") && !r.d100.includes("camera"), { d99: r.d99, d100: r.d100 });
+  if (en) ok("EN 'how' words match", !en.camera && en.moon.how === "3 evenings in a row" && en.airplane.how === "7 evenings in a row" && en.suitcase.how === "60 days", { camera: en.camera, moon: en.moon, airplane: en.airplane, suitcase: en.suitcase });
   await ctx.close();
 }
 

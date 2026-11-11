@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, Check, Link2, Spline, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GrowthLadder } from "./IslandStats";
 import { haptics } from "@/lib/haptics";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { getEntries, getTrackers } from "@/lib/storage";
@@ -100,17 +101,8 @@ const Growth = ({ island }: { island: IslandId }) => {
   const { t } = useTranslation();
   return (
     <Box>
-      <div className="grid grid-cols-4 items-end gap-1">
-        {([1, 2, 3, 4] as const).map((s) => (
-          <div key={s} className="tour-pop flex flex-col items-center" style={delay(0.3 + (s - 1) * 0.38)}>
-            <span className="flex h-[46px] w-full items-end justify-center">
-              <img aria-hidden="true" className="art-day block max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(artOf(island, STAGE_AT[s - 1]), false)} alt="" />
-              <img aria-hidden="true" className="art-night block max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(artOf(island, STAGE_AT[s - 1]), true)} alt="" />
-            </span>
-            <span className="mt-1 text-[12px] font-semibold text-muted-foreground">{s === 1 ? t("path.ladderStart") : t("path.ladderAt", { count: STAGE_AT[s - 1] })}</span>
-          </div>
-        ))}
-      </div>
+      {/* the same ladder as the island's card: names and evenings, the flag standing at "In bloom" (Nov 11 2026) */}
+      <GrowthLadder island={island} days={0} bare current={false} pop={(s) => delay(0.3 + (s - 1) * 0.38)} />
     </Box>
   );
 };

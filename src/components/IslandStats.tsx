@@ -13,7 +13,8 @@ import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
 import { linkCount, linkHead, trackerLookup, type TrackerOf } from "@/lib/linkText";
-import { LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
+import { ASPECT, LADDER_WIDTH, STAGE_AT, art, artOf, stageOf } from "@/lib/globeArt";
+import { IslandAsOnGlobe } from "./IslandAsOnGlobe";
 import { islandHsl } from "@/lib/islandColors";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { countedDays, getChests } from "@/lib/pathSteps";
@@ -84,22 +85,35 @@ export const AnswerNow = ({ island, trackers, entries }: { island: Island; track
  *  (her note, Nov 5 2026: "надо обязательно показать, как будет выглядеть,
  *  когда его разовьют полностью"). Passed and now in full colour, the one now
  *  ringed, the ones ahead pale, each with the evening it opens at. */
-export const GrowthLadder = ({ island, days }: { island: IslandId; days: number }) => {
+export const GrowthLadder = ({ island, days, real, bare = false, current = true, pop }: {
+  island: IslandId;
+  days: number;
+  /** what stands on her island now (treasures, garden, lighthouse): the stage she's at shows her real island */
+  real?: { treasures?: PlacedTreasure[]; garden?: string[]; lit?: boolean };
+  /** no card of its own (inside another card) */
+  bare?: boolean;
+  /** false: only how an island grows, no stage ringed (the tour) */
+  current?: boolean;
+  /** each stage pops in, one after another (the tour) */
+  pop?: (s: number) => React.CSSProperties;
+}) => {
   const { t } = useTranslation();
   const now = stageOf(days);
+  // One ladder everywhere (Nov 11 2026, her note: the stages must look and read the same in the island card, the
+  // grow moment, the tour and onboarding): each stage drawn as on the globe (IslandPicture: the flag stands on the
+  // ground at "In bloom", never hanging in the air), its name and the evening it opens at.
   return (
-    <div className="surface mb-3 grid grid-cols-4 gap-1.5 rounded-[20px] px-2 pb-2.5 pt-2.5" aria-label={t(`path.stage${now}`)}>
+    <div className={cn("grid grid-cols-4 gap-1.5", !bare && "surface mb-3 rounded-[20px] px-2 pb-2.5 pt-2.5")} aria-label={current ? t(`path.stage${now}`) : undefined}>
       {([1, 2, 3, 4] as const).map((s) => {
-        const name = artOf(island, STAGE_AT[s - 1]), ahead = s > now;
+        const at = s === now && current ? days : STAGE_AT[s - 1], name = artOf(island, at), ahead = current && s > now, here = current && s === now;
+        // each stage a step bigger, standing on the same line; a tall picture is held to the row's height
+        const width = `min(${LADDER_WIDTH[s]}%, ${Math.round(46 / (ASPECT[name] ?? 0.55))}px)`;
         return (
-          <div key={s} className="flex flex-col items-center text-center">
-            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", s === now && "surface pick-on", ahead && "opacity-50 saturate-50")}>
-              {/* each stage a step bigger, standing on the same line */}
+          <div key={s} className={cn("flex flex-col items-center text-center", pop && "tour-pop")} style={pop?.(s)}>
+            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", here && "surface pick-on", ahead && "opacity-50 saturate-50")}>
               <span className="flex h-[50px] items-end justify-center">
-                <img aria-hidden="true" className="art-day block max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(name, false)} alt="" />
-                <img aria-hidden="true" className="art-night block max-h-full object-contain" style={{ width: `${LADDER_WIDTH[s]}%` }} src={art(name, true)} alt="" />
+                <IslandAsOnGlobe island={island} days={at} style={{ width }} {...(here ? real : {})} />
               </span>
-              {s === 4 && <img aria-hidden="true" className="absolute left-[22%] top-[4%] w-[15%]" src={mapPicFor("marker_flag", false)} alt="" />}
             </span>
             <span className={cn("mt-1 text-[12px] font-bold leading-tight", ahead && "text-muted-foreground")}>{t(`path.stage${s}`)}</span>
             <span className="text-[11px] font-semibold leading-tight text-muted-foreground">{s === 1 ? t("path.ladderStart") : t("path.ladderAt", { count: STAGE_AT[s - 1] })}</span>

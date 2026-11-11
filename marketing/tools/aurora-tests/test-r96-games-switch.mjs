@@ -89,15 +89,21 @@ for (const [lang, playful] of [["en", false], ["ru", false], ["en", true]]) {
       const lines = await p.evaluate(async () => {
         const st = await import("/src/lib/storage.ts"), rl = await import("/src/lib/reminderLines.ts");
         const [T, E] = await Promise.all([st.getTrackers(), st.getEntries()]);
-        const off = rl.progressLines(T, E, 0);
+        // after ~60 days every daily treasure is already hers (no camera at 100 days since Nov 11 2026), so the
+        // treasure line is checked on her first days too, when one is still ahead
+        const d = new Date(); d.setDate(d.getDate() - 4);
+        const since = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const early = E.filter((e) => e.date >= since);
+        const off = rl.progressLines(T, E, 0), offEarly = rl.progressLines(T, early, 0);
         localStorage.removeItem("memap_playful");
-        const on = rl.progressLines(T, E, 0);
+        const on = rl.progressLines(T, E, 0), onEarly = rl.progressLines(T, early, 0);
         localStorage.setItem("memap_playful", "off");
-        return { on, off };
+        return { on, off, onEarly, offEarly };
       });
       out[`${tag} reminder lines`] = lines;
       const treasure = (l) => l.some((x) => /until you get the/.test(x));
-      check(`${tag} reminders: a treasure line only with the games on`, treasure(lines.on) && !treasure(lines.off), lines);
+      check(`${tag} reminders: a treasure line only with the games on`, treasure(lines.onEarly) && !treasure(lines.offEarly) && !treasure(lines.off), lines);
+      check(`${tag} reminders: never the camera`, ![...lines.on, ...lines.onEarly].some((x) => /camera/i.test(x)), lines);
     }
     const flame = await headerStart(p);
     check(`${tag} flame ${playful ? "shown" : "gone"}`, playful ? /\d/.test(flame) : flame === "", flame);

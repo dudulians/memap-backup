@@ -6,14 +6,16 @@
 // island instead of making a twin.
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { islandName, mapPic, type Island, type IslandId } from "@/lib/islands";
 import {
-  createIsland, deleteIsland, getOwnIslands, iconForName, ISLAND_ICONS, LOOK_NAMES, LOOKS, lookForIcon, updateIsland,
+  createIsland, deleteIsland, getOwnIslands, iconForName, ISLAND_ICONS, lookForIcon, updateIsland,
   type IslandIcon,
 } from "@/lib/ownIslands";
+import { IslandAsOnGlobe } from "./IslandAsOnGlobe";
+import { GrowthLadder } from "./IslandStats";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Pressable } from "@/components/ui/pressable";
 
@@ -22,28 +24,17 @@ const IDEAS: { icon: IslandIcon; key: string }[] = [
   { icon: "music", key: "music" }, { icon: "family", key: "friends" }, { icon: "travel", key: "travel" }, { icon: "hobbies", key: "hobby" },
 ];
 
-/** The island with a given look, drawn like on the map. */
-const LookPicture = ({ look, width }: { look: string; width: number }) => {
-  const l = LOOKS[look] ?? LOOKS.grove;
-  const height = Math.round(width * 0.9);
-  const cy = height - width * 0.3;
-  const at = (dx: number, dy: number, w: number) => ({ left: width / 2 + dx * width - w / 2, top: cy + dy * width, width: w });
-  return (
-    <div aria-hidden="true" style={{ position: "relative", width, height }}>
-      <img src={mapPic(l.base)} alt="" className="pointer-events-none absolute -translate-y-1/2" style={at(0, 0, width)} />
-      {l.land.map(([n, lw, dx, dy]) => <img key={n} src={mapPic(n)} alt="" className="pointer-events-none absolute -translate-y-1/2" style={at(dx, dy, lw * width)} />)}
-    </div>
-  );
-};
-
 export const IslandEditor = ({
   editId,
+  days = 0,
   islands,
   onClose,
   onOpenIsland,
 }: {
   /** an own island to change; none = a new one */
   editId?: IslandId | null;
+  /** evenings answered on it (its stage); a new one starts at the first stage */
+  days?: number;
   islands: Island[];
   onClose: () => void;
   onOpenIsland: (id: IslandId) => void;
@@ -55,8 +46,9 @@ export const IslandEditor = ({
   const [name, setName] = useState(editing?.name ?? "");
   const [icon, setIcon] = useState<IslandIcon>(editing?.icon ?? firstFree);
   const [iconPicked, setIconPicked] = useState(!!editing);
-  const [look, setLook] = useState(editing?.look ?? lookForIcon(editing?.icon ?? firstFree));
-  const [lookPicked, setLookPicked] = useState(!!editing);
+  // the stored look is kept for old data; the globe draws every own island from her pack (globeArt.artOf)
+  const look = editing?.look ?? lookForIcon(icon);
+  const isle = (editId ?? "own-new") as IslandId;
 
   const names = useMemo(() => new Map(islands.map((i) => [islandName(t, i.id).toLowerCase(), i.id])), [islands, t]);
   const twin = name.trim() && names.get(name.trim().toLowerCase());
@@ -66,23 +58,13 @@ export const IslandEditor = ({
     setName(v);
     if (!iconPicked) {
       const guess = iconForName(v);
-      if (guess) {
-        setIcon(guess);
-        if (!lookPicked) setLook(lookForIcon(guess));
-      }
+      if (guess) setIcon(guess);
     }
   };
   const pickIcon = (i: IslandIcon) => {
     haptics.tap();
     setIcon(i);
     setIconPicked(true);
-    if (!lookPicked) setLook(lookForIcon(i));
-  };
-  const flip = (d: number) => {
-    haptics.tap();
-    const k = LOOK_NAMES.indexOf(look);
-    setLook(LOOK_NAMES[(k + d + LOOK_NAMES.length) % LOOK_NAMES.length]);
-    setLookPicked(true);
   };
   const save = () => {
     if (!name.trim()) return;
@@ -95,21 +77,20 @@ export const IslandEditor = ({
 
   return (
     <BottomSheet open onOpenChange={(o) => { if (!o) onClose(); }} className="h-[88vh]" ariaTitle={editing ? t("islands.edit") : t("islands.new")}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-6 [&>*]:shrink-0">
         <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{editing ? t("islands.edit") : t("islands.new")}</h2>
 
-        {/* The island as it will be on the map. */}
-        <div className="relative flex flex-col items-center rounded-[24px] py-3" style={{ background: "linear-gradient(180deg, #DDF2FA, #BCDDED)" }}>
-          <button type="button" onClick={() => flip(1)} aria-label={t("islands.anotherLook")}>
-            <LookPicture look={look} width={150} />
-          </button>
-          <span className="surface -mt-1 inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3">
+        {/* The island as it will stand on the globe, from her pack, and how it grows: the same picture and the same
+            stages as everywhere else (Nov 11 2026, her note: the old flat-map island with a house floating over its
+            base was "какой-то не наш"; the looks to flip through were never drawn on the globe). */}
+        <div data-new-island className="relative flex flex-col items-center rounded-[24px] px-3 pb-3 pt-6" style={{ background: "linear-gradient(180deg, #DDF2FA, #BCDDED)" }}>
+          <IslandAsOnGlobe island={isle} days={days} style={{ width: 170 }} />
+          <span className="surface mt-2 inline-flex items-center gap-1.5 rounded-full py-1 pl-1 pr-3">
             <img src={mapPic("icon_" + icon)} alt="" width={26} height={26} />
             <span className="text-[15px] font-bold text-foreground">{name.trim() || t("islands.myIsland")}</span>
           </span>
-          <button type="button" onClick={() => flip(-1)} aria-label={t("islands.anotherLook")} className="surface absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full"><ChevronLeft className="h-5 w-5" /></button>
-          <button type="button" onClick={() => flip(1)} aria-label={t("islands.anotherLook")} className="surface absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full"><ChevronRight className="h-5 w-5" /></button>
         </div>
+        <div className="mt-3"><GrowthLadder island={isle} days={days} /></div>
 
         <input
           value={name}
@@ -126,7 +107,7 @@ export const IslandEditor = ({
         {!name && (
           <div className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1">
             {IDEAS.filter((i) => !names.has(t(`islands.idea.${i.key}`).toLowerCase())).map((i) => (
-              <button key={i.key} type="button" onClick={() => { haptics.tap(); setName(t(`islands.idea.${i.key}`)); setIcon(i.icon); setIconPicked(true); if (!lookPicked) setLook(lookForIcon(i.icon)); }}
+              <button key={i.key} type="button" onClick={() => { haptics.tap(); setName(t(`islands.idea.${i.key}`)); setIcon(i.icon); setIconPicked(true); }}
                 className="surface inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full pl-1 pr-3 text-[15px] font-semibold">
                 <img src={mapPic("icon_" + i.icon)} alt="" width={28} height={28} />
                 {t(`islands.idea.${i.key}`)}

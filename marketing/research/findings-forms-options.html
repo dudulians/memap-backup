@@ -1,0 +1,181 @@
+<title>MeMap finding forms</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: one column; each new kind of finding = "now" card, then option cards A/B as they'd sit in Links; the numbers last */
+:root {
+  --bg: #EEF3F9;
+  --card: #FFFFFF;
+  --ink: #2F3542;
+  --soft: #6B7383;
+  --faint: #98A0AE;
+  --line: #E3E8EF;
+  --teal: #2A9D8F;
+  --teal-soft: #E3F3F0;
+  --shadow: 0 1px 2px rgba(40, 52, 72, .06), 0 6px 18px rgba(40, 52, 72, .07);
+  --font: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141A24; --card: #1E2633; --ink: #E6EAF0; --soft: #9AA3B2; --faint: #7D8796; --line: #2D3746;
+    --teal: #5CC4B6; --teal-soft: #1F3A3A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141A24; --card: #1E2633; --ink: #E6EAF0; --soft: #9AA3B2; --faint: #7D8796; --line: #2D3746;
+  --teal: #5CC4B6; --teal-soft: #1F3A3A; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 36px; }
+.ru { display: none; }
+html.lang-ru .ru { display: revert; }
+html.lang-ru .en { display: none; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+h2 { font-size: 19px; font-weight: 800; margin: 0; display: flex; align-items: baseline; gap: 10px; }
+h2 .num { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--teal-soft); color: var(--teal); font-size: 15px; flex: none; align-self: center; }
+.when { margin: 4px 0 0 38px; color: var(--soft); font-weight: 600; font-size: 14px; }
+.seg { display: inline-flex; background: var(--card); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+.seg button { font: 700 14px var(--font); color: var(--soft); background: none; border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+section { display: flex; flex-direction: column; gap: 12px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tag { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.tag.opt { color: var(--teal); }
+.say { font-size: 17px; font-weight: 700; line-height: 1.32; text-wrap: pretty; }
+.count { font-size: 13.5px; color: var(--soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+.now .say { color: var(--soft); font-weight: 600; font-size: 15.5px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.chip { background: var(--teal-soft); color: var(--ink); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 700; }
+.rules { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 6px 16px; }
+.rule { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 10px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rule:last-child { border-bottom: 0; }
+.rule b { color: var(--teal); }
+.rule .r { font-weight: 700; }
+.rule .ex { grid-column: 2; color: var(--soft); font-size: 13.5px; font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="en">New kinds of findings</span><span class="ru">Новые находки</span></h1>
+    <div class="seg" role="group" aria-label="Language">
+      <button id="b-en" type="button" aria-pressed="true">EN</button>
+      <button id="b-ru" type="button" aria-pressed="false">RU</button>
+    </div>
+  </header>
+
+  <!-- 1 + 2 -->
+  <section>
+    <h2><span class="num">1</span><span><span class="en">Only on such days, otherwise calm</span><span class="ru">Только в такие дни, в остальные спокойно</span></span></h2>
+    <p class="when"><span class="en">When almost all the hard days come with one thing.</span><span class="ru">Когда почти все тяжёлые дни приходятся на одно и то же.</span></p>
+    <div class="cards">
+      <div class="card now"><span class="tag"><span class="en">Now</span><span class="ru">Сейчас</span></span>
+        <div class="say"><span class="en">On days you feel drained after work, you usually argue with your partner</span><span class="ru">В дни, когда после работы не остаётся сил, вы с партнёром обычно ссоритесь</span></div>
+        <div class="count"><span class="en">12 of 16 times · on other days 2 of 44</span><span class="ru">12 из 16 раз · в другие дни 2 из 44</span></div></div>
+      <div class="card"><span class="tag opt">A</span>
+        <div class="say"><span class="en">You mostly argue with your partner on days you feel drained after work</span><span class="ru">Вы с партнёром в основном ссоритесь в дни, когда после работы не остаётся сил</span></div>
+        <div class="count"><span class="en">12 of 14 times · on other days almost never: 2 of 44</span><span class="ru">12 из 14 раз · в другие дни почти никогда: 2 из 44</span></div></div>
+      <div class="card"><span class="tag opt">B</span>
+        <div class="say"><span class="en">Most of the time you argue with your partner, it’s on days you feel drained after work</span><span class="ru">Чаще всего вы с партнёром ссоритесь в дни, когда после работы не остаётся сил</span></div>
+        <div class="count"><span class="en">12 of 14 times · on other days almost never: 2 of 44</span><span class="ru">12 из 14 раз · в другие дни почти никогда: 2 из 44</span></div></div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h2><span class="num">2</span><span><span class="en">It’s something else</span><span class="ru">Дело в другом</span></span></h2>
+    <p class="when"><span class="en">When a likely cause had enough days and made no difference.</span><span class="ru">Когда возможной причины было достаточно, а разницы нет.</span></p>
+    <div class="cards">
+      <div class="card now"><span class="tag"><span class="en">Now</span><span class="ru">Сейчас</span></span>
+        <div class="say"><span class="en">Nothing. Such a check is never shown.</span><span class="ru">Ничего. Такая проверка нигде не показывается.</span></div></div>
+      <div class="card"><span class="tag opt">A</span>
+        <div class="say"><span class="en">Looks like it’s something else</span><span class="ru">Похоже, дело в другом</span></div>
+        <div class="count"><span class="en">You feel drained after work as often on days you sleep 7+ hours (9 of 20) as on days you sleep under 7 hours (7 of 15)</span><span class="ru">После работы не остаётся сил так же часто в дни, когда ты спишь 7+ часов (9 из 20), как и в дни, когда ты спишь меньше 7 часов (7 из 15)</span></div>
+        <div class="chips"><span class="en">What else to watch:</span><span class="ru">Что ещё отмечать:</span> <span class="chip"><span class="en">Many interruptions</span><span class="ru">Много отвлечений</span></span><span class="chip"><span class="en">Difficult boss</span><span class="ru">Сложный начальник</span></span></div></div>
+      <div class="card"><span class="tag opt">C · <span class="en">softer</span><span class="ru">мягче</span></span>
+        <div class="say"><span class="en">So far your days don’t show it’s about sleep</span><span class="ru">Пока по твоим дням не видно, что дело в сне</span></div>
+        <div class="count"><span class="en">You feel drained after work as often on days you sleep 7+ hours (9 of 20) as on days you sleep under 7 hours (7 of 15)</span><span class="ru">После работы не остаётся сил так же часто в дни, когда ты спишь 7+ часов (9 из 20), как и в дни, когда ты спишь меньше 7 часов (7 из 15)</span></div>
+        <div class="chips"><span class="en">What else to watch:</span><span class="ru">Что ещё отмечать:</span> <span class="chip"><span class="en">Many interruptions</span><span class="ru">Много отвлечений</span></span><span class="chip"><span class="en">Difficult boss</span><span class="ru">Сложный начальник</span></span></div></div>
+      <div class="card"><span class="tag opt">B</span>
+        <div class="say"><span class="en">You feel drained after work on days you sleep 7+ hours too</span><span class="ru">После работы не остаётся сил и в дни, когда ты спишь 7+ часов</span></div>
+        <div class="count"><span class="en">9 of 20 · after short nights 7 of 15. Looks like it’s something else.</span><span class="ru">9 из 20 · после коротких ночей 7 из 15. Похоже, дело в другом.</span></div>
+        <div class="chips"><span class="en">What else to watch:</span><span class="ru">Что ещё отмечать:</span> <span class="chip"><span class="en">Many interruptions</span><span class="ru">Много отвлечений</span></span><span class="chip"><span class="en">Difficult boss</span><span class="ru">Сложный начальник</span></span></div></div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h2><span class="num">3</span><span><span class="en">A chain</span><span class="ru">Цепочка</span></span></h2>
+    <p class="when"><span class="en">When one link leads into another.</span><span class="ru">Когда одна связь переходит в другую.</span></p>
+    <div class="cards">
+      <div class="card now"><span class="tag"><span class="en">Now</span><span class="ru">Сейчас</span></span>
+        <div class="say"><span class="en">Two separate cards in the list, often far apart.</span><span class="ru">Две отдельные карточки в списке, часто далеко друг от друга.</span></div></div>
+      <div class="card"><span class="tag opt">A</span>
+        <div class="say"><span class="en">On days you sleep under 7 hours, you usually feel drained after work. On those days you usually argue with your partner</span><span class="ru">В дни, когда ты спишь меньше 7 часов, после работы обычно не остаётся сил. В такие дни вы с партнёром обычно ссоритесь</span></div>
+        <div class="count"><span class="en">11 of 15 · 12 of 16</span><span class="ru">11 из 15 · 12 из 16</span></div></div>
+      <div class="card"><span class="tag opt">B</span>
+        <div class="say"><span class="en">Short night → drained after work → argument with partner</span><span class="ru">Короткая ночь → без сил после работы → ссора с партнёром</span></div>
+        <div class="count"><span class="en">Tap to see both links</span><span class="ru">Нажми, чтобы увидеть обе связи</span></div></div>
+    </div>
+  </section>
+
+  <!-- one pair, different months -->
+  <section>
+    <h2><span class="num">★</span><span><span class="en">One pair, different months: yelling and “bad parent”</span><span class="ru">Одна пара, разные месяцы: срывы и «плохой родитель»</span></span></h2>
+    <p class="when"><span class="en">Both questions on the Parenting island. Which card shows depends only on her days.</span><span class="ru">Оба вопроса на острове «Дети». Какая карточка появится, зависит только от её дней.</span></p>
+    <div class="cards">
+      <div class="card"><span class="tag opt"><span class="en">Mostly on such days</span><span class="ru">В основном в такие дни</span></span>
+        <div class="say"><span class="en">You mostly feel like a bad parent on days you yell at your kid</span><span class="ru">В основном приходит мысль «я плохой родитель» в дни, когда ты срываешься на ребёнка</span></div>
+        <div class="count"><span class="en">9 of 10 times · on other days almost never: 1 of 30</span><span class="ru">9 из 10 раз · в другие дни почти никогда: 1 из 30</span></div></div>
+      <div class="card"><span class="tag opt"><span class="en">Often then, often otherwise too</span><span class="ru">Часто тогда, но и в другие дни</span></span>
+        <div class="say"><span class="en">On days you yell at your kid, you usually feel like a bad parent</span><span class="ru">В дни, когда ты срываешься на ребёнка, обычно приходит мысль «я плохой родитель»</span></div>
+        <div class="count"><span class="en">8 of 10 times · on other days 6 of 30</span><span class="ru">8 из 10 раз · в другие дни 6 из 30</span></div></div>
+      <div class="card"><span class="tag opt"><span class="en">Almost always, whatever happened</span><span class="ru">Почти всегда, что бы ни было</span></span>
+        <div class="say"><span class="en">Looks like it’s something else</span><span class="ru">Похоже, дело в другом</span></div>
+        <div class="count"><span class="en">You feel like a bad parent as often on days you don’t yell at your kid (14 of 20) as on days you yell at your kid (7 of 10)</span><span class="ru">Мысль «я плохой родитель» приходит так же часто в дни, когда ты не срываешься на ребёнка (14 из 20), как и в дни, когда ты срываешься на ребёнка (7 из 10)</span></div>
+        <div class="chips"><span class="en">What else to watch:</span><span class="ru">Что ещё отмечать:</span> <span class="chip"><span class="en">Parenting feels like too much</span><span class="ru">С детьми слишком тяжело</span></span><span class="chip"><span class="en">Anxiety</span><span class="ru">Тревога</span></span></div></div>
+      <div class="card now"><span class="tag"><span class="en">Too few days</span><span class="ru">Мало дней</span></span>
+        <div class="say"><span class="en">Nothing yet. A pair needs at least 5 days with and 5 without, about two weeks of answers.</span><span class="ru">Пока ничего. Паре нужно хотя бы 5 дней «с» и 5 «без», это примерно две недели ответов.</span></div></div>
+      <div class="card now"><span class="tag"><span class="en">Two sides of one thing</span><span class="ru">Две стороны одного</span></span>
+        <div class="say"><span class="en">“Yelled at my kid” and “Ran out of patience” always go together: never shown as a link, it says nothing new.</span><span class="ru">«Сорвался на ребёнка» и «Не хватило терпения» всегда вместе: связью не показываются, это ничего нового не говорит.</span></div></div>
+    </div>
+  </section>
+
+  <!-- numbers -->
+  <section>
+    <h2><span class="num">4</span><span><span class="en">The numbers (yours to approve)</span><span class="ru">Числа (их утверждаешь ты)</span></span></h2>
+    <div class="rules">
+      <div class="rule"><b>a</b><span class="r"><span class="en">“Mostly on such days”: at least 6 hard days, at least 3 of every 4 on such days, at least 10 other days to compare, and on those other days it’s rare (at most 1 in 4). So a thing that happens almost every day never gets “mostly”</span><span class="ru">«В основном в такие дни»: хотя бы 6 тяжёлых дней, хотя бы 3 из каждых 4 — в такие дни, хотя бы 10 других дней для сравнения, и в другие дни это редко (не чаще 1 из 4). Так то, что бывает почти каждый день, никогда не получит «в основном»</span></span><span class="ex"><span class="en">“Almost only” from 9 of every 10</span><span class="ru">«Почти только» — с 9 из 10</span></span></div>
+      <div class="rule"><b>b</b><span class="r"><span class="en">Other days in words: “never” at 0, “almost never” up to 1 in 10, “rarely” up to 1 in 4</span><span class="ru">Другие дни словами: «никогда» при 0, «почти никогда» до 1 из 10, «редко» до 1 из 4</span></span><span class="ex"><span class="en">More than that: just the numbers, as now</span><span class="ru">Больше: только цифры, как сейчас</span></span></div>
+      <div class="rule"><b>c</b><span class="r"><span class="en">“Something else”: stricter than a link. At least 4 weeks of answers, at least 10 days with and 10 without (a thing that hardly ever changes can’t rule anything out), the hard thing at least 10 times (from a few migraines nothing can be ruled out), and the two differ by less than 1 in 10</span><span class="ru">«Дело в другом»: строже, чем связь. Хотя бы 4 недели ответов, хотя бы 10 дней «с» и 10 «без» (то, что почти не меняется, ничего не может исключить), тяжёлое хотя бы 10 раз (по нескольким мигреням ничего нельзя исключить), и разница меньше 1 из 10</span></span><span class="ex"><span class="en">Only for a hard question’s likely causes that she also answers (the app’s own list of what may come with what), on any island</span><span class="ru">Только для возможных причин тяжёлого вопроса, на которые она тоже отвечает (свой список приложения «что с чем бывает»), на любом острове</span></span></div>
+      <div class="rule"><b>e</b><span class="r"><span class="en">One set of numbers for every topic: they follow how often things happen. Anything with the cycle (period, PMS) needs at least 8 weeks of answers, two cycles</span><span class="ru">Одни числа для всех тем: они сами учитывают, как часто что бывает. Всё, что связано с циклом (месячные, ПМС), — хотя бы 8 недель ответов, два цикла</span></span><span class="ex"><span class="en">Nov 11 2026, after “you understand it better”</span><span class="ru">11 нояб. 2026, после «ты лучше понимаешь»</span></span></div>
+      <div class="rule"><b>d</b><span class="r"><span class="en">A chain: only when both links are already shown</span><span class="ru">Цепочка: только когда обе связи уже показаны</span></span><span class="ex"><span class="en">Two causes together (sleep and bowel): later, needs far more days</span><span class="ru">Две причины вместе (сон и кишечник): позже, нужно намного больше дней</span></span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var en = document.getElementById("b-en"), ru = document.getElementById("b-ru");
+  function set(lang) {
+    document.documentElement.classList.toggle("lang-ru", lang === "ru");
+    en.setAttribute("aria-pressed", String(lang === "en"));
+    ru.setAttribute("aria-pressed", String(lang === "ru"));
+    try { localStorage.setItem("ff-lang", lang); } catch (e) {}
+  }
+  en.addEventListener("click", function () { set("en"); });
+  ru.addEventListener("click", function () { set("ru"); });
+  var saved = null;
+  try { saved = localStorage.getItem("ff-lang"); } catch (e) {}
+  if (saved === "ru") set("ru");
+})();
+</script>

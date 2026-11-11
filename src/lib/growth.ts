@@ -73,7 +73,7 @@ export const growthLand = (kinds: GrowthKind[], land: [string, number, number, n
 
 // --- Special items ---------------------------------------------------------
 
-export type ItemId = "balloon" | "camera" | "signpost" | "books" | "sparkles" | "bicycle" | "easel" | "rainbow" | "airplane"
+export type ItemId = "balloon" | "signpost" | "books" | "sparkles" | "bicycle" | "easel" | "rainbow" | "airplane"
   // from her pack, Nov 5 2026 ("возьми все возможные трежерс")
   | "moon" | "chest" | "zen" | "lavender" | "house" | "tent" | "suitcase";
 // In the order they usually come. Her note, Nov 10 2026: the camera came first and made no sense ("не
@@ -95,7 +95,8 @@ export const ITEMS: { id: ItemId; pic: string }[] = [
   { id: "house", pic: "house" }, // an island fully grown (21 evenings)
   { id: "tent", pic: "camping_tent" }, // 30 days
   { id: "suitcase", pic: "travel_suitcase" }, // 60 days (was 100)
-  { id: "camera", pic: "camera" }, // 100 days, the last one (was 3 evenings in a row; Nov 7 2026: never a gift for a link)
+  // no camera any more (Nov 11 2026, her note: «меня бесит этот фотоаппарат… можем мы вообще убрать?»): it was the
+  // 100-day gift, and the progress lines kept promising it; the suitcase at 60 days is the last daily one now
 ];
 
 export interface WorldFacts {
@@ -123,7 +124,6 @@ export interface WorldFacts {
 export const itemEarned = (id: ItemId, f: WorldFacts): boolean => {
   switch (id) {
     case "balloon": return f.days >= 7;
-    case "camera": return f.days >= 100;
     case "signpost": return f.ownIslands >= 1;
     case "books": return f.notes >= 10;
     case "sparkles": return f.hunches >= 1;
@@ -185,7 +185,6 @@ export const markTreasuresSeen = (f: WorldFacts): void => {
 export const itemProgress = (id: ItemId, f: WorldFacts): [number, number] => {
   switch (id) {
     case "balloon": return [Math.min(f.days, 7), 7];
-    case "camera": return [Math.min(f.days, 100), 100];
     case "signpost": return [Math.min(f.ownIslands, 1), 1];
     case "books": return [Math.min(f.notes, 10), 10];
     case "sparkles": return [Math.min(f.hunches, 1), 1];
@@ -228,7 +227,7 @@ export const worldFacts = (trackers: Tracker[], entries: TrackerEntry[], islands
 // --- Treasures on the map ----------------------------------------------------
 // WORLD-BIBLE "Решения 5 ноября" #8 (Nov 5 2026): a treasure stands on an
 // island, in one of three places — over it (balloon, plane, rainbow, stars) or
-// on its left or right shore (camera, signpost, books, easel, bicycle). The
+// on its left or right shore (signpost, books, easel, bicycle). The
 // island is the one it belongs to when there is one (the rainbow over the
 // island that turned calm, the easel where her test was, the signpost on her
 // own island, the stars where her
