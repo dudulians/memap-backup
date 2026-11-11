@@ -20,6 +20,8 @@ for (const lang of ["en", "ru"]) {
     : { tryBtn: /Try it for 2 weeks/, start: /^Start/i, cont: /^Continue$/, no: /^No$/, sleepQ: "Did you sleep 7+ hours?", bed: "In bed by 10:30 PM: 8 hours before you get up.", push: "Tonight: in bed by 10:30 PM, 8 hours before your 6:30 AM wake-up", startNight: "Tomorrow evening MeMap will ask how the night went." };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: "Europe/London" });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${lang}: ${e.message}`));
+  // the afternoon, London time: the night-test push depends on the hour (run late at night it read as day 3; Nov 12 2026)
+  const afternoon = new Date(); afternoon.setUTCHours(14, 0, 0, 0); await p.clock.install({ time: afternoon });
   let n = 0; const shot = async (name) => { await p.waitForTimeout(500); await p.screenshot({ path: `${D}/${lang}-night-${String(++n).padStart(2, "0")}-${name}.png` }); };
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   // three weeks: short nights on most days, so the sleep rule is lit; sleep is the topic

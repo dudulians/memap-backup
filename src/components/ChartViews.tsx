@@ -9,7 +9,7 @@
 // in the app's colours — and the full chart is the same chart, bigger, with
 // dates, 8 weeks or 6 months, and a finger to read any week.
 import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
-import { linkOf, linkWorthShowing } from "@/lib/islands";
+import { linkOf, linkWorthShowing, LINKS_TOP } from "@/lib/islands";
 import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -221,7 +221,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
   const links = useMemo(() => {
     const ids = new Set(mine.map((x) => x.id));
     const of = trackerLookup(live);
-    return computeCorrelations(live, entries, 12)
+    return computeCorrelations(live, entries, LINKS_TOP)
       .filter(linkWorthShowing)
       .filter((c) => !focusIds || (pair ? ids.has(c.trackerA.id) && ids.has(c.trackerB.id) : ids.has(c.trackerA.id) || ids.has(c.trackerB.id)))
       .map((c) => {

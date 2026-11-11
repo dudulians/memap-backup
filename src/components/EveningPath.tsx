@@ -34,7 +34,7 @@ import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { tipFor } from "@/lib/observeTips";
-import { buildIslands, buildRoutes } from "@/lib/islands";
+import { buildIslands, buildRoutes, LINKS_TOP } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
 import { UnloadGame } from "@/components/UnloadGame";
@@ -702,7 +702,7 @@ export const EveningPath = ({
       return { text, open: "overview" as null | "overview" | "findings" | "signals" | "world" };
     }
     if (part === 1) {
-      const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length;
+      const n = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length;
       return n > 0 ? { text: t("path.next4.links", { count: n }), open: "findings" as const } : { text: evenings < LINKS_AT ? t("path.next4.linksSoon", { count: LINKS_AT - evenings }) : t("path.next4.linksWait"), open: null };
     }
     if (part === 2) { const lit = litTrackers(trackers, entries).size; return { text: lit > 0 ? t("path.next4.lit", { count: lit }) : t("path.next4.rule"), open: "signals" as const }; }

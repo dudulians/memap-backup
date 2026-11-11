@@ -291,7 +291,9 @@ export type AnalyticsEvent =
   | "reminder_permission"
   // her own question's words, asked under its link (opened; saved with a yes and/or a no word; never the words)
   | "own_words_opened"
-  | "own_words_saved";
+  | "own_words_saved"
+  // a question added from "What else to watch" under "Looks like it's something else" (Nov 11 2026)
+  | "notit_watch_added";
 
 /** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
 export const setSource = (source: string) => {

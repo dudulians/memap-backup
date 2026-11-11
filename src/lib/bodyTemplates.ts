@@ -52,6 +52,8 @@ const NATURAL_PAIRS: [string, string][] = [
   ["period-day", "heavy-flow-day"], ["period-day", "period-symptoms"], ["period-day", "pms-signs"], ["period-day", "breast-tender"],
   ["pms-signs", "breast-tender"], ["pms-signs", "period-symptoms"], ["hot-flushes", "night-sweats"], ["bladder-urgency", "bladder-leak"],
   ["pooped-today", "hard-to-poop"], ["pooped-today", "loose-stool"], ["headache", "migraine"], ["felt-depressed", "lost-interest"], ["felt-anxious", "panic-attack"],
+  // yelling at the kid and running out of patience with the kid are one moment told twice (Nov 11 2026)
+  ["yelled-at-kid", "ran-out-of-patience"],
 ];
 const NATURAL = new Set(NATURAL_PAIRS.flatMap(([x, y]) => [`${x}|${y}`, `${y}|${x}`]));
 export const isNaturalPair = (a: string | null, b: string | null) => !!a && !!b && NATURAL.has(`${a}|${b}`);

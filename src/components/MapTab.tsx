@@ -15,7 +15,7 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { firstLinkState } from "@/lib/firstLink";
 import { growSeen } from "@/lib/growMoment";
 import { grewToday } from "@/lib/globeArt";
-import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, mapPic, type Route } from "@/lib/islands";
+import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, LINKS_TOP, mapPic, type Route } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { currentExperiment, experimentOver, type Experiment } from "@/lib/experiments";
 import { getDoorState } from "@/lib/doors";
@@ -241,7 +241,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     return tr ? islandOf(tr) : null;
   }, [trackers]);
   // every link worth showing, not only the ones drawn between islands
-  const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).length, [trackers, entries]);
+  const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length, [trackers, entries]);
   // What helps opens its own sheet (Nov 8 2026: it opened a test's island, and an empty "Week summary"
   // when that island wasn't there)
   const [helpsOpen, setHelpsOpen] = useState(false);

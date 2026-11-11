@@ -7,7 +7,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getDoor, getDoorState, strongestContextFact, type ContextFact } from "@/lib/doors";
 import { activeQuestions } from "@/lib/pathSteps";
 import { computeCorrelations } from "@/lib/correlations";
-import { isNeutralQuestion, linkOf, linkWorthShowing, rankLinks } from "@/lib/islands";
+import { isNeutralQuestion, linkOf, linkWorthShowing, LINKS_TOP, rankLinks } from "@/lib/islands";
 
 /** days: the week's answers in day order (true/false, null = no answer); hardWhen: which answer is hard */
 export interface ChestStat { trackerId: string; door: boolean; k: number; n: number; days: (boolean | null)[]; hardWhen: "yes" | "no" | null }
@@ -19,7 +19,7 @@ export interface ChestContent { main: ChestStat | null; rows: ChestStat[]; fact:
 // The same link as the top of the Links list, read the same way round (QA, Nov 8 2026: the week
 // report said the opposite of the Links list about the same two questions).
 const strongestLink = (trackers: Tracker[], entries: TrackerEntry[]): ChestInsight | null => {
-  const c = rankLinks(computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing))[0];
+  const c = rankLinks(computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing))[0];
   if (!c) return null;
   const l = linkOf(c);
   return { a: l.first.id, b: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, otherK: l.other.k, otherN: l.other.n };

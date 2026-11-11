@@ -25,7 +25,7 @@ import { haptics } from "@/lib/haptics";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { ruleCount, ruleState, ruleWindowDates, quietContext, type RuleState } from "@/lib/lighthouses";
 import { ruleKeyOf } from "@/lib/rules";
-import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, mapPic, type IslandId } from "@/lib/islands";
+import { isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { getDoorState, isoLocal } from "@/lib/doors";
@@ -164,7 +164,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   // the cards opened to their details
   const [openCards, setOpenCards] = useState<string[]>([]);
   // her links, read the same way as the Links list: what comes before a lit question's hard answer
-  const links = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, 12).filter(linkWorthShowing).map(linkOf), [trackers, entries]);
+  const links = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).map(linkOf), [trackers, entries]);
   const of = useMemo(() => trackerLookup(trackers), [trackers]);
   const linksInto = (tr: Tracker) => links.filter((l) => l.second.id === tr.id && l.secondHard === true && !isTestQuestion(l.first)).slice(0, 2);
   /** a link's first question, when it's that question's hard answer and it has a plan: a cause to test.

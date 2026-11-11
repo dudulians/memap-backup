@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { BarChart3 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { islandName, type IslandId, type Route } from "@/lib/islands";
-import { linkHead, linkOtherDays, linkTimesBig, trackerLookup } from "@/lib/linkText";
+import { linkHead, linkNumbers, linkOtherDays, linkTimesBig, trackerLookup } from "@/lib/linkText";
 import { cap } from "@/lib/answerPhrases";
 import { art, artOf } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
@@ -38,6 +38,8 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
     );
   };
   const r = route;
+  // a "mostly" link counts from what it says: 12 of the 14 times (Nov 11 2026)
+  const num = r ? linkNumbers(r) : { k: 0, n: 0 };
   return (
     <BottomSheet open={!!r} onOpenChange={(o) => { if (!o) onClose(); }} ariaTitle={t("link.title")}>
       {r && (
@@ -69,10 +71,10 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           {[of(r.first), of(r.second)].filter(needsWords).slice(0, 1).map((tr) => <OwnWordsPrompt key={tr.id} tracker={tr} />)}
 
           {/* k of n, as dots: filled = it came */}
-          <p className="mt-4 text-[34px] font-bold leading-[1.1] tracking-tight tabular-nums">{linkTimesBig(t, r.k, r.n)}</p>
+          <p className="mt-4 text-[34px] font-bold leading-[1.1] tracking-tight tabular-nums">{linkTimesBig(t, num.k, num.n)}</p>
           <div className="mt-3 flex flex-wrap gap-1.5" aria-hidden="true">
-            {Array.from({ length: Math.min(r.n, 40) }, (_, i) => (
-              <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < r.k ? dot(r.secondHard) : r.secondHard === null ? "hsl(var(--foreground) / 0.12)" : dot(!r.secondHard, 0.7) }} />
+            {Array.from({ length: Math.min(num.n, 40) }, (_, i) => (
+              <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < num.k ? dot(r.secondHard) : r.secondHard === null ? "hsl(var(--foreground) / 0.12)" : dot(!r.secondHard, 0.7) }} />
             ))}
           </div>
           {/* the other days, so a coincidence looks like one */}

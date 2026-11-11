@@ -52,6 +52,11 @@ for (const lang of ["en", "ru"]) {
   // 1. Links
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "findings", back: true } })));
   await p.waitForTimeout(2200); await shot("links");
+  // words first, numbers on tap (her note, Nov 11 2026): no count until a card is opened; then open them all
+  const closedCounts = await p.evaluate(() => document.querySelectorAll("[role=dialog] [data-link-count]").length);
+  ok(`${lang}.links: words first, no numbers until a tap`, closedCounts === 0, closedCounts);
+  await p.evaluate(() => document.querySelectorAll("[data-link-card] button[aria-expanded=false]").forEach((x) => x.click()));
+  await p.waitForTimeout(600);
   const links = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.links`] = links.slice(0, 900);
   ok(`${lang}.links: forced yes, the next day, as a sentence`, FORCED[lang].test(links), links.slice(0, 300));

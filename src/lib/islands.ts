@@ -8,10 +8,11 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import type { TFunction } from "i18next";
 import { computeCorrelations, correlationFrame, isHighlySignificant, trackerPolarity, type CorrelationResult } from "@/lib/correlations";
 import { getDoorState, isoLocal } from "@/lib/doors";
-import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
+import { matchTemplateIdByTitle, RELATED_QUESTIONS } from "@/lib/relatedQuestions";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { getOwnIslands, LOOKS } from "@/lib/ownIslands";
+import { mostlyOf, type Mostly } from "@/lib/findingForms";
 
 const PICS = new Map(
   Object.entries(import.meta.glob("@/assets/map/*.webp", { eager: true, import: "default" }) as Record<string, string>)
@@ -160,12 +161,21 @@ export interface Island {
  *  firstYes false: the days WITHOUT the first (her note, Nov 6 2026: "no walk →
  *  tired" read as "walk → tired"); secondYes false: the second did NOT come.
  *  other: the second (that same answer) on the rest of the days. */
-export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean; firstYes: boolean; secondYes: boolean; other: { k: number; n: number }; /** the counted answer is a hard one (red), a good one (green), or neither */ secondHard: boolean | null }
+export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean; firstYes: boolean; secondYes: boolean; other: { k: number; n: number }; /** the counted answer is a hard one (red), a good one (green), or neither */ secondHard: boolean | null;
+  /** "mostly" / "almost only" on such days (findingForms.ts, her pick Nov 11 2026), or the plain form */ mostly?: Mostly | null }
 
 /** A pattern as she reads it. Together (phi > 0): "with A → B". Apart (phi < 0):
  *  the second is told by its hard answer, as a hard day is (WORLD-BIBLE): "without
  *  a walk → tired", "anxious → not slept enough". k of n counts those days; other
  *  counts the same second answer on the rest. */
+/** Same day, which one goes first by the app's list of what may lead to what: true = b may lead to a (b first),
+ *  false = a may lead to b, null = the list says nothing (or both ways). */
+const causeFirst = (a: Tracker, b: Tracker): boolean | null => {
+  const ta = matchTemplateIdByTitle(a.title), tb = matchTemplateIdByTitle(b.title);
+  if (!ta || !tb) return null;
+  const aToB = (RELATED_QUESTIONS[tb] ?? []).includes(ta), bToA = (RELATED_QUESTIONS[ta] ?? []).includes(tb);
+  return aToB === bToA ? null : bToA;
+};
 export const linkOf = (c: CorrelationResult) => {
   // same day: her topic's question goes second, as the thing explained ("Short night →
   // migraine", not "Migraine → short night"; Nov 6 2026)
@@ -173,7 +183,10 @@ export const linkOf = (c: CorrelationResult) => {
   // same day, neither or both her topic: one fixed order, so the Links list, the island, the week report and
   // the PDF all say it the same way round (QA re-check, Nov 9 2026: the PDF said it reversed)
   const leadA = lead.has(c.trackerA.id), leadB = lead.has(c.trackerB.id);
-  const flip = c.lag === -1 || (c.lag === 0 && (leadA !== leadB ? leadA : c.trackerA.id > c.trackerB.id));
+  // neither her topic: the app's list of what may lead to what puts the likely cause first ("drained after work"
+  // before "arguments"; Nov 11 2026, for "You mostly argue… on days you feel drained after work"); else a fixed order
+  const graph = causeFirst(c.trackerA, c.trackerB);
+  const flip = c.lag === -1 || (c.lag === 0 && (leadA !== leadB ? leadA : graph !== null ? graph : c.trackerA.id > c.trackerB.id));
   const second0 = flip ? c.trackerA : c.trackerB;
   const secondYes = c.phi >= 0 || trackerPolarity(second0) !== "good";
   const firstYes = c.phi >= 0 || !secondYes;
@@ -184,10 +197,11 @@ export const linkOf = (c: CorrelationResult) => {
   const k = at(firstYes, secondYes), ok = at(!firstYes, secondYes);
   const pol = trackerPolarity(second0);
   const secondHard = pol === "neutral" ? null : secondYes === (pol === "bad");
-  return {
-    first: flip ? c.trackerB : c.trackerA, second: second0, firstYes, secondYes, secondHard, nextDay: c.lag !== 0,
-    k, n: k + at(firstYes, !secondYes), other: { k: ok, n: ok + at(!firstYes, !secondYes) },
-  };
+  const first = flip ? c.trackerB : c.trackerA, n = k + at(firstYes, !secondYes), other = { k: ok, n: ok + at(!firstYes, !secondYes) };
+  const nextDay = c.lag !== 0;
+  // "mostly on such days" when it passes her numbers (findingForms.ts); the plain form otherwise
+  const mostly = mostlyOf({ first: first.id, second: second0.id, firstYes, secondYes, nextDay, k, n, other, secondHard }, first, second0);
+  return { first, second: second0, firstYes, secondYes, secondHard, nextDay, k, n, other, mostly };
 };
 
 /** Worth showing as a link. Against intuition (a good thing before a hard one, a
@@ -211,6 +225,9 @@ export const rankLinks = (cs: CorrelationResult[]): CorrelationResult[] => {
 /** Days needed on each side of a link (QA, Nov 8 2026: "4 of 4 times, on other days 0 of 3" and "1 of 2"
  *  proved nothing, and they are claims about her health). */
 export const LINK_MIN_SIDE = 5;
+/** How many links are kept (was 12, Nov 11 2026: with many questions a weaker link to her own topic dropped out
+ *  behind strong ones between side questions; now every link worth showing stays, her topics first). */
+export const LINKS_TOP = 80;
 export const linkWorthShowing = (c: CorrelationResult): boolean => {
   if (c.phi === 0) return false;
   // a 2-week test has its own result screen; as a link it read as a double negative
@@ -324,7 +341,7 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
   for (const isl of islands) for (const id of isl.trackerIds) where.set(id, isl.id);
   const seen = new Set<string>();
   const out: Route[] = [];
-  for (const c of rankLinks(computeCorrelations(trackers, entries, 12).filter(linkWorthShowing))) {
+  for (const c of rankLinks(computeCorrelations(trackers, entries, LINKS_TOP).filter(linkWorthShowing))) {
     const l = linkOf(c);
     // islands in reading order: the first question's island, then the second's
     const a = where.get(l.first.id), b = where.get(l.second.id);
@@ -332,7 +349,7 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
     const key = [a, b].sort().join("|");
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other });
+    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other, mostly: l.mostly });
   }
   return out.slice(0, 4);
 };

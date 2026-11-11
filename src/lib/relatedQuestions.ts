@@ -34,6 +34,8 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "slept-enough",
     "felt-stressed",
     "felt-fatigued",
+    // a hard day at work spills over into the couple (Nov 11 2026: the store's "drained after work → arguments")
+    "burned-out-after-work",
     "drank-alcohol",
     "unfair-chores",
     "phones-together",
