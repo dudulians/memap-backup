@@ -16,6 +16,8 @@ import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/i
 import { haptics } from "@/lib/haptics";
 import { standAt, standsOn } from "@/lib/islandSpots";
 import { playBloop } from "@/lib/feedback";
+import { isPlayful } from "@/lib/playful";
+import { toggleNight } from "@/lib/theme";
 import planetDay from "@/assets/globe/planet-day.webp";
 import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
@@ -82,12 +84,27 @@ const toTexture = (img: HTMLImageElement) => {
 };
 const TEXTURES = new Map<string, HTMLCanvasElement>();
 
+// Lights along her links (her "Да, добавляем", Nov 11 2026, from reel 16 «Целый мир»): a warm light runs along a
+// new link's route, both islands switch on a small light, the link's sign comes at the end; at night the islands
+// that have links keep their light. A light means "this is linked to this": only where a link is, never random.
+const LIT_KEY = "memap_links_lit";
+const pairKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+const readLit = (): Set<string> | null => { try { const s = localStorage.getItem(LIT_KEY); return s === null ? null : new Set(JSON.parse(s) as string[]); } catch { return null; } };
+const addLit = (keys: string[]) => { try { const s = readLit() ?? new Set<string>(); keys.forEach((k) => s.add(k)); localStorage.setItem(LIT_KEY, JSON.stringify([...s])); } catch { /* runs again next time */ } };
+/** The light along all her links, once a day when World opens: waits for her yes (Nov 11 2026). The event
+ *  "memap-routes-light" plays it by hand. */
+const DAILY_RUN: boolean = false;
+/** how long the light takes along one route; how long the islands stay lit after it; how long night takes to come */
+const RUN_MS = 1500, TAIL_MS = 2600, DAYNIGHT_MS = 1700;
+const STAR = "M0 -14 Q1.6 -1.6 14 0 Q1.6 1.6 0 14 Q-1.6 1.6 -14 0 Q-1.6 -1.6 0 -14Z";
+interface Light { key: string; from: string; to: string; t0: number; dur: number; fresh: boolean; litA?: boolean; litB?: boolean; gone?: boolean }
+
 const VS = "attribute vec2 p; varying vec2 v; void main(){ v = p; gl_Position = vec4(p, 0.0, 1.0); }";
 // The ball drawn per pixel: her picture, one light from the top left, a light rim and an atmosphere.
 const FS = `precision highp float;
 varying vec2 v;
 uniform vec2 uRes; uniform vec3 uBall; uniform float uYaw; uniform float uPitch; uniform float uNight; uniform float uPx;
-uniform sampler2D uTex;
+uniform sampler2D uTex; uniform sampler2D uTex2;
 const float PI = 3.14159265;
 void main(){
   vec2 frag = vec2((v.x * 0.5 + 0.5) * uRes.x, (0.5 - v.y * 0.5) * uRes.y);
@@ -105,7 +122,8 @@ void main(){
   float x0 = n.x * cy - z1 * sy;
   float z0 = n.x * sy + z1 * cy;
   vec2 uv = vec2(atan(x0, z0) / (2.0 * PI) + 0.5, 0.5 - asin(clamp(y0, -1.0, 1.0)) / PI);
-  vec3 col = texture2D(uTex, uv).rgb;
+  // the day and the night picture mixed by uNight, so night comes softly (Nov 11 2026)
+  vec3 col = mix(texture2D(uTex, uv).rgb, texture2D(uTex2, uv).rgb, uNight);
   vec3 L = normalize(vec3(-0.35, 0.55, 0.78));
   float diff = max(dot(n, L), 0.0);
   col *= mix(0.72, 1.06, diff);
@@ -159,6 +177,11 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     window.addEventListener("memap-theme-changed", sync);
     return () => window.removeEventListener("memap-theme-changed", sync);
   }, []);
+  // night comes and goes softly on the ball (the WebGL keeps running; dayNightRef fades it)
+  const nightRef = useRef(night);
+  nightRef.current = night;
+  const dayNightRef = useRef<(toNight: boolean) => void>(() => undefined);
+  useEffect(() => { dayNightRef.current(night); }, [night]);
   // the hint until she has turned the globe once (QA, Nov 8 2026: still shown after 59 days)
   const [hint, setHintState] = useState(() => { try { return localStorage.getItem("memap_globe_turned") !== "1"; } catch { return true; } });
   const setHint = (v: boolean) => { setHintState(v); if (!v) { try { localStorage.setItem("memap_globe_turned", "1"); } catch { /* shows again */ } } };
@@ -180,6 +203,12 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     list.push({ key: "boat", kind: "boat", ll: boatLL, v: vec(boatLL), name: "sailboat", size: 0.72, ar: 1 });
     return { things: list, wakes: links };
   }, [islands, routes, lit, days]);
+  // islands with a link (between two islands or inside one): at night their small light stays on
+  const linked = useMemo(() => new Set<string>([...wakes.flat(), ...(inner ? [...inner.keys()] : [])]), [wakes, inner]);
+  // how strong each pair's link is (the light along all of them goes strongest first)
+  const strengthRef = useRef(new Map<string, number>());
+  strengthRef.current = useMemo(() => { const m = new Map<string, number>(); for (const r of routes) { const k = pairKey(r.a, r.b); m.set(k, Math.max(m.get(k) ?? 0, r.n ? r.k / r.n : 0)); } return m; }, [routes]);
+  const lightG = useRef<SVGGElement>(null);
 
   const wrap = useRef<HTMLDivElement>(null);
   const cv = useRef<HTMLCanvasElement>(null);
@@ -242,19 +271,32 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     gl.attachShader(prog, vs); gl.attachShader(prog, fs); gl.linkProgram(prog); gl.useProgram(prog);
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    const U = Object.fromEntries(["uRes", "uBall", "uYaw", "uPitch", "uNight", "uPx", "uTex"].map((k) => [k, gl.getUniformLocation(prog, k)]));
-    const tex = gl.createTexture();
-    let hasTex = false;
-    const setTexture = (c: HTMLCanvasElement) => {
-      gl.bindTexture(gl.TEXTURE_2D, tex);
+    const U = Object.fromEntries(["uRes", "uBall", "uYaw", "uPitch", "uNight", "uPx", "uTex", "uTex2"].map((k) => [k, gl.getUniformLocation(prog, k)]));
+    // the day and the night picture: each on the GPU only while it is shown or being faded to (8 MB each)
+    const texOf = { day: gl.createTexture(), night: gl.createTexture() };
+    const has = { day: false, night: false };
+    const setTexture = (which: "day" | "night", c: HTMLCanvasElement) => {
+      gl.activeTexture(which === "day" ? gl.TEXTURE0 : gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, texOf[which]);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      hasTex = true; dirty = true; kick();
+      has[which] = true; dirty = true; kick();
+    };
+    /** frees a picture's GPU memory: a 1×1 pixel in its place */
+    const dropTexture = (which: "day" | "night") => {
+      gl.activeTexture(which === "day" ? gl.TEXTURE0 : gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, texOf[which]);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+      has[which] = false;
     };
     let alive = true;
+    // night as a number: 0 day, 1 night, in between while it changes
+    let nv = nightRef.current ? 1 : 0;
+    let nvAnim: { from: number; to: number; t0: number } | null = null;
+    const lights: Light[] = [];
 
     let W = 0, H = 0, DPR = 1, R = 0, CX = 0, CY = 0;
     let yaw = VIEW?.yaw ?? -C0[1] * D2R, pitch = VIEW?.pitch ?? Math.max(0, C0[0] - 20) * D2R, vy = 0, vp = 0;
@@ -295,9 +337,13 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     const pos = new Map<string, { x: number; y: number; z: number; w: number; s: number }>();
     const draw = () => {
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-      if (hasTex) {
+      const now = performance.now();
+      if (has.day || has.night) {
+        // a picture not on the GPU borrows the other one (it is mixed in at 0 then)
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, has.day ? texOf.day : texOf.night);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, has.night ? texOf.night : texOf.day);
         gl.uniform2f(U.uRes, canvas.width, canvas.height); gl.uniform3f(U.uBall, CX * DPR, CY * DPR, R * DPR);
-        gl.uniform1f(U.uYaw, yaw); gl.uniform1f(U.uPitch, pitch); gl.uniform1f(U.uNight, night ? 1 : 0); gl.uniform1f(U.uPx, DPR); gl.uniform1i(U.uTex, 0);
+        gl.uniform1f(U.uYaw, yaw); gl.uniform1f(U.uPitch, pitch); gl.uniform1f(U.uNight, nv); gl.uniform1f(U.uPx, DPR); gl.uniform1i(U.uTex, 0); gl.uniform1i(U.uTex2, 1);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       const base = R * 0.35;
@@ -332,9 +378,11 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         }
       }
       // links: a dotted boat route between two islands, a sign at its middle
-      let h = "";
+      let h = "", glowH = "";
       linkHits.length = 0;
-      for (const [a, b] of wakes) {
+      // the globe draws a few routes (bridgesOf); a light on a link it doesn't draw brings its route for the run
+      const guests = lights.filter((l) => l.from !== l.to && !wakes.some(([x, y]) => pairKey(x, y) === l.key)).map((l) => [l.from, l.to, true] as const);
+      for (const [a, b, guest] of [...wakes.map(([x, y]) => [x, y, false] as const), ...guests]) {
         const A = things.find((x) => x.key === a)?.v, B = things.find((x) => x.key === b)?.v; if (!A || !B) continue;
         const N = 90, runs: { x: number; y: number; z: number; t: number }[][] = []; let run: { x: number; y: number; z: number; t: number }[] = [];
         for (let k = 0; k <= N; k++) {
@@ -342,27 +390,82 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           if (p[2] > 0.06) run.push({ x: CX + R * p[0], y: CY - R * p[1], z: p[2], t: tt }); else if (run.length) { runs.push(run); run = []; }
         }
         if (run.length) runs.push(run);
-        for (const P of runs) for (const q of P) linkHits.push({ a, b, x: q.x, y: q.y });
+        const L = lightOf(a, b, now);
+        if (!guest) for (const P of runs) for (const q of P) linkHits.push({ a: a as IslandId, b: b as IslandId, x: q.x, y: q.y });
         const chip = chipEls.current.get(`${a}|${b}`);
         if (chip) {
           const pm = rot(slerp(A, B, 0.5)), cv = Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2));
           const cx = CX + R * pm[0], cy = CY - R * pm[1];
           chip.style.transform = `translate(${(cx - 17).toFixed(1)}px, ${(cy - 17).toFixed(1)}px)`;
-          chip.style.opacity = String(cv); chip.style.zIndex = String(Math.round(150 + pm[2] * 100));
-          if (cv > 0.5) linkHits.push({ a, b, x: cx, y: cy, chip: true });
+          chip.style.opacity = String(cv * (L ? L.chip : 1)); chip.style.zIndex = String(Math.round(150 + pm[2] * 100));
+          if (cv > 0.5) linkHits.push({ a: a as IslandId, b: b as IslandId, x: cx, y: cy, chip: true });
         }
         for (const P of runs) {
           for (const d of routeDots(P.map((q) => ({ x: q.x, y: q.y, t: q.t, k: 0.55 + 0.45 * q.z })), 12 * Math.sqrt(zoom))) {
-            h += `<circle class="planet-route" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${(d.r * Math.sqrt(zoom)).toFixed(2)}" opacity="${d.o.toFixed(2)}"/>`;
+            // where the light has passed, the dots are warm, then cool down again
+            const warm = L && L.on ? L.warm * Math.max(0, Math.min(1, (L.head - (L.rev ? 1 - d.t : d.t)) / 0.05 + 0.5)) : 0;
+            const r = d.r * Math.sqrt(zoom);
+            // a guest route shows only where the light has been, and goes with it
+            if (guest && warm <= 0.02) continue;
+            if (warm > 0.02) glowH += `<circle class="planet-route-glow" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${(r * 3.4).toFixed(1)}" opacity="${(0.55 * warm * d.o).toFixed(2)}"/>`;
+            h += `<circle class="planet-route${warm > 0.5 ? " is-warm" : ""}" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${r.toFixed(2)}" opacity="${(d.o * (guest ? warm : 1)).toFixed(2)}"/>`;
+          }
+        }
+        // the light itself, running from one island to the other
+        if (L && L.on && L.head < 1) {
+          const lp = rot(slerp(L.rev ? B : A, L.rev ? A : B, L.head));
+          if (lp[2] > 0.06) {
+            const x = (CX + R * lp[0]).toFixed(1), y = (CY - R * lp[1]).toFixed(1), g = 22 * Math.sqrt(zoom);
+            glowH += `<circle class="planet-light-glow" cx="${x}" cy="${y}" r="${g.toFixed(1)}"/><path class="planet-light-star" transform="translate(${x} ${y}) rotate(${((now / 11) % 360).toFixed(1)}) scale(${(g / 30).toFixed(3)})" d="${STAR}"/>`;
           }
         }
       }
       if (wakeG.current) wakeG.current.innerHTML = h;
+      if (lightG.current) lightG.current.innerHTML = glowH;
       // far from home, or zoomed: offer the way back
       const far = rot(vec(C0))[2] < 0.82 || Math.abs(zoom - 1) > 0.15;
       if (far !== wasFar) { wasFar = far; setAway(far); }
     };
     let wasFar = false;
+    /** Where the light is on the route a–b now: its head (0..1 from where it started), how warm the passed
+     *  dots still are, and how far the link's sign has come back (a new link's sign comes at the end). */
+    const lightOf = (a: string, b: string, now: number) => {
+      const r = lights.find((x) => x.key === pairKey(a, b));
+      if (!r) return null;
+      const rev = r.from !== a;
+      if (now < r.t0) return r.fresh ? { on: false, head: 0, warm: 0, rev, chip: 0 } : null;
+      const k = r.dur ? Math.min(1, (now - r.t0) / r.dur) : 1, end = r.t0 + r.dur;
+      return { on: true, head: k < 1 ? k * k * (3 - 2 * k) : 1, warm: now <= end ? 1 : Math.max(0, 1 - (now - end) / 1400), rev, chip: r.fresh ? Math.max(0, Math.min(1, (now - end) / 400)) : 1 };
+    };
+    /** An island's small light on or off (off only when no other light still needs it). */
+    const isleLight = (id: string, on: boolean) => {
+      const el = els.current.get(id)?.el;
+      if (!el) return;
+      if (on) { el.classList.remove("is-lit-new"); void el.offsetWidth; el.classList.add("is-lit", "is-lit-new"); }
+      else if (!lights.some((x) => !x.gone && (x.from === id || x.to === id))) el.classList.remove("is-lit", "is-lit-new");
+    };
+    const stepLights = (now: number) => {
+      for (const r of lights) {
+        if (!r.litA && now >= r.t0) { r.litA = true; isleLight(r.from, true); }
+        if (!r.litB && now >= r.t0 + r.dur * 0.92) { r.litB = true; isleLight(r.to, true); if (r.fresh) haptics.soft(); }
+        if (now >= r.t0 + r.dur + TAIL_MS) r.gone = true;
+      }
+      for (let i = lights.length - 1; i >= 0; i--) {
+        const r = lights[i];
+        if (r.gone) { lights.splice(i, 1); isleLight(r.from, false); isleLight(r.to, false); }
+      }
+    };
+    /** The light along the route from one island to the other, at time `at`; a fresh one (a new link) hides the sign till the end. */
+    const startLight = (from: string, to: string, at: number, fresh: boolean, dur = RUN_MS) => {
+      const key = pairKey(from, to);
+      // a link inside one island has no route: the island just lights up
+      if (!things.some((x) => x.key === from) || !things.some((x) => x.key === to)) return false;
+      if (from === to) { lights.push({ key, from, to, t0: at, dur: 0, fresh }); addLit([key]); dirty = true; kick(); return true; }
+      for (let i = lights.length - 1; i >= 0; i--) if (lights[i].key === key) lights.splice(i, 1);
+      lights.push({ key, from, to, t0: at, dur: reduce ? 0 : dur, fresh });
+      addLit([key]); dirty = true; kick();
+      return true;
+    };
     // where the routes and their signs are on screen, for taps
     const linkHits: { a: IslandId; b: IslandId; x: number; y: number; chip?: boolean }[] = [];
     const innerHits: { id: IslandId; x: number; y: number }[] = [];
@@ -389,6 +492,14 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         const f = Math.pow(FRICTION, dt / 16.7); vy *= f; vp *= f; if (Math.abs(vy) < 2e-5) vy = 0; if (Math.abs(vp) < 2e-5) vp = 0;
         moving = true; dirty = true;
       }
+      // night coming or going
+      if (nvAnim) {
+        const k = Math.min(1, (tm - nvAnim.t0) / DAYNIGHT_MS), e = k * k * (3 - 2 * k);
+        nv = nvAnim.from + (nvAnim.to - nvAnim.from) * e; dirty = true;
+        if (k >= 1) { const to = nvAnim.to; nvAnim = null; dropTexture(to ? "day" : "night"); } else moving = true;
+      }
+      // the lights along her links
+      if (lights.length) { stepLights(tm); dirty = true; if (lights.length) moving = true; }
       if (dirty) { draw(); dirty = false; VIEW = { yaw, pitch, zoom, ox, oy }; }
       if (moving && !pausedRef.current) kick(); else last = 0;
     };
@@ -410,14 +521,33 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       anim = { t0: performance.now(), dur: 320, y0: yaw, y1: yaw, p0: pitch, p1: pitch, z0: zoom, z1, ox0: ox, oy0: oy }; kick();
     };
     // "memap-globe-focus" {ids}: turn so these islands face her, back at zoom 1
-    const focus = (e: Event) => {
-      const ids = ((e as CustomEvent).detail?.ids ?? []) as string[];
+    const turnToIds = (ids: string[], done?: () => void) => {
       const vs = things.filter((x) => x.kind === "area" && ids.includes(x.key)).map((x) => x.v);
-      if (!vs.length) return;
+      if (!vs.length) { done?.(); return; }
       const m = vs.reduce((a, v) => [a[0] + v[0], a[1] + v[1], a[2] + v[2]] as V3, [0, 0, 0] as V3), L = Math.hypot(...m) || 1;
-      turnTo([Math.asin(m[1] / L) / D2R + 12, Math.atan2(m[0], m[2]) / D2R], undefined, 1);
+      turnTo([Math.asin(m[1] / L) / D2R + 12, Math.atan2(m[0], m[2]) / D2R], done, 1);
     };
+    const focus = (e: Event) => turnToIds(((e as CustomEvent).detail?.ids ?? []) as string[]);
     window.addEventListener("memap-globe-focus", focus);
+    // "memap-route-light" {a, b, fresh?, focus?}: the light from island a to island b (a new link: fresh);
+    // the globe turns to them first unless focus is false. Also for filming the store video.
+    const onRouteLight = (e: Event) => {
+      const d = ((e as CustomEvent).detail ?? {}) as { a?: string; b?: string; fresh?: boolean; focus?: boolean };
+      if (!d.a || !d.b) return;
+      const go = () => { if (alive) startLight(d.a!, d.b!, performance.now(), !!d.fresh); };
+      if (d.focus === false) go(); else turnToIds([d.a, d.b], go);
+    };
+    // "memap-routes-light": the light along all her links in turn, strongest first, in two to three seconds
+    const onRoutesLight = () => {
+      const order = [...wakes].sort(([a1, b1], [a2, b2]) => (strengthRef.current.get(pairKey(a2, b2)) ?? 0) - (strengthRef.current.get(pairKey(a1, b1)) ?? 0));
+      const step = Math.min(380, 1700 / Math.max(1, order.length)), t0 = performance.now();
+      order.forEach(([a, b], i) => startLight(a, b, t0 + i * step, false, 1100));
+    };
+    // "memap-daynight": day to night or back, as the moon button does (for filming)
+    const onDayNight = () => toggleNight();
+    window.addEventListener("memap-route-light", onRouteLight);
+    window.addEventListener("memap-routes-light", onRoutesLight);
+    window.addEventListener("memap-daynight", onDayNight);
 
     // touch: drag 1:1, a short glide, tap; two fingers pinch to zoom
     let dragging = false, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, moved = 0, pid: number | null = null;
@@ -512,19 +642,33 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     // before: the second visit found the picture ready, drew at once and hit
     // the frame state not made yet, and the whole app fell over: her note,
     // Nov 4 2026, "периодически вылетает глобус"; day/night did the same.)
-    const src = night ? planetNight : planetDay;
-    const cached = TEXTURES.get(src);
-    if (cached) setTexture(cached);
-    else { const im = new Image(); im.onload = () => { if (!alive) return; const c = toTexture(im); TEXTURES.set(src, c); setTexture(c); }; im.src = src; }
-    // the other one loads ahead, so day/night switches at once
-    const other = night ? planetDay : planetNight;
+    const load = (which: "day" | "night", then?: () => void) => {
+      const src = which === "day" ? planetDay : planetNight;
+      const cached = TEXTURES.get(src);
+      if (cached) { setTexture(which, cached); then?.(); return; }
+      const im = new Image(); im.onload = () => { if (!alive) return; const c = toTexture(im); TEXTURES.set(src, c); setTexture(which, c); then?.(); }; im.src = src;
+    };
+    load(nv >= 0.5 ? "night" : "day");
+    // day to night or back: the other picture goes on the GPU, then night fades in (or out)
+    dayNightRef.current = (toNight: boolean) => {
+      const to = toNight ? 1 : 0;
+      if (nvAnim ? nvAnim.to === to : nv === to) return;
+      const go = () => {
+        if (!alive) return;
+        if (reduce) { nv = to; nvAnim = null; dropTexture(toNight ? "day" : "night"); dirty = true; kick(); return; }
+        nvAnim = { from: nv, to, t0: performance.now() }; kick();
+      };
+      if (has[toNight ? "night" : "day"]) go(); else load(toNight ? "night" : "day", go);
+    };
+    // the other one waits ready in memory (not on the GPU), so a change starts at once
+    const other = nv >= 0.5 ? planetDay : planetNight;
     const ahead = window.setTimeout(() => { if (!TEXTURES.has(other)) { const im = new Image(); im.onload = () => TEXTURES.set(other, toTexture(im)); im.src = other; } }, 1500);
     const ro = new ResizeObserver(resize); ro.observe(box);
     resize();
     // for the tests in development: where an island is drawn, how the ball is turned
     if (import.meta.env.DEV) (window as unknown as { __planet?: unknown }).__planet = {
       at: (id: string) => pos.get(id) ?? null,
-      state: () => ({ yaw, pitch, zoom }),
+      state: () => ({ yaw, pitch, zoom, night: nv, lights: lights.length }),
     };
     return () => {
       alive = false; cancelAnimationFrame(raf); window.clearTimeout(ahead); ro.disconnect();
@@ -532,22 +676,61 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       box.removeEventListener("pointerup", onUp); box.removeEventListener("pointercancel", onCancel);
       box.removeEventListener("wheel", onWheel);
       window.removeEventListener("memap-globe-focus", focus);
+      window.removeEventListener("memap-route-light", onRouteLight);
+      window.removeEventListener("memap-routes-light", onRoutesLight);
+      window.removeEventListener("memap-daynight", onDayNight);
       kickRef.current = () => undefined;
+      dayNightRef.current = () => undefined;
       // what this run put on the GPU goes with it
-      gl.deleteTexture(tex); gl.deleteBuffer(buf); gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs);
+      gl.deleteTexture(texOf.day); gl.deleteTexture(texOf.night); gl.deleteBuffer(buf); gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs);
     };
-  }, [things, wakes, night, gen]);
+  }, [things, wakes, gen]);
+
+  // A new link, found since she last looked: the light runs along it on the open globe (her note, Nov 11 2026: not
+  // only the first one). The first link has its own moment (LinkMoment), which starts the light itself.
+  useEffect(() => {
+    if (decor || paused) return;
+    const keys = wakes.map(([a, b]) => pairKey(a, b));
+    const seen = readLit();
+    if (seen === null) { addLit(keys); return; } // the links this install had before the lights: no flood of them
+    let firstSeen: string | null = null;
+    try { firstSeen = localStorage.getItem("memap_first_link_seen"); } catch { /* the first link's moment decides */ }
+    if (!firstSeen) return;
+    const fresh = wakes.filter(([a, b]) => !seen.has(pairKey(a, b)));
+    if (!fresh.length) return;
+    // games and rewards off: the link is just there
+    if (!isPlayful()) { addLit(fresh.map(([a, b]) => pairKey(a, b))); return; }
+    const timers = fresh.slice(0, 3).map(([a, b], i) => window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-route-light", { detail: { a, b, fresh: true } })), 900 + i * 2600));
+    if (fresh.length > 3) addLit(fresh.slice(3).map(([a, b]) => pairKey(a, b)));
+    return () => timers.forEach((x) => window.clearTimeout(x));
+  }, [wakes, paused, decor]);
+  // Once a day when World opens, the light along all her links: off until she says yes (DAILY_RUN)
+  useEffect(() => {
+    if (!DAILY_RUN || decor || paused || !wakes.length || !isPlayful()) return;
+    const today = new Date().toDateString();
+    try { if (localStorage.getItem("memap_links_run_day") === today) return; localStorage.setItem("memap_links_run_day", today); } catch { return; }
+    const id = window.setTimeout(() => window.dispatchEvent(new Event("memap-routes-light")), 1100);
+    return () => window.clearTimeout(id);
+  }, [wakes, paused, decor]);
 
   return (
-    <div ref={wrap} className="planet-wrap" aria-label={t("map.aria")}>
-      {sky && <div className={`planet-sky ${night ? "night" : "day"}`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
+    <div ref={wrap} className={`planet-wrap${night ? " is-night" : ""}`} aria-label={t("map.aria")}>
+      {/* both skies, the night one fading in over the day one (soft day and night, Nov 11 2026) */}
+      {sky && <div className="planet-sky day" style={{ backgroundImage: `url(${skyDay})` }} />}
+      {sky && <div className={`planet-sky night${night ? " is-on" : ""}`} style={{ backgroundImage: `url(${skyNight})` }} />}
       <canvas ref={cv} className="planet-canvas" />
       <svg className="planet-wakes" aria-hidden="true">
         <defs>
           <filter id="planet-wb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.2" /></filter>
           <filter id="planet-ws"><feGaussianBlur stdDeviation="0.5" /></filter>
         </defs>
+        <defs>
+          <radialGradient id="planet-light-grad"><stop offset="0" stopColor="#fff6d6" stopOpacity="1" /><stop offset="0.35" stopColor="#ffd98a" stopOpacity="0.7" /><stop offset="1" stopColor="#ffd98a" stopOpacity="0" /></radialGradient>
+          {/* by day the light is a little more amber, to show on her pale sea */}
+          <radialGradient id="planet-light-grad-day"><stop offset="0" stopColor="#fff3c4" stopOpacity="1" /><stop offset="0.35" stopColor="#ffc65a" stopOpacity="0.72" /><stop offset="1" stopColor="#ffc65a" stopOpacity="0" /></radialGradient>
+        </defs>
         <g ref={wakeG} />
+        <g ref={lightG} />
       </svg>
       <div className="planet-things">
         {things.map((th) => {
@@ -555,14 +738,20 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           return (
             <div key={th.key}>
               <div ref={(el) => { elOf(th.key).el = el; }} data-isle={th.kind === "area" ? th.key : undefined} data-art={th.kind === "area" ? th.name : undefined}
-                className={`planet-isle ${th.kind === "boat" ? "planet-boat" : ""} ${th.kind === "sky" ? "planet-cloud" : ""} ${on === th.key ? "on" : ""} ${th.kind === "area" && th.key === main ? "is-main" : ""}`} style={{ opacity: 0 }}>
+                className={`planet-isle ${th.kind === "boat" ? "planet-boat" : ""} ${th.kind === "sky" ? "planet-cloud" : ""} ${on === th.key ? "on" : ""} ${th.kind === "area" && th.key === main ? "is-main" : ""} ${th.kind === "area" && linked.has(th.key) ? "has-link" : ""}`} style={{ opacity: 0 }}>
                 {th.kind === "area" && th.key === main && <span className="main-glow" aria-hidden="true" />}
                 {th.kind === "area" && <div className="ring" />}
                 {th.kind === "boat" ? (
                   <div className="bob"><img src={mapPic("sailboat")} alt="" />{avatar && <img className="otter" src={avatar} alt="" />}</div>
                 ) : (
-                  <img className="island-art" src={art(th.name, night)} alt="" />
+                  <>
+                    {/* day and night pictures together, the night one fading in over the day one */}
+                    <img className="island-art d" src={art(th.name, false)} alt="" />
+                    <img className="island-art n" src={art(th.name, true)} alt="" />
+                  </>
                 )}
+                {/* its small light: on while a light runs along its link, and at night if it has a link */}
+                {th.kind === "area" && <span className="isle-light" aria-hidden="true"><i /></span>}
                 {th.island && garden?.get(th.island.id)?.map((pic, gi) => (
                   <span key={`g${gi}`} className="stand tree" style={standAt(th.name, gi === 0 ? "g1" : "g2")}><img src={mapPic(pic)} alt="" /></span>
                 ))}

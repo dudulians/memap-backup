@@ -2381,7 +2381,8 @@ header h1 { transition: opacity 200ms ease; }
 .planet-sky { position: absolute; inset: 0; pointer-events: none; background-position: center top; background-repeat: no-repeat; }
 .planet-sky.day { background-size: cover; background-color: #E4DDF4; }
 /* her night sky is shorter than the screen: it fills the width, the ball covers what is below it */
-.planet-sky.night { background-size: 100% auto; background-color: #2C3B70; }
+.planet-sky.night { background-size: 100% auto; background-color: #2C3B70; opacity: 0; transition: opacity 1.7s ease; }
+.planet-sky.night.is-on { opacity: 1; }
 .planet-canvas, .planet-wakes { position: absolute; inset: 0; width: 100%; height: 100%; }
 .planet-wakes { pointer-events: none; }
 /* Data colours in the new look. Nov 4 2026 (her note: teal, yellow and pink "совсем
@@ -2437,6 +2438,28 @@ button.link-chip:active { transform: scale(.92); }
 html[data-ui="new"][data-theme="aurora"] .link-chip { background: hsl(var(--surface)); }
 /* a link: a dotted boat route (globeArt routeDots, Nov 4 2026) */
 .planet-route { fill: #FFFFFF; stroke: rgba(70, 100, 170, .28); stroke-width: 1; }
+/* lights along her links (reel 16, Nov 11 2026): warm where the light has passed, the light itself, a small light on each island */
+.planet-route.is-warm, html[data-ui="new"][data-theme="aurora"] .planet-route.is-warm { fill: #FFEFC2; }
+.planet-route-glow, .planet-light-glow { fill: url(#planet-light-grad); }
+.planet-light-star { fill: #FFF8DC; }
+.planet-wrap:not(.is-night) .planet-route-glow, .planet-wrap:not(.is-night) .planet-light-glow { fill: url(#planet-light-grad-day); }
+.planet-wrap:not(.is-night) .planet-route.is-warm { fill: #FFD27A; stroke: rgba(214, 140, 30, .45); }
+.planet-wrap:not(.is-night) .planet-light-star { fill: #FFE7A0; stroke: rgba(230, 160, 40, .55); stroke-width: 1.2; }
+.planet-isle > img.island-art { transition: opacity 1.7s ease; }
+.planet-isle > img.island-art.n, .planet-isle.is-main > img.island-art.n { position: absolute; left: 0; top: 0; }
+.planet-wrap:not(.is-night) .planet-isle > img.island-art.n { opacity: 0; }
+.planet-wrap.is-night .planet-isle > img.island-art.d { opacity: 0; }
+.planet-isle .isle-light { position: absolute; left: 50%; top: 40%; width: 58%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; z-index: 2; opacity: 0; transition: opacity .6s ease; }
+.planet-isle .isle-light::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255, 238, 190, .95) 0%, rgba(255, 214, 120, .42) 30%, rgba(255, 214, 120, 0) 68%); }
+.planet-isle .isle-light i { position: absolute; left: 50%; top: 50%; width: 9%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: #FFF6D6; box-shadow: 0 0 6px 2px rgba(255, 230, 160, .9); }
+.planet-wrap:not(.is-night) .planet-isle .isle-light::before { background: radial-gradient(circle, rgba(255, 240, 190, .95) 0%, rgba(255, 190, 80, .5) 30%, rgba(255, 190, 80, 0) 68%); }
+.planet-isle.is-lit .isle-light, .planet-wrap.is-night .planet-isle.has-link .isle-light { opacity: 1; }
+.planet-isle.is-lit-new .isle-light { animation: isle-light-on .9s cubic-bezier(.2, .9, .3, 1.25) both; }
+@keyframes isle-light-on { 0% { scale: 2.1; opacity: 0; } 35% { opacity: 1; } 100% { scale: 1; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .planet-sky.night, .planet-isle > img.island-art, .planet-isle .isle-light { transition: none; }
+  .planet-isle.is-lit-new .isle-light { animation: none; }
+}
 html[data-ui="new"][data-theme="aurora"] .planet-route { fill: #D8FFF6; stroke: rgba(10, 20, 60, .35); }
 /* its own layer: islands and clouds stay under the header, the tabs and the sheets */
 .planet-things { position: absolute; inset: 0; pointer-events: none; z-index: 2; }

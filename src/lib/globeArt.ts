@@ -87,7 +87,7 @@ export type WakePoint = { x: number; y: number; t: number; k?: number };
  *  wake before it "больше похожа на молнию"): round dots along a smooth curve,
  *  every `gap` px, small and faint near both islands, full in the middle. `k`
  *  (0..1) shrinks them toward the back of the globe. */
-export type RouteDot = { x: number; y: number; r: number; o: number };
+export type RouteDot = { x: number; y: number; r: number; o: number; /** 0 at the route's start, 1 at its end */ t: number };
 export const routeDots = (P: WakePoint[], gap = 12): RouteDot[] => {
   const out: RouteDot[] = [];
   let carry = gap * 0.5;
@@ -97,7 +97,7 @@ export const routeDots = (P: WakePoint[], gap = 12): RouteDot[] => {
     for (; d <= L; d += gap) {
       const f = L ? d / L : 0, t = a.t + (b.t - a.t) * f, k = (a.k ?? 1) + ((b.k ?? 1) - (a.k ?? 1)) * f;
       const end = Math.min(1, Math.min(t, 1 - t) / 0.14);
-      out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, r: (1.5 + 1.7 * end) * k, o: (0.3 + 0.7 * end) * (0.45 + 0.55 * k) });
+      out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, r: (1.5 + 1.7 * end) * k, o: (0.3 + 0.7 * end) * (0.45 + 0.55 * k), t });
     }
     carry = d - L;
   }
