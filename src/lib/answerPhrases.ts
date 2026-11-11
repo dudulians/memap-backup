@@ -124,6 +124,11 @@ const P: Record<string, [string, string, string, string]> = {
   "laughed-uncontrollably": ["laughing", "a day without laughs", "смех", "без смеха"],
   "envied-on-social": ["envy online", "no envy online", "зависть в соцсетях", "без зависти в соцсетях"],
   "felt-not-like-others": ["feeling left behind", "not feeling left behind", "чувство «не как все»", "без чувства «не как все»"],
+  "kept-going-over-it": ["going over it", "not going over it", "мысли по кругу", "без мыслей по кругу"],
+  "scolded-myself": ["scolding yourself", "not scolding yourself", "ругать себя", "без ругани на себя"],
+  "switched-off-from-work": ["switched off from work", "work on your mind", "вечер без работы в голове", "работа не отпускала"],
+  "felt-understood": ["feeling understood", "not feeling understood", "чувство, что тебя понимают", "без чувства, что тебя понимают"],
+  "let-it-pass": ["letting it pass", "nothing to let pass", "промолчать ради мира", "молчать не пришлось"],
   "danced-or-sang-alone": ["dancing or singing alone", "no dancing or singing", "танцы или пение", "без танцев и пения"],
   "petted-an-animal": ["petting an animal", "no petting an animal", "погладить животное", "без поглаживания животных"],
   "liked-my-selfie": ["a good selfie", "no good selfie", "удачное селфи", "без удачного селфи"],
@@ -366,5 +371,24 @@ export const answerClause = (t: TFunction, tr: Tracker | undefined, yes: boolean
     ? (() => { const r = rowS(tr, id); return getLanguage() === "ru" ? (yes ? r[2] : r[3]) : yes ? r[0] : r[1]; })()
     : t("link.ownClause", { q: localizeTrackerTitle(tr.title).replace(/[?？]+$/, ""), a: t(yes ? "link.yes" : "link.no") });
   const [cause, result] = s.includes("|") ? s.split("|") : [s, s];
-  return (role === "cause" ? cause.replace("~", "") : result.replace("~", often ? `${often} ` : "")).replace(/\s+/g, " ").trim();
+  return (role === "cause" ? cause.replace("~", "") : withOften(result, often)).replace(/\s+/g, " ").trim();
+};
+
+// "always" before a "no" says "never" (QA, Nov 12 2026: "you always don't meditate"): "you never meditate",
+// "your partner almost never raises their voice", "there's never any fun time", «ты никогда не медитируешь»,
+// «приятного времени вдвоём почти никогда нет».
+const NEVER: Record<string, string> = { always: "never", "almost always": "almost never", "всегда": "никогда", "почти всегда": "почти никогда" };
+const thirdPerson = (v: string) => (/(s|sh|ch|x|z|o)$/.test(v) ? `${v}es` : /[^aeiou]y$/.test(v) ? `${v.slice(0, -1)}ies` : v === "have" ? "has" : `${v}s`);
+const withOften = (result: string, often: string): string => {
+  const never = NEVER[often];
+  if (never) {
+    if (result.includes("~don't ")) return result.replace("~don't ", `${never} `);
+    if (result.includes("~doesn't ")) return result.replace(/~doesn't (\S+)/, (_, v: string) => `${never} ${thirdPerson(v)}`);
+    if (result.includes("~isn't ")) return result.replace("~isn't ", `is ${never} `);
+    if (result.includes("~can't ")) return result.replace("~can't ", `can ${never} `);
+    if (result.includes("~no ")) return result.replace("~no ", `${never} any `);
+    if (result.includes("~не ")) return result.replace("~не ", `${never} не `);
+    if (/~нет$/.test(result)) return result.replace("~нет", `${never} нет`);
+  }
+  return result.replace("~", often ? `${often} ` : "");
 };

@@ -209,6 +209,12 @@ export const TOPIC_IDEAS: Record<string, string[]> = {
  *  answered it that way; a daily habit for two weeks, never a once-action (those are plans). An empty
  *  list on purpose: no 2-week habit changes it (a cold, a heavy period day), only "write your own". */
 export const QUESTION_IDEAS: Record<string, string[]> = {
+  // inner questions (Nov 12 2026): no everyday change fits 1, 2 and 5 without an explanation, only "write your own"
+  "kept-going-over-it": [],
+  "scolded-myself": [],
+  "let-it-pass": [],
+  "switched-off-from-work": ["noMailEvening", "stop19"],
+  "felt-understood": ["callOne", "textFriend"],
   // love: partner
   "argued-with-partner": ["pauseHeated", "talkNoPhones", "thankYou", "walkTogether"],
   "felt-lonely-with-partner": ["askPartnerDay", "talkNoPhones", "walkTogether", "noPhoneMeal"],

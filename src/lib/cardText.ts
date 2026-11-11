@@ -16,6 +16,12 @@ import { testQuestionOf } from "@/lib/testWords";
 import { RU_CARD } from "@/lib/ruNeutral";
 
 const CARD_TEXT: Record<string, { en: string; ru: string }> = {
+  // inner questions (Nov 12 2026, option A)
+  "kept-going-over-it": { en: "Did you keep going over something in your head?", ru: "Крутилась в голове одна и та же ситуация?" },
+  "scolded-myself": { en: "Did you scold yourself for something?", ru: "Приходилось себя ругать?" },
+  "switched-off-from-work": { en: "Did you manage to switch off from work in the evening?", ru: "Удалось вечером отключиться от работы?" },
+  "felt-understood": { en: "Did you feel understood by someone?", ru: "Было чувство, что тебя понимают?" },
+  "let-it-pass": { en: "Did you let something pass to avoid an argument?", ru: "Пришлось промолчать, чтобы не было ссоры?" },
   // door questions
   "argued-with-partner": { en: "Did you fight with your partner?", ru: "Была ссора с партнёром?" },
   "yelled-at-kid": { en: "Did you snap at your child?", ru: "Был срыв на ребёнка?" },

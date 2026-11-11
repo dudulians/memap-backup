@@ -32,11 +32,14 @@ import {
   localizeTrackerAdviceRaw,
 } from "./trackerLocalize";
 import { uuid } from "./uuid";
+import { NOV_PACKS, type NovPack } from "./demoPacksNov";
+import { getLanguage } from "./i18n";
 
 const NUM_DAYS = 60;
 const FRESH_WINDOW = 21;
 
 export type DemoPackId =
+  | NovPack["id"]
   | "self-care"
   | "burnout"
   | "body"
@@ -47,6 +50,8 @@ export type DemoPackId =
 interface DemoPack {
   id: DemoPackId;
   templateIds: string[];
+  /** her own questions, as people type them (Nov 12 2026 packs) */
+  own?: NovPack["own"];
   // Build the engineered per-day series. Returns Map<templateId,
   // (boolean | undefined)[]> where each array is length NUM_DAYS,
   // dates[0] oldest, dates[N-1] today. `undefined` means "no entry
@@ -613,7 +618,11 @@ const packShowcase: DemoPack = {
   },
 };
 
+// the Nov 12 2026 packs (src/lib/demoPacksNov.ts): built day by day, so their findings always show
+const novPack = (p: NovPack): DemoPack => ({ id: p.id, templateIds: p.templateIds, own: p.own, script: () => p.script(NUM_DAYS) });
+
 const PACKS: Record<DemoPackId, DemoPack> = {
+  ...(Object.fromEntries(NOV_PACKS.map((p) => [p.id, novPack(p)])) as Record<NovPack["id"], DemoPack>),
   "self-care": packSelfCare,
   burnout: packBurnout,
   body: packBody,
@@ -623,7 +632,12 @@ const PACKS: Record<DemoPackId, DemoPack> = {
 };
 
 export const DEMO_PACK_IDS: DemoPackId[] = [
-  "showcase",              // first — "all features visible" one
+  // the new ones first (her ask, Nov 12 2026: "на разные темы, чтоб можно было всё потестить")
+  "work-home",
+  "migraine-cycle",
+  "parenting",
+  "good-days",
+  "showcase",              // "all features visible" one
   "relationship-reality",  // second — promo video pack
   "self-care",
   "burnout",
@@ -660,6 +674,20 @@ export const generateDemoData = (packId: DemoPackId): DemoDataResult => {
     idToTracker.set(tplId, t);
   }
 
+  // her own questions (as typed; no answer words, so "Say … in your own words" shows under their links)
+  const ru = getLanguage() === "ru";
+  for (const q of pack.own ?? []) {
+    const text = ru ? q.ru : q.en;
+    const t: Tracker = {
+      // "0-" sorts before any other id: with nothing else to go by (not in the cause list, not a feeling), a link puts
+      // her own question first, the same way every time the pack loads (Nov 12 2026)
+      id: `0-own-${q.key}-${Date.now()}`, title: text.replace(/[?？]+$/, "").slice(0, 60), category: "Curious", questionText: text,
+      answerType: "boolean", periodDays: 30, threshold: 10, problemWhen: q.problemWhen, adviceAboveThreshold: "", createdAt: new Date().toISOString(),
+    };
+    trackers.push(t);
+    idToTracker.set(`own:${q.key}`, t);
+  }
+
   // dates[0] = oldest, dates[N-1] = today.
   const dates: string[] = [];
   for (let i = NUM_DAYS - 1; i >= 0; i--) dates.push(dateNDaysAgo(i));
@@ -667,7 +695,7 @@ export const generateDemoData = (packId: DemoPackId): DemoDataResult => {
 
   const script = pack.script();
   const entries: TrackerEntry[] = [];
-  for (const tplId of pack.templateIds) {
+  for (const tplId of [...pack.templateIds, ...(pack.own ?? []).map((q) => `own:${q.key}`)]) {
     const tracker = idToTracker.get(tplId);
     const series = script.get(tplId);
     if (!tracker || !series) continue;

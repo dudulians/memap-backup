@@ -2,6 +2,7 @@
 // (her call, Oct 31 2026: keep the old version for old users and delete
 // it once none are left). See src/lib/uiMode.ts. Do not add features here.
 import { useState, useRef, useEffect, useCallback } from "react";
+import { CHOSEN_ONLY_IDS } from "@/lib/researchTemplates";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -217,7 +218,7 @@ export const DailySession = ({
         }
         return stream.templates.filter((tpl) => {
           // Sensitive (intimacy / libido / ex) — opt-in via Settings.
-          if (tpl.sensitive || tpl.private || tpl.askOnly || tpl.quiet) return false; // never offered since Nov 7 2026; private ones aren't ideas; partner harm never (Nov 9)
+          if (tpl.sensitive || tpl.private || tpl.askOnly || tpl.quiet || CHOSEN_ONLY_IDS.has(tpl.id)) return false; // never offered since Nov 7 2026; private ones aren't ideas; partner harm never (Nov 9)
           const hay = haystack(tpl);
           if (interviewAnswers.hasKids === false && matchesAny(hay, KIDS_HAY))
             return false;

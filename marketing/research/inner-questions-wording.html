@@ -1,0 +1,180 @@
+<title>Пять новых вопросов</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each question is a block with its card as the app shows it, then B and C to swap. */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --fg: #2a2f37; --muted: #69707c; --line: #e3e6eb;
+  --accent: #4f5fd6; --hard: #c2415b; --good: #2f8a5b; --neutral: #7a6f9c; --chip: #eef0f4;
+  --display: "Manrope", "Segoe UI", system-ui, sans-serif; --body: "Manrope", "Segoe UI", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15181d; --surface: #1d2128; --fg: #e6e8ec; --muted: #9aa1ad; --line: #2c313a;
+  --accent: #8e9bff; --hard: #f07a92; --good: #6fcf9a; --neutral: #b7a9e0; --chip: #262b33; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15181d; --surface: #1d2128; --fg: #e6e8ec; --muted: #9aa1ad; --line: #2c313a;
+  --accent: #8e9bff; --hard: #f07a92; --good: #6fcf9a; --neutral: #b7a9e0; --chip: #262b33; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15.5px; line-height: 1.55; }
+.wrap { max-width: 760px; margin: 0 auto; padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 44px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 6vw, 38px); line-height: 1.12; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 700; font-size: 21px; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 700; font-size: 17px; margin: 0; }
+p { margin: 0; max-width: 65ch; }
+.lead { color: var(--muted); font-size: 16.5px; }
+section { display: grid; gap: 16px; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.q { background: var(--surface); border-radius: 20px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.q-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.num { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12.5px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--chip); color: var(--muted); }
+.tag.hard { color: var(--hard); } .tag.good { color: var(--good); } .tag.neutral { color: var(--neutral); }
+.card { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.card > div { min-width: 0; }
+.big { font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 1.3; }
+.lang { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: block; margin-bottom: 2px; }
+.alts { display: grid; gap: 6px; font-size: 14.5px; }
+.alt { display: grid; grid-template-columns: 22px 1fr 1fr; gap: 10px; color: var(--muted); }
+.alt b { font-family: var(--mono); font-weight: 500; color: var(--fg); }
+.reads { font-size: 14.5px; color: var(--fg); display: grid; gap: 4px; }
+.reads span { color: var(--muted); }
+.note { font-size: 14px; color: var(--muted); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+.scroll { overflow-x: auto; }
+.ba { display: grid; gap: 10px; }
+.ba-row { background: var(--surface); border-radius: 16px; padding: 14px 16px; display: grid; gap: 6px; min-width: 0; }
+.before { color: var(--hard); text-decoration: line-through; text-decoration-thickness: 1px; }
+.after { color: var(--good); font-weight: 600; }
+.packs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.pack { background: var(--surface); border-radius: 16px; padding: 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.pack p { font-size: 14.5px; }
+.ask { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; display: grid; gap: 6px; }
+@media (max-width: 560px) { .card { grid-template-columns: 1fr; } .alt { grid-template-columns: 22px 1fr; } .alt span:last-child { grid-column: 2; } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid; gap:12px">
+    <span class="eyebrow">MeMap · v138 · 12 ноября 2026</span>
+    <h1>Пять новых вопросов о том, что человек делает с собой</h1>
+    <p class="lead">Из исследования о «внутренних» вопросах в приложении теперь пять. Вопросы 6–8 отложены на потом. Ниже карточка каждого вопроса так, как её показывает приложение (вариант A), и варианты B и C, если захочешь поменять. Ещё ниже числа для «Когда действовать» (без твоего «да» их нет) и то, что поменялось в словах по дороге.</p>
+  </header>
+
+  <section>
+    <h2>Вопросы</h2>
+
+    <div class="q">
+      <div class="q-head"><span class="num">1</span><h3>Мысли по кругу · Kept going over it</h3></div>
+      <div class="tags"><span class="tag">остров «Я»</span><span class="tag hard">трудный ответ: да</span><span class="tag">только если человек выбрал сам</span></div>
+      <div class="card"><div><span class="lang">EN</span><span class="big">Did you keep going over something in your head?</span></div><div><span class="lang">RU</span><span class="big">Крутилась в голове одна и та же ситуация?</span></div></div>
+      <div class="alts">
+        <div class="alt"><b>B</b><span>Did the same thoughts keep going round in your head?</span><span>Одни и те же мысли ходили по кругу?</span></div>
+        <div class="alt"><b>C</b><span>Did you get stuck on something and couldn't let it go?</span><span>Была мысль или ситуация, которая никак не отпускала?</span></div>
+      </div>
+      <div class="reads"><span>Так читается в связях (проверено на тестовых днях):</span>On days someone close criticizes or hurts you, you usually keep going over something in your head. The day after, thoughts usually keep you awake<br>В дни, когда кто-то близкий критикует или задевает тебя, в голове обычно крутится одна и та же ситуация</div>
+    </div>
+
+    <div class="q">
+      <div class="q-head"><span class="num">2</span><h3>Ругаю себя · Scolded myself</h3></div>
+      <div class="tags"><span class="tag">остров «Я»</span><span class="tag hard">трудный ответ: да</span><span class="tag">только если человек выбрал сам</span></div>
+      <div class="card"><div><span class="lang">EN</span><span class="big">Did you scold yourself for something?</span></div><div><span class="lang">RU</span><span class="big">Приходилось себя ругать?</span></div></div>
+      <div class="alts">
+        <div class="alt"><b>B</b><span>Were you angry or unhappy with yourself?</span><span>Была злость или недовольство собой?</span></div>
+        <div class="alt"><b>C</b><span>Was there a moment of "what's wrong with me"?</span><span>Был момент «ну что со мной не так»?</span></div>
+      </div>
+      <p class="note">Не становится находкой рядом с «плохой родитель», «день прошёл зря» и «не как все»: это одно и то же с двух сторон.</p>
+    </div>
+
+    <div class="q">
+      <div class="q-head"><span class="num">3</span><h3>Отключиться от работы · Switched off from work</h3></div>
+      <div class="tags"><span class="tag">остров «Работа»</span><span class="tag good">трудный ответ: нет</span><span class="tag">предлагается как другие рабочие вопросы</span></div>
+      <div class="card"><div><span class="lang">EN</span><span class="big">Did you manage to switch off from work in the evening?</span></div><div><span class="lang">RU</span><span class="big">Удалось вечером отключиться от работы?</span></div></div>
+      <div class="alts">
+        <div class="alt"><b>B</b><span>Did you stop thinking about work after work?</span><span>Удалось не думать о работе после работы?</span></div>
+        <div class="alt"><b>C</b><span>Did you get a real break from work thoughts?</span><span>Получилось отдохнуть от рабочих мыслей?</span></div>
+      </div>
+      <p class="note">Идеи для теста: «Stay off work mail in the evening», «Stop work by 19:00».</p>
+    </div>
+
+    <div class="q">
+      <div class="q-head"><span class="num">4</span><h3>Меня понимают · Felt understood</h3></div>
+      <div class="tags"><span class="tag">остров «Я»</span><span class="tag good">трудный ответ: нет</span><span class="tag">предлагается как другие вопросы «Я»</span></div>
+      <div class="card"><div><span class="lang">EN</span><span class="big">Did you feel understood by someone?</span></div><div><span class="lang">RU</span><span class="big">Было чувство, что тебя понимают?</span></div></div>
+      <div class="alts">
+        <div class="alt"><b>B</b><span>Did someone really get you?</span><span>Был человек, который тебя понял?</span></div>
+        <div class="alt"><b>C</b><span>Did you feel someone was on your side?</span><span>Было чувство, что кто-то на твоей стороне?</span></div>
+      </div>
+      <div class="reads"><span>В связях:</span>You mostly feel understood on days you see friends in person</div>
+    </div>
+
+    <div class="q">
+      <div class="q-head"><span class="num">5</span><h3>Промолчать, чтобы не спорить · Let it pass</h3></div>
+      <div class="tags"><span class="tag">остров «Я»</span><span class="tag neutral">нейтральный, без оценки</span><span class="tag">предлагается как другие вопросы «Я»</span></div>
+      <div class="card"><div><span class="lang">EN</span><span class="big">Did you let something pass to avoid an argument?</span></div><div><span class="lang">RU</span><span class="big">Пришлось промолчать, чтобы не было ссоры?</span></div></div>
+      <div class="alts">
+        <div class="alt"><b>B</b><span>Did you keep quiet about something that bothered you?</span><span>Было что-то, что задело, но осталось несказанным?</span></div>
+        <div class="alt"><b>C</b><span>Did you hold back something you wanted to say?</span><span>Хотелось что-то сказать, но пришлось сдержаться?</span></div>
+      </div>
+      <div class="reads"><span>В связях, без советов «скажи» и без «плохо»:</span>On days your partner irritates you, you usually let something pass to avoid an argument<br>В дни, когда партнёр раздражает, ты обычно молчишь, чтобы не было ссоры</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Числа для «Когда действовать»</h2>
+    <p>Сейчас у всех пяти порога нет (0): вопросы дают связи, но карточка «пора действовать» не загорается. Это числа дизайна, а не исследования, по образцу похожих вопросов. Нужно твоё «да» или другие числа.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Вопрос</th><th>Предлагаю</th><th>По образцу</th></tr></thead>
+      <tbody>
+        <tr><td>1 Мысли по кругу</td><td>6 из 14 дней «да»</td><td>Мысли не давали уснуть: 6 из 14</td></tr>
+        <tr><td>2 Ругаю себя</td><td>6 из 14 дней «да»</td><td>тот же ритм, что и 1</td></tr>
+        <tr><td>3 Отключиться от работы</td><td>8 из 14 вечеров «нет»</td><td>рабочие вопросы с ежедневным ритмом</td></tr>
+        <tr><td>4 Меня понимают</td><td>20 из 30 дней «нет»</td><td>Разговор по душам: 20 из 30</td></tr>
+        <tr><td>5 Промолчать</td><td>никогда</td><td>нейтральный: не судим, не зовём действовать</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Что поменялось в словах</h2>
+    <div class="ba">
+      <div class="ba-row"><span class="eyebrow">«Всегда» с отрицанием</span><span class="before">On days you spend 4+ hours on screens, you always don't meditate</span><span class="after">…you never meditate</span><span class="note">Так же «almost never raises their voice», «there's never any fun time», «ты никогда не медитируешь», «приятного времени вдвоём никогда нет». Нашлось в демо «Хорошие дни».</span></div>
+      <div class="ba-row"><span class="eyebrow">Кто чей результат</span><span class="before">On days you feel happy, you more often see friends</span><span class="after">On days you see friends in person, you always feel happy</span><span class="note">Когда в списке «что из чего бывает» нет подсказки, порядок раньше решался случайным номером вопроса. Теперь чувство идёт вторым, как то, что получилось из дня.</span></div>
+      <div class="ba-row"><span class="eyebrow">Вода и головная боль</span><span class="before">You drink too little water on days you have no headache too</span><span class="after">You feel drained all day on days you drink enough water too</span><span class="note">В списке причин у воды стояли её последствия (голова, усталость, глаза). Теперь вода стоит причиной у головной боли и усталости.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Новые демо-данные</h2>
+    <p>В Settings → Data четыре новых набора на 60 дней, каждый на свою тему. Дни подобраны так, чтобы не было случайных связей, а нужные выводы всегда показывались.</p>
+    <div class="packs">
+      <div class="pack"><h3>💼 Работа и дом</h3><p>You mostly argue with your partner on days you feel drained after work. Цепочка «мало сна → нет сил → ссора», «чаще всего ссоритесь, когда…», «похоже, дело не в алкоголе», свой вопрос про почту после 20:00 без слов.</p></div>
+      <div class="pack"><h3>🌙 Мигрень и цикл</h3><p>You most often have a headache on days you have your period or you feel stressed. Кофе после 14:00 → короткая ночь на следующий день.</p></div>
+      <div class="pack"><h3>🧸 Родительство</h3><p>You feel like a bad parent almost only on days you yell at your kid. Срывы в основном в дни без времени для себя, спокойствие с ним.</p></div>
+      <div class="pack"><h3>☀️ Хорошие дни</h3><p>You most often feel happy on days you see friends in person, you spend 30 minutes outside or you call your mom. Спокойствие в основном в дни медитации.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Случайные связи в списке «Связи»</h2>
+    <p>С v137 список показывает все связи, а не 12 сильнейших. Сессия страницы App Store заметила: на старых демо-днях (24 вопроса, связей встроено 3) список показал 35 связей, и многие звучат бессмысленно, например «There are mostly unexpected bills the day after you feel anxious». Проверено на случайных ответах, где настоящих связей нет совсем (по 15 случайных месяцев на каждую строку):</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Вопросов у человека</th><th>Сейчас</th><th>A: без «ранних» связей</th><th>B: A и порог строже</th></tr></thead>
+      <tbody>
+        <tr><td>8</td><td>2 (до 6)</td><td>0,5</td><td>0,1</td></tr>
+        <tr><td>15</td><td>7 (до 15)</td><td>5</td><td>1</td></tr>
+        <tr><td>24</td><td>17 (до 27)</td><td>9</td><td>2,5</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Среднее число связей, которые показал бы список, хотя все они случайны. Из них со словом «mostly» сейчас 1–2 на 24 вопроса.</p>
+    <div class="ask"><h3>A. Не показывать «ранние» связи</h3><p>Они проходят, если два ответа просто часто совпадают, даже без настоящей связи. Пример из демо: «The day after you have time for yourself, you usually sleep 7+ hours», 32 из 40 при почти нулевой силе связи. В четырёх новых демо-наборах A не прячет ни одной задуманной связи.</p></div>
+    <div class="ask"><h3>B. A и порог строже (p &lt; 0,01 вместо 0,05)</h3><p>Шум почти пропадает. Цена: молодые настоящие связи появятся на несколько дней позже. В демо «Хорошие дни» пока спрячется «On days you call your mom, you always feel happy» (8 из 8).</p></div>
+    <p class="note">Без твоего выбора правило связей не меняется.</p>
+  </section>
+
+  <section>
+    <h2>Замечено, пока без изменений</h2>
+    <div class="ask"><h3>Ночные вопросы</h3><p>У «Did you sleep 7+ hours last night?» и «мысли не давали уснуть» связь пишется «The day after…», хотя речь о ночи сразу после дня. Можно писать «That night…» / «Этой же ночью…». Это смена слов, сначала покажу страницу «было/стало».</p></div>
+  </section>
+</div>

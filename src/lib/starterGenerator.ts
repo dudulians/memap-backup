@@ -1,4 +1,5 @@
 import { Tracker, ProblemWhen } from "@/types/tracker";
+import { CHOSEN_ONLY_IDS } from "./researchTemplates";
 import { LIFE_STREAMS, LifeStreamTemplate } from "./lifeStreams";
 // TEMPLATE_GROUPS removed — it's now a thin adapter over LIFE_STREAMS
 // (see templateGroups.ts), so importing both would dedupe-fail and
@@ -681,7 +682,7 @@ export const generateStarterPack = (
   // topics" can opt the user in (writes a localStorage flag the
   // generator picks up via a separate path; for now: always hide
   // here, the broader catalog in AddTrackerModal exposes them).
-  candidates = candidates.filter((tpl) => !tpl.sensitive && !tpl.askOnly && !tpl.quiet);
+  candidates = candidates.filter((tpl) => !tpl.sensitive && !tpl.askOnly && !tpl.quiet && !CHOSEN_ONLY_IDS.has(tpl.templateId));
   const scored = candidates.map((tpl) => ({ tpl, score: scoreTemplate(tpl, answers) }));
   const picked = pickTop(scored, count, 2);
 

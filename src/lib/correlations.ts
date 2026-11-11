@@ -99,6 +99,8 @@ const userOptedIntoSensitive = (): boolean => {
 const NEUTRAL_TEMPLATE_IDS = new Set<string>([
   // markers from the research (Nov 7 2026): a period day, travel, heat, a weather change…
   ...MARKER_TEMPLATE_IDS,
+  // "let something pass to avoid an argument": never judged, no hint that keeping quiet is wrong (Nov 12 2026)
+  "let-it-pass",
   "wanted-child",
   "thought-about-emigrating",
   "wanted-leave-job",

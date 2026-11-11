@@ -1,6 +1,6 @@
 import { Tracker, ProblemWhen, AnswerType } from "@/types/tracker";
 import { BODY_TEMPLATES } from "./bodyTemplates";
-import { RESEARCH_TEMPLATES } from "./researchTemplates";
+import { CHOSEN_ONLY_IDS, RESEARCH_TEMPLATES } from "./researchTemplates";
 import { applyMinimalMedicine } from "./medicalArchive";
 import { applyNicheArchive } from "./nicheArchive";
 import { getLanguage } from "@/lib/i18n";
@@ -3367,7 +3367,7 @@ export const getRandomIdeas = (count: number = 4): (LocalizedTemplate & { stream
     .filter((stream) => !stream.gatedBy) // exclude expat cluster from random ideas
     .flatMap(stream =>
       stream.templates
-        .filter((t) => !t.sensitive && !t.private && !t.askOnly && !t.quiet)
+        .filter((t) => !t.sensitive && !t.private && !t.askOnly && !t.quiet && !CHOSEN_ONLY_IDS.has(t.id))
         .map(t => ({
           ...localizeTemplate(t),
           streamIcon: stream.icon,

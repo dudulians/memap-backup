@@ -79,7 +79,7 @@ const ok = (name, cond, info = "") => { out[name] = cond ? "ok" : `FAIL ${typeof
   ok("niche ideas are no longer offered", r.retiredOffered.length === 0, r.retiredOffered);
   ok("niche ideas still known to tests already running", r.retiredKept.length === 0 && r.legacy.retiredRun === "waitScreenshot", { kept: r.retiredKept, run: r.legacy.retiredRun });
   ok("the 5 new simple ideas have words in both languages", r.newOk.length === 5, r.newOk);
-  ok("every question with its own list still has ideas", r.emptyQ.every((q) => ["heavy-flow-day", "sick-day", "morning-libido", "partner-raised-voice", "partner-said-hurtful"].includes(q)), r.emptyQ);
+  ok("every question with its own list still has ideas", r.emptyQ.every((q) => ["heavy-flow-day", "sick-day", "morning-libido", "partner-raised-voice", "partner-said-hurtful", "kept-going-over-it", "scolded-myself", "let-it-pass"].includes(q)), r.emptyQ);
   ok("no doctor, vet or pills in offered ideas", r.medical.length === 0, r.medical);
   ok("Russian ideas are gender-free", r.gendered.length === 0, r.gendered);
   ok("every offered idea has EN and RU words", r.missingText.length === 0, r.missingText);

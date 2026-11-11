@@ -8,6 +8,7 @@
 // after enough days with both answered it says whether she was onto
 // something. Counts only, never a cause. Stored on the phone.
 import { Tracker, TrackerEntry } from "@/types/tracker";
+import { CHOSEN_ONLY_IDS } from "./researchTemplates";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { getSuspectTemplateIds, getTemplatesByIds, matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import type { LifeStreamTemplate } from "@/lib/lifeStreams";
@@ -100,7 +101,7 @@ export const suspectsFor = (target: Tracker, trackers: Tracker[]): Suspect[] => 
   const tpls = getTemplatesByIds(getSuspectTemplateIds(tid)).filter((tpl) => !tpl.sensitive && !tpl.quiet && tpl.id !== tid);
   const tracked = tpls.filter((tpl) => byTemplate.has(tpl.id)).map((tpl) => ({ kind: "tracked" as const, tracker: byTemplate.get(tpl.id)! }));
   // a partner-harm question is never offered as a new one (one she already has stays above)
-  const fresh = tpls.filter((tpl) => !byTemplate.has(tpl.id) && !tpl.askOnly).map((template) => ({ kind: "template" as const, template }));
+  const fresh = tpls.filter((tpl) => !byTemplate.has(tpl.id) && !tpl.askOnly && !CHOSEN_ONLY_IDS.has(tpl.id)).map((template) => ({ kind: "template" as const, template }));
   return [...tracked.slice(0, 3), ...fresh].slice(0, 6);
 };
 

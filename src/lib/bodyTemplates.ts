@@ -49,6 +49,9 @@ export const QUIET_NO = new Set(["pooped-today"]);
 /** Pairs that go together by nature (a follow-up and its question, two sides of one thing):
  *  never shown as a link, "period ↔ heavy period" says nothing new (Nov 7 2026). */
 const NATURAL_PAIRS: [string, string][] = [
+  // inner questions (research brief, rule 5; Nov 12 2026)
+  ["kept-going-over-it", "felt-anxious"], ["scolded-myself", "felt-bad-parent"], ["scolded-myself", "felt-useless"], ["scolded-myself", "felt-not-like-others"],
+  ["felt-understood", "deep-conversation"], ["felt-understood", "felt-lonely"], ["let-it-pass", "said-yes-when-meant-no"],
   ["period-day", "heavy-flow-day"], ["period-day", "period-symptoms"], ["period-day", "pms-signs"], ["period-day", "breast-tender"],
   ["pms-signs", "breast-tender"], ["pms-signs", "period-symptoms"], ["hot-flushes", "night-sweats"], ["bladder-urgency", "bladder-leak"],
   ["pooped-today", "hard-to-poop"], ["pooped-today", "loose-stool"], ["headache", "migraine"], ["felt-depressed", "lost-interest"], ["felt-anxious", "panic-attack"],

@@ -47,7 +47,21 @@ export const RESEARCH_TEMPLATES: T[] = [
   q("health", "early-migraine-signs", "Body", "Migraine", "Early migraine signs", "Предвестники мигрени", "Did you notice your usual early migraine signs today — yawning, a stiff neck, cravings, odd tiredness?", "Сегодня были привычные предвестники мигрени — зевота, скованная шея, тяга к еде, странная усталость?", "yes", 30, 0),
   q("health", "pill-free-day", "Body", "Cycle", "Pill-free day of the pack", "Перерыв в таблетках", "Did you have a pill-free or placebo day of your birth-control pack today?", "Сегодня день перерыва или пустышки в упаковке противозачаточных?", "yes", 30, 0),
   q("health", "strength-training", "Health", "Movement", "Strength training", "Силовая тренировка", "Did you do strength exercises today — weights, bands or bodyweight?", "Сегодня были силовые упражнения — с весами, резинками или с весом своего тела?", "no", 7, 6, "2 strength sessions a week", "2 силовые тренировки в неделю"),
+  // "Inner" questions (Nov 12 2026, research: marketing/research/inner-questions.md, brief inner-questions-brief.md):
+  // what a person does with oneself, the middle of a chain (criticised → kept going over it → slow to fall asleep).
+  // Threshold 0 until she OKs numbers. 1 and 2 only when the person picks them (CHOSEN_ONLY_IDS); 5 is never judged
+  // (neutral, correlations.ts); 4 says "understood", not "helped"; 3 is about work, on the Work island.
+  q("state", "kept-going-over-it", "Emotions", "Thoughts", "Kept going over it", "Мысли по кругу", "Did you keep going over something in your head today?", "Сегодня крутилась в голове одна и та же ситуация?", "yes", 14, 0),
+  q("state", "scolded-myself", "Emotions", "Thoughts", "Scolded myself", "Ругаю себя", "Did you scold yourself for something today?", "Сегодня приходилось себя ругать?", "yes", 14, 0),
+  q("state", "switched-off-from-work", "Emotions", "Work", "Switched off from work", "Отключиться от работы", "Did you manage to switch off from work this evening?", "Сегодня вечером удалось отключиться от работы?", "no", 14, 0),
+  q("state", "felt-understood", "Emotions", "Connection", "Felt understood", "Меня понимают", "Did you feel understood by someone today?", "Сегодня было чувство, что тебя понимают?", "no", 30, 0),
+  q("state", "let-it-pass", "Emotions", "Connection", "Let it pass", "Промолчать, чтобы не спорить", "Did you let something pass today to avoid an argument?", "Сегодня пришлось промолчать, чтобы не было ссоры?", "yes", 30, 0),
 ];
 
 /** Markers: context for links, no hard answer (drawn neutral, never a hard day). */
 export const MARKER_TEMPLATE_IDS = ["period-day", "travel-or-night-away", "hot-day", "weather-change", "early-migraine-signs", "pill-free-day", "medicine-change"];
+
+/** Offered only when the person picks them (library, search, the Me island, "more things to watch"): never in
+ *  starter sets, play decks, ideas of the day or hunches. In a trial with depressed patients, 4 people left the
+ *  group that tracked negative thoughts because filling it in affected them badly (research brief, rule 1). */
+export const CHOSEN_ONLY_IDS = new Set(["kept-going-over-it", "scolded-myself"]);

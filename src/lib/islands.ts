@@ -95,7 +95,7 @@ export const BODY_TEMPLATES = new Set(["exercised"]);
 export const WORK_TEMPLATES = new Set([
   "burned-out-after-work", "didnt-want-to-work", "worked-overtime", "felt-fulfilled-at-work", "boss-was-difficult",
   "conflict-with-colleague", "wanted-leave-job", "thought-career-change", "long-commute", "dealt-with-paperwork",
-  "main-thing-done", "focus-hour",
+  "main-thing-done", "focus-hour", "switched-off-from-work",
 ]);
 const STREAM_OF = new Map(LIFE_STREAMS.flatMap((st) => st.templates.map((tpl) => [tpl.id, st.id] as const)));
 const islandCache = new Map<string, IslandId>();
@@ -169,12 +169,17 @@ export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: 
  *  a walk → tired", "anxious → not slept enough". k of n counts those days; other
  *  counts the same second answer on the rest. */
 /** Same day, which one goes first by the app's list of what may lead to what: true = b may lead to a (b first),
- *  false = a may lead to b, null = the list says nothing (or both ways). */
+ *  false = a may lead to b, null = nothing to go by. When the list says nothing (or both ways), a feeling goes
+ *  second, as what came of the day: "On days you see friends, you feel happy", never "On days you feel happy, you
+ *  see friends" (Nov 12 2026: the order had been left to random ids, so it could read backwards). */
 const causeFirst = (a: Tracker, b: Tracker): boolean | null => {
   const ta = matchTemplateIdByTitle(a.title), tb = matchTemplateIdByTitle(b.title);
-  if (!ta || !tb) return null;
-  const aToB = (RELATED_QUESTIONS[tb] ?? []).includes(ta), bToA = (RELATED_QUESTIONS[ta] ?? []).includes(tb);
-  return aToB === bToA ? null : bToA;
+  if (ta && tb) {
+    const aToB = (RELATED_QUESTIONS[tb] ?? []).includes(ta), bToA = (RELATED_QUESTIONS[ta] ?? []).includes(tb);
+    if (aToB !== bToA) return bToA;
+  }
+  const fa = a.category === "Emotions", fb = b.category === "Emotions";
+  return fa === fb ? null : fa;
 };
 export const linkOf = (c: CorrelationResult) => {
   // same day: her topic's question goes second, as the thing explained ("Short night →

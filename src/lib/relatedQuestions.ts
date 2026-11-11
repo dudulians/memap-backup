@@ -143,6 +143,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
   // ─── Родительство ──────────────────────────────────────────────
   "yelled-at-kid": [
     "slept-enough",
+    "time-for-myself",
     "child-meltdown",
     "bedtime-battle",
     "felt-fatigued",
@@ -192,6 +193,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "weather-change",
     "travel-or-night-away",
     "screen-time-long",
+    "drank-water",
   ],
   "migraine": [
     "slept-enough",
@@ -260,6 +262,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "felt-overwhelmed-parenting",
     "drained-by-someone",
     "hot-day",
+    "drank-water",
   ],
   "period-symptoms": [
     "period-day",
@@ -307,6 +310,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "woke-at-night",
     "bed-before-midnight",
     "travel-or-night-away",
+    "switched-off-from-work",
   ],
   "outside-30min": [
     "had-energy",
@@ -322,11 +326,8 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "had-energy",
     "outside-30min",
   ],
-  "drank-water": [
-    "headache",
-    "felt-fatigued",
-    "eye-strain",
-  ],
+  // drank-water: its old list named what follows from too little water (headache, fatigue, eye strain), against the
+  // rule above; those lists name it now (Nov 12 2026: "You drink too little water on days you have no headache too")
   "ate-by-2pm": [
     "had-energy",
     "headache",
@@ -399,6 +400,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "felt-fatigued",
     "pms-signs",
     "period-day",
+    "scolded-myself",
   ],
   "screen-time-long": [
     "felt-lonely",
@@ -557,6 +559,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "in-flow",
     "got-recognition",
     "outside-30min",
+    "felt-understood",
   ],
   "felt-anxious": [
     "slept-enough",
@@ -1159,6 +1162,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "drank-alcohol",
     "felt-anxious",
     "noisy-neighbors",
+    "kept-going-over-it",
   ],
   "woke-too-early": [
     "racing-thoughts-in-bed",
@@ -1197,6 +1201,7 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
     "screens-before-bed",
     "heard-bad-news",
     "doomscrolled-news",
+    "kept-going-over-it",
   ],
   "pooped-today": [
     "ate-vegetables",
@@ -1417,6 +1422,36 @@ export const RELATED_QUESTIONS: Record<string, string[]> = {
   "money-worry": [
     "financial-issue",
     "impulse-spending",
+  ],
+  // inner questions (Nov 12 2026): after events, before the evening and the night
+  "kept-going-over-it": [
+    "criticized-by-close",
+    "argued-with-partner",
+    "boss-was-difficult",
+    "money-worry",
+    "felt-stressed",
+  ],
+  "scolded-myself": [
+    "criticized-by-close",
+    "procrastinated",
+    "boss-was-difficult",
+    "yelled-at-kid",
+  ],
+  "switched-off-from-work": [
+    "worked-overtime",
+    "many-interruptions",
+    "boss-was-difficult",
+    "conflict-with-colleague",
+  ],
+  "felt-understood": [
+    "saw-friends",
+    "good-time-together",
+    "called-parent",
+  ],
+  "let-it-pass": [
+    "partner-irritated-me",
+    "boss-was-difficult",
+    "parent-pressured",
   ],
   "deep-conversation": [
     "phones-together",
@@ -1686,6 +1721,11 @@ const TEMPLATE_KEYWORDS: Array<[string, string[]]> = [
   ["laughed-uncontrollably", ["ржал до слёз", "ржал до слез", "смеял до слёз", "laughed uncontrol", "couldn't stop laugh", "посмеяться", "laughed today"]],
   ["envied-on-social", ["завид", "envy", "envied"]],
   ["felt-not-like-others", ["не как все", "not like everyone"]],
+  ["kept-going-over-it", ["по кругу", "прокручива", "не отпуска", "going over", "ruminat", "overthink"]],
+  ["scolded-myself", ["ругал себя", "ругаю себя", "ругать себя", "винил себя", "виню себя", "злюсь на себя", "scold myself", "scolded myself", "blamed myself", "beat myself up", "angry at myself"]],
+  ["switched-off-from-work", ["отключ от работ", "отключиться от работ", "не думать о работе", "switch off from work", "switched off from work", "stop thinking about work"]],
+  ["felt-understood", ["меня понима", "меня поняли", "понял меня", "поняли меня", "felt understood", "understood me"]],
+  ["let-it-pass", ["промолч", "смолчал", "не стал спорить", "не стала спорить", "let it pass", "kept quiet", "bit my tongue"]],
   ["danced-or-sang-alone", ["танцев один", "пел громко", "danced alone", "sang alone"]],
   ["petted-an-animal", ["гладил кот", "гладил соб", "тискал", "petted", "pet animal"]],
   ["liked-my-selfie", ["селфи", "понрав фото", "liked my selfie", "selfie"]],
