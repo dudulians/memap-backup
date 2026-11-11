@@ -14,6 +14,9 @@ export const NICHE_IDS = new Set([
   // repeat a simple question that is already there
   "skipped-cleaning", "bought-on-sale", "paid-to-skip-effort", "less-caffeine-than-usual", "watched-course-lecture",
   "wanted-learn-new",
+  // too wide (Nov 11 2026, her note: «слишком широкий»): the app never asks for a morning promise, and its narrow
+  // versions are already there (workout, phone-free morning, bed before midnight, the main task, sweets, water…)
+  "kept-morning-promise",
   // very narrow body and moving-abroad questions
   "pill-free-day", "pelvic-floor-exercises", "thought-third-country", "missed-familiar-weather",
   "local-institution-contact", "tried-local-food",

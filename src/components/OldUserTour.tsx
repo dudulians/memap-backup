@@ -197,7 +197,7 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
               <div className="sticky bottom-0 -mx-5 mt-4 bg-gradient-to-t from-background via-background/95 to-transparent px-5 pb-safe pt-6">
                 <button type="button" onClick={done} className={cn(btn, "mb-1")}>{t("upgrade.setSail")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button>
                 {/* the way back, said where the new look begins (her note, Nov 11 2026: "не очевидна кнопка… как вернуться в старую версию") */}
-                <button type="button" data-tour-old onClick={() => { haptics.tap(); finish(); switchToOld(); }} className="mb-4 h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("upgrade.oldLook")}</button>
+                <button type="button" data-tour-old onClick={() => { haptics.tap(); finish(); switchToOld("tour"); }} className="mb-4 h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("upgrade.oldLook")}</button>
               </div>
             </>
           )}

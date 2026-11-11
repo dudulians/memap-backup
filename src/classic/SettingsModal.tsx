@@ -801,7 +801,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                     <>
                     {/* The way to the new look, first in Settings (her ask, Nov 7 2026: whoever went
                         back to the old look must be able to come back to the new one any time). */}
-                    <button type="button" onClick={switchToNew}
+                    <button type="button" onClick={() => switchToNew("settings")}
                       className="mb-3 w-full flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-left active:bg-primary/20 transition-colors">
                       <Sparkles className="h-5 w-5 text-primary flex-shrink-0" strokeWidth={2} />
                       <span className="flex-1 text-sm font-semibold text-primary">{t("upgrade.tryRow")}</span>

@@ -34,6 +34,7 @@
 import mixpanel from "mixpanel-browser";
 import { Capacitor } from "@capacitor/core";
 import { useEffect } from "react";
+import { getUiMode } from "@/lib/uiMode";
 
 /** The version people run (keep with iOS MARKETING_VERSION). */
 export const APP_VERSION = "2.0";
@@ -148,7 +149,8 @@ export const initAnalytics = (): void => {
     // on every event (her note, Nov 8 2026: "чтобы не путались со старыми пользователями"): the version,
     // old or new, the phone's language and region setting, where she heard about us when she said
     const source = getSource();
-    mixpanel.register({ app_version: APP_VERSION, cohort: cohort(), onb_variant: onbLabel(), region: navigator.language || "", ...(source ? { source } : {}) });
+    // ui: the look this event happened in, new or classic (Nov 11 2026: who stays on the new look, who goes back)
+    mixpanel.register({ app_version: APP_VERSION, cohort: cohort(), onb_variant: onbLabel(), ui: getUiMode(), region: navigator.language || "", ...(source ? { source } : {}) });
     // the first launch of this install, once
     try {
       if (!localStorage.getItem("memap_first_open")) {
@@ -277,7 +279,19 @@ export type AnalyticsEvent =
   // "Why?" (Nov 10 2026): reasons saved (how many answers and chips, any words, from the path or Notes or the
   // calendar), or the step skipped (how many answers, from the sheet or the path's card)
   | "reasons_saved"
-  | "reasons_skipped";
+  | "reasons_skipped"
+  // Nov 11 2026 (her "1 да"): the old users' way to the new look (the invite shown, again or not; "Not now";
+  // ui_switched says from where), the first evening's day (yesterday or tonight), the examples (opened, folded),
+  // and whether the phone allowed reminders. The look itself is on every event (ui).
+  | "ui_invite_shown"
+  | "ui_invite_later"
+  | "onboarding_day"
+  | "example_opened"
+  | "example_hidden"
+  | "reminder_permission"
+  // her own question's words, asked under its link (opened; saved with a yes and/or a no word; never the words)
+  | "own_words_opened"
+  | "own_words_saved";
 
 /** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
 export const setSource = (source: string) => {

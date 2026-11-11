@@ -52,12 +52,12 @@ const words = await p.evaluate(async () => {
 const W = words;
 ok("EN better: names the test and says what changed", W.en.better.human && W.en.better.head === "Looks like walks together help: you argue with your partner less often.", W.en.better);
 ok("EN better: the count under it", W.en.better.count === "2 of 14 days during the test, 8 of 14 in the two weeks before.", W.en.better.count);
-ok("RU better", W.ru.better.head === "Похоже, прогулки вместе помогают: вы реже ссоритесь с партнёром." && W.ru.better.count === "2 из 14 дней во время проверки, 8 из 14 за две недели до.", W.ru.better);
-ok("worse: don't help, more often", W.en.worse.head === "Looks like walks together don't help: you argue with your partner more often." && W.ru.worse.head === "Похоже, прогулки вместе не помогают: вы чаще ссоритесь с партнёром.", [W.en.worse.head, W.ru.worse.head]);
-ok("her own plan: it helps", W.en.own.head === "Looks like it helps: you argue with your partner less often." && W.ru.own.head === "Похоже, это помогает: вы реже ссоритесь с партнёром.", [W.en.own.head, W.ru.own.head]);
+ok("RU better", W.ru.better.head === "Похоже, прогулки вместе помогают: вы с партнёром реже ссоритесь." && W.ru.better.count === "2 из 14 дней во время проверки, 8 из 14 за две недели до.", W.ru.better);
+ok("worse: don't help, more often", W.en.worse.head === "Looks like walks together don't help: you argue with your partner more often." && W.ru.worse.head === "Похоже, прогулки вместе не помогают: вы с партнёром чаще ссоритесь.", [W.en.worse.head, W.ru.worse.head]);
+ok("her own plan: it helps", W.en.own.head === "Looks like it helps: you argue with your partner less often." && W.ru.own.head === "Похоже, это помогает: вы с партнёром реже ссоритесь.", [W.en.own.head, W.ru.own.head]);
 ok("a good answer: more often, counted as good days", W.en.good.head === "Looks like saying thank you helps: your partner pays you a real compliment more often." && W.en.good.count === "12 of 14 days during the test, 5 of 14 in the two weeks before." && W.ru.good.head === "Похоже, слова благодарности помогают: партнёр чаще говорит что-то по-настоящему доброе.", W.en.good);
 ok("same: plain words, the change under it", W.en.same.head === "No difference yet: about as many hard days as before." && !W.en.same.human && W.en.same.most === "You argue with your partner less often: 2 of 14 days during the test, 8 of 14 in the two weeks before.", W.en.same);
-ok("RU same", W.ru.same.head === "Пока без разницы: тяжёлых дней примерно столько же, сколько раньше." && W.ru.same.most === "Вы реже ссоритесь с партнёром: 2 из 14 дней во время проверки, 8 из 14 за две недели до.", W.ru.same);
+ok("RU same", W.ru.same.head === "Пока без разницы: тяжёлых дней примерно столько же, сколько раньше." && W.ru.same.most === "Вы с партнёром реже ссоритесь: 2 из 14 дней во время проверки, 8 из 14 за две недели до.", W.ru.same);
 ok("too few: no 'on one side'", W.en.few.head === "Not enough answered days to compare yet." && W.ru.few.head === "Пока мало отвеченных дней, чтобы сравнить.", [W.en.few.head, W.ru.few.head]);
 ok("something no change can move (neighbours): the old plain line", !W.en.outside.human && /^Fewer hard days/.test(W.en.outside.head), W.en.outside);
 ok("praise: 12 → Well done!, 8 → Good effort!, 5 → nothing", JSON.stringify(W.en.praise) === JSON.stringify(["Well done!", "Good effort!", null]) && JSON.stringify(W.ru.praise) === JSON.stringify(["Отлично!", "Уже немало!", null]), [W.en.praise, W.ru.praise]);
@@ -111,7 +111,7 @@ for (const lang of ["en", "ru"]) {
     ok("screen EN: 12 of 14 days. Well done!", r.did === "You did it on 12 of 14 days. Well done!", r.did);
     ok("screen EN: no old lines", !/biggest difference|It may help you|“/.test(r.text), r.text.slice(0, 400));
   } else {
-    ok("screen RU: the human line", r.head === "Похоже, прогулки вместе помогают: вы реже ссоритесь с партнёром.", r);
+    ok("screen RU: the human line", r.head === "Похоже, прогулки вместе помогают: вы с партнёром реже ссоритесь.", r);
     ok("screen RU: 12 из 14 дней. Отлично!", r.did === "Получилось 12 из 14 дней. Отлично!", r.did);
   }
   // "No, that's enough": the test goes to What helps, with the same first line
@@ -122,7 +122,7 @@ for (const lang of ["en", "ru"]) {
   await p.evaluate(() => document.querySelector("[data-tour=helps]")?.click()); await p.waitForTimeout(1500);
   const helps = await p.evaluate(() => [...document.querySelectorAll("[data-result-head]")].map((x) => x.textContent));
   await p.screenshot({ path: `${D}/${lang}-2-what-helps.png` });
-  ok(`What helps ${lang}: the same first line`, helps.includes(lang === "en" ? "Looks like walks together help: you argue with your partner less often." : "Похоже, прогулки вместе помогают: вы реже ссоритесь с партнёром."), helps);
+  ok(`What helps ${lang}: the same first line`, helps.includes(lang === "en" ? "Looks like walks together help: you argue with your partner less often." : "Похоже, прогулки вместе помогают: вы с партнёром реже ссоритесь."), helps);
   for (let i = 0; i < 3; i++) { await p.keyboard.press("Escape"); await p.waitForTimeout(400); }
 
   // 5. the island card

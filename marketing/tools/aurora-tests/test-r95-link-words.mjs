@@ -1,9 +1,11 @@
-// r95 (Nov 9 2026, her note about "When you say yes when you mean no, the next day you often have a
-// headache — 11 of 17 times": "как меня бесит эта формулировка… так сложно читается"). A link is two
-// short parts now, everywhere: the headline ("Forced yes → headache the next day", "Short night and
-// headache often come together") and the count under it ("11 of 17 times · on other days 4 of 20",
-// "every time — 6 of 6"). The Links screen, When to act "Comes with it", the week report and the
-// doctor's report (its canvas text), EN and RU; no link says "When you…" / «Если ты…».
+// r95. Nov 9 2026 (her note about "When you say yes when you mean no, the next day you often have a headache —
+// 11 of 17 times": "так сложно читается") links became short headlines with the count under them. Nov 11 2026
+// the headlines "резали глаза" ("Unwanted yes → headache the next day"), and after a page of real examples she
+// chose sentences again ("Да, ставь"): a sentence ("The day after you agree to something you don't really want,
+// you usually have a headache", «Если ты соглашаешься на то, чего не хочешь, на следующий день обычно болит
+// голова») and the count on its own line ("17 of 20 times · on other days 12 of 39", "Every time — 15 of 15"),
+// never glued on with a dash, no arrows. The Links screen, a link's sheet, When to act "Comes with it", the week
+// report and the doctor's report (its canvas text), EN and RU.
 // Run from marketing/tools:  node aurora-tests/test-r95-link-words.mjs
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
@@ -11,7 +13,13 @@ const D = `./aurora-tests/work/r95`; mkdirSync(D, { recursive: true });
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
 const errs = [], out = {}, fails = [];
 const ok = (name, cond, info = "") => { out[name] = !!cond; if (!cond) fails.push(`${name} ${info}`.trim()); };
-const SENTENCE = { en: /\bWhen you\b|\bOn days when\b/, ru: /Если ты|В дни, когда/ };
+// the short headlines that are gone, and the old sentence with its count glued on
+const SHORT = /→|come together|бывают вместе| — and |times\.|раз\./;
+const SAY = { en: /The day after |On days you /, ru: /Если ты |В дни, когда / };
+const FORCED = {
+  en: /The day after you agree to something you don't really want, you [a-z ]*have a headache (\d+ of \d+ times|Every time — \d+ of \d+) · on other days \d+ of \d+/,
+  ru: /Если ты соглашаешься на то, чего не хочешь, на следующий день [а-яё ]*болит голова (\d+ из \d+ раз(а)?|Каждый раз — \d+ из \d+) · в другие дни \d+ из \d+/,
+};
 
 for (const lang of ["en", "ru"]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: "Europe/London" });
@@ -46,9 +54,9 @@ for (const lang of ["en", "ru"]) {
   await p.waitForTimeout(2200); await shot("links");
   const links = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.links`] = links.slice(0, 900);
-  ok(`${lang}.links: forced yes → headache`, lang === "en" ? /Unwanted yes → headache the next day \d+ of \d+ times · on other days \d+ of \d+/.test(links) : /Согласие против желания → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни \d+ из \d+/.test(links), links.slice(0, 300));
-  ok(`${lang}.links: same day, every time`, lang === "en" ? /Short night and headache often come together Every time — (\d+) of \1/.test(links) : /Короткая ночь и головная боль часто бывают вместе Каждый раз — (\d+) из \1/.test(links));
-  ok(`${lang}.links: no sentence`, !SENTENCE[lang].test(links));
+  ok(`${lang}.links: forced yes, the next day, as a sentence`, FORCED[lang].test(links), links.slice(0, 300));
+  ok(`${lang}.links: same day, every time`, lang === "en" ? /On days you sleep under 7 hours, you always have a headache Every time — (\d+) of \1/.test(links) : /В дни, когда ты спишь меньше 7 часов, всегда болит голова Каждый раз — (\d+) из \1/.test(links), links.slice(0, 400));
+  ok(`${lang}.links: no short headline`, !SHORT.test(links), links.slice(0, 300));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   // a link's own sheet on the map (every time: the big count)
   const route = await p.evaluate(async () => {
@@ -65,7 +73,7 @@ for (const lang of ["en", "ru"]) {
     await p.waitForTimeout(1500); await shot("link-sheet");
     const sheet = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
     out[`${lang}.sheet`] = sheet.slice(0, 500);
-    ok(`${lang}.sheet: headline, no sentence`, /→|come together|бывают вместе| — and | — и /.test(sheet) && !SENTENCE[lang].test(sheet), sheet.slice(0, 300));
+    ok(`${lang}.sheet: a sentence, no short headline`, SAY[lang].test(sheet) && !SHORT.test(sheet), sheet.slice(0, 300));
     await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   }
 
@@ -80,8 +88,8 @@ for (const lang of ["en", "ru"]) {
   const comes = await p.evaluate(() => { const h = [...document.querySelectorAll("[role=dialog] p")].find((x) => /Comes with it|Бывает вместе с этим/.test(x.textContent)); h?.scrollIntoView({ block: "center" }); return h ? h.parentElement.innerText.replace(/\s+/g, " ") : ""; });
   await shot("act-comes-with");
   out[`${lang}.act`] = comes.slice(0, 600);
-  ok(`${lang}.act: comes with, in two parts`, lang === "en" ? /Unwanted yes → headache the next day \d+ of \d+ times · on other days/.test(comes) : /Согласие против желания → головная боль на следующий день \d+ из \d+ раз(а)? · в другие дни/.test(comes), comes.slice(0, 300));
-  ok(`${lang}.act: no sentence`, comes.length > 0 && !SENTENCE[lang].test(comes));
+  ok(`${lang}.act: comes with, a sentence and its count`, FORCED[lang].test(comes), comes.slice(0, 300));
+  ok(`${lang}.act: no short headline`, comes.length > 0 && !SHORT.test(comes));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
 
   // 3. The week report: last week's waits on Today as the first step
@@ -94,8 +102,8 @@ for (const lang of ["en", "ru"]) {
   await shot("week-report");
   const week = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.week`] = week.slice(0, 600);
-  ok(`${lang}.week: insight in two parts`, lang === "en" ? /→ .* the next day \d+ of \d+ times · on other days|come together .*(\d+ of \d+ times|[Ee]very time)/.test(week) : /→ .* на следующий день \d+ из \d+ раз(а)? · в другие дни|вместе .*(\d+ из \d+ раз|[Кк]аждый раз)/.test(week), week.slice(0, 300));
-  ok(`${lang}.week: no sentence`, week.length > 0 && !SENTENCE[lang].test(week));
+  ok(`${lang}.week: insight, a sentence and its count`, lang === "en" ? /(The day after|On days you) [^·]*? (\d+ of \d+ times|Every time — \d+ of \d+) · on other days/.test(week) : /(Если ты|В дни, когда) [^·]*? (\d+ из \d+ раз(а)?|Каждый раз — \d+ из \d+) · в другие дни/.test(week), week.slice(0, 300));
+  ok(`${lang}.week: no short headline`, week.length > 0 && !SHORT.test(week));
 
   // 4. The doctor's report: every word drawn on its pages
   const report = await p.evaluate(async ({ lang }) => {
@@ -112,12 +120,13 @@ for (const lang of ["en", "ru"]) {
   writeFileSync(`${D}/${lang}-report-text.txt`, report.text);
   writeFileSync(`${D}/${lang}-report-last.jpg`, Buffer.from(report.page.split(",")[1], "base64"));
   const lines = report.text.split("\n");
-  const linkLines = lines.filter((l) => /→| and .* come together| — and |часто бывают вместе| — и /.test(l));
+  const linkLines = lines.filter((l) => /^(The day after|On days you|Если ты|В дни, когда)/.test(l));
   out[`${lang}.report links`] = linkLines;
   out[`${lang}.report counts`] = lines.filter((l) => /times · |каждый раз|every time|раз(а)? · /.test(l));
-  ok(`${lang}.report: headline lines`, linkLines.length > 0);
+  ok(`${lang}.report: sentence lines`, linkLines.length > 0, lines.slice(0, 60).join(" | "));
   ok(`${lang}.report: count lines`, out[`${lang}.report counts`].length > 0);
-  ok(`${lang}.report: no sentence`, !SENTENCE[lang].test(report.text));
+  // (the section title "What tended to come together in this period" stays)
+  ok(`${lang}.report: no short headline`, !/→|often come together|more than usual|бывают вместе/.test(report.text));
   await ctx.close();
 }
 console.log(JSON.stringify({ fails, out, errs }, null, 1));

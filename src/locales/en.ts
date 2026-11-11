@@ -115,11 +115,9 @@ const en = {
     onIsland: "a link on this island",
     onIslandOf: "A link on the {{island}} island",
     withoutLow: "without “{{q}}”",
-    // a link in two short parts (her note, Nov 9 2026: the "When you…" sentences were hard to read)
-    headNextDay: "{{first}} → {{second}} the next day",
-    headSameDay: "{{first}} and {{second}} often come together",
-    headSameDayMore: "{{first}} and {{second}} come together more than usual",
-    headSameDayThen: "{{first}} — and {{second}} the same day",
+    // a link as a sentence, its count on the line under it (Nov 11 2026, her pick after the short headlines)
+    sayNextDay: "the day after {{cause}}, {{result}}",
+    saySameDay: "on days {{cause}}, {{result}}",
     times_one: "{{k}} of {{count}} time",
     times_other: "{{k}} of {{count}} times",
     everyTime: "every time — {{k}} of {{n}}",
@@ -1047,7 +1045,10 @@ const en = {
     no: "No",
     phYes: "e.g. walk with the dog",
     phNo: "e.g. no walk",
-    example: "In your links it reads: “{{w}}, and on those days a migraine came more often.”",
+    example: "In your links: On days you mark “{{w}}”, you usually have a headache.",
+    // under a link with her own question that has no words yet (Nov 11 2026)
+    prompt: "Say “{{q}}” in your own words",
+    save: "Save",
   },
   // the 4 parts over the map (board 76 A, Nov 6 2026)
   world4: {

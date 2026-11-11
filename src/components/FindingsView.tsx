@@ -18,6 +18,7 @@ import { daysAgoIso, doorCounts, getDoor, getDoorState, strongestContextFact } f
 import { factLine } from "@/lib/echo";
 import { LINKS_AT, countedDays } from "@/lib/pathSteps";
 import { ExampleLink } from "./Examples";
+import { needsWords, OwnWordsPrompt } from "./AnswerWordsFields";
 
 const STRIP_DAYS = 14;
 
@@ -171,6 +172,8 @@ const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
             <span className="text-[13px] font-medium text-muted-foreground">{t("patterns.findDays", { count: c.sharedDays })}</span>
           </div>
           <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] }))} className="mt-3 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("patterns.findSeeDays")}</button>
+          {/* her own question without words: say it her way (Nov 11 2026) */}
+          {[a, b].filter(needsWords).slice(0, 1).map((tr) => <OwnWordsPrompt key={tr.id} tracker={tr} />)}
         </div>
       )}
     </div>

@@ -105,7 +105,7 @@ const packSelfCare: DemoPack = {
     "yelled-at-kid",
     "ran-out-of-patience",
     "felt-bad-parent",
-    "kept-morning-promise",   // ≈ "self-care morning routine"
+    "time-for-myself",   // the morning-promise question went to the archive (Nov 11 2026)
     "slept-enough",
     "felt-fatigued",
     "saw-friends",
@@ -113,7 +113,7 @@ const packSelfCare: DemoPack = {
   ],
   script: () => {
     const N = NUM_DAYS;
-    const selfCare: boolean[] = [];  // kept-morning-promise
+    const selfCare: boolean[] = [];  // time-for-myself
     const sawFriends: boolean[] = [];
     for (let i = 0; i < N; i++) {
       selfCare.push(r(0.45));
@@ -153,7 +153,7 @@ const packSelfCare: DemoPack = {
       ["yelled-at-kid", yelled],
       ["ran-out-of-patience", ranOutPatience],
       ["felt-bad-parent", feltBadParent],
-      ["kept-morning-promise", selfCare],
+      ["time-for-myself", selfCare],
       ["slept-enough", slept],
       ["felt-fatigued", fatigued],
       ["saw-friends", sawFriends],

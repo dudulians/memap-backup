@@ -268,28 +268,54 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own,
 
 // --- 2b. your own question -----------------------------------------------------------
 const IDEAS = ["onb7.idea1", "onb7.idea2", "onb7.idea3", "onb7.idea4"];
+/** Is a yes a hard day? The ideas know (a lunch break, water and a call home are good; spending over budget is hard). */
+const IDEA_HARD: Record<string, boolean> = { "onb7.idea1": false, "onb7.idea2": false, "onb7.idea3": false, "onb7.idea4": true };
+/** Her own questions' answer to "A yes is… good or hard?", by the question as it is saved (Nov 11 2026: they were
+ *  all saved as "a yes is a hard day", so "Did I call my family?" counted calls as hard days and could light a
+ *  "time to act"). Kept here until the questions are saved at the end of the questions step. */
+const OWN_HARD = new Map<string, boolean>();
+/** "A yes is… Good / Hard", as when a question is written on an island (sun or storm, never guessed). */
+const YesIs = ({ hard, onPick }: { hard: boolean | null; onPick: (h: boolean) => void }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-3">
+      <p className="text-[16px] font-bold">{t("islands.yesIs")}</p>
+      <div className="mt-2 grid grid-cols-2 gap-2.5">
+        {[false, true].map((h) => (
+          <button key={String(h)} type="button" onClick={() => { haptics.tap(); onPick(h); }} aria-pressed={hard === h} data-onb-interactive data-yes-is={h ? "hard" : "good"}
+            className={cn("flex h-14 items-center justify-center gap-2 rounded-2xl text-[16px] font-semibold", hard === h ? "surface pick-on font-bold" : "bg-foreground/[0.05]")}>
+            <img src={mapPic(h ? "thunder_cloud" : "sun")} alt="" width={28} height={28} className="object-contain" />
+            {t(h ? "islands.hard" : "islands.good")}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
 export const OwnV7 = ({ onBack, onDone, initial = "", progress = [1, 5] }: { onBack: () => void; onDone: (text: string) => void; initial?: string; progress?: [number, number] }) => {
   const { t } = useTranslation();
   const [text, setText] = useState(initial);
+  const [hard, setHard] = useState<boolean | null>(() => (initial ? OWN_HARD.get(asQuestion(initial)) ?? null : null));
   const ok = text.trim().length >= 4;
   return (
     <Page>
       <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
       <H1 className="mt-5">{t("onb7.ownTitle")}</H1>
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.ownSub")}</p>
-      <input value={text} onChange={(e) => setText(e.target.value.slice(0, 80))} placeholder={t("onb7.ownPlaceholder")} aria-label={t("onb7.ownTitle")} data-onb-interactive
+      <input value={text} onChange={(e) => { setText(e.target.value.slice(0, 80)); setHard(null); }} placeholder={t("onb7.ownPlaceholder")} aria-label={t("onb7.ownTitle")} data-onb-interactive
         className="surface pick-on mt-4 h-14 w-full rounded-[18px] px-4 text-[18px] font-bold outline-none placeholder:font-semibold placeholder:text-muted-foreground" />
       {ok && <p className="mt-2 flex items-center gap-1.5 text-[14px] font-bold text-[hsl(var(--coin-teal))]"><Check className="h-4 w-4" strokeWidth={3} />{t("onb7.ownOk")}</p>}
+      {ok && <YesIs hard={hard} onPick={setHard} />}
       <p className="mt-6 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("onb7.ownIdeas")}</p>
       <div className="mt-2 flex flex-col gap-2">
         {IDEAS.map((k) => (
-          <button key={k} type="button" onClick={() => { haptics.tap(); setText(t(k)); }} data-onb-interactive className="surface flex min-h-[48px] items-center gap-2.5 rounded-[16px] px-4 text-left text-[16px] font-bold">
+          <button key={k} type="button" onClick={() => { haptics.tap(); setText(t(k)); setHard(IDEA_HARD[k]); }} data-onb-interactive className="surface flex min-h-[48px] items-center gap-2.5 rounded-[16px] px-4 text-left text-[16px] font-bold">
             <Plus className="h-4 w-4 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.8} />{t(k)}
           </button>
         ))}
       </div>
       <div className="min-h-6 flex-1" />
-      <Main disabled={!ok} onClick={() => onDone(asQuestion(text))}>{t("doors.continue")}</Main>
+      <Main disabled={!ok || hard === null} onClick={() => { const q = asQuestion(text); OWN_HARD.set(q, !!hard); onDone(q); }}>{t("doors.continue")}</Main>
     </Page>
   );
 };
@@ -345,7 +371,7 @@ const saveSetup = async (pick: V7Pick, { doors, mains, aroundTpls }: Plan, texts
   const mainIds: string[] = [];
   for (let i = 0; i < mains.length; i++) {
     const m = mains[i];
-    mainIds.push(m.tpl ? (await ensureTemplates([m.tpl]))[0] : await addOwnTracker(texts[i].trim() || m.base));
+    mainIds.push(m.tpl ? (await ensureTemplates([m.tpl]))[0] : await addOwnTracker(texts[i].trim() || m.base, OWN_HARD.get(m.base)));
   }
   // her own words for a main question (cardQuestion shows hers)
   const edited = new Map(mains.flatMap((m, i) => (m.tpl && texts[i].trim() && texts[i].trim() !== m.base ? [[mainIds[i], asQuestion(texts[i])] as const] : [])));
@@ -355,7 +381,7 @@ const saveSetup = async (pick: V7Pick, { doors, mains, aroundTpls }: Plan, texts
   }
   const aroundIds = await ensureTemplates(aroundTpls.filter((id) => on.has(id)));
   const ownIds: string[] = [];
-  for (const q of own) ownIds.push(await addOwnTracker(q));
+  for (const q of own) ownIds.push(await addOwnTracker(q, OWN_HARD.get(q)));
   const byDoor = mains.flatMap((m, i) => (m.door ? [{ id: m.door.id, trackerId: mainIds[i] }] : []));
   const lead = pick.kind === "simple" ? { id: "energy" as DoorId, trackerId: mainIds[0] } : byDoor[0] ?? null;
   if (lead) saveDoorState({ id: lead.id, trackerId: lead.trackerId, contextTrackerIds: [...aroundIds, ...ownIds], startedAt: isoLocal(new Date()), extra: byDoor.slice(1) });
@@ -375,6 +401,7 @@ export const QuestionsV7 = ({ pick, onBack, onDone, progress = [2, 5] }: { pick:
   const [on, setOn] = useState<Set<string>>(() => new Set(plan.ticked));
   const [own, setOwn] = useState<string[]>([]);
   const [draft, setDraft] = useState<string | null>(null);
+  const [draftHard, setDraftHard] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const isl = (id: string) => islandName(t, islandOfTpl(id));
   const toggle = (id: string) => setOn((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -431,16 +458,19 @@ export const QuestionsV7 = ({ pick, onBack, onDone, progress = [2, 5] }: { pick:
             icon={<span className="w-[64px] shrink-0 truncate text-[11px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{t("onb7.yours")}</span>}>{q}</Row>
         ))}
         {draft === null ? (
-          <button type="button" onClick={() => { haptics.tap(); setDraft(""); }} data-onb-interactive
+          <button type="button" onClick={() => { haptics.tap(); setDraft(""); setDraftHard(null); }} data-onb-interactive
             className="flex h-12 items-center justify-center gap-1.5 rounded-[16px] border-[1.5px] border-dashed border-foreground/25 text-[16px] font-bold text-muted-foreground">
             <Plus className="h-4 w-4" strokeWidth={2.8} />{t("onb7.qWrite")}
           </button>
         ) : (
-          <div className="flex gap-2">
-            <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value.slice(0, 80))} placeholder={t("onb7.ownPlaceholder")} aria-label={t("onb7.qWrite")} data-onb-interactive
-              className="surface h-12 min-w-0 flex-1 rounded-[16px] px-4 text-[16px] font-bold outline-none placeholder:font-semibold" />
-            <button type="button" disabled={draft.trim().length < 4} onClick={() => { haptics.tap(); setOwn((o) => [...o, asQuestion(draft)]); setDraft(null); }} data-onb-interactive
-              className="h-12 rounded-[16px] px-4 text-[15px] font-bold text-[hsl(var(--coin-teal))] disabled:opacity-40">{t("onb7.qAdd")}</button>
+          <div>
+            <div className="flex gap-2">
+              <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value.slice(0, 80))} placeholder={t("onb7.ownPlaceholder")} aria-label={t("onb7.qWrite")} data-onb-interactive
+                className="surface h-12 min-w-0 flex-1 rounded-[16px] px-4 text-[16px] font-bold outline-none placeholder:font-semibold" />
+              <button type="button" disabled={draft.trim().length < 4 || draftHard === null} onClick={() => { haptics.tap(); const q = asQuestion(draft); OWN_HARD.set(q, !!draftHard); setOwn((o) => [...o, q]); setDraft(null); setDraftHard(null); }} data-onb-interactive
+                className="h-12 rounded-[16px] px-4 text-[15px] font-bold text-[hsl(var(--coin-teal))] disabled:opacity-40">{t("onb7.qAdd")}</button>
+            </div>
+            {draft.trim().length >= 4 && <YesIs hard={draftHard} onPick={setDraftHard} />}
           </div>
         )}
       </div>
@@ -479,7 +509,7 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }:
         {row(<Pic name="green_tree" map className="w-[40px]" />, t("onb7.v4t"), t("onb7.v4l"))}
       </div>
       <div className="min-h-6 flex-1" />
-      <Main onClick={() => (daytime ? setAsk(true) : onStart("today"))}>{t("onb7.vStart")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
+      <Main onClick={() => { if (daytime) { setAsk(true); return; } track("onboarding_day", { day: "today" }); onStart("today"); }}>{t("onb7.vStart")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
       {/* daytime: tonight, or yesterday (all answers for one day) */}
       {ask && (
         <div className="fixed inset-0 z-[120] flex items-end bg-[rgba(14,24,60,.35)] animate-fade-in" onClick={() => setAsk(false)}>
@@ -496,7 +526,8 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }:
               </Row>
             </div>
             <div className="h-4" />
-            <Main onClick={() => { setAsk(false); onStart(day); }}>{t("doors.continue")}</Main>
+            {/* yesterday is picked for her (Nov 11 2026); "changed" says whether people turn it to tonight */}
+            <Main onClick={() => { setAsk(false); track("onboarding_day", { day, changed: day !== "yesterday" }); onStart(day); }}>{t("doors.continue")}</Main>
           </div>
         </div>
       )}

@@ -113,7 +113,14 @@ export interface PermissionResult {
  * "the browser environment can't even ask" so the UI can show a useful
  * message (e.g. "open the installed app" instead of "permission denied").
  */
+/** Asks for reminders and counts what the phone said (Nov 11 2026: a reminder switched on in the app does
+ *  nothing when the phone said no, and that was invisible). Only yes/no and the reason, nothing else. */
 export const requestNotificationPermissionDetailed = async (): Promise<PermissionResult> => {
+  const r = await askNotificationPermission();
+  track("reminder_permission", { granted: r.granted, ...(r.granted ? {} : { reason: String(r.reason ?? "unknown") }) });
+  return r;
+};
+const askNotificationPermission = async (): Promise<PermissionResult> => {
   try {
     if (Capacitor.getPlatform() === "web") {
       // Insecure origin: anything that isn't HTTPS or localhost. Mobile

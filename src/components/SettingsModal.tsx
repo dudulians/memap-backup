@@ -810,7 +810,7 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                               <p className="text-[16px] font-semibold leading-snug">{t("upgrade.oldAsk")}</p>
                               <div className="mt-3 grid grid-cols-2 gap-2">
                                 <button type="button" onClick={() => setAskOld(false)} className="h-11 rounded-full bg-foreground/[0.06] text-[15px] font-bold">{t("upgrade.oldStay")}</button>
-                                <button type="button" onClick={switchToOld} className="raised-btn is-small h-11 justify-center">{t("upgrade.oldGo")}</button>
+                                <button type="button" onClick={() => switchToOld("settings")} className="raised-btn is-small h-11 justify-center">{t("upgrade.oldGo")}</button>
                               </div>
                             </div>
                           ) : (

@@ -360,8 +360,10 @@ export const ensureDoorTrackers = async (
   return { trackerId, contextTrackerIds };
 };
 
-/** A question the user typed themselves ("Did my dog limp today?"). */
-export const addOwnTracker = async (question: string): Promise<string> => {
+/** A question the user typed themselves ("Did my dog limp today?"). `hard`: is a yes a hard day? Asked in
+ *  onboarding since Nov 11 2026 (before, every one was saved as "a yes is hard", so a good habit read as a
+ *  problem); without an answer it stays "hard", as before. */
+export const addOwnTracker = async (question: string, hard?: boolean): Promise<string> => {
   const existing = await getTrackers();
   const text = question.trim();
   const tracker: Tracker = {
@@ -372,7 +374,7 @@ export const addOwnTracker = async (question: string): Promise<string> => {
     answerType: "boolean",
     periodDays: 30,
     threshold: 10,
-    problemWhen: "yes",
+    problemWhen: hard === false ? "no" : "yes",
     adviceAboveThreshold: "",
     createdAt: new Date().toISOString(),
     sortIndex: existing.length,

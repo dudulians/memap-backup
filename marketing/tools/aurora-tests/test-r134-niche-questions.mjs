@@ -75,7 +75,7 @@ const r = await p.evaluate(async (NICHE) => {
 }, NICHE);
 out.r = r;
 ok("all 24 niche questions are in the library and archived (quiet)", r.unknown.length === 0 && r.quietMissing.length === 0, { unknown: r.unknown, notQuiet: r.quietMissing });
-ok("none of them is offered: 225 - 24 = 201 left", r.offeredNiche.length === 0 && r.offeredCount === 201, { count: r.offeredCount, niche: r.offeredNiche });
+ok("none of them is offered: 225 - 25 = 200 left (Nov 11 2026: + the morning promise)", r.offeredNiche.length === 0 && r.offeredCount === 200, { count: r.offeredCount, niche: r.offeredNiche });
 ok("never among the ideas of the day", r.randomIdeasNiche.length === 0, r.randomIdeasNiche);
 ok("never in a starter pack (every focus, goal, kids/pets/partner/abroad)", r.starterNiche.length === 0 && r.starterIds.length > 30 && !String(r.starterIds[0] ?? "").startsWith("error"), { niche: r.starterNiche, n: r.starterIds.length, first: r.starterIds.slice(0, 3) });
 ok("people who have one keep it: still recognised by its title, with its card and ideas", r.stillKnown.length === 24 && r.en.shot === "Did you screenshot a conversation?" && r.shotIdeas.length > 0, { known: r.stillKnown.length, card: r.en.shot, ideas: r.shotIdeas });

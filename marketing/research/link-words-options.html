@@ -1,0 +1,160 @@
+<title>MeMap link words</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: a grid of link cards as they sit in the app (sentence, count, then the current line small), then the question list */
+:root {
+  --bg: #EEF3F9;
+  --card: #FFFFFF;
+  --ink: #2F3542;
+  --soft: #6B7383;
+  --faint: #8F97A6;
+  --line: #E3E8EF;
+  --teal: #2A9D8F;
+  --teal-soft: #E3F3F0;
+  --rose: #D9536B;
+  --shadow: 0 1px 2px rgba(40, 52, 72, .06), 0 6px 18px rgba(40, 52, 72, .07);
+  --font: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141A24; --card: #1E2633; --ink: #E6EAF0; --soft: #9AA3B2; --faint: #7D8796; --line: #2D3746;
+    --teal: #5CC4B6; --teal-soft: #1F3A3A; --rose: #F07C90;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141A24; --card: #1E2633; --ink: #E6EAF0; --soft: #9AA3B2; --faint: #7D8796; --line: #2D3746;
+  --teal: #5CC4B6; --teal-soft: #1F3A3A; --rose: #F07C90;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1020px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+.ru { display: none; }
+html.lang-ru .ru { display: revert; }
+html.lang-ru .en { display: none; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+h2 { font-size: 20px; font-weight: 800; margin: 0; text-wrap: balance; }
+.seg { display: inline-flex; background: var(--card); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+.seg button {
+  font: 700 14px var(--font); color: var(--soft); background: none; border: 0; border-radius: 999px;
+  padding: 7px 16px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--teal); color: #fff; }
+.seg button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+section { display: flex; flex-direction: column; gap: 18px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; }
+.card {
+  background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 18px 14px;
+  display: flex; flex-direction: column; gap: 8px; min-width: 0;
+}
+.ico { width: 26px; height: 26px; border-radius: 50%; background: var(--teal-soft); display: grid; place-items: center; }
+.ico svg { width: 15px; height: 15px; stroke: var(--teal); }
+.say { font-size: 17px; font-weight: 700; line-height: 1.32; text-wrap: pretty; }
+.count { font-size: 13.5px; color: var(--soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+.now { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--faint); font-weight: 600; }
+.now b { flex: none; font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+.old {
+  background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 6px; max-width: 520px;
+}
+.old .q { font-size: 17px; font-weight: 700; color: var(--soft); text-decoration: line-through; text-decoration-color: var(--rose); }
+.old .what { font-size: 14px; font-weight: 600; color: var(--soft); }
+.sub { font-size: 15px; font-weight: 800; color: var(--soft); text-transform: uppercase; letter-spacing: .06em; margin: 4px 0 0; }
+.list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+.row {
+  background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px;
+  display: flex; gap: 10px; align-items: flex-start; min-width: 0; font-weight: 600;
+}
+.row .mark { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--teal); }
+.row .mark svg { width: 20px; height: 20px; }
+.tag { flex: none; font-size: 12px; font-weight: 800; color: var(--teal); background: var(--teal-soft); border-radius: 999px; padding: 2px 9px; margin-top: 1px; }
+.foot { color: var(--soft); font-size: 14px; font-weight: 600; margin: 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span class="en">Links as sentences</span><span class="ru">Связи предложениями</span></h1>
+    <div class="seg" role="group" aria-label="Language">
+      <button id="b-en" type="button" aria-pressed="true">EN</button>
+      <button id="b-ru" type="button" aria-pressed="false">RU</button>
+    </div>
+  </header>
+
+  <section aria-label="Links">
+    <div class="cards" id="links"></div>
+  </section>
+
+  <section aria-label="Morning promise">
+    <h2><span class="en">Instead of one wide question</span><span class="ru">Вместо одного широкого вопроса</span></h2>
+    <div class="old">
+      <div class="q"><span class="en">Did you do what you committed to this morning?</span><span class="ru">Удалось сделать обещанное себе утром?</span></div>
+      <div class="what"><span class="en">To the archive. People who already have it keep it.</span><span class="ru">В архив. У кого он уже есть, у тех остаётся.</span></div>
+    </div>
+    <p class="sub"><span class="en">Already in the app</span><span class="ru">Уже есть в приложении</span></p>
+    <div class="list" id="have"></div>
+    <p class="sub"><span class="en">Could add</span><span class="ru">Можно добавить</span></p>
+    <div class="list" id="add"></div>
+    <p class="foot"><span class="en">Searching “promise” or “plan” would show these.</span><span class="ru">Поиск по словам «обещание» или «план» покажет эти вопросы.</span></p>
+  </section>
+</div>
+
+<script>
+(function () {
+  // built from the app's own word lists (answerSentences.ts, answerPhrases.ts); numbers are examples
+  var LINKS = [{"en":{"now":"Unwanted yes → headache the next day","say":"The day after you agree to something you don't really want, you often have a headache","count":"11 of 17 times · on other days 4 of 20"},"ru":{"now":"Согласие против желания → головная боль на следующий день","say":"Если ты соглашаешься на то, чего не хочешь, на следующий день часто болит голова","count":"11 из 17 раз · в другие дни 4 из 20"}},{"en":{"now":"Short night and headache often come together","say":"On days you sleep under 7 hours, you usually have a headache","count":"9 of 12 times · on other days 5 of 31"},"ru":{"now":"Короткая ночь и головная боль часто бывают вместе","say":"В дни, когда ты спишь меньше 7 часов, обычно болит голова","count":"9 из 12 раз · в другие дни 5 из 31"}},{"en":{"now":"No me-time — and yelling at the kid the same day","say":"On days you have no time for yourself, you usually yell at your kid","count":"8 of 11 times · on other days 3 of 29"},"ru":{"now":"Без времени для себя — и крик на ребёнка в тот же день","say":"В дни, когда времени для себя нет, ты обычно срываешься на ребёнка","count":"8 из 11 раз · в другие дни 3 из 29"}},{"en":{"now":"Coffee after 2 pm → short night the next day","say":"The day after you have coffee after 2 pm, you usually sleep under 7 hours","count":"7 of 9 times · on other days 6 of 27"},"ru":{"now":"Кофе после 14:00 → короткая ночь на следующий день","say":"Если ты пьёшь кофе после 14:00, на следующий день ты обычно спишь меньше 7 часов","count":"7 из 9 раз · в другие дни 6 из 27"}},{"en":{"now":"No workout — and feeling drained the same day","say":"On days you don't work out, you often feel drained all day","count":"13 of 20 times · on other days 4 of 18"},"ru":{"now":"Без тренировки — и сильная усталость в тот же день","say":"В дни, когда ты не тренируешься, часто весь день нет сил","count":"13 из 20 раз · в другие дни 4 из 18"}},{"en":{"now":"Argument with partner — and not calm the same day","say":"On days you argue with your partner, you usually don't feel calm","count":"10 of 12 times · on other days 9 of 34"},"ru":{"now":"Ссора с партнёром и неспокойный день часто бывают вместе","say":"В дни, когда вы ссоритесь с партнёром, спокойствия обычно нет","count":"10 из 12 раз · в другие дни 9 из 34"}},{"en":{"now":"7,000+ steps and calm often come together","say":"On days you walk 7,000+ steps, you usually feel calm","count":"12 of 16 times · on other days 10 of 30"},"ru":{"now":"7000+ шагов и спокойствие часто бывают вместе","say":"В дни, когда ты проходишь 7000+ шагов, тебе обычно спокойно","count":"12 из 16 раз · в другие дни 10 из 30"}},{"en":{"now":"Phone first thing — and main thing not done the same day","say":"On days you reach for the phone first thing, the main thing often stays undone","count":"9 of 15 times · on other days 5 of 25"},"ru":{"now":"Телефон с утра — и главное не сделано в тот же день","say":"В дни, когда ты берёшь телефон сразу с утра, главное часто остаётся несделанным","count":"9 из 15 раз · в другие дни 5 из 25"}},{"en":{"now":"Alcohol → anxiety the next day","say":"The day after you drink alcohol, you often feel anxious","count":"5 of 8 times · on other days 6 of 33"},"ru":{"now":"Алкоголь → тревога на следующий день","say":"Если ты пьёшь алкоголь, на следующий день часто бывает тревога","count":"5 из 8 раз · в другие дни 6 из 33"}},{"en":{"now":"Friends in person and happy day often come together","say":"On days you see friends in person, you usually feel happy","count":"10 of 13 times · on other days 11 of 28"},"ru":{"now":"Встреча с друзьями и счастливый день часто бывают вместе","say":"В дни, когда ты видишься с друзьями вживую, тебе обычно радостно","count":"10 из 13 раз · в другие дни 11 из 28"}},{"en":{"now":"Screens before bed and slow to fall asleep often come together","say":"On days you're on a screen before bed, you always take over 30 minutes to fall asleep","count":"Every time — 6 of 6 · on other days 3 of 22"},"ru":{"now":"Экран перед сном — и долгое засыпание в тот же день","say":"В дни, когда ты сидишь в телефоне перед сном, ты всегда засыпаешь дольше 30 минут","count":"Каждый раз — 6 из 6 · в другие дни 3 из 22"}},{"en":{"now":"“Walked the dog”: no — and feeling drained the same day","say":"On days you answer “no” to “Walked the dog”, you usually feel drained all day","count":"7 of 10 times · on other days 5 of 26"},"ru":{"now":"«Прогулка с собакой»: нет — и сильная усталость в тот же день","say":"В дни, когда ты отвечаешь «нет» на «Прогулка с собакой», обычно весь день нет сил","count":"7 из 10 раз · в другие дни 5 из 26"}}];
+  var HAVE = [
+    ["Did you do a real workout today?", "Была сегодня настоящая тренировка?"],
+    ["Was the first hour after waking phone-free?", "Первый час после пробуждения прошёл без телефона?"],
+    ["Did you go to bed before 00:00?", "Удалось лечь спать до 00:00?"],
+    ["Did you get up on the first alarm?", "Удалось встать с первого будильника?"],
+    ["Did you finish the most important task of your day?", "Самое важное дело дня сделано?"],
+    ["Did you eat more sweets than you wanted?", "Сладкого было больше, чем хотелось?"],
+    ["Did you drink more than 1.5 litres of water?", "Удалось выпить больше 1,5 литра воды?"],
+    ["Did you read at least 10 pages of a book?", "Удалось прочитать хотя бы 10 страниц книги?"],
+    ["Did you stick to your spending plan?", "Удалось удержаться в плане трат?"],
+    ["Did you meditate or breathe slowly for 5+ minutes?", "Было 5+ минут медитации или спокойного дыхания?"]
+  ];
+  var ADD = [
+    ["Did you get one put-off task done today?", "Удалось сделать одно дело, которое давно откладывалось?"],
+    ["Did you take a real break from work, 15+ minutes away from screens?", "Был настоящий перерыв в работе, 15+ минут без экрана?"]
+  ];
+  var esc = function (s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); };
+  var both = function (en, ru) { return '<span class="en">' + esc(en) + '</span><span class="ru">' + esc(ru) + '</span>'; };
+  var icon = '<span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>';
+  document.getElementById("links").innerHTML = LINKS.map(function (x) {
+    return '<div class="card">' + icon +
+      '<div class="say">' + both(x.en.say, x.ru.say) + '</div>' +
+      '<div class="count">' + both(x.en.count, x.ru.count) + '</div>' +
+      '<div class="now"><b>' + both("Now", "Сейчас") + '</b><span>' + both(x.en.now, x.ru.now) + '</span></div></div>';
+  }).join("");
+  var check = '<span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
+  var row = function (q, lead) { return '<div class="row">' + lead + '<span>' + both(q[0], q[1]) + '</span></div>'; };
+  document.getElementById("have").innerHTML = HAVE.map(function (q) { return row(q, check); }).join("");
+  document.getElementById("add").innerHTML = ADD.map(function (q) { return row(q, '<span class="tag">' + both("New", "Новый") + '</span>'); }).join("");
+
+  var en = document.getElementById("b-en"), ru = document.getElementById("b-ru");
+  function set(lang) {
+    document.documentElement.classList.toggle("lang-ru", lang === "ru");
+    en.setAttribute("aria-pressed", String(lang === "en"));
+    ru.setAttribute("aria-pressed", String(lang === "ru"));
+    try { localStorage.setItem("lw-lang", lang); } catch (e) {}
+  }
+  en.addEventListener("click", function () { set("en"); });
+  ru.addEventListener("click", function () { set("ru"); });
+  var saved = null;
+  try { saved = localStorage.getItem("lw-lang"); } catch (e) {}
+  if (saved === "ru") set("ru");
+})();
+</script>

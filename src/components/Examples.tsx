@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, Sprout, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
+import { track } from "@/lib/analytics";
 import type { Tracker } from "@/types/tracker";
 import { findTemplate } from "@/lib/doors";
 import { mapPic } from "@/lib/islands";
@@ -39,7 +40,7 @@ export const ExampleBox = ({ line, children, kind }: { line: string; children: R
   }, [open, kind]);
   if (!open) {
     return (
-      <button type="button" data-example-folded={kind} onClick={() => { haptics.tap(); setOpen(true); }}
+      <button type="button" data-example-folded={kind} onClick={() => { haptics.tap(); track("example_opened", { kind }); setOpen(true); }}
         className="mx-auto flex h-10 w-fit items-center gap-1.5 rounded-full border-2 border-dashed border-foreground/20 px-4 text-[14px] font-bold text-muted-foreground">
         <Eye className="h-4 w-4" strokeWidth={2.4} />{t("examples.show")}
       </button>
@@ -52,7 +53,7 @@ export const ExampleBox = ({ line, children, kind }: { line: string; children: R
         <span className="shrink-0 rounded-full bg-foreground/[0.08] px-2.5 py-1 text-[12px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("tour.example")}</span>
         <p className="min-w-0 text-[14px] font-semibold leading-snug text-muted-foreground">{line}</p>
       </div>
-      <button type="button" data-example-hide onClick={() => { haptics.tap(); markSeen(kind); setOpen(false); }} aria-label={t("examples.hide")}
+      <button type="button" data-example-hide onClick={() => { haptics.tap(); track("example_hidden", { kind }); markSeen(kind); setOpen(false); }} aria-label={t("examples.hide")}
         className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground">
         <X className="h-4 w-4" strokeWidth={2.6} />
       </button>

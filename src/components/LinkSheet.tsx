@@ -12,6 +12,7 @@ import { cap } from "@/lib/answerPhrases";
 import { art, artOf } from "@/lib/globeArt";
 import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
+import { needsWords, OwnWordsPrompt } from "./AnswerWordsFields";
 
 /** A counted day's colour: hard red, good green, neutral indigo. */
 const dot = (hard: boolean | null, a = 1) => (hard === null ? `hsl(var(--data-a) / ${a})` : hard ? `hsl(var(--strong) / ${a})` : `hsl(var(--balanced) / ${a})`);
@@ -64,6 +65,8 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
           )}
 
           <p className="mt-5 text-[21px] font-bold leading-snug tracking-tight">{linkHead(t, r, of)}</p>
+          {/* her own question without words reads clumsily: she can say it her way (Nov 11 2026) */}
+          {[of(r.first), of(r.second)].filter(needsWords).slice(0, 1).map((tr) => <OwnWordsPrompt key={tr.id} tracker={tr} />)}
 
           {/* k of n, as dots: filled = it came */}
           <p className="mt-4 text-[34px] font-bold leading-[1.1] tracking-tight tabular-nums">{linkTimesBig(t, r.k, r.n)}</p>

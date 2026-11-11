@@ -31,8 +31,10 @@ const askAgain = (v: string | null): boolean => {
   return (Date.now() - new Date(at + "T00:00:00").getTime()) / 86_400_000 >= ASK_AGAIN_DAYS;
 };
 
-export const switchToNew = () => {
-  track("ui_switched", { to: "new" });
+/** Where the switch was made (Nov 11 2026, her ask to see who stays, who goes back and why). */
+export type SwitchFrom = "invite" | "settings" | "card" | "tour";
+export const switchToNew = (from: SwitchFrom = "invite") => {
+  track("ui_switched", { to: "new", from });
   try {
     localStorage.setItem("memap_ui", "new");
     // the path starts today only the first time; coming back keeps her weeks and reports (QA, Nov 8 2026)
@@ -44,8 +46,8 @@ export const switchToNew = () => {
   window.location.reload();
 };
 
-export const switchToOld = () => {
-  track("ui_switched", { to: "classic" });
+export const switchToOld = (from: SwitchFrom = "settings") => {
+  track("ui_switched", { to: "classic", from });
   try {
     localStorage.setItem("memap_ui", "classic");
     localStorage.setItem(KEY, declined());
@@ -62,18 +64,23 @@ export const UpgradeInvite = () => {
     let seen = true;
     try { seen = !askAgain(localStorage.getItem(KEY)); } catch { /* keep hidden */ }
     if (seen) return;
+    let again = false;
+    try { again = (localStorage.getItem(KEY) ?? "").startsWith("declined"); } catch { /* first time */ }
     const id = window.setTimeout(async () => {
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
       if (trackers.filter((tr) => !tr.archived).length === 0) return;
       const islands = buildIslands(trackers, entries);
       setData({ trackers, islands, routes: buildRoutes(trackers, entries, islands), days: countedDays(trackers, entries).length });
       setStage("invite");
+      // the invite, and whether it's the second ask (two weeks after a "Not now")
+      track("ui_invite_shown", { again });
     }, 1500);
     return () => window.clearTimeout(id);
   }, []);
 
   if (stage === "hidden" || !data) return null;
   const later = () => {
+    track("ui_invite_later");
     try { localStorage.setItem(KEY, declined()); } catch { /* shows again next launch */ }
     setStage("hidden");
   };
@@ -95,7 +102,7 @@ export const UpgradeInvite = () => {
           ))}
         </div>
         <p className="mt-4 text-[16px] font-medium text-[hsl(205_20%_40%)]">{t("upgrade.nothingLost")}</p>
-        <Pressable tone="teal" haptic="none" onClick={() => { haptics.success(); switchToNew(); }} className="mt-5 h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
+        <Pressable tone="teal" haptic="none" onClick={() => { haptics.success(); switchToNew("invite"); }} className="mt-5 h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
           {t("upgrade.showMe")}
         </Pressable>
         <button type="button" onClick={later} className="mt-2 h-12 w-full text-[16px] font-semibold text-[hsl(205_20%_40%)]">{t("upgrade.notNow")}</button>

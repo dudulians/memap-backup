@@ -38,7 +38,7 @@ const run = async (tag, { lang = "en", theme = "aurora-light", hour = 19, path }
   else {
     await btn(T.start).click(); await whyStep(p); await shot("topic");
     if (path.more) { await btn(path.more).click(); await shot("topic-more"); await btn(T.cont).click(); }
-    else if (path.own) { await btn(T.own).click(); await shot("own"); await p.locator("input").first().fill(path.own); await shot("own-typed"); await btn(T.cont).click(); await shot("topic-own"); await btn(T.cont).click(); }
+    else if (path.own) { await btn(T.own).click(); await shot("own"); await p.locator("input").first().fill(path.own); await p.locator("[data-yes-is=good]").first().click(); await shot("own-typed"); await btn(T.cont).click(); await shot("topic-own"); await btn(T.cont).click(); }
     else { await btn(path.topic).click(); await btn(T.cont).click(); }
   }
   await shot("questions");
