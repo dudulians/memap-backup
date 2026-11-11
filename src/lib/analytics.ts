@@ -248,7 +248,7 @@ export type AnalyticsEvent =
   | "first_link_seen" | "island_grew_seen" | "treasure_earned"
   | "unload_played" | "hunch_made" | "note_saved" | "experiment_started"
   | "report_opened" | "island_opened" | "link_opened" | "map_view_changed"
-  | "ui_switched" | "reminders_changed" | "world_shared"
+  | "ui_switched" | "ui_kept_new" | "reminders_changed" | "world_shared"
   // Nov 8 2026: where people come from and where they leave
   | "first_open" // the first launch of this install
   | "app_left" // the app went to the background: the screen she was on, seconds in the app

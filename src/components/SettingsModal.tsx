@@ -799,10 +799,33 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                       <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
                     </button>
                   );
+                  // Back to the old screens. Whoever came from the old look finds it first, at the top (her note,
+                  // Nov 11 2026: "не очевидна кнопка, как людям, у которых была старая версия… вернуться в старую");
+                  // everyone else at the end.
+                  let cameFromOld = false;
+                  try { cameFromOld = localStorage.getItem("memap_upgrade_invite") === "accepted"; } catch { /* at the end */ }
+                  const oldRow = (
+                    askOld ? (
+                            <div className="px-4 py-3">
+                              <p className="text-[16px] font-semibold leading-snug">{t("upgrade.oldAsk")}</p>
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <button type="button" onClick={() => setAskOld(false)} className="h-11 rounded-full bg-foreground/[0.06] text-[15px] font-bold">{t("upgrade.oldStay")}</button>
+                                <button type="button" onClick={switchToOld} className="raised-btn is-small h-11 justify-center">{t("upgrade.oldGo")}</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setAskOld(true)} className={cn(row, "active:bg-muted/60 transition-colors")}>
+                              <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                              <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
+                              <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
+                            </button>
+                          )
+                  );
                   return (
                     <>
                       <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                         {/* no avatar row (Nov 8 2026): the animal in You has its own "Change" */}
+                        {cameFromOld && oldRow}
                         <div>
                           <div className={row}>
                             <button type="button" onClick={() => setScreen("notifications")} className="flex-1 min-w-0 text-left text-[17px] font-medium">
@@ -882,7 +905,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         ))}
                       </div>
 
-                      <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
+                      {/* empty on Android for whoever has the way back at the top */}
+                      {(Capacitor.getPlatform() !== "android" || !cameFromOld) && <div className="settings-card rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.05] overflow-hidden divide-y divide-foreground/[0.08]">
                         {Capacitor.getPlatform() !== "android" && (
                           <button
                             type="button"
@@ -899,22 +923,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         {/* Back to the old screens, right here (her note, Nov 6 2026: ads bring
                             people to the old version; whoever tries the new one and doesn't
                             like it must find the way back without digging into "More"). */}
-                        {askOld ? (
-                          <div className="px-4 py-3">
-                            <p className="text-[16px] font-semibold leading-snug">{t("upgrade.oldAsk")}</p>
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                              <button type="button" onClick={() => setAskOld(false)} className="h-11 rounded-full bg-foreground/[0.06] text-[15px] font-bold">{t("upgrade.oldStay")}</button>
-                              <button type="button" onClick={switchToOld} className="raised-btn is-small h-11 justify-center">{t("upgrade.oldGo")}</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button type="button" onClick={() => setAskOld(true)} className={cn(row, "active:bg-muted/60 transition-colors")}>
-                            <History className="h-5 w-5 text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                            <span className="flex-1 text-[17px] font-medium">{t("upgrade.oldLook")}</span>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground/60 flex-shrink-0" />
-                          </button>
-                        )}
-                      </div>
+                        {!cameFromOld && oldRow}
+                      </div>}
                     </>
                   );
                 })()}

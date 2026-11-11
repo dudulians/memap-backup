@@ -544,6 +544,24 @@
     overscroll-behavior: none;
   }
 
+  /* An app, not a web page (her note, Nov 11 2026: "каждое слово в приложении можно скопировать… даже
+     иконки внизу, если неудачно нажать… я бы это не разрешала"): no selecting, no copy menu, no long-press
+     callout, no dragging pictures. Only the places she types in keep it. */
+  html, body {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input, textarea, select, [contenteditable="true"], [contenteditable=""] {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+  img, svg {
+    -webkit-user-drag: none;
+  }
+
   body {
     @apply text-foreground;
     font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

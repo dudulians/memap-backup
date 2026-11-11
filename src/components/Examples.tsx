@@ -2,9 +2,13 @@
 // открываю links, там nothing to show yet. А хочется, чтобы мне показали пример, а что же будет… календарь —
 // как эти дни будут заполняться… прям чтобы было четко понятно, что это именно примеры"). Each is drawn
 // like the real thing, inside a dashed edge with an "Example" tag on top, and goes once her own data is there.
-import type { ReactNode } from "react";
+// They pop up and go away (her note, Nov 11 2026: "я что-то заполняю, у меня под календарем все еще стоит этот
+// example… нафига мне всегда… они должны всплывать и отсплывать"): open the first time it's on screen, then
+// folded into a small "See an example" the next times; × folds it at once.
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Sprout } from "lucide-react";
+import { Eye, Sprout, X } from "lucide-react";
+import { haptics } from "@/lib/haptics";
 import type { Tracker } from "@/types/tracker";
 import { findTemplate } from "@/lib/doors";
 import { mapPic } from "@/lib/islands";
@@ -12,16 +16,46 @@ import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
 import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { cardQuestion } from "@/lib/cardText";
 
-/** The dashed frame with its tag and one short line: what hers will look like. */
+const SEEN_KEY = "memap_examples_seen";
+const seenList = (): string[] => { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || "[]"); } catch { return []; } };
+const markSeen = (kind: string) => { try { const s = seenList(); if (!s.includes(kind)) localStorage.setItem(SEEN_KEY, JSON.stringify([...s, kind])); } catch { /* shows open again */ } };
+
+/** The dashed frame with its tag and one short line: what hers will look like. Open the first time it's
+ *  seen (on screen for a moment); the next times a small "See an example" opens it; × folds it now. */
 export const ExampleBox = ({ line, children, kind }: { line: string; children: ReactNode; kind: string }) => {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(() => !seenList().includes(kind));
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!open || !el || typeof IntersectionObserver === "undefined") return;
+    let timer = 0;
+    const io = new IntersectionObserver(([e]) => {
+      window.clearTimeout(timer);
+      if (e?.isIntersecting) timer = window.setTimeout(() => { markSeen(kind); io.disconnect(); }, 1500);
+    }, { threshold: 0.5 });
+    io.observe(el);
+    return () => { window.clearTimeout(timer); io.disconnect(); };
+  }, [open, kind]);
+  if (!open) {
+    return (
+      <button type="button" data-example-folded={kind} onClick={() => { haptics.tap(); setOpen(true); }}
+        className="mx-auto flex h-10 w-fit items-center gap-1.5 rounded-full border-2 border-dashed border-foreground/20 px-4 text-[14px] font-bold text-muted-foreground">
+        <Eye className="h-4 w-4" strokeWidth={2.4} />{t("examples.show")}
+      </button>
+    );
+  }
   return (
-    <section data-example={kind} aria-label={`${t("tour.example")}: ${line}`}
-      className="rounded-[22px] border-2 border-dashed border-foreground/20 px-4 pb-4 pt-3">
-      <div className="flex items-center gap-2">
+    <section ref={ref} data-example={kind} aria-label={`${t("tour.example")}: ${line}`}
+      className="relative rounded-[22px] border-2 border-dashed border-foreground/20 px-4 pb-4 pt-3 animate-fade-in">
+      <div className="flex items-center gap-2 pr-9">
         <span className="shrink-0 rounded-full bg-foreground/[0.08] px-2.5 py-1 text-[12px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("tour.example")}</span>
         <p className="min-w-0 text-[14px] font-semibold leading-snug text-muted-foreground">{line}</p>
       </div>
+      <button type="button" data-example-hide onClick={() => { haptics.tap(); markSeen(kind); setOpen(false); }} aria-label={t("examples.hide")}
+        className="absolute right-1.5 top-1.5 flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground">
+        <X className="h-4 w-4" strokeWidth={2.6} />
+      </button>
       {/* the picture is an illustration: nothing in it can be tapped */}
       <div aria-hidden="true" className="pointer-events-none mt-3 select-none">{children}</div>
     </section>

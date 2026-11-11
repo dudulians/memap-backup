@@ -200,7 +200,7 @@ const ExampleLinkChart = ({ one = false }: { one?: boolean }) => {
     { color: PAIR_B, values: [3, 4, 3, 3, 2, 2, 1, 1], label: cap(answerPhrase(t, b, true)) },
   ].slice(0, one ? 1 : 2);
   return (
-    <ExampleBox kind="chart" line={t("examples.chart")}>
+    <ExampleBox kind={one ? "chart-one" : "chart"} line={t("examples.chart")}>
       <Chart series={series} height={110} />
       <Legend series={series} />
     </ExampleBox>

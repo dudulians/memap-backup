@@ -457,7 +457,10 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }:
   const exKey = setup.doorId && EXAMPLE_KEYS.has(setup.doorId) && pickKind !== "simple" ? setup.doorId : pickKind === "own" ? "own" : door?.branch ?? "good";
   const daytime = new Date().getHours() < 17;
   const [ask, setAsk] = useState(false);
-  const [day, setDay] = useState<"tonight" | "yesterday">("tonight");
+  // in the daytime yesterday comes first and is picked (her notes, Nov 6 2026: "если онбординг проходит днём или утром,
+  // предлагать вопросы за вчера"; Nov 11 2026, after a reset in the morning: "мне должны были предложить ответить на
+  // вопросы за вчера, а он мне предложил за сегодня"). Variant C already starts with yesterday before 17:00.
+  const [day, setDay] = useState<"tonight" | "yesterday">("yesterday");
   const row = (pic: React.ReactNode, title: string, line: string) => (
     <div className="surface flex items-center gap-3 rounded-[18px] px-3.5 py-3">
       <span className="flex h-[52px] w-[60px] shrink-0 items-center justify-center" aria-hidden="true">{pic}</span>
@@ -485,11 +488,11 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }:
             <p className="text-[14px] font-bold text-[hsl(36_86%_45%)]">{t("onb7.dayTitle")}</p>
             <p className="mt-1 text-[22px] font-bold leading-tight">{t("onb7.dayAsk")}</p>
             <div className="mt-3 flex flex-col gap-2">
-              <Row on={day === "tonight"} onClick={() => setDay("tonight")} icon={<Moon className="h-5 w-5 shrink-0 text-[hsl(232_62%_62%)]" strokeWidth={2.2} />}>
-                <span className="block">{t("onb7.dayTonight")}</span><span className="block text-[13px] font-semibold text-muted-foreground">{t("onb7.dayTonightLine")}</span>
-              </Row>
               <Row on={day === "yesterday"} onClick={() => setDay("yesterday")} icon={<CalendarDays className="h-5 w-5 shrink-0 text-[hsl(36_86%_52%)]" strokeWidth={2.2} />}>
                 <span className="block">{t("onb7.dayYesterday")}</span><span className="block text-[13px] font-semibold text-muted-foreground">{t("onb7.dayYesterdayLine")}</span>
+              </Row>
+              <Row on={day === "tonight"} onClick={() => setDay("tonight")} icon={<Moon className="h-5 w-5 shrink-0 text-[hsl(232_62%_62%)]" strokeWidth={2.2} />}>
+                <span className="block">{t("onb7.dayTonight")}</span><span className="block text-[13px] font-semibold text-muted-foreground">{t("onb7.dayTonightLine")}</span>
               </Row>
             </div>
             <div className="h-4" />
