@@ -57,8 +57,8 @@ const lightsNow = (p) => p.evaluate(() => ({
   ok("the demo has links between islands", pairs.length > 0, pairs);
   await toWorld(p);
   // the light starts about 0.9 s after World opens, the globe turns first (0.6 s)
-  let mid = null;
-  for (let i = 0; i < 14 && !(mid && mid.glow); i++) { await p.waitForTimeout(150); mid = await lightsNow(p); }
+  let mid = null, maxWarm = 0;
+  for (let i = 0; i < 14 && !(mid && mid.glow); i++) { await p.waitForTimeout(150); mid = await lightsNow(p); maxWarm = Math.max(maxWarm, mid.warm); }
   await p.screenshot({ path: `${D}/1-light-running.png` });
   ok("a warm light runs along the new link's route", !!mid && mid.glow > 0, mid);
   ok("…the sign of the link waits for the end", !!mid && mid.chips.some((o) => o === 0), mid?.chips);
@@ -68,7 +68,7 @@ const lightsNow = (p) => p.evaluate(() => ({
   const end = await lightsNow(p);
   await p.screenshot({ path: `${D}/2-islands-lit.png` });
   ok("both islands light up", end.lit.length >= 2, end);
-  ok("the dots it passed are warm", passing.warm > 0 || end.warm > 0, { passing: passing.warm, end: end.warm });
+  ok("the dots it passed are warm", Math.max(maxWarm, mid?.warm ?? 0, passing.warm, end.warm) > 0, { maxWarm, passing: passing.warm, end: end.warm });
   await p.waitForTimeout(4200);
   const calm = await lightsNow(p);
   ok("then calm: no light, the day islands go dark again", calm.glow === 0 && calm.lit.length === 0, calm);
@@ -95,18 +95,31 @@ const lightsNow = (p) => p.evaluate(() => ({
 
   // 3. soft day and night (and 2. the linked islands keep their light at night)
   await p.evaluate(() => window.dispatchEvent(new Event("memap-daynight")));
-  await p.waitForTimeout(700);
-  const half = await p.evaluate(() => ({ nv: window.__planet?.state?.().night, sky: Number(getComputedStyle(document.querySelector(".planet-sky.night")).opacity) }));
-  await p.screenshot({ path: `${D}/4-dusk.png` });
-  ok("day to night is soft: halfway after 0.7 s", half.nv > 0.05 && half.nv < 0.95 && half.sky > 0.05 && half.sky < 0.95, half);
-  await p.waitForTimeout(1800);
+  // watch the change: a soft one passes through the middle (the page's own theme change comes first, ~0.3 s)
+  const t0 = Date.now(), samples = [];
+  let shot = false;
+  while (Date.now() - t0 < 2600) {
+    const s1 = await p.evaluate(() => ({ nv: window.__planet?.state?.().night ?? 0, sky: Math.max(...[...document.querySelectorAll(".planet-sky.night")].map((x) => Number(getComputedStyle(x).opacity))) }));
+    samples.push({ ms: Date.now() - t0, ...s1 });
+    if (!shot && s1.nv > 0.3 && s1.nv < 0.7) { shot = true; await p.screenshot({ path: `${D}/4-dusk.png` }); }
+    await p.waitForTimeout(90);
+  }
+  // (the test browser draws WebGL in software and can stall for a second, so it counts in-between values, not time)
+  const midBall = samples.filter((x) => x.nv > 0.05 && x.nv < 0.95), midSky = samples.filter((x) => x.sky > 0.05 && x.sky < 0.95);
+  ok("day to night is soft: the ball and the sky pass through in-between values, not a jump", midBall.length >= 2 && midSky.length >= 2, { midBall: midBall.map((x) => x.nv.toFixed(2)), midSky: midSky.map((x) => x.sky.toFixed(2)) });
+  await p.waitForTimeout(200);
   const night = await p.evaluate(() => ({
     nv: window.__planet?.state?.().night,
     on: [...document.querySelectorAll(".planet-isle.has-link .isle-light")].map((x) => Number(getComputedStyle(x).opacity)),
     off: [...document.querySelectorAll(".planet-isle[data-isle]:not(.has-link) .isle-light")].map((x) => Number(getComputedStyle(x).opacity)),
+    skies: [...document.querySelectorAll(".planet-sky.night")].map((x) => Number(getComputedStyle(x).opacity)),
   }));
+  await p.waitForTimeout(1200);
+  const later = await p.evaluate(() => [...document.querySelectorAll(".planet-sky.night")].map((x) => Number(getComputedStyle(x).opacity)));
   await p.screenshot({ path: `${D}/5-night-lights.png` });
   ok("night has come", night.nv === 1, night.nv);
+  // the World page draws its own sky under the globe too (App Store session, Nov 11 2026: it faded away after a live change)
+  ok("the night sky stays (every sky layer, 2.5 s and 3.7 s after the change)", night.skies.length > 0 && night.skies.every((o) => o > 0.95) && later.every((o) => o > 0.95), { at25: night.skies, at37: later });
   ok("at night the islands with links keep their light", night.on.length > 0 && night.on.every((o) => o > 0.9), night.on);
   ok("…the others don't", night.off.every((o) => o < 0.05), night.off);
   await p.evaluate(() => window.dispatchEvent(new Event("memap-daynight")));

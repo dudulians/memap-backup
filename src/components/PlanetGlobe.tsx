@@ -181,6 +181,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   const nightRef = useRef(night);
   nightRef.current = night;
   const dayNightRef = useRef<(toNight: boolean) => void>(() => undefined);
+  // how much night there is now, and the change under way: kept outside the WebGL run, so a run made anew in the
+  // middle of a change (her data reloads when the theme changes) carries it on instead of jumping
+  const dn = useRef<{ v: number; anim: { from: number; to: number; t0: number } | null }>({ v: night ? 1 : 0, anim: null });
   useEffect(() => { dayNightRef.current(night); }, [night]);
   // the hint until she has turned the globe once (QA, Nov 8 2026: still shown after 59 days)
   const [hint, setHintState] = useState(() => { try { return localStorage.getItem("memap_globe_turned") !== "1"; } catch { return true; } });
@@ -293,9 +296,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       has[which] = false;
     };
     let alive = true;
-    // night as a number: 0 day, 1 night, in between while it changes
-    let nv = nightRef.current ? 1 : 0;
-    let nvAnim: { from: number; to: number; t0: number } | null = null;
+    // night as a number: 0 day, 1 night, in between while it changes (dn: it outlives this run)
+    const DN = dn.current;
     const lights: Light[] = [];
 
     let W = 0, H = 0, DPR = 1, R = 0, CX = 0, CY = 0;
@@ -343,7 +345,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, has.day ? texOf.day : texOf.night);
         gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, has.night ? texOf.night : texOf.day);
         gl.uniform2f(U.uRes, canvas.width, canvas.height); gl.uniform3f(U.uBall, CX * DPR, CY * DPR, R * DPR);
-        gl.uniform1f(U.uYaw, yaw); gl.uniform1f(U.uPitch, pitch); gl.uniform1f(U.uNight, nv); gl.uniform1f(U.uPx, DPR); gl.uniform1i(U.uTex, 0); gl.uniform1i(U.uTex2, 1);
+        gl.uniform1f(U.uYaw, yaw); gl.uniform1f(U.uPitch, pitch); gl.uniform1f(U.uNight, DN.v); gl.uniform1f(U.uPx, DPR); gl.uniform1i(U.uTex, 0); gl.uniform1i(U.uTex2, 1);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       const base = R * 0.35;
@@ -493,10 +495,10 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         moving = true; dirty = true;
       }
       // night coming or going
-      if (nvAnim) {
-        const k = Math.min(1, (tm - nvAnim.t0) / DAYNIGHT_MS), e = k * k * (3 - 2 * k);
-        nv = nvAnim.from + (nvAnim.to - nvAnim.from) * e; dirty = true;
-        if (k >= 1) { const to = nvAnim.to; nvAnim = null; dropTexture(to ? "day" : "night"); } else moving = true;
+      if (DN.anim) {
+        const k = Math.min(1, (tm - DN.anim.t0) / DAYNIGHT_MS), e = k * k * (3 - 2 * k);
+        DN.v = DN.anim.from + (DN.anim.to - DN.anim.from) * e; dirty = true;
+        if (k >= 1) { const to = DN.anim.to; DN.anim = null; dropTexture(to ? "day" : "night"); } else moving = true;
       }
       // the lights along her links
       if (lights.length) { stepLights(tm); dirty = true; if (lights.length) moving = true; }
@@ -648,27 +650,31 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       if (cached) { setTexture(which, cached); then?.(); return; }
       const im = new Image(); im.onload = () => { if (!alive) return; const c = toTexture(im); TEXTURES.set(src, c); setTexture(which, c); then?.(); }; im.src = src;
     };
-    load(nv >= 0.5 ? "night" : "day");
+    load(DN.v >= 0.5 ? "night" : "day");
+    // a change under way when this run began: both pictures, and it goes on
+    if (DN.anim) load(DN.anim.to ? "night" : "day", () => kick());
     // day to night or back: the other picture goes on the GPU, then night fades in (or out)
     dayNightRef.current = (toNight: boolean) => {
       const to = toNight ? 1 : 0;
-      if (nvAnim ? nvAnim.to === to : nv === to) return;
+      if (DN.anim ? DN.anim.to === to : DN.v === to) return;
       const go = () => {
         if (!alive) return;
-        if (reduce) { nv = to; nvAnim = null; dropTexture(toNight ? "day" : "night"); dirty = true; kick(); return; }
-        nvAnim = { from: nv, to, t0: performance.now() }; kick();
+        if (reduce) { DN.v = to; DN.anim = null; dropTexture(toNight ? "day" : "night"); dirty = true; kick(); return; }
+        DN.anim = { from: DN.v, to, t0: performance.now() }; kick();
       };
       if (has[toNight ? "night" : "day"]) go(); else load(toNight ? "night" : "day", go);
     };
     // the other one waits ready in memory (not on the GPU), so a change starts at once
-    const other = nv >= 0.5 ? planetDay : planetNight;
+    const other = DN.v >= 0.5 ? planetDay : planetNight;
+    // a change asked for while no run was there to take it (the old run had gone, this one wasn't made yet)
+    if (!DN.anim && DN.v !== (nightRef.current ? 1 : 0)) dayNightRef.current(nightRef.current);
     const ahead = window.setTimeout(() => { if (!TEXTURES.has(other)) { const im = new Image(); im.onload = () => TEXTURES.set(other, toTexture(im)); im.src = other; } }, 1500);
     const ro = new ResizeObserver(resize); ro.observe(box);
     resize();
     // for the tests in development: where an island is drawn, how the ball is turned
     if (import.meta.env.DEV) (window as unknown as { __planet?: unknown }).__planet = {
       at: (id: string) => pos.get(id) ?? null,
-      state: () => ({ yaw, pitch, zoom, night: nv, lights: lights.length }),
+      state: () => ({ yaw, pitch, zoom, night: DN.v, lights: lights.length }),
     };
     return () => {
       alive = false; cancelAnimationFrame(raf); window.clearTimeout(ahead); ro.disconnect();

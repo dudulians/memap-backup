@@ -309,7 +309,10 @@ const Index = () => {
           content scrolls over it. */}
       {/* Today: her own day/night picture with islands at the edges (Nov 3
           2026), so nothing needs to be scattered on the path. */}
-      {onGlobe && <div aria-hidden="true" className={`planet-sky ${night ? "night" : "day"} -z-10`} style={{ backgroundImage: `url(${night ? skyNight : skyDay})` }} />}
+      {/* both skies, the night one fading in over the day one, as on the globe (v134; the App Store session saw
+          the night sky fade away after a live change when this was one layer) */}
+      {onGlobe && <div aria-hidden="true" className="planet-sky day -z-10" style={{ backgroundImage: `url(${skyDay})` }} />}
+      {onGlobe && <div aria-hidden="true" className={`planet-sky night -z-10${night ? " is-on" : ""}`} style={{ backgroundImage: `url(${skyNight})` }} />}
       {activeTab !== "patterns" && (
         <div aria-hidden="true" className="memap-sea-bg memap-path-bg pointer-events-none absolute inset-0 -z-10"
           // Today: the open sea of her planet, as on the Map (her note, Nov 4
