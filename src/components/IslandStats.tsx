@@ -25,6 +25,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { experimentDay, EXPERIMENT_DAYS, runningExperiments } from "@/lib/experiments";
 import { testNameOf } from "@/lib/testWords";
+import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { haptics } from "@/lib/haptics";
 import { isoLocal } from "@/lib/doors";
 import { last7Range } from "@/lib/weekRange";
@@ -131,18 +132,24 @@ export const IslandWeek = ({ island, trackers }: { island: Island; trackers: Tra
       {island.weather && !early && (
         <div className="surface mt-2.5 rounded-[18px] px-4 py-3">
           <p className="text-[15px] font-bold leading-snug">{t(`isle.why.${island.weather}`)}</p>
+          {/* the hard answer in words, "No compliment from partner · 5 days" (her note, Nov 11 2026: the question's
+              name and "No" in quotes read like a form); her own question keeps its name and the answer */}
           {island.hardBy.slice(0, 3).map((h) => {
             const tr = trackers.find((x) => x.id === h.trackerId);
+            const words = !!tr && (!!templateIdOf(tr) || !!(tr.problemWhen === "yes" ? tr.words?.yes : tr.words?.no));
             return (
-              <p key={h.trackerId} className="mt-1.5 flex items-center gap-2 text-[15px] font-medium leading-snug">
-                <span className="min-w-0 flex-1 leading-snug">{title(h.trackerId)}</span>
+              <p key={h.trackerId} data-hard-row className="mt-1.5 flex items-center gap-2 text-[15px] font-medium leading-snug">
+                <span className="min-w-0 flex-1 leading-snug">{words ? cap(answerPhrase(t, tr, tr!.problemWhen === "yes")) : title(h.trackerId)}</span>
                 <span className="shrink-0 rounded-full bg-[hsl(var(--data-a)/0.14)] px-2 py-0.5 text-[13px] font-bold text-[hsl(var(--strong))]">
-                  {t("isle.ansDays", { ans: tr?.problemWhen === "yes" ? t("common.yes") : t("common.no"), count: h.days })}
+                  {words ? t("isle.days", { count: h.days }) : t("isle.ansDays", { ans: tr?.problemWhen === "yes" ? t("common.yes") : t("common.no"), count: h.days })}
                 </span>
               </p>
             );
           })}
-          <p className="mt-2 text-[13px] font-medium leading-snug text-muted-foreground">{t("isle.hardDay")}</p>
+          {/* "a yes to a hard question…" only where a row still says yes / no */}
+          {island.hardBy.slice(0, 3).some((h) => { const tr = trackers.find((x) => x.id === h.trackerId); return !tr || !(templateIdOf(tr) || (tr.problemWhen === "yes" ? tr.words?.yes : tr.words?.no)); }) && (
+            <p className="mt-2 text-[13px] font-medium leading-snug text-muted-foreground">{t("isle.hardDay")}</p>
+          )}
         </div>
       )}
     </div>

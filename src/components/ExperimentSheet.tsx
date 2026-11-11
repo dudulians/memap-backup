@@ -17,8 +17,9 @@ import { playSparkle } from "@/lib/feedback";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { praiseFor, resultWords } from "@/lib/testResult";
 import { BED_FROM_WAKE, NIGHT_IDEAS, WATCH_IDEAS, answeredToday, beforeBed, bedtimeFrom, comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
-import { answerPhrase, templateIdOf } from "@/lib/answerPhrases";
+import { templateIdOf } from "@/lib/answerPhrases";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
 import { countFromToday } from "@/lib/actionPoints";
@@ -240,35 +241,40 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                 )}
               </>
             ) : (
-              <p className="mt-1 text-[17px] font-medium text-muted-foreground">{result.did === EXPERIMENT_DAYS ? t("experiment.didAll", { count: EXPERIMENT_DAYS }) : t("experiment.didDays", { k: result.did, count: EXPERIMENT_DAYS })}</p>
+              <p className="mt-1 text-[17px] font-medium text-muted-foreground">
+                {result.did === EXPERIMENT_DAYS ? t("experiment.didAll", { count: EXPERIMENT_DAYS }) : t("experiment.didDays", { k: result.did, count: EXPERIMENT_DAYS })}
+                {/* praise for the effort, never for the result (her pick A, Nov 11 2026) */}
+                {result.did < EXPERIMENT_DAYS && praiseFor(t, result.did) && <>. <span data-praise className="praise-text font-bold">{praiseFor(t, result.did)}</span></>}
+              </p>
             )}
             <div className="surface mt-5 rounded-[22px] px-5 py-4">
               <KindTag kind="finding" />
-              <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>
-              {comparedBy(result) === "before" ? (
-                <>
-                  <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.duringIt", { k: result.during[0], count: result.during[1] })}</p>
-                  <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.beforeIt", { k: result.before[0], count: result.before[1] })}</p>
-                </>
-              ) : (
-                <>
-                  <p className="mt-2 text-[19px] font-bold leading-snug">{t("experiment.withIt", { k: result.withChange[0], count: result.withChange[1] })}</p>
-                  <p className="mt-1 text-[17px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
-                </>
-              )}
-              {/* never "better / worse with it" about a partner shouting (Nov 9 2026) */}
-              {!fromHome && <p className="mt-2 text-[16px] font-bold leading-snug text-[hsl(var(--coin-teal))]">{t(`experiment.verdict.${verdictOf(result)}`)}</p>}
-              {/* the biggest difference on any island, in plain words (Nov 8 2026) */}
-              {result.most && (() => {
-                const m = result.most, tr = trackers.find((x) => x.id === m.trackerId);
-                if (!tr) return null;
-                const what = answerPhrase(t, tr, m.hardYes);
+              {/* one human line first (her note, Nov 11 2026: "кажется прогулки помогают, вы стали меньше ссориться"),
+                  its count under it; never "better / worse with it" about a partner shouting (Nov 9 2026) */}
+              {(() => {
+                const w = resultWords(t, experiment, result, trackers);
                 return (
-                  <p className="mt-3 border-t border-foreground/[0.07] pt-3 text-[16px] font-semibold leading-snug">
-                    {t(m.by === "with" ? "experiment.mostWith" : "experiment.mostBefore", { what, a: m.a[0], b: m.a[1], c: m.b[0], d: m.b[1] })}
-                  </p>
+                  <>
+                    {!fromHome && <p data-result-head className={w.human ? "mt-1.5 text-[20px] font-bold leading-snug" : "mt-1.5 text-[17px] font-bold leading-snug text-[hsl(var(--coin-teal))]"}>{w.head}</p>}
+                    {!fromHome && w.count && <p data-result-count className="mt-1 text-[14px] font-semibold leading-snug text-muted-foreground">{w.count}</p>}
+                    {(fromHome || !w.human) && w.most && <p data-result-most className="mt-2 text-[16px] font-semibold leading-snug">{w.most}</p>}
+                  </>
                 );
               })()}
+              <div className="mt-3 border-t border-foreground/[0.07] pt-3">
+                <p className="text-[14px] font-semibold text-muted-foreground">{t("experiment.hardOn", { island: islandName(t, experiment.island as IslandId) })}</p>
+                {comparedBy(result) === "before" ? (
+                  <>
+                    <p className="mt-1 text-[17px] font-bold leading-snug">{t("experiment.duringIt", { k: result.during[0], count: result.during[1] })}</p>
+                    <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{t("experiment.beforeIt", { k: result.before[0], count: result.before[1] })}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-1 text-[17px] font-bold leading-snug">{t("experiment.withIt", { k: result.withChange[0], count: result.withChange[1] })}</p>
+                    <p className="mt-0.5 text-[15px] font-semibold leading-snug text-muted-foreground">{t("experiment.withoutIt", { k: result.without[0], count: result.without[1] })}</p>
+                  </>
+                )}
+              </div>
               {/* other changes at the same time: their effects mix into this one (Nov 8 2026) */}
               {experiment && overlapping(experiment).length > 0 && (
                 <p className="mt-1.5 text-[14px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(experiment).map((x) => quotedTestName(x.change)).join(", ") })}</p>

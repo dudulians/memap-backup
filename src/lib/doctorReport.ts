@@ -16,7 +16,7 @@ import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
 import { linkCount, linkHead } from "@/lib/linkText";
-import { answerPhrase } from "@/lib/answerPhrases";
+import { answerPhrase, templateIdOf } from "@/lib/answerPhrases";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { getDoorState, isoLocal } from "@/lib/doors";
@@ -226,7 +226,10 @@ const findings = (data: Data, max: number): string[] => {
   if (top) {
     let run = 0, best = 0;
     for (const d of top.ans) { if (isHardAnswer(top.q, top.v.get(d))) run = 0; else { run++; best = Math.max(best, run); } }
-    if (best >= 5) out.push(t("report.find.calm", { what: whatOf(top), count: best }));
+    // "No headache: 6 days in a row, your longest stretch" (her note, Nov 11 2026: a name in quotes reads like a
+    // form); her own question without words keeps the old line
+    const words = !!templateIdOf(top.q) || !!(top.q.problemWhen === "yes" ? top.q.words?.no : top.q.words?.yes);
+    if (best >= 5) out.push(words ? t("report.find.calmWords", { what: capFirst(answerPhrase(t, top.q, top.q.problemWhen !== "yes")), count: best }) : t("report.find.calm", { what: whatOf(top), count: best }));
   }
   const goods = rows.filter((r) => r.q.problemWhen === "no" && r.yes >= 3 && r.yes / r.ans.length >= 0.5).sort((x, y) => y.yes / y.ans.length - x.yes / x.ans.length);
   if (goods[0]) out.push(t("report.find.good", { what: answerPhrase(t, goods[0].q, true), k: goods[0].yes, count: goods[0].ans.length }));

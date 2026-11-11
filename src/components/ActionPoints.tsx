@@ -34,6 +34,7 @@ import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { markActSeen } from "@/lib/pathSteps";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
+import { resultWords } from "@/lib/testResult";
 import { MIN_SIDE, experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
 import i18nInstance from "@/lib/i18n";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -800,7 +801,8 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: T
                     {r.withChange[1] && r.without[1] ? t("helps.resultLine", { a: r.withChange[0], b: r.withChange[1], c: r.without[0], d: r.without[1] })
                       : r.during[1] && r.before[1] ? t("helps.beforeLine", { a: r.during[0], b: r.during[1], c: r.before[0], d: r.before[1] }) : t("helps.noData")}
                   </p>
-                  {verdictOf(r) !== "few" && <p className="mt-0.5 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{t(`experiment.verdict.${verdictOf(r)}`)}</p>}
+                  {/* the same first line as the test's result (her note, Nov 11 2026) */}
+                  {verdictOf(r) !== "few" && <p data-result-head className="mt-0.5 text-[14px] font-bold leading-snug" style={{ color: TEAL }}>{resultWords(t, x, r, trackers).head}</p>}
                   {overlapping(x).length > 0 && <p className="mt-0.5 text-[13px] font-semibold leading-snug text-muted-foreground">{t("experiment.overlap", { list: overlapping(x).map((o) => quotedTestName(o.change)).join(", ") })}</p>}
                 </div>
               );

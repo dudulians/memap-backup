@@ -2602,6 +2602,8 @@ svg .tour-pop { transform-box: fill-box; transform-origin: center; }
 .kind-question { color: hsl(var(--data-a)); }
 .kind-finding { color: hsl(28 78% 42%); }
 html[data-theme="aurora"] .kind-finding { color: hsl(38 90% 62%); }
+/* praise for the effort (her pick, Nov 11 2026): green by meaning, mixed with the ink so it reads in both themes */
+.praise-text { color: hsl(var(--balanced)); color: color-mix(in srgb, hsl(var(--balanced)) 62%, hsl(var(--foreground))); }
 
 /* A light tour without words (glowHints.ts, her note Nov 10 2026): after the first evening the World tab glows
    until it is opened, then the World's four parts glow until each is opened once. Teal: something to do. */
