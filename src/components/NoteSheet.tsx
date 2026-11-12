@@ -2,7 +2,7 @@
 // the big mic, then the day and an optional question as big buttons.
 // Used by Notes and, since Nov 2 2026, straight from Today's "Write a note"
 // step (her: "нажала шаг ноут — сразу пишешь, а не ещё раз нажимаешь").
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarDays } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -60,6 +60,9 @@ export const NoteSheet = ({
   const noteRef = useRef<HTMLTextAreaElement>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const nameOf = useQuestionName(trackers);
+  // what the sheet opened with: leaving saves only a real change (an unchanged note just closes)
+  const opened = useRef<string | null>(null);
+  useEffect(() => { opened.current = draft ? JSON.stringify(draft) : null; }, [draft?.id, !!draft]); // eslint-disable-line react-hooks/exhaustive-deps
   const today = daysAgoIso(0);
   const yesterday = daysAgoIso(1);
 
@@ -74,14 +77,14 @@ export const NoteSheet = ({
 
   // No "Note added" popup: the note shows up where she looks (her call on
   // popups, Nov 2 2026).
-  const save = async () => {
+  const save = async (via: "button" | "close" = "button") => {
     if (!draft) return;
     const text = draft.text.trim();
     if (!text) return;
     if (draft.id) await updateNote(draft.id, { text, date: draft.date, linkedPatternIds: draft.linkedPatternIds });
     else await addNote({ date: draft.date, text, linkedPatternIds: draft.linkedPatternIds });
     haptics.success();
-    track("note_saved", { edited: !!draft.id, questions: draft.linkedPatternIds.length });
+    track("note_saved", { edited: !!draft.id, questions: draft.linkedPatternIds.length, via });
     setDraft(null);
     window.dispatchEvent(new CustomEvent("memap-notes-changed"));
     onSaved();
@@ -97,7 +100,12 @@ export const NoteSheet = ({
 
   return (
     <>
-      <BottomSheet open={!!draft} onOpenChange={(o) => !o && setDraft(null)} className="h-[86vh]"
+      {/* leaving saves, as everywhere else in the app (her note, Nov 12 2026: «человек может что-то заполнять, потом
+          выйти по рефлексу… и заметка пропадёт»); an empty or unchanged note just closes */}
+      <BottomSheet open={!!draft} onOpenChange={(o) => {
+        if (o || !draft) return;
+        if (draft.text.trim() && JSON.stringify(draft) !== opened.current) void save("close"); else setDraft(null);
+      }} className="h-[86vh]"
         ariaTitle={draft?.id ? t("notesTab.editNote") : t("notesTab.newNote")}>
         {draft && (
           <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col">
@@ -153,7 +161,7 @@ export const NoteSheet = ({
                   return (
                     <button key={tr.id} type="button" aria-pressed={on} data-note-q
                       onClick={() => setDraft({ ...draft, linkedPatternIds: on ? draft.linkedPatternIds.filter((x) => x !== tr.id) : [...draft.linkedPatternIds, tr.id] })}
-                      className={cn(chip(on), "block max-w-[240px] truncate leading-[38px]")}>
+                      className={cn(chip(on), "h-auto min-h-[40px] max-w-full whitespace-normal py-2 text-left leading-snug")}>
                       {nameOf(tr.id)}
                     </button>
                   );
@@ -162,7 +170,9 @@ export const NoteSheet = ({
             )}
 
             <div className="flex-1 min-h-6" />
-            <button type="button" onClick={save} disabled={!draft.text.trim()} className="raised-btn mt-6 w-full justify-center">
+            {/* always in sight: it stays at the bottom while the list scrolls (her note, Nov 12 2026: below the list it
+                was easy to miss) */}
+            <button type="button" data-note-save onClick={() => void save()} disabled={!draft.text.trim()} className="raised-btn is-floating sticky bottom-3 z-10 mt-6 w-full shrink-0 justify-center">
               {t("common.save")}
             </button>
             {draft.id && (
