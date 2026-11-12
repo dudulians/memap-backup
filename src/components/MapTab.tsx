@@ -245,13 +245,15 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // What helps opens its own sheet (Nov 8 2026: it opened a test's island, and an empty "Week summary"
   // when that island wasn't there)
   const [helpsOpen, setHelpsOpen] = useState(false);
+  // a test's push opens its own card (Nov 12 2026)
+  const [helpsFocus, setHelpsFocus] = useState<string | null>(null);
   // a part opened from anywhere stops glowing (glowHints.ts)
   useEffect(() => { if (only) markGlowSeen(only === "trends" ? "overview" : only); }, [only]);
   useEffect(() => { if (helpsOpen) markGlowSeen("helps"); }, [helpsOpen]);
   const onHelps = () => setHelpsOpen(true);
   // "See" under a done task (Nov 10 2026): from When to act straight to What helps, where it is now kept
   useEffect(() => {
-    const go = () => { backTo.current = null; setOnly(null); setOnlyIds(null); window.setTimeout(() => setHelpsOpen(true), 250); };
+    const go = (e: Event) => { backTo.current = null; setOnly(null); setOnlyIds(null); setHelpsFocus((e as CustomEvent).detail?.id ?? null); window.setTimeout(() => setHelpsOpen(true), 250); };
     window.addEventListener("memap-open-helps", go);
     return () => window.removeEventListener("memap-open-helps", go);
   }, []);
@@ -307,7 +309,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("world4.whatHelps")}</h2>
           {!tourCompleted() && <TipCard id="block:helps" className="mb-3" title={t("world4.whatHelps")} line={t("tour.helps.line")} />}
-          <WhatHelps trackers={trackers} entries={entries}
+          <WhatHelps trackers={trackers} entries={entries} focusId={helpsFocus} onFocused={() => setHelpsFocus(null)}
             onResult={(x) => { setHelpsOpen(false); window.setTimeout(() => setHelpsResult(x), 250); }}
             onPick={() => { setHelpsOpen(false); window.setTimeout(pickTest, 250); }} />
         </div>

@@ -78,7 +78,8 @@ for (const lang of ["en", "ru"]) {
     out[`${lang}.experiment`] = st;
     ok(`${lang}.1 watches the sleep question, no new one`, st.x?.same === true && st.x?.trackerId === ids.sleep && st.trackers === trackersBefore, st);
     ok(`${lang}.1 night + wake-up saved`, st.x?.night === true && st.x?.wake === "06:30", st.x);
-    ok(`${lang}.1 push says tonight's bedtime`, st.push.startsWith(W.push), st.push);
+    // the step is in the body since Nov 12 2026 (a title is one line on the lock screen and cut the step)
+    ok(`${lang}.1 push says tonight's bedtime`, (st.push.split(" | ")[1] ?? "").startsWith(W.push), st.push);
   }
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
 
@@ -107,7 +108,7 @@ for (const lang of ["en", "ru"]) {
     const tr = T.find((t) => t.id === x.trackerId);
     const d = new Date(); d.setDate(d.getDate() + 1);
     const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const push = n.tryPlan().find((q) => q.title === tw.testTodayOf(x.change));
+    const push = n.tryPlan().find((q) => q.body.startsWith(tw.testTodayOf(x.change) ?? "-"));
     // hookah, watched: 3 days without it, 1 with
     const h = { id: "h", island: "health", trackerId: ids.hookah, change: "x", start: "2026-11-01", same: true, doneWhen: false };
     const E = [["2026-11-01", false], ["2026-11-02", false], ["2026-11-03", true], ["2026-11-04", false]].map(([date, value], i) => ({ id: `e${i}`, trackerId: ids.hookah, date, value }));

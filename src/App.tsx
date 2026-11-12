@@ -79,6 +79,18 @@ const App = () => {
           // which push brought her back (Nov 8 2026)
           const ex = ((action as { notification?: { extra?: Record<string, unknown> } })?.notification?.extra ?? {}) as Record<string, unknown>;
           track("notification_opened", { kind: String(ex.kind ?? "unknown"), variant: String(ex.variant ?? ""), hour: new Date().getHours() });
+          // a push opens what it is about (her note, Nov 12 2026: a test's step opened a random evening question):
+          // a test's step → its card in What helps; a rule reached → When to act; the evening one → the questions
+          const kind = String(ex.kind ?? "");
+          if (getUiMode() === "new" && (kind === "test" || kind === "goal" || kind === "test_kept")) {
+            window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }));
+            setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: ex.test ? String(ex.test) : undefined } })), 400);
+            return;
+          }
+          if (getUiMode() === "new" && kind === "rule") {
+            window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "signals", back: true } }));
+            return;
+          }
           // Switch active tab to Cards (Index owns the activeTab state).
           window.dispatchEvent(
             new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }),

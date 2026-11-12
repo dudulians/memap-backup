@@ -362,8 +362,9 @@ const tryWords = (x: Experiment, k: number): { title: string; body: string; key:
   const day = i18n.t(`notifications.try.${key}`, o);
   // today's step on top ("Не забудь потренироваться сегодня"); her own plan in her words under a kind title
   const today = testTodayOf(x.change, x);
+  // the step in the body, which wraps: a title is one line on the lock screen and the step was cut (Nov 12 2026)
   return today
-    ? { title: today, body: day, key }
+    ? { title: i18n.t("notifications.try.homeTitle"), body: `${today}. ${day}`, key }
     : { title: i18n.t("notifications.try.ownTitle"), body: `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${day}`, key };
 };
 
@@ -394,7 +395,7 @@ export const tryPlan = (entries: TrackerEntry[] = [], homeIds: Set<string> = new
       const at = new Date(start); at.setDate(start.getDate() + k - 1); at.setHours(h || 0, m || 0, 0, 0);
       if (at.getTime() <= Date.now() || skip(x, at)) continue;
       const w = homeTest(x) ? { ...tryWords(x, k), ...neutral() } : tryWords(x, k);
-      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, title: w.title, body: w.body, schedule: { at, allowWhileIdle: true }, extra: { kind: x.same ? "goal" : "test", variant: w.key } });
+      out.push({ id: dateToNotificationId(at) + TRY_ID_OFFSET + i * 50_000_000, title: w.title, body: w.body, schedule: { at, allowWhileIdle: true }, extra: { kind: x.same ? "goal" : "test", variant: w.key, test: x.id } });
     }
   });
   // kept going after the two weeks ("Продолжим в том же духе?" — yes): the reminder goes on, a week
@@ -410,10 +411,10 @@ export const tryPlan = (entries: TrackerEntry[] = [], homeIds: Set<string> = new
       const quiet = homeTest(x) ? neutral() : null;
       out.push({
         id: dateToNotificationId(at) + TRY_ID_OFFSET + (8 + i) * 50_000_000,
-        title: quiet ? quiet.title : today ?? i18n.t("notifications.try.ownTitle"),
-        body: quiet ? quiet.body : today ? body : `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${body}`,
+        title: quiet ? quiet.title : today ? i18n.t("notifications.try.homeTitle") : i18n.t("notifications.try.ownTitle"),
+        body: quiet ? quiet.body : today ? `${today}. ${body}` : `${i18n.t("notifications.try.ownPlan", { plan: testNameOf(x.change) })} ${body}`,
         schedule: { at, allowWhileIdle: true },
-        extra: { kind: "test_kept", variant: `keep${(at.getDate() % 4) + 1}` },
+        extra: { kind: "test_kept", variant: `keep${(at.getDate() % 4) + 1}`, test: x.id },
       });
     }
   });
@@ -487,7 +488,7 @@ const fireThresholdNotification = async (tracker: Tracker) => {
           title,
           body,
           schedule: { at: new Date(Date.now() + 1000) },
-          extra: { kind: "rule" },
+          extra: { kind: "rule", tracker: tracker.id },
         },
       ],
     });

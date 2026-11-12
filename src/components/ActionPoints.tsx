@@ -725,11 +725,18 @@ const TestSheet = ({ test, trackers, entries, line, onClose, onStop }: { test: E
 /** "What helps" (the World's 4th part; her note, Nov 8 2026: it opened an empty "Week summary"):
  *  the tests running now (each opens with its reminder), a finished one's result, the ones tried
  *  before with what they showed, and "Test one change". */
-export const WhatHelps = ({ trackers, entries, onResult, onPick }: { trackers: Tracker[]; entries: TrackerEntry[]; onResult: (x: Experiment) => void; onPick: () => void }) => {
+export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocused }: { trackers: Tracker[]; entries: TrackerEntry[]; onResult: (x: Experiment) => void; onPick: () => void; focusId?: string | null; onFocused?: () => void }) => {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<Experiment | null>(null);
   const [, setTick] = useState(0);
   const running = runningExperiments();
+  // opened from a test's push: that test's own card, its step in full (Nov 12 2026)
+  useEffect(() => {
+    if (!focusId) return;
+    const x = running.find((y) => y.id === focusId);
+    if (x) { if (experimentOver(x)) onResult(x); else setOpen(x); }
+    onFocused?.();
+  }, [focusId]); // eslint-disable-line react-hooks/exhaustive-deps
   const tried = [...finishedExperiments()].reverse();
   const since = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language, { day: "numeric", month: "long" });
   // the history of what she did (her note, Nov 10 2026: "надо, чтоб человек где-то видел историю своих действий"):
