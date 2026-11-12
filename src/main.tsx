@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { applyTheme, followPhoneOnFirstRun, getTheme } from "@/lib/theme";
 import { applyColorBlind } from "@/lib/colorBlind";
 import App from "./App.tsx";
 import "./index.css";
@@ -24,5 +25,7 @@ initAnalytics();
 // classic keeps the one it shipped with.
 document.documentElement.setAttribute("data-ui", getUiMode());
 applyColorBlind();
+// a new install starts in the phone's own dark or light (Nov 12 2026)
+if (getUiMode() === "new") { followPhoneOnFirstRun(); applyTheme(getTheme()); }
 
 createRoot(document.getElementById("root")!).render(<App />);

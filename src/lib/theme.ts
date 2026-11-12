@@ -40,6 +40,19 @@ export const getLegacyTheme = (): AppTheme | null => {
   }
 };
 
+/** A brand-new install starts in the phone's own dark or light (her pick, Nov 12 2026: «Луна + как в телефоне»).
+ *  Only before anything is saved (no theme, no questions), so nobody who already uses the app is switched; decided
+ *  once and stored, so the theme never changes under someone mid-onboarding. */
+export const followPhoneOnFirstRun = (): void => {
+  try {
+    if (localStorage.getItem(THEME_KEY)) return;
+    const trackers = localStorage.getItem("memap_trackers");
+    if (trackers && trackers !== "[]") return;
+    const dark = typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
+    localStorage.setItem(THEME_KEY, dark ? "aurora" : "aurora-light");
+  } catch { /* blocked storage: the default stays */ }
+};
+
 // Called when onboarding finishes. Freezes the default for this
 // install so getTheme() stops depending on the tour flag.
 export const persistDefaultTheme = (): void => {

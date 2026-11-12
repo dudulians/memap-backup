@@ -7,7 +7,8 @@
 //   → "Your world has begun" (WorldBegun.tsx) → a reminder, then Today.
 // Setup is apart from the first real answer (GPT's review); the world is the picture
 // and the reward, the promise is practical (my review of the world-first brief).
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { isNight, toggleNight } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudDrizzle, Globe, Lock, Moon, Pencil, Plus, Spline, Sun, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -97,11 +98,18 @@ export const WelcomeV7 = ({ onStart, onSimple }: { onStart: () => void; onSimple
   const [lang, setLang] = useState<SupportedLanguage>(getLanguage() === "ru" ? "ru" : "en");
   const [langOpen, setLangOpen] = useState(false);
   const pick = (l: SupportedLanguage) => { haptics.tap(); setLang(l); setLanguage(l); setLangOpen(false); };
+  // day or night, right here (her pick, Nov 12 2026): the same moon as in the app's header
+  const [night, setNight] = useState(isNight());
+  useEffect(() => { const on = () => setNight(isNight()); window.addEventListener("memap-theme-changed", on); return () => window.removeEventListener("memap-theme-changed", on); }, []);
   const who = avatarUrl(getAvatar() ?? DEFAULT_AVATAR);
   return (
     <Page>
       {/* the language: one globe button; the list only on tap (v75) */}
-      <div className="relative flex justify-end pt-4">
+      <div className="relative flex justify-end gap-2 pt-4">
+        <button type="button" data-night-toggle onClick={() => { haptics.soft(); toggleNight(); }} aria-label={night ? t("common.dayMode") : t("common.nightMode")}
+          className="lang-btn surface flex h-10 w-10 items-center justify-center rounded-full">
+          {night ? <Sun className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.4} /> : <Moon className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />}
+        </button>
         <button type="button" onClick={() => { haptics.tap(); setLangOpen((v) => !v); }} aria-haspopup="listbox" aria-expanded={langOpen} aria-label={t("settings.language")}
           className="lang-btn surface flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[15px] font-bold">
           <Globe className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{lang.toUpperCase()}
