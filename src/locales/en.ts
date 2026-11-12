@@ -731,6 +731,7 @@ const en = {
     weeks8: "8 weeks",
     daysAWeekShort: "Days a week",
     touch: "touch the chart to see a week",
+    everyDay: "Every day of these 8 weeks",
     links: "Links",
     each: "Each question",
     daysAWeek: "Days a week, last 8 weeks",

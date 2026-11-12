@@ -22,6 +22,8 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { isoLocal } from "@/lib/doors";
 import { islandOf } from "@/lib/islands";
 import { islandHsl } from "@/lib/islandColors";
+import { art, artOf } from "@/lib/globeArt";
+import { islandDays } from "@/lib/growth";
 import { ExampleBox, standIn } from "./Examples";
 
 const WEEKS = 8;
@@ -38,10 +40,10 @@ const weekEnd = (w: number, n: number) => {
   return d;
 };
 
-/** Days a week the question "came" (yes for a hard question, no for a good one), oldest week first. */
-const weekly = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS): number[] => {
+/** Days a week the question "came" (yes for a hard question, no for a good one; a link's own answer when given),
+ *  oldest week first. */
+const weekly = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = tracker.problemWhen === "yes"): number[] => {
   const counts = Array.from({ length: n }, () => new Set<string>());
-  const hit = tracker.problemWhen === "yes";
   const today = new Date();
   const start = (w: number) => isoLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() - (w * 7 + 6)));
   const end = (w: number) => isoLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() - w * 7));
@@ -50,6 +52,16 @@ const weekly = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS): number[] 
     for (let w = 0; w < n; w++) if (e.date >= start(w) && e.date <= end(w)) counts[n - 1 - w].add(e.date);
   }
   return counts.map((s) => s.size);
+};
+
+/** Every day of the last n weeks, oldest week first, Monday… as the weeks above: did it come that day. */
+const dayMarks = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = tracker.problemWhen === "yes"): (boolean | undefined)[][] => {
+  const byDate = new Map(entries.filter((e) => e.trackerId === tracker.id).map((e) => [e.date, e.value] as const));
+  const today = new Date();
+  return Array.from({ length: n }, (_, w) => Array.from({ length: 7 }, (_, i) => {
+    const v = byDate.get(isoLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() - ((n - 1 - w) * 7 + 6 - i))));
+    return v === undefined ? undefined : v === hit;
+  }));
 };
 
 /** A smooth line through the points that never overshoots (monotone cubic). */
@@ -88,69 +100,63 @@ const useWidth = () => {
   return [ref, w] as const;
 };
 
-type Series = { color: string; values: number[]; label?: string };
+type Series = { color: string; values: number[]; label?: string; days?: (boolean | undefined)[][]; pic?: string };
 
-/** The one chart look: smooth thick lines, a soft fill under the first, the
- *  latest week marked. Big: dates under it and a finger to read any week. */
-const Chart = ({ series, height, big = false }: { series: Series[]; height: number; big?: boolean }) => {
+/** The one chart look (her pick, Nov 12 2026, the store session's mock-up B): thin lines that bend without
+ *  overshooting, a soft shadow and a light wash in each line's own colour, the scale ends at the data (three quiet
+ *  hairlines), the latest week marked. Big: dates under it, a finger to read any week, and every day of the weeks as
+ *  small upright marks under the lines (a line of "days a week" can't show whether it was the SAME days; days with
+ *  both are joined by a pale capsule). */
+const Chart = ({ series, height, big = false, at = null, onAt }: { series: Series[]; height: number; big?: boolean; at?: number | null; onAt?: (k: number) => void }) => {
   const { i18n, t } = useTranslation();
   const [ref, W] = useWidth();
   const n = series[0]?.values.length ?? WEEKS;
-  const padX = big ? 30 : 8, padTop = 10, padBottom = big ? 30 : 8;
-  const x = (i: number) => padX + (i / (n - 1)) * (W - padX - 8);
-  const y = (v: number) => padTop + (1 - v / 7) * (height - padTop - padBottom);
-  const [at, setAt] = useState<number | null>(null);
+  const padX = big ? 44 : 8, padTop = 10, padBottom = big ? 30 : 8;
+  const top = Math.max(...series.flatMap((s) => s.values), 0);
+  const MAX = big ? Math.max(4, Math.ceil(top / 2) * 2) : Math.max(2, top);
+  const x = (i: number) => padX + (i / (n - 1)) * (W - padX - 10);
+  const y = (v: number) => padTop + (1 - v / MAX) * (height - padTop - padBottom);
   const id = useMemo(() => `c${Math.random().toString(36).slice(2, 8)}`, []);
   const lang = i18n.language?.startsWith("ru") ? "ru-RU" : "en-US";
   const day = (d: Date) => d.toLocaleDateString(lang, { day: "numeric", month: "short" });
   const read = (clientX: number) => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || !onAt) return;
     const r = el.getBoundingClientRect();
-    const i = Math.round(((clientX - r.left - padX) / (W - padX - 8)) * (n - 1));
-    const k = Math.max(0, Math.min(n - 1, i));
-    if (k !== at) { haptics.tap(); setAt(k); }
+    const k = Math.max(0, Math.min(n - 1, Math.round(((clientX - r.left - padX) / (W - padX - 10)) * (n - 1))));
+    if (k !== at) { haptics.tap(); onAt(k); }
   };
+  // the days under the lines: 7 marks a week, centred on the week's point
+  const BW = 4.4, BH = 12, GAP = 1.5, ROWGAP = 7, WK = 7 * BW + 6 * GAP;
+  const rows = big ? series.filter((s) => s.days) : [];
+  const stripH = rows.length ? rows.length * BH + (rows.length - 1) * ROWGAP : 0;
   return (
-    <>
-    {/* The week she touched, on its own line above the chart (never over the controls). */}
-    {big && (
-      <div className="mt-3 flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-0.5 text-[14px] font-semibold" aria-live="polite">
-        {at === null ? (
-          <span className="text-muted-foreground">{t("charts.touch")}</span>
-        ) : (
-          <>
-            <span className="text-muted-foreground">{t("charts.weekTo", { day: day(weekEnd(at, n)) })}</span>
-            {series.map((s, k) => (
-              <span key={k} className="inline-flex min-w-0 items-center gap-1.5">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: `hsl(${s.color})` }} />
-                <span className="truncate">{t("charts.days", { count: s.values[at] })}{s.label && series.length > 1 ? ` · ${s.label}` : ""}</span>
-              </span>
-            ))}
-          </>
-        )}
-      </div>
-    )}
-    <div ref={ref} className="relative mt-2 w-full select-none" style={{ height, touchAction: big ? "pan-y" : undefined }}
+    <div ref={ref} className="relative mt-2 w-full select-none" style={{ touchAction: big ? "pan-y" : undefined }}
       onPointerDown={big ? (e) => read(e.clientX) : undefined} onPointerMove={big ? (e) => { if (e.buttons || e.pointerType === "touch") read(e.clientX); } : undefined}>
-      <svg width={W} height={height} className="absolute inset-0 overflow-visible" aria-hidden="true">
+      <svg width={W} height={height} className="block overflow-visible" aria-hidden="true">
         <defs>
           {series.map((s, k) => (
-            <linearGradient key={k} id={`${id}-${k}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor={`hsl(${s.color})`} stopOpacity={0.28} />
-              <stop offset="1" stopColor={`hsl(${s.color})`} stopOpacity={0} />
-            </linearGradient>
+            <g key={k}>
+              <linearGradient id={`${id}-${k}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" style={{ stopColor: `hsl(${s.color})` }} stopOpacity={0.16} />
+                <stop offset="1" style={{ stopColor: `hsl(${s.color})` }} stopOpacity={0} />
+              </linearGradient>
+              <filter id={`${id}-s${k}`} x="-10%" y="-30%" width="120%" height="180%">
+                <feDropShadow dx="0" dy={big ? 5 : 3} stdDeviation={big ? 3 : 2} style={{ floodColor: `hsl(${s.color})` }} floodOpacity={0.28} />
+              </filter>
+            </g>
           ))}
         </defs>
-        {[0, 3.5, 7].map((v) => (
-          <line key={v} x1={padX} x2={W - 8} y1={y(v)} y2={y(v)} stroke="hsl(var(--foreground) / 0.07)" strokeWidth={1.5} strokeDasharray={v === 0 ? undefined : "3 6"} />
+        {[0, MAX / 2, MAX].map((v) => (
+          <line key={v} x1={big ? padX - 14 : padX} x2={W - 4} y1={y(v)} y2={y(v)} stroke="hsl(var(--foreground) / 0.08)" strokeWidth={1} />
         ))}
         {big && (
           <>
-            <text x={padX - 8} y={y(7) + 4} textAnchor="end" className="fill-muted-foreground text-[12px] font-semibold">7</text>
-            <text x={padX - 8} y={y(0) + 4} textAnchor="end" className="fill-muted-foreground text-[12px] font-semibold">0</text>
+            {[0, MAX / 2, MAX].map((v) => (
+              <text key={v} x={padX - 22} y={y(v) + 4} textAnchor="end" className="fill-muted-foreground text-[11.5px] font-medium tabular-nums">{v}</text>
+            ))}
             {[0, Math.floor((n - 1) / 2), n - 1].map((i) => (
-              <text key={i} x={x(i)} y={height - 8} textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"} className="fill-muted-foreground text-[12px] font-semibold">
+              <text key={i} x={x(i)} y={height - 8} textAnchor={i === n - 1 ? "end" : i === 0 ? "start" : "middle"} className="fill-muted-foreground text-[11.5px] font-medium">
                 {i === n - 1 ? t("charts.now") : day(weekEnd(i, n))}
               </text>
             ))}
@@ -159,23 +165,46 @@ const Chart = ({ series, height, big = false }: { series: Series[]; height: numb
         {series.map((s, k) => {
           const pts = s.values.map((v, i) => [x(i), y(v)] as [number, number]);
           const line = smooth(pts);
+          return <path key={`w${k}`} d={`${line} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill={`url(#${id}-${k})`} />;
+        })}
+        {series.map((s, k) => {
+          const pts = s.values.map((v, i) => [x(i), y(v)] as [number, number]);
           return (
             <g key={k}>
-              {k === 0 && <path d={`${line} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill={`url(#${id}-${k})`} />}
-              <path d={line} fill="none" stroke={`hsl(${s.color})`} strokeWidth={big ? 4.5 : 4} strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx={x(n - 1)} cy={y(s.values[n - 1])} r={big ? 6 : 5} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2.5} />
+              <path d={smooth(pts)} fill="none" stroke={`hsl(${s.color})`} strokeWidth={big ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" filter={`url(#${id}-s${k})`} />
+              <circle cx={x(n - 1)} cy={y(s.values[n - 1])} r={big ? 5 : 4} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2} />
             </g>
           );
         })}
         {big && at !== null && (
           <g>
-            <line x1={x(at)} x2={x(at)} y1={padTop} y2={y(0)} stroke="hsl(var(--foreground) / 0.25)" strokeWidth={1.5} />
-            {series.map((s, k) => <circle key={k} cx={x(at)} cy={y(s.values[at])} r={6} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2.5} />)}
+            <line x1={x(at)} x2={x(at)} y1={padTop} y2={y(0)} stroke="hsl(var(--foreground) / 0.22)" strokeWidth={1.5} />
+            {series.map((s, k) => <circle key={k} cx={x(at)} cy={y(s.values[at])} r={5.5} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2} />)}
           </g>
         )}
       </svg>
+      {rows.length > 0 && n <= WEEKS && (
+        <div data-chart-days className="mt-4">
+          <p className="mb-2.5 text-[12.5px] font-medium text-muted-foreground">{t("charts.everyDay")}</p>
+          <svg width={W} height={stripH + 6} viewBox={`0 -3 ${W} ${stripH + 6}`} className="block overflow-visible" aria-hidden="true">
+            {rows[0].days!.map((wk, w) => wk.map((_, i) => {
+              const cx = x(w) - WK / 2 + i * (BW + GAP) + BW / 2;
+              const all = rows.length > 1 && rows.every((r) => r.days![w][i] === true);
+              return (
+                <g key={`${w}-${i}`}>
+                  {all && <rect x={cx - BW / 2 - 2} y={-3} width={BW + 4} height={stripH + 6} rx={BW / 2 + 2} style={{ fill: `hsl(${rows[rows.length - 1].color} / 0.2)` }} />}
+                  {rows.map((r, k) => {
+                    const v = r.days![w][i];
+                    return <rect key={k} x={cx - BW / 2} y={k * (BH + ROWGAP)} width={BW} height={BH} rx={BW / 2} style={{ fill: v ? `hsl(${r.color})` : v === false ? "hsl(var(--foreground) / 0.1)" : "hsl(var(--foreground) / 0.04)" }} />;
+                  })}
+                </g>
+              );
+            }))}
+            {rows.map((r, k) => r.pic ? <image key={`p${k}`} href={r.pic} x={-2} y={k * (BH + ROWGAP) - 6} width={24} height={24} /> : null)}
+          </svg>
+        </div>
+      )}
     </div>
-    </>
   );
 };
 
@@ -208,7 +237,7 @@ const ExampleLinkChart = ({ one = false }: { one?: boolean }) => {
 };
 
 export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trackers: Tracker[]; entries: TrackerEntry[]; focusIds?: string[]; pair?: boolean }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const live = useMemo(() => trackers.filter((tr) => !tr.archived && tr.source !== "play"), [trackers]);
   const mine = useMemo(() => (focusIds ? live.filter((tr) => focusIds.includes(tr.id)) : live), [live, focusIds]);
   const name = (id: string) => localizeTrackerTitle(live.find((x) => x.id === id)?.title ?? "");
@@ -227,7 +256,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
       .map((c) => {
         const l = linkOf(c);
         const route = { ...l, a: "other" as const, b: "other" as const, first: l.first.id, second: l.second.id };
-        return { a: l.first, b: l.second, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkHead(t, route, of), count: linkCount(t, route) };
+        return { a: l.first, b: l.second, aYes: l.firstYes, bYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, arrow: linkHead(t, route, of), count: linkCount(t, route) };
       })
       .slice(0, 5);
   }, [live, mine, entries, focusIds, pair, t]);
@@ -240,50 +269,87 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
 
   const [view, setView] = useState<"links" | "each">(links.length > 0 ? "links" : "each");
   // The full chart: which questions, and how far back.
-  const [detail, setDetail] = useState<{ ids: string[]; title: string; sub?: string } | null>(() => {
+  const [detail, setDetail] = useState<{ ids: string[]; yes?: boolean[]; title: string; sub?: string } | null>(() => {
     if (!pair || focusIds?.length !== 2) return null;
     const l = links[0];
-    return l ? { ids: [l.a.id, l.b.id], title: l.arrow, sub: l.count } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
+    return l ? { ids: [l.a.id, l.b.id], yes: [l.aYes, l.bYes], title: l.arrow, sub: l.count } : { ids: focusIds, title: focusIds.map(name).join(" · ") };
   });
   const [long, setLong] = useState(false);
+  const [at, setAt] = useState<number | null>(null);
+  const isleDays = useMemo(() => islandDays(trackers, entries), [trackers, entries]);
+  /** a question's island as on the globe, at its stage: it names the line */
+  const picOf = (tr: Tracker) => { const isle = islandOf(tr); return art(artOf(isle, isleDays.get(isle) ?? 0), false); };
 
   const colorOf = (tr: Tracker, k: number, pair: boolean) => (pair ? (k === 0 ? PAIR_A : PAIR_B) : islandHsl(islandOf(tr)));
 
   if (detail) {
     const n = long ? LONG : WEEKS;
-    const series = detail.ids.map((id, k) => {
+    const series: Series[] = detail.ids.map((id, k) => {
       const tr = live.find((x) => x.id === id)!;
-      return { color: colorOf(tr, k, detail.ids.length > 1), values: weekly(tr, entries, n), label: detail.ids.length > 1 ? hardWord(tr) : name(id) };
+      // the answer the link counts ("short night": the no of Slept 7+ hours); a question alone: its hard answer
+      const hit = detail.yes ? detail.yes[k] : tr.problemWhen === "yes";
+      return {
+        color: colorOf(tr, k, detail.ids.length > 1), values: weekly(tr, entries, n, hit), days: dayMarks(tr, entries, WEEKS, hit), pic: picOf(tr),
+        label: detail.yes ? cap(answerPhrase(t, tr, detail.yes[k])) : detail.ids.length > 1 ? hardWord(tr) : name(id),
+      };
     });
+    // "12 of 14 times" large, the other days under it (the mock-up B)
+    const [times, ...rest] = (detail.sub ?? "").split(" · ");
+    const pickLong = (v: boolean) => { haptics.tap(); setLong(v); setAt(null); };
     return (
       <div className="animate-fade-in">
         {/* a link's own chart (its "See the days") goes back to the link from the sheet's top, not to a list (Nov 10 2026) */}
         {!pair && (
-          <button type="button" onClick={() => { haptics.tap(); setDetail(null); }}
+          <button type="button" onClick={() => { haptics.tap(); setDetail(null); setAt(null); }}
             className="mb-2 inline-flex h-10 items-center gap-1.5 text-[15px] font-semibold text-muted-foreground">
             <ArrowLeft className="h-4 w-4" /> {t("charts.back")}
           </button>
         )}
-        <div className="surface rounded-[24px] px-4 pb-4 pt-4">
-          <p className="text-[19px] font-bold leading-snug">{detail.title}</p>
-          {detail.sub && <p className="mt-0.5 text-[15px] font-medium text-muted-foreground">{detail.sub}</p>}
-          <div className="seg mt-3" role="tablist">
-            {[false, true].map((v) => (
-              <button key={String(v)} type="button" role="tab" aria-selected={long === v} onClick={() => { haptics.tap(); setLong(v); }}
-                className={cn("chip", long === v && "is-on")}>
-                {t(v ? "charts.months6" : "charts.weeks8")}
-              </button>
+        <div data-chart-detail className="surface rounded-[26px] px-5 pb-5 pt-5">
+          <p className="text-[20px] font-bold leading-snug tracking-tight">{detail.title}</p>
+          {/* the lines named by their islands (no row of legend dots) */}
+          <div className="mt-4 flex flex-col gap-1.5">
+            {series.map((s, k) => (
+              <p key={k} data-chart-key className="flex min-w-0 items-center gap-2.5 text-[15.5px] font-semibold">
+                <img src={s.pic} alt="" aria-hidden="true" className="-my-1.5 h-10 w-10 shrink-0 object-contain" />
+                <span className="h-0 w-[22px] shrink-0 rounded-full border-t-[2.5px]" style={{ borderColor: `hsl(${s.color})` }} />
+                <span className="truncate">{s.label}</span>
+              </p>
             ))}
           </div>
-          <Chart series={series} height={230} big />
-          {series.length > 1 && <Legend series={series} />}
-          <p className="mt-3 text-[14px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</p>
+          {/* "Days a week" and the period on one line; a touched week reads here instead */}
+          <div className="mt-4 flex min-h-[34px] items-center justify-between gap-3" aria-live="polite">
+            {at === null ? (
+              <span className="text-[12.5px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</span>
+            ) : (
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 text-[13px] font-semibold">
+                <span className="text-muted-foreground">{t("charts.weekTo", { day: weekEnd(at, n).toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { day: "numeric", month: "short" }) })}</span>
+                {series.map((s, k) => (
+                  <span key={k} className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: `hsl(${s.color})` }} />{t("charts.days", { count: s.values[at] })}</span>
+                ))}
+              </span>
+            )}
+            <div className="seg shrink-0" role="tablist">
+              {[false, true].map((v) => (
+                <button key={String(v)} type="button" role="tab" aria-selected={long === v} onClick={() => pickLong(v)} className={cn("chip", long === v && "is-on")}>
+                  {t(v ? "charts.months6" : "charts.weeks8")}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Chart series={series} height={190} big at={at} onAt={setAt} />
+          {detail.sub && (
+            <p data-chart-count className="mt-5 text-[15.5px] font-semibold leading-snug">
+              <span className="block text-[17px] font-extrabold">{times}</span>
+              {rest.length > 0 && <span className="mt-0.5 block font-medium text-muted-foreground">{rest.join(" · ")}</span>}
+            </p>
+          )}
         </div>
       </div>
     );
   }
 
-  const card = "surface block w-full rounded-[22px] px-4 py-3.5 text-left active:scale-[0.99] transition-transform";
+    const card = "surface block w-full rounded-[22px] px-4 py-3.5 text-left active:scale-[0.99] transition-transform";
   return (
     <div className="animate-fade-in">
       <div className="seg" role="tablist">
@@ -306,11 +372,11 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
             // "Slept enough (7+ hours)" under "you usually sleep under 7 hours")
             const title = l.arrow, sub = l.count;
             const series = [
-              { color: PAIR_A, values: weekly(l.a, entries), label: hardWord(l.a) },
-              { color: PAIR_B, values: weekly(l.b, entries), label: hardWord(l.b) },
+              { color: PAIR_A, values: weekly(l.a, entries, WEEKS, l.aYes), label: cap(answerPhrase(t, l.a, l.aYes)) },
+              { color: PAIR_B, values: weekly(l.b, entries, WEEKS, l.bYes), label: cap(answerPhrase(t, l.b, l.bYes)) },
             ];
             return (
-              <button key={i} type="button" className={card} onClick={() => { haptics.tap(); setDetail({ ids: [l.a.id, l.b.id], title, sub }); }}>
+              <button key={i} type="button" className={card} onClick={() => { haptics.tap(); setDetail({ ids: [l.a.id, l.b.id], yes: [l.aYes, l.bYes], title, sub }); }}>
                 <p className="text-[17px] font-bold leading-snug">{title}</p>
                 <p className="mt-0.5 text-[14px] font-medium text-muted-foreground">{sub}</p>
                 <Chart series={series} height={96} />
