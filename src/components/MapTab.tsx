@@ -422,7 +422,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
         </div>
       </BottomSheet>
-      <LinkSheet route={link} trackers={trackers} days={dayCount} onClose={() => setLink(null)}
+      <LinkSheet route={link} trackers={trackers} entries={entries} days={dayCount} onClose={() => setLink(null)}
         onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
       {helpsResult && (
         <ExperimentSheet mode="result" experiment={helpsResult} trackers={trackers} entries={entries} onClose={() => setHelpsResult(null)} />

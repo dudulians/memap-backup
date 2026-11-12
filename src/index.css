@@ -2397,12 +2397,13 @@ header h1 { transition: opacity 200ms ease; }
    soft rose red (v73: "больше в розовинку"), a good / calm day (--balanced) soft green, by what the answer
    means, not yes/no. Indigo (--data-a) stays for neutral things: a pair's first
    line, a link's sign; warm amber the second line. The old screens keep theirs. */
-:root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; }
+:root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; --pair-b: 282 46% 66%; }
 /* Text: soft graphite #3A3F4E, quieter text #6B7184 (her pick, Nov 5 2026, board 51) */
 html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --muted-foreground: 226 10% 47%; }
 /* red and green, her pick E "Ягода и мята" (Nov 12 2026, marketing/research/colors-red-green.html); were 348 70% 69% / 146 45% 60% */
-html[data-ui="new"][data-theme="aurora-light"] { --strong: 335 68% 63%; --strong-foreground: 0 0% 100%; --balanced: 162 48% 50%; --balanced-foreground: 162 60% 14%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
-html[data-ui="new"][data-theme="aurora"] { --strong: 335 72% 69%; --strong-foreground: 335 60% 14%; --balanced: 162 50% 52%; --balanced-foreground: 162 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
+html[data-ui="new"][data-theme="aurora-light"] { --strong: 335 68% 63%; --strong-foreground: 0 0% 100%; --balanced: 162 48% 50%; --balanced-foreground: 162 60% 14%; --data-a: 232 62% 62%; --data-b: 36 86% 56%;
+  /* the second of two things that came together (her pick B, Nov 12 2026): lilac, a colour with no meaning */ --pair-b: 282 46% 66%; }
+html[data-ui="new"][data-theme="aurora"] { --strong: 335 72% 69%; --strong-foreground: 335 60% 14%; --balanced: 162 50% 52%; --balanced-foreground: 162 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; --pair-b: 282 55% 74%; }
 /* colour-blind mode (her pick O, Nov 12 2026; src/lib/colorBlind.ts): orange and sky blue (Okabe & Ito), and good
    days as rings: any round dot filled with the good colour (an inline style) becomes a ring of it */
 html[data-ui="new"][data-theme="aurora-light"][data-cb="1"] { --strong: 24 100% 42%; --strong-foreground: 0 0% 100%; --balanced: 202 77% 63%; --balanced-foreground: 205 70% 18%; }

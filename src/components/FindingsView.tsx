@@ -26,7 +26,7 @@ import { factLine } from "@/lib/echo";
 import { LINKS_AT, countedDays } from "@/lib/pathSteps";
 import { ExampleLink } from "./Examples";
 import { OwnWordsPrompt } from "./AnswerWordsFields";
-import { DayRows as DayRowsList, LinkIsles, LinkNumbers, OrderAsk, trackedTemplates, type DayRow } from "./LinkParts";
+import { DayBars, LinkIsles, LinkNumbers, OrderAsk, PAIR_A, PAIR_B, trackedTemplates, type BarRow } from "./LinkParts";
 
 const STRIP_DAYS = 14;
 
@@ -41,8 +41,10 @@ const toneOf = (tr: Tracker | undefined, v: boolean) =>
 /** Short words for this answer: a library question, or a typed one she named short. Plates only then (her pick, Nov 12
  *  2026: «плашки для коротких»); a typed question as typed reads as a sentence. */
 const short = (tr: Tracker | undefined, yes: boolean) => !!tr && (!!templateIdOf(tr) || !!(yes ? tr.words?.yes : tr.words?.no));
-/** The days with that answer over the last two weeks (a short night: the "no" days of "Slept 7+ hours"). */
-type DaysWith = (id: string, yes: boolean) => (boolean | undefined)[];
+/** Every day of the last weeks with that answer, 7 a week, oldest week first (a short night: the "no" days of
+ *  "Slept 7+ hours"). */
+type DaysWith = (id: string, yes: boolean) => (boolean | undefined)[][];
+const BAR_WEEKS = 8;
 
 export const FindingsView = ({
   trackers,
@@ -131,7 +133,10 @@ export const FindingsView = ({
 
   const daysWith: DaysWith = (trackerId, yes) => {
     const byDate = new Map(entries.filter((e) => e.trackerId === trackerId).map((e) => [e.date, e.value]));
-    return Array.from({ length: STRIP_DAYS }, (_, i) => { const v = byDate.get(daysAgoIso(STRIP_DAYS - 1 - i)); return typeof v === "boolean" ? v === yes : undefined; });
+    return Array.from({ length: BAR_WEEKS }, (_, w) => Array.from({ length: 7 }, (_, i) => {
+      const v = byDate.get(daysAgoIso((BAR_WEEKS - 1 - w) * 7 + 6 - i));
+      return typeof v === "boolean" ? v === yes : undefined;
+    }));
   };
 
   // eight links, the rest under "More links" (every link worth showing is kept, her topics first)
@@ -289,9 +294,9 @@ const TwoCard = ({ g, of, daysWith }: { g: Route[]; of: TrackerOf; daysWith: Day
   const l = g[0];
   const plates = short(of(l.second), l.secondYes) && g.every((x) => short(of(x.first), x.firstYes));
   const res = of(l.second);
-  const rows: DayRow[] = [
-    { label: cap(answerPhrase(t, res, l.secondYes)), days: daysWith(l.second, l.secondYes), color: toneOf(res, l.secondYes), main: true },
-    ...g.map((x) => ({ label: cap(answerPhrase(t, of(x.first), x.firstYes)), days: daysWith(x.first, x.firstYes), color: toneOf(of(x.first), x.firstYes) })),
+  const rows: BarRow[] = [
+    { label: cap(answerPhrase(t, res, l.secondYes)), weeks: daysWith(l.second, l.secondYes), color: PAIR_A, main: true },
+    ...g.map((x) => ({ label: cap(answerPhrase(t, of(x.first), x.firstYes)), weeks: daysWith(x.first, x.firstYes), color: PAIR_B })),
   ];
   return (
     <div data-story="two" className="surface rounded-[22px]">
@@ -318,23 +323,12 @@ const TwoCard = ({ g, of, daysWith }: { g: Route[]; of: TrackerOf; daysWith: Day
         <div data-story-numbers className="px-[18px] pb-4 animate-fade-in">
           {plates && <p data-link-sentence className="pb-1.5 text-[16px] font-semibold leading-snug text-foreground">{twoThingsText(t, g, of)}</p>}
           <div className="space-y-1">{g.map((x) => <p key={x.first} className="text-[15px] font-semibold text-muted-foreground">{twoThingsLine(t, x, of)}</p>)}</div>
-          <DayRowsTwo rows={rows} />
+          <DayBars rows={rows} />
         </div>
       )}
     </div>
   );
 };
-/** The last 14 days of "two things", one row under another. */
-const DayRowsTwo = ({ rows }: { rows: DayRow[] }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="mt-3">
-      <p className="text-[13px] font-bold uppercase tracking-[0.04em] text-muted-foreground">{t("link.lastDays", { count: STRIP_DAYS })}</p>
-      <DayRowsList rows={rows} />
-    </div>
-  );
-};
-
 /** One link. Short answers (her pick, Nov 12 2026): two plates and when ("Mostly the same days"), the strongest large
  *  with its islands, a plate under each, and the calm other days in words. A typed question without short words: the
  *  sentence (the strongest with its islands and their names). A tap opens the sentence, the count large with a small
@@ -363,9 +357,9 @@ const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
     const id = window.setTimeout(() => setLit(false), 1600);
     return () => window.clearTimeout(id);
   }, [sentence]);
-  const rows: DayRow[] = [
-    { label: cap(answerPhrase(t, a, r.firstYes)), days: daysWith(r.first, r.firstYes), color: toneOf(a, r.firstYes) },
-    { label: cap(answerPhrase(t, b, r.secondYes)), days: daysWith(r.second, r.secondYes), color: toneOf(b, r.secondYes) },
+  const rows: BarRow[] = [
+    { label: cap(answerPhrase(t, a, r.firstYes)), weeks: daysWith(r.first, r.firstYes), color: PAIR_A },
+    { label: cap(answerPhrase(t, b, r.secondYes)), weeks: daysWith(r.second, r.secondYes), color: PAIR_B },
   ];
   const sentenceEl = (big: boolean) => (
     <span data-link-sentence className={cn("-mx-1.5 block rounded-lg px-1.5 py-0.5 leading-snug transition-colors duration-700", big ? "font-bold tracking-tight" : "font-semibold", lit && "bg-[hsl(var(--coin-teal)/0.16)]",
@@ -410,7 +404,7 @@ const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
           {plates && <div className="mb-2">{sentenceEl(false)}</div>}
           {/* typed questions without short words: name them, right under the sentence */}
           <OwnWordsPrompt trackers={[a, b]} />
-          <div className="mt-2"><LinkNumbers r={r} rows={rows} onChart={() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] }))} /></div>
+          <div className="mt-2"><LinkNumbers r={r} bars={rows} onChart={() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] }))} /></div>
           {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026) */}
           {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} />}
         </div>

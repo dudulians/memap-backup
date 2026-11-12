@@ -28,10 +28,10 @@ import { ExampleBox, standIn } from "./Examples";
 
 const WEEKS = 8;
 const LONG = 26;
-// a pair's two lines: the data colours (index.css --data-a/--data-b)
+// a pair's two lines: indigo and the buttons' teal, neutral (her note, Nov 12 2026: rose means "hard"; orange was off
+// the palette, QA Nov 8)
 const PAIR_A = "var(--data-a)";
-// indigo and rose (QA, Nov 8 2026: orange was off the palette)
-const PAIR_B = "var(--strong)";
+const PAIR_B = "var(--pair-b)";
 
 /** The end of week w (0 = oldest of n), as a date. */
 const weekEnd = (w: number, n: number) => {
@@ -267,7 +267,10 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
     .filter((x) => x.answered)
     .sort((p, q) => q.values.reduce((s, v) => s + v, 0) - p.values.reduce((s, v) => s + v, 0)), [mine, entries]);
 
-  const [view, setView] = useState<"links" | "each">(links.length > 0 ? "links" : "each");
+  // the links' charts live in Links (her note, Nov 12 2026: «пусть чарты с линками сидят в линках, а в My Days просто
+  // чарты по каждому вопросу»): a link's "Chart" opens its own chart here; the list shows each question
+  const view = "each" as "links" | "each";
+  const setView = (_v: "links" | "each") => undefined;
   // The full chart: which questions, and how far back.
   const [detail, setDetail] = useState<{ ids: string[]; yes?: boolean[]; title: string; sub?: string } | null>(() => {
     if (!pair || focusIds?.length !== 2) return null;
@@ -352,7 +355,7 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
     const card = "surface block w-full rounded-[22px] px-4 py-3.5 text-left active:scale-[0.99] transition-transform";
   return (
     <div className="animate-fade-in">
-      <div className="seg" role="tablist">
+      <div className="seg hidden" role="tablist">
         {(["links", "each"] as const).map((v) => (
           <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
             className={cn("chip", view === v && "is-on")}>

@@ -11,7 +11,7 @@ import { getLinkOrder, setLinkOrder } from "@/lib/linkOrder";
 import { art, artOf } from "@/lib/globeArt";
 import { RELATED_QUESTIONS } from "@/lib/relatedQuestions";
 import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
-import { ensureTemplates, findTemplate } from "@/lib/doors";
+import { daysAgoIso, ensureTemplates, findTemplate } from "@/lib/doors";
 import { templateQuestion } from "@/lib/cardText";
 import { haptics } from "@/lib/haptics";
 import { track } from "@/lib/analytics";
@@ -65,34 +65,63 @@ export const LinkDots = ({ k, n, hard }: { k: number; n: number; hard: boolean |
   );
 };
 
-/** A row of days: one answer's last days as dots (filled = it came), the rows one under another so the days that came
- *  together line up (her question, Nov 12 2026: why one link had dots and "two things" not). */
-export type DayRow = { label: string; days: (boolean | undefined)[]; color: string; main?: boolean };
-/** One day: filled colour = it was, soft grey = it wasn't (answered), an empty ring = no answer that day. */
-const DayDot = ({ v, color }: { v: boolean | undefined; color: string }) => (
-  <span data-day={v === true ? "yes" : v === false ? "no" : "none"} className="h-3.5 w-3.5 rounded-full"
-    style={v === undefined ? { boxShadow: "inset 0 0 0 1.5px hsl(var(--foreground) / 0.22)" } : { background: v ? color : "hsl(var(--foreground) / 0.13)" }} />
-);
-export const DayRows = ({ rows }: { rows: DayRow[] }) => {
+/** The pair's two colours with no meaning (her pick B, Nov 12 2026: rose and green are hard and good, the buttons'
+ *  teal reads as green): indigo and lilac; "two things": the answer indigo, the things lilac. */
+export const PAIR_A = "var(--data-a)";
+export const PAIR_B = "var(--pair-b)";
+
+/** Every day of the last weeks with that answer, 7 a week, oldest week first (a short night: the "no" days of
+ *  "Slept 7+ hours"). */
+export const weeksWith = (entries: { trackerId: string; date: string; value: unknown }[], trackerId: string, yes: boolean, weeks = 8): (boolean | undefined)[][] => {
+  const byDate = new Map(entries.filter((e) => e.trackerId === trackerId).map((e) => [e.date, e.value]));
+  return Array.from({ length: weeks }, (_, w) => Array.from({ length: 7 }, (_, i) => {
+    const v = byDate.get(daysAgoIso((weeks - 1 - w) * 7 + 6 - i));
+    return typeof v === "boolean" ? v === yes : undefined;
+  }));
+};
+
+/** A row of bars: one answer on every day of the last weeks, 7 bars a week, oldest week first. */
+export type BarRow = { label: string; weeks: (boolean | undefined)[][]; color: string; main?: boolean };
+/** Every day of the last weeks as bars, the rows close under each other; a day when the first row and another came
+ *  together is lit across the rows (as the bars under a link's chart, her pick, Nov 12 2026). Filled = it was, grey =
+ *  it wasn't, an outline = no answer that day. */
+export const DayBars = ({ rows }: { rows: BarRow[] }) => {
   const { t } = useTranslation();
-  const color = rows[0]?.color ?? "hsl(var(--strong))";
+  if (!rows.length) return null;
+  const nW = rows[0].weeks.length;
+  const W = 300, BW = 3.6, GAP = 1.4, WK = 7 * BW + 6 * GAP, WGAP = nW > 1 ? (W - nW * WK) / (nW - 1) : 0;
+  const BH = 12, ROWGAP = 6, H = rows.length * BH + (rows.length - 1) * ROWGAP;
+  const both = (w: number, i: number) => rows.length > 1 && rows[0].weeks[w][i] === true && rows.slice(1).some((r) => r.weeks[w][i] === true);
   return (
-    <div data-day-rows className="mt-3">
-      <div className="space-y-3">
-        {rows.map((r, n) => (
-          <div key={n}>
-            <p className={cn("mb-1.5 truncate text-[14px]", r.main ? "font-extrabold text-foreground" : "font-semibold text-muted-foreground")}>{r.label}</p>
-            <div className="flex items-center justify-between" aria-hidden="true">
-              {r.days.map((v, i) => <DayDot key={i} v={v} color={r.color} />)}
-            </div>
-          </div>
+    <div data-day-bars className="mt-3.5">
+      <div className="flex flex-col gap-1">
+        {rows.map((r, k) => (
+          <p key={k} className={cn("flex min-w-0 items-center gap-2 text-[14px]", r.main ? "font-extrabold" : "font-semibold")}>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: `hsl(${r.color})` }} />
+            <span className="truncate">{r.label}</span>
+          </p>
         ))}
       </div>
-      {/* what a dot means (her question, Nov 12 2026: grey read as "not filled in") */}
-      <p data-day-key className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-semibold text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5"><DayDot v={true} color={color} />{t("link.dayYes")}</span>
-        <span className="inline-flex items-center gap-1.5"><DayDot v={false} color={color} />{t("link.dayNo")}</span>
-        <span className="inline-flex items-center gap-1.5"><DayDot v={undefined} color={color} />{t("link.dayNone")}</span>
+      <svg viewBox={`0 -3 ${W} ${H + 6}`} className="mt-2.5 block w-full overflow-visible" aria-hidden="true">
+        {rows[0].weeks.map((wk, w) => wk.map((_, i) => {
+          const cx = w * (WK + WGAP) + i * (BW + GAP) + BW / 2;
+          return (
+            <g key={`${w}-${i}`}>
+              {both(w, i) && <rect x={cx - BW / 2 - 1.6} y={-3} width={BW + 3.2} height={H + 6} rx={BW / 2 + 1.6} style={{ fill: `hsl(${rows[1].color} / 0.2)` }} />}
+              {rows.map((r, k) => {
+                const v = r.weeks[w][i];
+                return v === undefined
+                  ? <rect key={k} x={cx - BW / 2 + 0.5} y={k * (BH + ROWGAP) + 0.5} width={BW - 1} height={BH - 1} rx={(BW - 1) / 2} style={{ fill: "none", stroke: "hsl(var(--foreground) / 0.2)", strokeWidth: 1 }} />
+                  : <rect key={k} x={cx - BW / 2} y={k * (BH + ROWGAP)} width={BW} height={BH} rx={BW / 2} style={{ fill: v ? `hsl(${r.color})` : "hsl(var(--foreground) / 0.11)" }} />;
+              })}
+            </g>
+          );
+        }))}
+      </svg>
+      <p data-day-key className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-semibold text-muted-foreground">
+        <span>{t("link.lastWeeks", { count: nW })}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-[4px] rounded-full" style={{ background: `hsl(${rows[1]?.color ?? rows[0].color} / 0.35)` }} />{t("link.dayTogether")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-3 w-[4px] rounded-full" style={{ boxShadow: "inset 0 0 0 1px hsl(var(--foreground) / 0.25)" }} />{t("link.dayNone")}</span>
       </p>
     </div>
   );
@@ -100,7 +129,7 @@ export const DayRows = ({ rows }: { rows: DayRow[] }) => {
 
 /** "13 of 15 times" large with a small "Chart" at its side, the dots (k of n, or the days in rows), and the other days
  *  in words. */
-export const LinkNumbers = ({ r, onChart, rows }: { r: Pick<Route, "k" | "n" | "other" | "mostly" | "secondHard">; onChart?: () => void; rows?: DayRow[] }) => {
+export const LinkNumbers = ({ r, onChart, bars }: { r: Pick<Route, "k" | "n" | "other" | "mostly" | "secondHard">; onChart?: () => void; bars?: BarRow[] }) => {
   const { t } = useTranslation();
   const { k, n } = linkNumbers(r);
   const other = linkOtherDays(t, r);
@@ -115,7 +144,7 @@ export const LinkNumbers = ({ r, onChart, rows }: { r: Pick<Route, "k" | "n" | "
           </button>
         )}
       </div>
-      {rows ? <DayRows rows={rows} /> : <LinkDots k={k} n={n} hard={r.secondHard} />}
+      {bars ? <DayBars rows={bars} /> : <LinkDots k={k} n={n} hard={r.secondHard} />}
       {other && <p data-link-other className="mt-2.5 text-[16px] font-bold leading-snug">{cap(other)}</p>}
     </div>
   );

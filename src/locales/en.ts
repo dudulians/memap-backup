@@ -179,6 +179,9 @@ const en = {
     // the small link at the side of a link's count (her pick, Nov 12 2026)
     chartShort: "Chart",
     // the key under a link's rows of days (Nov 12 2026)
+    lastWeeks_one: "Every day, the last week",
+    lastWeeks_other: "Every day, the last {{count}} weeks",
+    dayTogether: "both",
     dayYes: "it was",
     dayNo: "it wasn't",
     dayNone: "no answer",
