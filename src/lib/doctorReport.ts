@@ -14,7 +14,7 @@
 import i18n from "@/lib/i18n";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
-import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
+import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, LINKS_TOP, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
 import { linkCount, linkHead } from "@/lib/linkText";
 import { answerPhrase, templateIdOf } from "@/lib/answerPhrases";
 import { computeCorrelations, type CorrelationResult } from "@/lib/correlations";
@@ -170,7 +170,8 @@ const collect = (r: ReportInput): Data => {
   const qs = groups.flatMap((gr) => gr.qs.map((x) => x.q)).filter((q) => ids.has(q.id));
   const answeredDays = new Set(inPeriod.filter((e) => ids.has(e.trackerId)).map((e) => e.date)).size;
   // links only between the questions that go in
-  const pairs = rankLinks(computeCorrelations(qs, inPeriod.filter((e) => ids.has(e.trackerId)), 6).filter(linkWorthShowing));
+  // every link worth showing (was the 6 strongest: her note, Nov 12 2026, "так у нас вроде для этого и есть полный репорт")
+  const pairs = rankLinks(computeCorrelations(qs, inPeriod.filter((e) => ids.has(e.trackerId)), LINKS_TOP).filter(linkWorthShowing));
   return { days, first, last, qs, vals, answeredDays, pairs };
 };
 /** A link as the app says it (her note, Nov 9 2026: no "When you…" sentences): the headline, and its
@@ -367,13 +368,22 @@ const drawMonth = (g: CanvasRenderingContext2D, x: number, y: number, w: number,
   g.textAlign = "left";
   return cell * 1.3 + rows * cell;
 };
+/** A month's width: three across, whatever the period, so three calendars fit a page (Nov 12 2026). */
+const CAL_W = (SPAN - 50 * 2) / 3;
+/** A calendar's height with its title and legend, for keeping it whole on a page. */
+const calendarH = (data: Data) => 112 + Math.ceil(monthsOf(data.days).length / 3) * ((CAL_W / 7) * 7.3 + 30);
+/** Every question gets a calendar in the full report (her note, Nov 12 2026: «почему не все календари выходят… так у
+ *  нас вроде для этого и есть полный репорт»): her topics first, then what hurt or was missed most, then the rest. */
+const calendarOrder = (data: Data): Tracker[] => {
+  const h = hardTops(data), first = [...h.bad, ...h.missed].map((r) => r.q);
+  return [...first, ...data.qs.filter((q) => !first.includes(q))];
+};
 /** All months of the period, up to three across, wrapping. */
 const drawCalendar = (p: Pages, data: Data, q: Tracker, icons?: Map<string, HTMLImageElement | null>) => {
   const v = data.vals.get(q.id) ?? new Map();
   const mark = (iso: string): Mark => iso < data.first || iso > data.last ? { fill: null, out: true } : { fill: v.has(iso) ? tone(q, v.get(iso)) : null, icon: icons?.get(iso) };
   const months = monthsOf(data.days);
-  const cols = Math.min(3, months.length), gap = 50;
-  const w = Math.min(cols === 1 ? 620 : 9999, (SPAN - gap * (cols - 1)) / cols);
+  const cols = 3, gap = 50, w = CAL_W;
   for (let i = 0; i < months.length; i += cols) {
     p.room((w / 7) * 7.6 + 20);
     let h = 0;
@@ -511,11 +521,13 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
   // a calendar for each of what came up most (up to 3), the days by colour; in hers, treasures on their days
   const icons = new Map<string, HTMLImageElement | null>();
   if (me) { const kept = keptTreasures(); for (const it of ITEMS) { const d = kept[it.id]; if (d && d >= data.first && d <= data.last && !icons.has(d)) icons.set(d, await load(mapPicFor(it.pic, false))); } }
-  const calQs = (() => { const h = hardTops(data); return [...h.bad, ...h.missed].slice(0, 3).map((r) => r.q); })();
+  const calQs = calendarOrder(data);
   for (const [i, q] of calQs.entries()) {
-    // a calendar title never stays alone at the bottom of a page: room for its first row of months
-    p.heading(t("report.pro.calendar", { q: title(q) }), 560);
-    answerLegend(p, q); p.y += 34;
+    // smaller titles than a section, and a calendar never splits across pages
+    if (i === 0) p.heading(t("report.calendars"), calendarH(data));
+    p.room(calendarH(data)); p.y += i === 0 ? 0 : 36;
+    p.text(fit(g(), t("report.pro.calendar", { q: title(q) }), SPAN), 26, 800, INK); p.y += 30;
+    answerLegend(p, q); p.y += 30;
     drawCalendar(p, data, q, me && i === 0 ? icons : undefined);
     if (me && i === 0 && icons.size) { p.room(40); p.text(t("report.me.treasureDays"), 21, 500, SOFT); p.y += 10; }
   }
@@ -563,7 +575,7 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
   // what tended to come together: every link between the questions in it
   p.heading(t("report.together"), 90);
   if (me) {
-    const all = data.pairs.slice(0, 12);
+    const all = data.pairs;
     if (all.length === 0) { p.room(60); p.text(t("report.togetherNone"), 23, 600, SOFT); p.y += 20; }
     for (const c of all) {
       const L = linkLine(c);
@@ -581,7 +593,7 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
       p.y = Math.max(p.y + 46, y0 + 70);
     }
     p.room(50); p.text(t("link.honest"), 20, 500, SOFT); p.y += 10;
-  } else linksList(p, data, 12);
+  } else linksList(p, data, data.pairs.length);
   notesSection(p, r, data);
   footers(p, t(me ? "report.me.footer" : "report.pro.footer"));
   return p.pages;

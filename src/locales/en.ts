@@ -2472,6 +2472,7 @@ const en = {
   // 1.8.0 onboarding "doors" + Today hero + echo lines. Context copy is
   // keyed by library template id (see src/lib/doors.ts).
   report: {
+    calendars: "Calendars",
     title: "Report of my days",
     line: "A clear PDF to show a doctor, a therapist or a coach.",
     lineMe: "A beautiful PDF of your days, with your islands.",
