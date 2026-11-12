@@ -49,23 +49,38 @@ for (const lang of ["en", "ru"]) {
   const text = (await dlg.innerText()).replace(/\s+/g, " ");
   out[`${lang} links`] = text.slice(0, 900);
   await p.screenshot({ path: `${D}/${lang}-1-links.png` });
+  // same day: two tags and when, no order claimed (her pick, Nov 12 2026); the sentence opens on tap
+  const PAIR = lang === "en" ? ["Argument with partner", "Drained after work", "Mostly the same days"] : ["Ссора с партнёром", "Без сил после работы", "В основном одни и те же дни"];
+  const FALL = lang === "en" ? "The days you argue with your partner mostly fall on days you feel drained after work" : "Дни, когда вы с партнёром ссоритесь, в основном приходятся на дни, когда после работы не остаётся сил";
   const MOSTLY = lang === "en" ? "You mostly argue with your partner on days you feel drained after work" : "Вы с партнёром в основном ссоритесь в дни, когда после работы не остаётся сил";
-  ok(`${lang}: "mostly" on the store's pair`, text.includes(MOSTLY), text.slice(0, 500));
-  // words first: no numbers on the closed cards
-  const shownCounts = await p.evaluate(() => document.querySelectorAll("[role=dialog] [data-link-count], [role=dialog] [data-story-numbers]").length);
+  const cardOf = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return !!c; }, pair);
+  ok(`${lang}: the store's pair as two tags, "mostly the same days"`, await cardOf(PAIR), text.slice(0, 500));
+  ok(`${lang}: no order claimed on a closed card`, !text.includes(MOSTLY) && !text.includes(FALL), text.slice(0, 300));
+  // words first: no sentence, no numbers on the closed cards
+  const shownCounts = await p.evaluate(() => document.querySelectorAll("[role=dialog] [data-link-count], [role=dialog] [data-story-numbers], [role=dialog] [data-link-sentence]").length);
   ok(`${lang}: words first, no numbers until a tap`, shownCounts === 0, shownCounts);
-  // tap the "mostly" card: its count
-  await p.evaluate((m) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => x.textContent.includes(m)); c?.querySelector("button[aria-expanded]")?.click(); }, MOSTLY);
-  await p.waitForTimeout(500);
-  const count = await p.evaluate((m) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => x.textContent.includes(m)); return c?.querySelector("[data-link-count]")?.textContent.replace(/\s+/g, " ") ?? ""; }, MOSTLY);
-  ok(`${lang}: its count from the arguments, the other days in words`, lang === "en" ? count === "12 of 14 times · on other days almost never: 2 of 45" : count === "12 из 14 раз · в другие дни почти никогда: 2 из 45", count);
+  // tap the card: the sentence, its count, the question
+  const open = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); const b = c?.querySelector("button[aria-expanded]"); if (b?.getAttribute("aria-expanded") === "false") b.click(); }, pair);
+  const read = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return { s: c?.querySelector("[data-link-sentence]")?.textContent ?? "", count: c?.querySelector("[data-link-count]")?.textContent.replace(/\s+/g, " ") ?? "", ask: !!c?.querySelector("[data-order-ask]") }; }, pair);
+  await open(PAIR); await p.waitForTimeout(500);
+  const o1 = await read(PAIR);
+  ok(`${lang}: on tap, when the days fall, no order`, o1.s === FALL, o1);
+  ok(`${lang}: its count from the arguments, the other days in words`, lang === "en" ? o1.count === "12 of 14 times · on other days almost never: 2 of 45" : o1.count === "12 из 14 раз · в другие дни почти никогда: 2 из 45", o1.count);
+  ok(`${lang}: "What comes first?" under the sentence`, o1.ask, o1);
   await p.screenshot({ path: `${D}/${lang}-2-open.png` });
-  // the chain, two things, something else
+  // the person's answer orders it: drained first = the store's sentence
+  const pick = (pair, which) => p.evaluate(({ pair, which }) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.slice(0, 2).every((w) => x.textContent.includes(w))); const b = [...(c?.querySelectorAll("[data-order]") ?? [])].find((x) => x.textContent.toLowerCase().includes(which.toLowerCase())); b?.click(); return !!b; }, { pair, which });
+  await pick(PAIR, PAIR[1]); await p.waitForTimeout(700);
+  const o2 = await p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return c?.querySelector("[data-link-sentence]")?.textContent ?? ""; }, PAIR.slice(0, 2));
+  ok(`${lang}: "drained first" gives the store's sentence`, o2 === MOSTLY, o2);
+  // a chain needs an order: short night first, then drained first (already) → short night → drained → arguments
+  const SHORT = lang === "en" ? "Short night" : "Короткая ночь";
+  await open([SHORT, PAIR[1]]); await p.waitForTimeout(400); await pick([SHORT, PAIR[1]], SHORT); await p.waitForTimeout(800);
   const stories = await p.evaluate(() => [...document.querySelectorAll("[data-story]")].map((x) => ({ kind: x.getAttribute("data-story"), text: x.textContent.replace(/\s+/g, " ").trim() })));
   out[`${lang} stories`] = stories;
   const chain = stories.find((x) => x.kind === "chain"), two = stories.find((x) => x.kind === "two"), notits = stories.filter((x) => x.kind === "notit");
-  ok(`${lang}: a chain (short night → drained → arguments)`, !!chain && (lang === "en" ? /under 7 hours.*drained after work\. On those days .*argue/.test(chain.text) : /меньше 7 часов.*не остаётся сил\. В такие дни .*ссоритесь/.test(chain.text)), stories);
-  ok(`${lang}: two things next to the arguments`, !!two && (lang === "en" ? /most often argue with your partner on days .* or / .test(two.text) : /чаще всего ссоритесь в дни, когда .* или /.test(two.text)), stories);
+  ok(`${lang}: a chain once the person set the order (short night → drained → arguments)`, !!chain && (lang === "en" ? /under 7 hours.*drained after work\. On those days .*argue/.test(chain.text) : /меньше 7 часов.*не остаётся сил\. В такие дни .*ссоритесь/.test(chain.text)), stories);
+  ok(`${lang}: two things next to the arguments, as tags`, !!two && (lang === "en" ? /Argument with partner.*Most often the same days as.*(Drained after work|Short night)/.test(two.text) : /Ссора с партнёром.*Чаще всего в те же дни, что и.*(Без сил после работы|Короткая ночь)/.test(two.text)), stories);
   ok(`${lang}: "something else" for headache and alcohol`, notits.some((n) => (lang === "en" ? /Looks like it.s something else\. .*headache on days you don.t drink too/i : /Похоже, дело в другом\. .*голова и в дни, когда ты не пьёшь алкоголь/i).test(n.text)), stories);
   ok(`${lang}: at most 3 "something else" cards, one per question`, notits.length > 0 && notits.length <= 3, notits.length);
   // its numbers and what to watch open on tap

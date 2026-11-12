@@ -59,7 +59,8 @@ const M = 92, SPAN = PX.w - 2 * M, BOTTOM = PX.h - M - 50;
 const FONT = "'MeMap Sans', Manrope, system-ui, sans-serif";
 // the app's new look (src/index.css, html[data-ui="new"][data-theme="aurora-light"])
 const INK = "#3A3F4E", SOFT = "#6B7184", FAINT = "#b9bdca", LINE = "rgba(58,63,78,.12)";
-const HARD = "#e7798f", GOOD = "#6bc793", GOOD_INK = "#17452c", NEUTRAL = "#6272da", NEUTRAL_NO = "#c9cef3", NONE = "#e7e9ef";
+// red and green as in the app, her pick E (Nov 12 2026)
+const HARD = "#e16096", GOOD = "#42bd98", GOOD_INK = "#0e3b2f", NEUTRAL = "#6272da", NEUTRAL_NO = "#c9cef3", NONE = "#e7e9ef";
 
 const ru = () => !!i18n.language?.startsWith("ru");
 const locale = () => (ru() ? "ru-RU" : "en-GB");

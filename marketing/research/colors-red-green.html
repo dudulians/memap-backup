@@ -1,0 +1,87 @@
+<title>Красный и зелёный</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: one card per pair of colours, each showing the same app pieces (tags, a strip of days, a calendar week, the
+   "holds up" pill) on the app's light sheet, and a small night strip. The cards keep the app's look in both page themes. */
+:root {
+  --bg: #eef1f5; --fg: #2c303c; --muted: #646a7c; --accent: #3c9a91;
+  --sheet: #f4f8fb; --card: #ffffff; --ink: #3b3f4f; --soft: #6c7184; --dot: rgba(59, 63, 79, 0.12); --night: #1b2233;
+  --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+header { display: grid; gap: 10px; max-width: 72ch; }
+h1 { font-weight: 800; font-size: clamp(26px, 5vw, 34px); letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
+p { margin: 0; }
+.lead { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 20px; }
+.v { background: var(--sheet); color: var(--ink); border-radius: 26px; padding: 18px; display: grid; gap: 12px; box-shadow: 0 1px 2px rgba(16, 42, 56, .06), 0 16px 36px -26px rgba(16, 42, 56, .45); min-width: 0; }
+.head { display: flex; align-items: baseline; gap: 10px; }
+.head b { font-size: 26px; font-weight: 800; }
+.head span { font-weight: 700; }
+.head small { margin-left: auto; font-size: 12px; color: var(--soft); font-family: ui-monospace, Consolas, monospace; }
+.card { background: var(--card); border-radius: 20px; padding: 14px 16px; display: grid; gap: 10px; box-shadow: 0 1px 2px rgba(16, 42, 56, 0.05), 0 10px 24px -14px rgba(16, 42, 56, 0.18); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { border-radius: 12px; padding: 6px 11px; font-size: 15px; font-weight: 700; }
+.when { font-size: 13.5px; font-weight: 700; color: var(--soft); }
+.strip { display: grid; gap: 4px; }
+.strip small { font-size: 12.5px; font-weight: 600; color: var(--soft); }
+.dots { display: flex; justify-content: space-between; }
+.dots i { width: 13px; height: 13px; border-radius: 50%; background: var(--dot); }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal span { font-size: 10.5px; font-weight: 700; color: var(--soft); }
+.cal i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; justify-self: center; }
+.pill { justify-self: start; border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 600; }
+.night { background: var(--night); border-radius: 16px; padding: 10px 14px; display: flex; gap: 10px; align-items: center; color: #e6e9f2; font-size: 12.5px; font-weight: 700; }
+.night .dots { flex: 1; }
+.night .dots i { background: rgba(255, 255, 255, 0.12); }
+.why { font-size: 13.5px; color: var(--soft); font-weight: 600; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Красный и зелёный: варианты</h1>
+    <p class="lead">Одни и те же кусочки приложения в разных оттенках: метки связи, полоска дней, неделя календаря, плашка «Holds up» и полоска ночью. A — как сейчас. Выбери букву, можно смешать: красный из одного, зелёный из другого.</p>
+  </header>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+// red / green as HSL (what the app uses: --strong / --balanced); ink on the red = white when it is dark enough
+const V = [
+  ["A", "Как сейчас", [348, 70, 69], [146, 45, 60], "Розовый и мятный."],
+  ["B", "Мягче", [350, 75, 76], [140, 40, 68], "Пастель, спокойнее; красный меньше тревожит."],
+  ["C", "Глубже", [345, 62, 56], [150, 48, 44], "Насыщеннее, лучше читается на солнце и в печати."],
+  ["D", "Тёплые", [8, 78, 67], [100, 40, 56], "Коралл и листья, ближе к природе островов."],
+  ["E", "Ягода и мята", [335, 68, 63], [162, 48, 50], "Холоднее; зелёный ближе к бирюзе кнопок."],
+  ["F", "Пыльные", [352, 45, 66], [135, 24, 60], "Приглушённые, «взрослые»."],
+  ["G", "Для дальтоников", [345, 68, 50], [140, 45, 74], "Красный темнее, зелёный светлее: различаются по светлоте, не только по цвету."],
+];
+const hsl = ([h, s, l], a = 1) => `hsla(${h}, ${s}%, ${l}%, ${a})`;
+const ink = ([h, , l]) => (l <= 66 ? "#ffffff" : `hsl(${h}, 55%, 22%)`);
+const gInk = ([h]) => `hsl(${h}, 55%, 18%)`;
+const days = [0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0];
+const good = [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1];
+const week = [["14", 1], ["15", 1], ["16", 0], ["17", 1], ["18", 0], ["19", 0], ["20", 1]];
+document.getElementById("grid").innerHTML = V.map(([k, name, r, g, why]) => `
+  <div class="v">
+    <div class="head"><b>${k}</b><span>${name}</span><small>red ${r.join(" ")} · green ${g.join(" ")}</small></div>
+    <div class="card">
+      <div class="tags"><span class="tag" style="background:${hsl(r, 0.18)}">Argument with partner</span><span class="tag" style="background:${hsl(r, 0.18)}">Drained after work</span></div>
+      <span class="when">Mostly the same days</span>
+      <div class="tags"><span class="tag" style="background:${hsl(g, 0.26)}">Calm</span><span class="tag" style="background:${hsl(g, 0.26)}">30 min outside</span></div>
+    </div>
+    <div class="card">
+      <div class="strip"><small>Drained after work</small><div class="dots">${days.map((d) => `<i style="${d ? `background:${hsl(r)}` : ""}"></i>`).join("")}</div></div>
+      <div class="strip"><small>Calm</small><div class="dots">${good.map((d) => `<i style="${d ? `background:${hsl(g)}` : ""}"></i>`).join("")}</div></div>
+      <div class="cal">${["Mo","Tu","We","Th","Fr","Sa","Su"].map((w) => `<span>${w}</span>`).join("")}${week.map(([n, h]) => `<i style="background:${h ? hsl(r) : hsl(g)};color:${h ? ink(r) : gInk(g)}">${n}</i>`).join("")}</div>
+      <span class="pill" style="background:${hsl(g, 0.25)}">Holds up · 12 of 14</span>
+    </div>
+    <div class="night"><span>Night</span><div class="dots">${days.map((d, i) => `<i style="${d ? `background:${hsl([r[0], r[1], r[2] + 4])}` : good[i] ? `background:${hsl([g[0], g[1], g[2] - 2])}` : ""}"></i>`).join("")}</div></div>
+    <p class="why">${why}</p>
+  </div>`).join("");
+</script>

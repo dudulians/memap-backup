@@ -293,7 +293,8 @@ export type AnalyticsEvent =
   | "own_words_opened"
   | "own_words_saved"
   // a question added from "What else to watch" under "Looks like it's something else" (Nov 11 2026)
-  | "notit_watch_added";
+  | "notit_watch_added"
+  | "link_order_answered";
 
 /** "Where did you hear about MeMap?" (one tap on Today): kept and put on every later event. */
 export const setSource = (source: string) => {

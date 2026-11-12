@@ -28,7 +28,7 @@ export const trackerLookup = (trackers: Tracker[]): TrackerOf => {
   return (id) => m.get(id);
 };
 
-type Sides = Pick<Route, "first" | "second" | "firstYes" | "secondYes" | "nextDay" | "k" | "n"> & { mostly?: Route["mostly"] };
+type Sides = Pick<Route, "first" | "second" | "firstYes" | "secondYes" | "nextDay" | "k" | "n"> & { mostly?: Route["mostly"]; together?: boolean; other?: { k: number; n: number } };
 type Counts = Pick<Route, "k" | "n"> & { other?: { k: number; n: number }; mostly?: Route["mostly"] };
 
 /** The link as a person would say it, with how often ("usually", "often": oftenWord). The sides are the
@@ -47,10 +47,39 @@ export const linkHeadPlain = (t: TFunction, r: Sides, of: TrackerOf): string =>
  *  feel drained after work" / «Вы с партнёром в основном ссоритесь в дни, когда после работы не остаётся сил»;
  *  from 9 of 10: "…almost only on days…". Otherwise the plain sentence. */
 export const linkHead = (t: TFunction, r: Sides, of: TrackerOf): string => {
+  if (r.together && !r.nextDay) return linkFallText(t, r, of);
   if (!r.mostly) return linkHeadPlain(t, r, of);
   const cause = answerClause(t, of(r.first), r.firstYes, "cause");
   if (r.mostly === "almostOnly") return cap(t(r.nextDay ? "link.onlyNextDay" : "link.onlySameDay", { cause, result: answerClause(t, of(r.second), r.secondYes, "result") }));
   return cap(t(r.nextDay ? "link.mostlyNextDay" : "link.mostlySameDay", { cause, result: answerClause(t, of(r.second), r.secondYes, "result", t("link.advMostly")) }));
+};
+
+/** The same day with no order claimed (her pick, Nov 12 2026; linkOrder.ts): when the days fall, not what led to
+ *  what. "The days you argue with your partner mostly fall on days you feel drained after work" / «Дни, когда вы с
+ *  партнёром ссоритесь, в основном приходятся на дни, когда после работы не остаётся сил»; plain: "The days you sleep
+ *  under 7 hours usually fall on days you have a headache". Both sides as days ("cause" clauses). */
+export const linkFallText = (t: TFunction, r: Sides, of: TrackerOf): string => {
+  const a = answerClause(t, of(r.first), r.firstYes, "cause"), b = answerClause(t, of(r.second), r.secondYes, "cause");
+  if (r.mostly === "almostOnly") return cap(t("link.fallOnly", { a: b, b: a }));
+  if (r.mostly) return cap(t("link.fallMostly", { a: b, b: a }));
+  return cap(t("link.fallPlain", { a, b, adv: oftenWord(t, r.k, r.n) }));
+};
+
+/** The short line under a link's two tags: "Mostly the same days", "Usually the same days"; the next day: "Usually". */
+export const linkWhen = (t: TFunction, r: Sides): string => {
+  if (r.nextDay) return cap(oftenWord(t, r.k, r.n));
+  if (r.mostly === "almostOnly") return t("link.sameOnly");
+  if (r.mostly) return t("link.sameMostly");
+  const q = r.n ? r.k / r.n : 0;
+  return t(`link.same.${r.n > 0 && r.k === r.n ? "all" : q >= 0.9 ? 0 : q >= 0.7 ? 1 : q >= 0.5 ? 2 : 3}`);
+};
+
+/** The calm half in words (her note via the store work, Nov 12 2026: "в остальные дни ты чувствуешь себя отлично"):
+ *  "On other days almost never"; empty when the other days are not calm. */
+export const linkCalmLine = (t: TFunction, r: Counts): string => {
+  if (!r.other || r.other.n <= 0) return "";
+  const calm = calmOf(r.other.k, r.other.n);
+  return calm ? t("link.otherCalm", { word: t(`link.calm.${calm}`) }) : "";
 };
 
 /** The numbers a link counts: of the days with the cause, how many had it ("12 of 16"); a "mostly" link counts from
@@ -69,6 +98,9 @@ export const twoThingsText = (t: TFunction, ls: Sides[], of: TrackerOf): string 
   const causes = ls.map((l) => answerClause(t, of(l.first), l.firstYes, "cause"));
   const joined = causes.length > 1 ? `${causes.slice(0, -1).join(", ")} ${t("link.or")} ${causes[causes.length - 1]}` : causes[0];
   const l = ls[0];
+  // the same day with no order: when the days fall ("The days you argue… most often fall on days you feel drained
+  // after work or you sleep under 7 hours")
+  if (!l.nextDay && ls.some((x) => x.together)) return cap(t("link.twoFall", { causes: joined, result: answerClause(t, of(l.second), l.secondYes, "cause") }));
   return cap(t(l.nextDay ? "link.twoNextDay" : "link.twoSameDay", { causes: joined, result: answerClause(t, of(l.second), l.secondYes, "result", t("link.advMostOften")) }));
 };
 /** Its lines on tap: "Period day: 7 of 10 times". */

@@ -1,0 +1,132 @@
+<title>Календарь по теме</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: "now" (the real report pages) next to "after" (one topic calendar with what came on its days); notes in RU.
+   The report pages keep the report's own white paper look in both page themes, on purpose. */
+:root {
+  --bg: #eef1f5; --fg: #2c303c; --muted: #646a7c; --accent: #3c9a91;
+  --paper: #ffffff; --ink: #3a3f4e; --soft: #6b7184; --faint: #c3c7d2; --line: rgba(58, 63, 78, .12);
+  --hard: #e7798f; --good: #6bc793; --good-ink: #17452c; --none: #e7e9ef; --period: #6272da; --stress: #3a3f4e;
+  --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 30px; }
+header { display: grid; gap: 10px; max-width: 72ch; }
+h1 { font-weight: 800; font-size: clamp(26px, 5vw, 34px); letter-spacing: -0.02em; margin: 0; line-height: 1.15; text-wrap: balance; }
+p { margin: 0; }
+.lead { color: var(--muted); }
+.row { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 28px; align-items: start; }
+@media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+.col { display: grid; gap: 12px; min-width: 0; }
+.label { display: flex; gap: 10px; align-items: baseline; }
+.label b { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.label span { font-weight: 700; }
+.note { font-size: 14px; color: var(--muted); max-width: 70ch; }
+.before { width: 100%; border-radius: 10px; box-shadow: 0 1px 2px rgba(16, 42, 56, .08), 0 14px 32px -22px rgba(16, 42, 56, .5); }
+
+/* the report page */
+.page { background: var(--paper); color: var(--ink); border-radius: 10px; padding: 34px 36px 30px; display: grid; gap: 16px; box-shadow: 0 1px 2px rgba(16, 42, 56, .08), 0 14px 32px -22px rgba(16, 42, 56, .5); min-width: 0; }
+.page h2 { font-size: 25px; font-weight: 800; margin: 0; letter-spacing: -0.01em; }
+.page .sub { color: var(--soft); font-weight: 600; font-size: 14.5px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13.5px; font-weight: 600; color: var(--soft); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 13px; height: 13px; border-radius: 50%; display: inline-block; }
+.mk { display: inline-block; }
+.mk.p { width: 7px; height: 7px; border-radius: 50%; background: var(--period); }
+.mk.s { width: 0; height: 0; border-left: 4.5px solid transparent; border-right: 4.5px solid transparent; border-bottom: 8px solid var(--stress); }
+.months { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 560px) { .months { grid-template-columns: 1fr; } }
+.month h3 { font-size: 15px; font-weight: 800; margin: 0 0 6px; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px 2px; text-align: center; }
+.wd { font-size: 10.5px; font-weight: 700; color: var(--soft); padding-bottom: 2px; }
+.day { display: grid; justify-items: center; gap: 2px; min-height: 40px; }
+.dot { width: 25px; height: 25px; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; color: #fff; }
+.dot.h { background: var(--hard); } .dot.g { background: var(--good); color: var(--good-ink); } .dot.n { background: none; color: var(--faint); font-weight: 600; }
+.marks { display: flex; gap: 3px; align-items: center; height: 9px; }
+.came { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.came h4 { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); margin: 0; }
+.cr { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 15.5px; }
+.cr b { font-weight: 800; }
+.cr .n { font-weight: 700; color: var(--soft); font-variant-numeric: tabular-nums; }
+.else { font-size: 14.5px; color: var(--soft); font-weight: 600; }
+.notes { display: grid; gap: 8px; max-width: 78ch; }
+.notes ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Отчёт: один календарь на тему вместо трёх отдельных</h1>
+    <p class="lead">Демо «Мигрень и цикл», 60 дней, полный отчёт для врача. Слева настоящая страница отчёта сейчас, справа — как может быть.</p>
+  </header>
+
+  <section class="row">
+    <div class="col">
+      <div class="label"><b>Сейчас</b><span>Страница 2 из 4</span></div>
+      <img class="before" src="before-2.jpg" alt="The current report page: a headache calendar and a screens-before-bed calendar">
+      <p class="note">Три календаря выбираются по числу «трудных» дней. Здесь второй — «Screens before bed», хотя к головной боли он отношения не имеет. Месячные и стресс в календари не попали: месячные — нейтральный вопрос, стресса всего 9 дней. Что совпадает с головной болью, видно только из текста в конце.</p>
+    </div>
+
+    <div class="col">
+      <div class="label"><b>Стало</b><span>Календарь темы и что совпадало</span></div>
+      <div class="page">
+        <div><h2>Headache days</h2><p class="sub">Sep 14 – Nov 12, 2026 · 22 of 60 days</p></div>
+        <div class="legend">
+          <span><i class="sw" style="background: var(--hard)"></i>headache</span>
+          <span><i class="sw" style="background: var(--good)"></i>no headache</span>
+          <span><i class="mk p"></i>period day</span>
+          <span><i class="mk s"></i>stressful day</span>
+        </div>
+        <div class="months" id="months"></div>
+        <div class="came">
+          <h4>Came on headache days</h4>
+          <div class="cr"><i class="mk p" style="justify-self: center"></i><span><b>Period day</b> · a headache on 13 of 14 period days</span><span class="n">13 / 14</span></div>
+          <div class="cr"><i class="mk s" style="justify-self: center"></i><span><b>Stressful day</b> · a headache on 8 of 9 stressful days</span><span class="n">8 / 9</span></div>
+          <p class="else">Other days: a headache on 1 of 37</p>
+          <p class="else">Looks like it’s something else: a headache as often after 7+ hours of sleep as after a short night</p>
+        </div>
+      </div>
+      <p class="note">Отметки берутся из связей головной боли (то, что прошло проверку), не больше трёх. Вопросы без связи с темой своих календарей не получают; их дни остаются в разделе «дни точками».</p>
+    </div>
+  </section>
+
+  <section class="notes">
+    <h2 style="font-size: 20px; margin: 0">Как это работает в отчёте</h2>
+    <ul>
+      <li>Календарь получает каждая твоя тема (до трёх из онбординга). Если тем нет — самый трудный вопрос.</li>
+      <li>На днях темы — до трёх отметок: то, что с ней совпадает по связям. У каждой своя форма, а не цвет, чтобы читалось и в чёрно-белой печати.</li>
+      <li>Под календарём — «Came on headache days»: сколько раз из скольких, «Other days» и «Looks like it’s something else».</li>
+      <li>В окне отчёта у вопросов переключатель «calendar»: можно добавить календарь любому вопросу или убрать.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+// The demo days (marketing/research/report-mockup/days.json, from the app's own "Migraine & cycle" pack).
+const D = {
+  headache: "2026-09-14,2026-09-15,2026-09-16,2026-09-17,2026-09-18,2026-09-19,2026-09-27,2026-09-28,2026-10-04,2026-10-07,2026-10-12,2026-10-13,2026-10-15,2026-10-16,2026-10-21,2026-10-23,2026-10-29,2026-11-08,2026-11-09,2026-11-10,2026-11-11,2026-11-12",
+  period: "2026-09-14,2026-09-15,2026-09-16,2026-09-17,2026-09-18,2026-10-12,2026-10-13,2026-10-14,2026-10-15,2026-10-16,2026-11-09,2026-11-10,2026-11-11,2026-11-12",
+  stress: "2026-09-19,2026-09-27,2026-09-28,2026-10-04,2026-10-07,2026-10-20,2026-10-21,2026-10-23,2026-11-08",
+};
+const set = (k) => new Set(D[k].split(","));
+const H = set("headache"), P = set("period"), S = set("stress");
+const FIRST = "2026-09-14", LAST = "2026-11-12";
+const iso = (y, m, d) => `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const box = document.getElementById("months");
+for (const [y, m, name] of [[2026, 8, "September 2026"], [2026, 9, "October 2026"], [2026, 10, "November 2026"]]) {
+  const el = document.createElement("div"); el.className = "month";
+  let html = `<h3>${name}</h3><div class="grid">` + ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((w) => `<span class="wd">${w}</span>`).join("");
+  const start = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate();
+  for (let i = 0; i < start; i++) html += `<span></span>`;
+  for (let d = 1; d <= n; d++) {
+    const k = iso(y, m, d), inP = k >= FIRST && k <= LAST;
+    const cls = !inP ? "n" : H.has(k) ? "h" : "g";
+    const marks = inP ? `${P.has(k) ? '<i class="mk p"></i>' : ""}${S.has(k) ? '<i class="mk s"></i>' : ""}` : "";
+    html += `<span class="day"><span class="dot ${cls}">${d}</span><span class="marks">${marks}</span></span>`;
+  }
+  el.innerHTML = html + "</div>"; box.appendChild(el);
+}
+</script>

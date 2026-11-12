@@ -90,6 +90,8 @@ const newPage = async (opts = {}) => {
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "findings", back: true } })));
   await p.waitForTimeout(2200);
   const dlg = p.locator("[role=dialog]").last();
+  // the sentences open on tap since Nov 12 2026 (closed cards are two tags): open them all to read
+  await p.evaluate(() => document.querySelectorAll("[data-link-card] button[aria-expanded=false]").forEach((x) => x.click())); await p.waitForTimeout(500);
   let text = (await dlg.innerText()).replace(/\s+/g, " ");
   ok("the own-question link reads in the plain safe form", /you answer “yes” to “Did my husband annoy me or not”/.test(text), text.slice(0, 400));
   ok("a fixed phrase: screens 'outside work'", !/screen/i.test(text) || /outside work/.test(text), text.slice(0, 600));

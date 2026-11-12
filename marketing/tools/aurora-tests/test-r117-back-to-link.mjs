@@ -52,7 +52,7 @@ for (const lang of ["en", "ru"]) {
   const openHeads = (await openCard.locator("button[aria-expanded]").allInnerTexts()).map((x) => x.replace(/\s+/g, " ").slice(0, 80));
   out[`${lang}.openAfterBack`] = openHeads;
   ok(`${lang}.back: the same link is open again`, openHeads.includes(head2), { head2, openHeads });
-  const inView = await p.evaluate((h) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => x.textContent.replace(/\s+/g, " ").includes(h.slice(0, 30))); if (!c) return false; const r = c.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; }, head2);
+  const inView = await p.evaluate((h) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => x.innerText.replace(/\s+/g, " ").includes(h.slice(0, 30))); if (!c) return false; const r = c.getBoundingClientRect(); return r.top < innerHeight && r.bottom > 0; }, head2);
   ok(`${lang}.back: that link is in view`, inView);
   // closing the chart (not the button) goes back too
   await p.locator("[data-link-card]").nth(1).getByRole("button", { name: W.see }).click(); await p.waitForTimeout(1600);

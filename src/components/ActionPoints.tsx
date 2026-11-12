@@ -461,7 +461,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                 <div className="mt-4 border-t border-foreground/[0.07] pt-3.5">
                   <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("rules.comesWith")}</p>
                   {linksInto(tr).map((l) => {
-                    const r = { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, other: l.other };
+                    const r = { first: l.first.id, second: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, other: l.other, mostly: l.mostly, together: l.together };
                     return (
                       <div key={l.first.id} className="mt-1.5">
                         <p className="text-[15px] font-semibold leading-snug">{linkHead(t, r, of)}</p>

@@ -28,6 +28,8 @@ export type Mostly = "mostly" | "almostOnly";
 type LinkLike = {
   first: string; second: string; firstYes: boolean; secondYes: boolean; nextDay: boolean; k: number; n: number;
   other?: { k: number; n: number }; secondHard?: boolean | null;
+  /** the same day with no order claimed: never a step in a chain (a chain tells an order) */
+  together?: boolean;
 };
 
 /** The second side is what the sentence starts from only when that is clear: the next day (time says it), her own
@@ -147,7 +149,7 @@ export const notItFindings = (trackers: Tracker[], entries: TrackerEntry[], offe
  *  after work", "drained after work → arguments". The best one (in the list's own order). */
 export const chainOf = <T extends LinkLike>(links: T[]): [T, T] | null => {
   for (const l1 of links) for (const l2 of links) {
-    if (l1 === l2) continue;
+    if (l1 === l2 || l1.together || l2.together) continue;
     if (l1.second === l2.first && l1.secondYes === l2.firstYes && l1.first !== l2.second) return [l1, l2];
   }
   return null;

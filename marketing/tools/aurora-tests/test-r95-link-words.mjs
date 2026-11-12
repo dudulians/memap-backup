@@ -15,7 +15,7 @@ const errs = [], out = {}, fails = [];
 const ok = (name, cond, info = "") => { out[name] = !!cond; if (!cond) fails.push(`${name} ${info}`.trim()); };
 // the short headlines that are gone, and the old sentence with its count glued on
 const SHORT = /→|come together|бывают вместе| — and |times\.|раз\./;
-const SAY = { en: /The day after |On days you /, ru: /Если ты |В дни, когда / };
+const SAY = { en: /The day after |On days you |The days you /, ru: /Если ты |В дни, когда |Дни, когда / };
 const FORCED = {
   en: /The day after you agree to something you don't really want, you [a-z ]*have a headache (\d+ of \d+ times|Every time — \d+ of \d+) · on other days \d+ of \d+/,
   ru: /Если ты соглашаешься на то, чего не хочешь, на следующий день [а-яё ]*болит голова (\d+ из \d+ раз(а)?|Каждый раз — \d+ из \d+) · в другие дни \d+ из \d+/,
@@ -60,7 +60,8 @@ for (const lang of ["en", "ru"]) {
   const links = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
   out[`${lang}.links`] = links.slice(0, 900);
   ok(`${lang}.links: forced yes, the next day, as a sentence`, FORCED[lang].test(links), links.slice(0, 300));
-  ok(`${lang}.links: same day, every time`, lang === "en" ? /On days you sleep under 7 hours, you always have a headache Every time — (\d+) of \1/.test(links) : /В дни, когда ты спишь меньше 7 часов, всегда болит голова Каждый раз — (\d+) из \1/.test(links), links.slice(0, 400));
+  // the same day claims no order since Nov 12 2026 (her pick): when the days fall
+  ok(`${lang}.links: same day, every time`, lang === "en" ? /The days you sleep under 7 hours always fall on days you have a headache (What comes first[^·]*? )?Every time — (\d+) of \2/.test(links) : /Дни, когда ты спишь меньше 7 часов, всегда приходятся на дни, когда болит голова (Что, по-твоему[^·]*? )?Каждый раз — (\d+) из \2/.test(links), links.slice(0, 600));
   ok(`${lang}.links: no short headline`, !SHORT.test(links), links.slice(0, 300));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   // a link's own sheet on the map (every time: the big count)
@@ -125,7 +126,7 @@ for (const lang of ["en", "ru"]) {
   writeFileSync(`${D}/${lang}-report-text.txt`, report.text);
   writeFileSync(`${D}/${lang}-report-last.jpg`, Buffer.from(report.page.split(",")[1], "base64"));
   const lines = report.text.split("\n");
-  const linkLines = lines.filter((l) => /^(The day after|On days you|Если ты|В дни, когда)/.test(l));
+  const linkLines = lines.filter((l) => /^(The day after|On days you|The days you|Если ты|В дни, когда|Дни, когда)/.test(l));
   out[`${lang}.report links`] = linkLines;
   out[`${lang}.report counts`] = lines.filter((l) => /times · |каждый раз|every time|раз(а)? · /.test(l));
   ok(`${lang}.report: sentence lines`, linkLines.length > 0, lines.slice(0, 60).join(" | "));

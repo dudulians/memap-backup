@@ -11,7 +11,7 @@ import { isNeutralQuestion, linkOf, linkWorthShowing, LINKS_TOP, rankLinks } fro
 
 /** days: the week's answers in day order (true/false, null = no answer); hardWhen: which answer is hard */
 export interface ChestStat { trackerId: string; door: boolean; k: number; n: number; days: (boolean | null)[]; hardWhen: "yes" | "no" | null }
-export interface ChestInsight { a: string; b: string; nextDay: boolean; k: number; n: number; otherK: number; otherN: number; firstYes?: boolean; secondYes?: boolean }
+export interface ChestInsight { a: string; b: string; nextDay: boolean; k: number; n: number; otherK: number; otherN: number; firstYes?: boolean; secondYes?: boolean; together?: boolean }
 export interface ChestContent { main: ChestStat | null; rows: ChestStat[]; fact: ContextFact | null; insight: ChestInsight | null }
 
 /** The strongest link in her answers so far, read like the map's links
@@ -22,7 +22,7 @@ const strongestLink = (trackers: Tracker[], entries: TrackerEntry[]): ChestInsig
   const c = rankLinks(computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing))[0];
   if (!c) return null;
   const l = linkOf(c);
-  return { a: l.first.id, b: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, otherK: l.other.k, otherN: l.other.n };
+  return { a: l.first.id, b: l.second.id, firstYes: l.firstYes, secondYes: l.secondYes, nextDay: l.nextDay, k: l.k, n: l.n, otherK: l.other.k, otherN: l.other.n, together: l.together };
 };
 
 export const chestContent = (trackers: Tracker[], entries: TrackerEntry[], dates: string[]): ChestContent => {

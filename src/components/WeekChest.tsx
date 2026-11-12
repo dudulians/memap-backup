@@ -154,7 +154,7 @@ export const WeekChest = ({
     ];
     const name = (id: string) => localizeTrackerTitle(trackers.find((x) => x.id === id)?.title ?? "");
     // the strongest link as a headline, its count under it (her note, Nov 9 2026: no "When you…" sentences)
-    const route = c.insight ? { first: c.insight.a, second: c.insight.b, firstYes: c.insight.firstYes ?? true, secondYes: c.insight.secondYes ?? true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n, other: { k: c.insight.otherK, n: c.insight.otherN } } : null;
+    const route = c.insight ? { first: c.insight.a, second: c.insight.b, firstYes: c.insight.firstYes ?? true, secondYes: c.insight.secondYes ?? true, nextDay: c.insight.nextDay, k: c.insight.k, n: c.insight.n, other: { k: c.insight.otherK, n: c.insight.otherN }, together: c.insight.together } : null;
     const insight = route ? linkHead(t, route, trackerLookup(trackers)) : undefined;
     const next: ChestRecord = {
       openedAt: isoLocal(new Date()),

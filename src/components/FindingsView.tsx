@@ -7,14 +7,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
-import { isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, LINKS_TOP, rankLinks, type Route } from "@/lib/islands";
-import { ChevronDown } from "lucide-react";
-import { chainText, linkCount, linkHead, linkNumbers, trackerLookup, twoThingsLine, twoThingsText } from "@/lib/linkText";
+import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
+import { Check, ChevronDown, Link2 } from "lucide-react";
+import { chainText, linkCalmLine, linkCount, linkHead, linkNumbers, linkWhen, trackerLookup, twoThingsLine, twoThingsText, type TrackerOf } from "@/lib/linkText";
+import { getLinkOrder, LINK_ORDER_EVENT, setLinkOrder } from "@/lib/linkOrder";
+import { art, artOf } from "@/lib/globeArt";
+import { islandDays } from "@/lib/growth";
+import { RELATED_QUESTIONS } from "@/lib/relatedQuestions";
+import { haptics } from "@/lib/haptics";
 import { answerClause } from "@/lib/answerPhrases";
 import { chainOf, notItFindings, pairOf, twoThingsOf, type NotIt } from "@/lib/findingForms";
 import { ensureTemplates, findTemplate } from "@/lib/doors";
 import { templateQuestion } from "@/lib/cardText";
-import { answerPhrase, cap } from "@/lib/answerPhrases";
+import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
 import { markCorrelationSeen } from "@/lib/appRating";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -68,7 +73,13 @@ export const FindingsView = ({
   }, [trackers, entries, focusIds]);
   // the new kinds of findings, on the whole list only (her pick, Nov 11 2026; findingForms.ts): a chain and "two
   // things next to it" on top, "looks like it's something else" at the end
-  const routes = useMemo(() => findings.map(routeOf), [findings]);
+  // an answer to "What comes first?" re-tells the links in the person's order (linkOrder.ts)
+  const [orderV, setOrderV] = useState(0);
+  useEffect(() => { const on = () => setOrderV((v) => v + 1); window.addEventListener(LINK_ORDER_EVENT, on); return () => window.removeEventListener(LINK_ORDER_EVENT, on); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const routes = useMemo(() => findings.map(routeOf), [findings, orderV]);
+  const isleDays = useMemo(() => Object.fromEntries(islandDays(trackers, entries)) as Record<string, number>, [trackers, entries]);
+  const tracked = useMemo(() => new Set(trackers.filter((x) => !x.archived).map((x) => templateIdOf(x)).filter((x): x is string => !!x)), [trackers]);
   const chain = useMemo(() => (focusIds ? null : chainOf(routes)), [routes, focusIds]);
   const twos = useMemo(() => (focusIds ? [] : twoThingsOf(routes)), [routes, focusIds]);
   const notIt = useMemo(() => (focusIds ? [] : notItFindings(trackers, entries, (id) => { const f = findTemplate(id); return !!f && !f.template.quiet && !f.template.sensitive && !f.template.askOnly; }, pairs)), [trackers, entries, pairs, focusIds]);
@@ -84,7 +95,6 @@ export const FindingsView = ({
   }, [findings.length]);
 
   const of = trackerLookup(trackers);
-  const sentence = (c: CorrelationResult) => linkHead(t, routeOf(c), of);
 
   if (findings.length === 0) {
     // answered evenings, the same count as the push and the week-2 chip (persona walk, Nov 9 2026)
@@ -134,13 +144,18 @@ export const FindingsView = ({
 
   // eight links, the rest under "More links" (every link worth showing is kept, her topics first)
   const SHOWN = 8;
+  // the strongest one first and large, with its islands (the store's screen 5, her yes Nov 12 2026); then a chain and
+  // "two things", then the rest as two tags each
+  const shown = allShown ? findings : findings.slice(0, SHOWN);
+  const card = (c: CorrelationResult, hero: boolean) => (
+    <LinkCard key={`${c.trackerA.id}-${c.trackerB.id}`} c={c} hero={hero} of={of} daysWith={daysWith} isleDays={isleDays} tracked={tracked} onSeeDays={onSeeDays} />
+  );
   return (
     <div className="space-y-2.5 animate-fade-in">
+      {shown.slice(0, 1).map((c) => card(c, true))}
       {chain && <StoryCard kind="chain" text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />}
-      {twos.map((g) => <StoryCard key={`two-${g[0].second}-${g[0].secondYes}`} kind="two" text={twoThingsText(t, g, of)} details={g.map((l) => twoThingsLine(t, l, of))} />)}
-      {(allShown ? findings : findings.slice(0, SHOWN)).map((c, i) => (
-        <LinkCard key={`${c.trackerA.id}-${c.trackerB.id}`} c={c} first={i === 0} sentence={sentence(c)} of={of} daysWith={daysWith} onSeeDays={onSeeDays} />
-      ))}
+      {twos.map((g) => <TwoCard key={`two-${g[0].second}-${g[0].secondYes}`} g={g} of={of} />)}
+      {shown.slice(1).map((c) => card(c, false))}
       {!allShown && findings.length > SHOWN && (
         <button type="button" data-more-links onClick={() => setAllShown(true)} className="w-full rounded-[18px] py-3 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
           {t("patterns.findAlso")} ({findings.length - SHOWN})
@@ -202,33 +217,199 @@ const NotItCard = ({ x }: { x: NotIt }) => {
 let reopen: string | null = null;
 export const reopenLink = (ids: string[]) => { reopen = ids.join("|"); };
 
-/** One link: its sentence and the other days; a tap opens its last 14 days as dots (her note, Nov 8
- *  2026: "есть «ещё», там не клацается"). The strongest one is open from the start. */
-const LinkCard = ({ c, first, sentence, of, daysWith, onSeeDays }: {
-  c: CorrelationResult; first: boolean; sentence: string; of: ReturnType<typeof trackerLookup>;
-  daysWith: (id: string, yes: boolean) => (boolean | undefined)[]; onSeeDays: () => void;
+/** A tag: one answer in its own short words, tinted by what it means (hard rose, good green, neutral indigo). */
+const tintOf = (tr: Tracker | undefined, v: boolean) =>
+  !tr || isNeutralQuestion(tr) || isTestQuestion(tr) ? "hsl(var(--data-a) / 0.16)" : isHardAnswer(tr, v) ? "hsl(var(--strong) / 0.16)" : "hsl(var(--balanced) / 0.24)";
+const Tag = ({ tr, yes, big }: { tr: Tracker | undefined; yes: boolean; big?: boolean }) => {
+  const { t } = useTranslation();
+  return (
+    <span data-tag className={cn("inline-block rounded-[12px] font-bold leading-tight text-foreground", big ? "px-2.5 py-1.5 text-[15.5px]" : "px-[11px] py-1.5 text-[16px]")} style={{ background: tintOf(tr, yes) }}>
+      {cap(answerPhrase(t, tr, yes))}
+    </span>
+  );
+};
+/** The two tags of a link; the next day keeps its order ("Coffee after 2 pm · next day · Short night"). */
+const Tags = ({ r, of }: { r: Route; of: TrackerOf }) => {
+  const { t } = useTranslation();
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <Tag tr={of(r.first)} yes={r.firstYes} />
+      {r.nextDay && <span className="text-[14px] font-bold text-muted-foreground">{t("link.nextDayTag")}</span>}
+      <Tag tr={of(r.second)} yes={r.secondYes} />
+    </span>
+  );
+};
+/** An island as on the globe, at its stage (day and night pictures). */
+const IslePic = ({ id, days }: { id: IslandId; days: number }) => {
+  const name = artOf(id, days);
+  return (
+    <span aria-hidden="true" className="block w-[104px]">
+      <img className="art-day block w-full" src={art(name, false)} alt="" />
+      <img className="art-night block w-full" src={art(name, true)} alt="" />
+    </span>
+  );
+};
+/** The strongest link: its two islands with the route and the link sign between, each answer under its island (the
+ *  store's screen 5; the App Store session's note 1, her yes Nov 12 2026). One island when both live on it. */
+const Isles = ({ r, of, isleDays }: { r: Route; of: TrackerOf; isleDays: Record<string, number> }) => {
+  const { t } = useTranslation();
+  const a = of(r.first), b = of(r.second);
+  if (!a || !b) return <Tags r={r} of={of} />;
+  const ia = islandOf(a), ib = islandOf(b);
+  if (ia === ib) return (
+    <span className="flex flex-col items-center gap-2 pt-1">
+      <IslePic id={ia} days={isleDays[ia] ?? 0} />
+      <Tags r={r} of={of} />
+    </span>
+  );
+  return (
+    <span className="-mx-2 grid grid-cols-[1fr_auto_1fr] items-end gap-0.5 pt-1">
+      <span className="flex min-w-0 flex-col items-center gap-2 text-center"><IslePic id={ia} days={isleDays[ia] ?? 0} /><Tag tr={a} yes={r.firstYes} big /></span>
+      <span className="mb-12 flex flex-col items-center text-[hsl(var(--coin-teal))]" aria-hidden="true">
+        <span className="flex items-center gap-1"><span className="w-2 border-t-2 border-dotted border-current opacity-60" /><span className="grid h-8 w-8 place-items-center rounded-full bg-white shadow-[0_2px_8px_rgba(16,42,56,0.16)]"><Link2 className="h-4 w-4" strokeWidth={2.4} /></span><span className="w-2 border-t-2 border-dotted border-current opacity-60" /></span>
+        {r.nextDay && <span className="mt-1 text-[12px] font-bold text-muted-foreground">{t("link.nextDayTag")}</span>}
+      </span>
+      <span className="flex min-w-0 flex-col items-center gap-2 text-center"><IslePic id={ib} days={isleDays[ib] ?? 0} /><Tag tr={b} yes={r.secondYes} big /></span>
+    </span>
+  );
+};
+
+/** More likely causes of both, not asked yet (for "Not sure"): first those both questions' lists name. */
+const watchFor = (a: Tracker, b: Tracker, tracked: Set<string>): string[] => {
+  const ta = templateIdOf(a), tb = templateIdOf(b);
+  const la = (ta && RELATED_QUESTIONS[ta]) || [], lb = (tb && RELATED_QUESTIONS[tb]) || [];
+  const ok = (id: string) => { if (tracked.has(id) || id === ta || id === tb) return false; const f = findTemplate(id); return !!f && !f.template.quiet && !f.template.sensitive && !f.template.askOnly; };
+  const both = la.filter((id) => lb.includes(id) && ok(id));
+  return [...new Set([...both, ...la.filter(ok), ...lb.filter(ok)])].slice(0, 2);
+};
+/** "What comes first, do you think?" (her idea, Nov 12 2026): the person's answer orders the link (linkOrder.ts);
+ *  "Not sure" offers what else may bring both. */
+const OrderAsk = ({ r, of, tracked }: { r: Route; of: TrackerOf; tracked: Set<string> }) => {
+  const { t } = useTranslation();
+  const a = of(r.first), b = of(r.second);
+  const [chosen, setChosen] = useState(() => (a && b ? getLinkOrder(a.id, b.id) : null));
+  const [editing, setEditing] = useState(false);
+  if (!a || !b) return null;
+  const pick = (v: string, choice: "first" | "second" | "unsure") => { haptics.tap(); setChosen(v); setEditing(false); setLinkOrder(a.id, b.id, v); track("link_order_answered", { choice }); };
+  const firstOf = (id: string) => (id === a.id ? answerPhrase(t, a, r.firstYes) : answerPhrase(t, b, r.secondYes));
+  // the app's picked row (one look kit): a teal ring and a tick, never a tinted ground (her note, Nov 12 2026: the
+  // first version, small grey chips under the dots, "я вообще не увидела этот вопрос")
+  const row = (on: boolean) => cn("flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-[16px] outline-none active:scale-[0.99]", on ? "surface pick-on font-bold" : "bg-foreground/[0.05] font-semibold");
+  const tick = (on: boolean) => <span aria-hidden="true" className={cn("tick", on && "is-on")}>{on && <Check className="h-4 w-4" strokeWidth={3} />}</span>;
+  const watch = chosen === "unsure" ? watchFor(a, b, tracked) : [];
+  const watchList = watch.length > 0 && (
+    <div className="mt-3">
+      <p className="text-[14px] font-bold">{t("link.orderWatch")}</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {watch.map((id) => { const f = findTemplate(id); return f ? (
+          <button key={id} type="button" data-watch={id} onClick={async () => { track("notit_watch_added"); await ensureTemplates([id]); }}
+            className="rounded-full bg-[hsl(var(--coin-teal)/0.12)] px-3 py-1.5 text-[14px] font-bold text-foreground">+ {templateQuestion(f.template)}</button>
+        ) : null; })}
+      </div>
+    </div>
+  );
+  // answered: one picked row says what was chosen and what it did; "Change" opens the three rows again
+  if (chosen && !editing) return (
+    <div data-order-ask data-order-done className="mt-3 mb-1">
+      <div className="surface pick-on flex min-h-12 items-center gap-3 rounded-2xl px-4 py-2.5">
+        <span aria-hidden="true" className="tick is-on"><Check className="h-4 w-4" strokeWidth={3} /></span>
+        <span data-order-mine className="min-w-0 flex-1 text-[16px] font-bold leading-snug">{chosen === "unsure" ? t("link.orderMineUnsure") : t("link.orderMine", { what: firstOf(chosen) })}</span>
+        <button type="button" data-order-change onClick={() => { haptics.tap(); setEditing(true); }} className="shrink-0 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("link.orderChange")}</button>
+      </div>
+      {chosen !== "unsure" && <p className="mt-1.5 text-[14px] font-semibold text-muted-foreground">{t("link.orderEffect")}</p>}
+      {watchList}
+    </div>
+  );
+  return (
+    <div data-order-ask className="mt-4 mb-1">
+      <p className="text-[19px] font-extrabold leading-snug tracking-tight">{t("link.orderAsk")}</p>
+      <div className="mt-2.5 space-y-2">
+        <button type="button" data-order="first" aria-pressed={chosen === a.id} onClick={() => pick(a.id, "first")} className={row(chosen === a.id)}><span className="min-w-0 flex-1">{cap(t("link.orderFirst", { what: answerPhrase(t, a, r.firstYes) }))}</span>{tick(chosen === a.id)}</button>
+        <button type="button" data-order="second" aria-pressed={chosen === b.id} onClick={() => pick(b.id, "second")} className={row(chosen === b.id)}><span className="min-w-0 flex-1">{cap(t("link.orderFirst", { what: answerPhrase(t, b, r.secondYes) }))}</span>{tick(chosen === b.id)}</button>
+        <button type="button" data-order="unsure" aria-pressed={chosen === "unsure"} onClick={() => pick("unsure", "unsure")} className={row(chosen === "unsure")}><span className="min-w-0 flex-1">{t("link.orderUnsure")}</span>{tick(chosen === "unsure")}</button>
+      </div>
+    </div>
+  );
+};
+
+/** "Two things next to it" as tags: the answer, "Most often the same days as", the things (her note, Nov 12 2026:
+ *  "сплошняком много текста"); the sentence and each one's numbers open on tap. */
+const TwoCard = ({ g, of }: { g: Route[]; of: TrackerOf }) => {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const l = g[0];
+  return (
+    <div data-story="two" className="surface rounded-[22px]">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-start gap-2 px-[18px] pb-3.5 pt-4 text-left">
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap gap-1.5"><Tag tr={of(l.second)} yes={l.secondYes} /></span>
+          <span className="mt-2 block text-[14px] font-bold text-muted-foreground">{t(l.nextDay ? "link.twoTagsNext" : "link.twoTagsSame")}</span>
+          <span className="mt-2 flex flex-wrap gap-1.5">{g.map((x) => <Tag key={x.first} tr={of(x.first)} yes={x.firstYes} />)}</span>
+        </span>
+        <ChevronDown className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} strokeWidth={2.4} />
+      </button>
+      {open && (
+        <div data-story-numbers className="space-y-1 px-[18px] pb-4 animate-fade-in">
+          <p data-link-sentence className="pb-1 text-[16px] font-semibold leading-snug text-foreground">{twoThingsText(t, g, of)}</p>
+          {g.map((x) => <p key={x.first} className="text-[15px] font-semibold text-muted-foreground">{twoThingsLine(t, x, of)}</p>)}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** One link: two tags and when ("Mostly the same days"); the strongest one large with its islands and the calm
+ *  other days in words. A tap opens the sentence, its last 14 days as dots, the numbers and, on the same day, "What
+ *  comes first?" (her picks, Nov 12 2026: «пока плохо выглядит… сплошняком много текста», «Вариант 2 красиво… можно
+ *  провалиться и в точки, и в это объясняющее предложение»). */
+const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
+  c: CorrelationResult; hero: boolean; of: TrackerOf;
+  daysWith: (id: string, yes: boolean) => (boolean | undefined)[]; isleDays: Record<string, number>; tracked: Set<string>; onSeeDays: () => void;
 }) => {
   const { t } = useTranslation();
   const r = routeOf(c);
   const again = useRef(reopen === [r.first, r.second].join("|"));
-  // words first: its numbers and days open on tap (her note, Nov 11 2026)
+  // words first: its sentence, numbers and days open on tap (her note, Nov 11 2026)
   const [open, setOpen] = useState(again.current);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!again.current) return; reopen = null; box.current?.scrollIntoView({ block: "center" }); }, []);
   const solid = c.stage === "emerging" || c.stage === "stable";
   const a = of(r.first), b = of(r.second);
+  const calm = hero ? linkCalmLine(t, r) : "";
+  // the same day in the person's own order (they answered "What comes first?"): said on the closed card too
+  const mine = !r.nextDay && !r.together && a ? t("link.orderMine", { what: answerPhrase(t, a, r.firstYes) }) : "";
+  const sentence = linkHead(t, r, of);
+  const said = useRef(sentence);
+  const [lit, setLit] = useState(false);
+  useEffect(() => {
+    if (said.current === sentence) return;
+    said.current = sentence; setLit(true);
+    const id = window.setTimeout(() => setLit(false), 1600);
+    return () => window.clearTimeout(id);
+  }, [sentence]);
   return (
-    <div ref={box} data-link-card className="surface rounded-[22px]">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-start gap-2 px-[18px] pb-3 pt-4 text-left">
+    <div ref={box} data-link-card data-together={r.together ? "1" : undefined} className="surface rounded-[22px]">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-start gap-2 px-[18px] pb-3.5 pt-4 text-left">
         <span className="min-w-0 flex-1">
-          {first && <span className="mb-1.5 block text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{t("patterns.findStrongest")}</span>}
-          <span className={cn("block font-bold leading-snug tracking-tight", first ? "text-[21px]" : "text-[17px]")}>{sentence}</span>
+          {hero && <span className="mb-2 block text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{t("patterns.findStrongest")}</span>}
+          {hero ? <Isles r={r} of={of} isleDays={isleDays} /> : <Tags r={r} of={of} />}
+          <span data-link-when className={cn("block font-bold", hero ? "mt-3 text-[21px] leading-tight tracking-tight" : "mt-2 text-[14px] text-muted-foreground")}>{linkWhen(t, r)}</span>
+          {mine && <span data-link-mine className="mt-1 block text-[13.5px] font-bold text-[hsl(var(--coin-teal))]">{mine}</span>}
+          {calm && (
+            <span data-link-calm className="mt-1.5 flex items-center gap-2 text-[16px] font-bold text-muted-foreground">
+              <img src={mapPic("sun")} alt="" aria-hidden="true" className="h-6 w-6" />{calm}
+            </span>
+          )}
         </span>
         <ChevronDown className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} strokeWidth={2.4} />
       </button>
       {open && (
         <div className="px-[18px] pb-4 animate-fade-in">
-          <p data-link-count className="mb-3 text-[15px] font-semibold text-muted-foreground">{linkCount(t, r)}</p>
+          <p data-link-sentence className={cn("-mx-1.5 mb-1.5 rounded-lg px-1.5 py-0.5 text-[16px] font-semibold leading-snug transition-colors duration-700", lit && "bg-[hsl(var(--coin-teal)/0.16)]")}>{sentence}</p>
+          {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026), right under
+              the sentence it changes */}
+          {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} />}
+          <p data-link-count className="mb-3 mt-3 text-[15px] font-semibold text-muted-foreground">{linkCount(t, r)}</p>
           <div className="space-y-3">
             <Strip label={cap(answerPhrase(t, a, r.firstYes))} days={daysWith(r.first, r.firstYes)} color={toneOf(a, r.firstYes)} />
             <Strip label={cap(answerPhrase(t, b, r.secondYes))} days={daysWith(r.second, r.secondYes)} color={toneOf(b, r.secondYes)} />

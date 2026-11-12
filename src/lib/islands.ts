@@ -4,6 +4,7 @@
 // an island = how often its "hard" answer came this week. Pictures are her
 // map set (marketing/brand/map-assets), shipped as small webp files.
 import { QUIET_NO } from "./bodyTemplates";
+import { getLinkOrder } from "@/lib/linkOrder";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import type { TFunction } from "i18next";
 import { computeCorrelations, correlationFrame, isHighlySignificant, trackerPolarity, type CorrelationResult } from "@/lib/correlations";
@@ -162,7 +163,9 @@ export interface Island {
  *  tired" read as "walk → tired"); secondYes false: the second did NOT come.
  *  other: the second (that same answer) on the rest of the days. */
 export interface Route { a: IslandId; b: IslandId; k: number; n: number; first: string; second: string; nextDay: boolean; firstYes: boolean; secondYes: boolean; other: { k: number; n: number }; /** the counted answer is a hard one (red), a good one (green), or neither */ secondHard: boolean | null;
-  /** "mostly" / "almost only" on such days (findingForms.ts, her pick Nov 11 2026), or the plain form */ mostly?: Mostly | null }
+  /** "mostly" / "almost only" on such days (findingForms.ts, her pick Nov 11 2026), or the plain form */ mostly?: Mostly | null;
+  /** the same day, and the person has not said which comes first: no order is claimed ("Mostly the same days";
+   *  her pick, Nov 12 2026, linkOrder.ts) */ together?: boolean }
 
 /** A pattern as she reads it. Together (phi > 0): "with A → B". Apart (phi < 0):
  *  the second is told by its hard answer, as a hard day is (WORLD-BIBLE): "without
@@ -191,7 +194,13 @@ export const linkOf = (c: CorrelationResult) => {
   // neither her topic: the app's list of what may lead to what puts the likely cause first ("drained after work"
   // before "arguments"; Nov 11 2026, for "You mostly argue… on days you feel drained after work"); else a fixed order
   const graph = causeFirst(c.trackerA, c.trackerB);
-  const flip = c.lag === -1 || (c.lag === 0 && (leadA !== leadB ? leadA : graph !== null ? graph : c.trackerA.id > c.trackerB.id));
+  // the same day: the app can't tell which came first (her example, Nov 12 2026: drained after work could follow a
+  // morning argument). The person's own answer sets the order; without it the words claim none (together), and the
+  // order above only decides which side the sentence starts from.
+  const chosen = c.lag === 0 ? getLinkOrder(c.trackerA.id, c.trackerB.id) : null;
+  const ordered = chosen === c.trackerA.id || chosen === c.trackerB.id;
+  const flip = c.lag === -1 || (c.lag === 0 && (ordered ? chosen === c.trackerB.id : leadA !== leadB ? leadA : graph !== null ? graph : c.trackerA.id > c.trackerB.id));
+  const together = c.lag === 0 && !ordered;
   const second0 = flip ? c.trackerA : c.trackerB;
   const secondYes = c.phi >= 0 || trackerPolarity(second0) !== "good";
   const firstYes = c.phi >= 0 || !secondYes;
@@ -206,7 +215,7 @@ export const linkOf = (c: CorrelationResult) => {
   const nextDay = c.lag !== 0;
   // "mostly on such days" when it passes her numbers (findingForms.ts); the plain form otherwise
   const mostly = mostlyOf({ first: first.id, second: second0.id, firstYes, secondYes, nextDay, k, n, other, secondHard }, first, second0);
-  return { first, second: second0, firstYes, secondYes, secondHard, nextDay, k, n, other, mostly };
+  return { first, second: second0, firstYes, secondYes, secondHard, nextDay, k, n, other, mostly, together };
 };
 
 /** Worth showing as a link. Against intuition (a good thing before a hard one, a
@@ -354,7 +363,7 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
     const key = [a, b].sort().join("|");
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other, mostly: l.mostly });
+    out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other, mostly: l.mostly, together: l.together });
   }
   return out.slice(0, 4);
 };
@@ -370,7 +379,7 @@ export const buildInnerLinks = (trackers: Tracker[], entries: TrackerEntry[], is
     const a = where.get(c.trackerA.id), b = where.get(c.trackerB.id);
     if (!a || a !== b || out.has(a)) continue;
     const l = linkOf(c);
-    out.set(a, { a, b: a, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other });
+    out.set(a, { a, b: a, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other, mostly: l.mostly, together: l.together });
   }
   return out;
 };

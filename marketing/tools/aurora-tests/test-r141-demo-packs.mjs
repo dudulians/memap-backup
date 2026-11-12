@@ -9,26 +9,27 @@ const errs = [], out = {}, fails = [];
 const ok = (name, cond, info = "") => { out[name] = cond ? "ok" : `FAIL ${typeof info === "string" ? info : JSON.stringify(info)}`.slice(0, 700); if (!cond) fails.push(name); console.log(name, "→", out[name]); };
 
 const EXPECT = {
+  // same-day links are two tags and when the days fall, no order (her pick, Nov 12 2026); the next day keeps its order
   "work-home": [
-    [/You mostly argue with your partner on days you feel drained after work/, "mostly: arguments on drained days"],
-    [/On those days you usually argue with your partner/, "a chain into the arguments"],
-    [/most often argue with your partner on days .* or /, "two things next to the arguments"],
-    [/Looks like it.s something else\. .* on days you don.t drink too/, "something else: not the alcohol"],
-    [/feel calm on days you spend at least 30 minutes outside|feel calm .*outside/, "calm with time outside (the good side)"],
+    [/STRONGEST SO FAR (Drained after work Argument with partner|Argument with partner Drained after work) Mostly the same days On other days almost never/, "the store's pair first, large, the calm days in words"],
+    [/^(?!.*On those days)/, "no chain until the person sets an order"],
+    [/Argument with partner Most often the same days as/, "two things next to the arguments"],
+    [/Looks like it.s something else. .* on days you don.t drink too/, "something else: not the alcohol"],
+    [/(30 min outside Calm|Calm 30 min outside) Mostly the same days/, "calm with time outside (the good side)"],
     [/“Did I check work email after 8 pm”/, "her own question, as typed"],
   ],
   "migraine-cycle": [
-    [/most often have a headache on days .*(period|stressed).* or .*(period|stressed)/, "two things next to the headache: period or stress"],
-    [/The day after you have coffee after 2 pm/, "next day: late coffee → short night"],
+    [/Headache Most often the same days as (Period day Stress|Stress Period day)/, "two things next to the headache: period or stress"],
+    [/Coffee after 2 pm next day Short night/, "next day: late coffee → short night"],
   ],
   parenting: [
-    [/You (mostly|almost only) feel like a bad parent on days you yell at your kid|bad parent .*(mostly|almost only).*yell/, "mostly: bad parent on yelling days"],
-    [/yell at your kid (mostly |almost only )?on days you have no time for yourself|mostly yell at your kid on days you have no time for yourself/, "yelling with no time for yourself"],
-    [/feel calm/, "calm with me-time (the good side)"],
+    [/(Yelling at the kid Feeling like a bad parent|Feeling like a bad parent Yelling at the kid) (Almost only|Mostly) the same days/, "bad parent and yelling: the same days"],
+    [/(No me-time Yelling at the kid|Yelling at the kid No me-time) Mostly the same days/, "yelling with no time for yourself"],
+    [/(Me-time Calm|Calm Me-time) (Almost only|Mostly) the same days/, "calm with me-time (the good side)"],
   ],
   "good-days": [
-    [/most often feel happy on days .* or /, "two things next to the happy days"],
-    [/feel calm on days you meditate|calm .*meditat/, "calm on meditation days"],
+    [/Happy day Most often the same days as/, "two things next to the happy days"],
+    [/(Meditation Calm|Calm Meditation) Mostly the same days/, "calm on meditation days"],
     [/“Did I call my mom”/, "her own good question"],
   ],
 };
