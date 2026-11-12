@@ -60,7 +60,7 @@ out.offersRunning = await p.evaluate(() => [...document.querySelectorAll("[aria-
 await p.evaluate(() => [...document.querySelectorAll("[aria-modal=true] button")].find((x) => /close/i.test(x.getAttribute("aria-label") ?? ""))?.click()); await p.waitForTimeout(800);
 // C9: a link's "See the days"
 await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "findings", back: true } }))); await p.waitForTimeout(2200);
-await p.evaluate(() => [...document.querySelectorAll("[role=dialog] button")].find((x) => /See the days/.test(x.textContent))?.click()); await p.waitForTimeout(1800);
+await p.evaluate(() => [...document.querySelectorAll("[role=dialog] button")].find((x) => /See the days|^Chart$/.test(x.textContent.trim()))?.click()); await p.waitForTimeout(1800);
 await shot("link-days");
 out.linkDays = await p.evaluate(() => document.querySelector("[role=dialog] h2")?.textContent);
 // C14

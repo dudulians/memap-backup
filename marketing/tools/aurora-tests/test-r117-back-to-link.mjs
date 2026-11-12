@@ -10,7 +10,7 @@ const errs = [], out = {}, fails = [];
 const ok = (name, cond, info = "") => { out[name] = !!cond; if (!cond) fails.push(`${name} ${typeof info === "string" ? info : JSON.stringify(info)}`.trim()); };
 
 for (const lang of ["en", "ru"]) {
-  const W = lang === "ru" ? { back: /Назад к связи/, see: /^Посмотреть дни$/, chart: /график|Смотреть на графике/i } : { back: /Back to the link/, see: /^See the days$/, chart: /chart/i };
+  const W = lang === "ru" ? { back: /Назад к связи/, see: /^(Посмотреть дни|График)$/, chart: /график|Смотреть на графике/i } : { back: /Back to the link/, see: /^(See the days|Chart)$/, chart: /chart/i };
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: "Europe/London" });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${lang}: ${e.message}`));
   let n = 0; const shot = async (name) => { await p.waitForTimeout(500); await p.screenshot({ path: `${D}/${lang}-back-${String(++n).padStart(2, "0")}-${name}.png` }); };
@@ -70,9 +70,9 @@ for (const lang of ["en", "ru"]) {
   });
   if (route) {
     await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))); await p.waitForTimeout(1800);
-    await p.evaluate((d) => window.dispatchEvent(new CustomEvent("memap-open-link", { detail: d })), route); await p.waitForTimeout(1500);
+    await p.evaluate((d) => window.dispatchEvent(new CustomEvent("memap-open-link-sheet", { detail: d })), route); await p.waitForTimeout(1500);
     const sheetText = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ").slice(0, 120);
-    await p.locator("[role=dialog]").last().locator("button.raised-btn").last().click(); await p.waitForTimeout(1800);
+    await p.locator("[role=dialog]").last().locator("[data-link-chart]").first().click(); await p.waitForTimeout(1800);
     await shot("chart-from-sheet");
     ok(`${lang}.sheet → chart: "Back to the link" shown`, (await p.locator("[data-back-to-link]").count()) === 1);
     await p.locator("[data-back-to-link]").click(); await p.waitForTimeout(1600);

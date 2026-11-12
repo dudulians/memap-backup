@@ -56,12 +56,12 @@ for (const lang of ["en", "ru"]) {
   const cardOf = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return !!c; }, pair);
   ok(`${lang}: the store's pair as two tags, "mostly the same days"`, await cardOf(PAIR), text.slice(0, 500));
   ok(`${lang}: no order claimed on a closed card`, !text.includes(MOSTLY) && !text.includes(FALL), text.slice(0, 300));
-  // words first: no sentence, no numbers on the closed cards
-  const shownCounts = await p.evaluate(() => document.querySelectorAll("[role=dialog] [data-link-count], [role=dialog] [data-story-numbers], [role=dialog] [data-link-sentence]").length);
+  // words first: no numbers on the closed cards (since v148 a typed question without short words is a sentence there)
+  const shownCounts = await p.evaluate(() => document.querySelectorAll("[role=dialog] [data-link-numbers], [role=dialog] [data-story-numbers]").length);
   ok(`${lang}: words first, no numbers until a tap`, shownCounts === 0, shownCounts);
   // tap the card: the sentence, its count, the question
   const open = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); const b = c?.querySelector("button[aria-expanded]"); if (b?.getAttribute("aria-expanded") === "false") b.click(); }, pair);
-  const read = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return { s: c?.querySelector("[data-link-sentence]")?.textContent ?? "", count: c?.querySelector("[data-link-count]")?.textContent.replace(/\s+/g, " ") ?? "", ask: !!c?.querySelector("[data-order-ask]") }; }, pair);
+  const read = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return { s: c?.querySelector("[data-link-sentence]")?.textContent ?? "", count: [c?.querySelector("[data-link-times]")?.textContent ?? "", (c?.querySelector("[data-link-other]")?.textContent ?? "").replace(/^./, (x) => x.toLocaleLowerCase())].join(" · ").replace(/\s+/g, " "), ask: !!c?.querySelector("[data-order-ask]") }; }, pair);
   await open(PAIR); await p.waitForTimeout(500);
   const o1 = await read(PAIR);
   ok(`${lang}: on tap, when the days fall, no order`, o1.s === FALL, o1);

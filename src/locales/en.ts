@@ -136,6 +136,8 @@ const en = {
     sameMostly: "Mostly the same days",
     sameOnly: "Almost only the same days",
     nextDayTag: "next day",
+    // under a next-day link's two plates (the arrow between them; Nov 12 2026)
+    whenNextDay: "{{often}} the next day",
     twoTagsSame: "Most often the same days as",
     twoTagsNext: "Most often the day after",
     otherCalm: "On other days {{word}}",
@@ -174,6 +176,17 @@ const en = {
     no: "no",
     honest: "This is what happened together in your days, not proof that one causes the other.",
     chart: "See it on a chart",
+    // the small link at the side of a link's count (her pick, Nov 12 2026)
+    chartShort: "Chart",
+    // the key under a link's rows of days (Nov 12 2026)
+    dayYes: "it was",
+    dayNo: "it wasn't",
+    dayNone: "no answer",
+    lastDays_one: "The last {{count}} day",
+    lastDays_other: "The last {{count}} days",
+    // two typed questions on the same days, as typed (Nov 12 2026)
+    ownTogetherYes: "A “yes” to “{{a}}” and to “{{b}}” {{adv}} come on the same days",
+    ownTogether: "A “{{x}}” to “{{a}}” and a “{{y}}” to “{{b}}” {{adv}} come on the same days",
   },
   upgrade: {
     title: "Try the new MeMap?",
@@ -1088,6 +1101,8 @@ const en = {
     example: "In your links: On days you mark “{{w}}”, you usually have a headache.",
     // under a link with her own question that has no words yet (Nov 11 2026)
     prompt: "Say “{{q}}” in your own words",
+    nameShort_one: "Name it short",
+    nameShort_other: "Name them short",
     save: "Save",
   },
   // the 4 parts over the map (board 76 A, Nov 6 2026)

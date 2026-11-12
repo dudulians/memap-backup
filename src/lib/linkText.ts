@@ -17,7 +17,7 @@
 //   count     "11 of 17 times · on other days 4 of 20" / "Every time — 6 of 6 · on other days 0 of 9"
 import type { TFunction } from "i18next";
 import type { Route } from "@/lib/islands";
-import { answerClause, answerPhrase, cap, oftenWord } from "@/lib/answerPhrases";
+import { answerClause, answerPhrase, cap, oftenWord, ownText, templateIdOf } from "@/lib/answerPhrases";
 import { calmOf, mostlyCount } from "@/lib/findingForms";
 import type { Tracker } from "@/types/tracker";
 
@@ -59,6 +59,15 @@ export const linkHead = (t: TFunction, r: Sides, of: TrackerOf): string => {
  *  партнёром ссоритесь, в основном приходятся на дни, когда после работы не остаётся сил»; plain: "The days you sleep
  *  under 7 hours usually fall on days you have a headache". Both sides as days ("cause" clauses). */
 export const linkFallText = (t: TFunction, r: Sides, of: TrackerOf): string => {
+  // two typed questions with no short words (her pick, Nov 12 2026): the questions as typed, the answers named
+  // once ("The days you answer “yes” to … fall on days you answer “yes” to …" read clumsily)
+  const A = of(r.first), B = of(r.second);
+  const bare = (x: Tracker | undefined, yes: boolean): x is Tracker => !!x && !templateIdOf(x) && !(yes ? x.words?.yes : x.words?.no);
+  if (bare(A, r.firstYes) && bare(B, r.secondYes)) {
+    const adv = r.mostly === "almostOnly" ? oftenWord(t, 9, 10) : r.mostly ? t("link.advMostly") : oftenWord(t, r.k, r.n);
+    if (r.firstYes && r.secondYes) return cap(t("link.ownTogetherYes", { a: ownText(A), b: ownText(B), adv }));
+    return cap(t("link.ownTogether", { x: t(r.firstYes ? "link.yes" : "link.no"), a: ownText(A), y: t(r.secondYes ? "link.yes" : "link.no"), b: ownText(B), adv }));
+  }
   const a = answerClause(t, of(r.first), r.firstYes, "cause"), b = answerClause(t, of(r.second), r.secondYes, "cause");
   if (r.mostly === "almostOnly") return cap(t("link.fallOnly", { a: b, b: a }));
   if (r.mostly) return cap(t("link.fallMostly", { a: b, b: a }));

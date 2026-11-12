@@ -164,6 +164,16 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     window.addEventListener("memap-open-link", open);
     return () => window.removeEventListener("memap-open-link", open);
   }, [routes]);
+  // the globe's own link sheet, as a tap on its dotted route opens it (the tests open it by this event)
+  useEffect(() => {
+    const open = (e: Event) => {
+      const d = (e as CustomEvent).detail as { a: string; b: string } | undefined;
+      const r = d && routes.find((x) => (x.a === d.a && x.b === d.b) || (x.a === d.b && x.b === d.a));
+      if (r) { setOpenRaw(null); window.setTimeout(() => setLink(r), 200); }
+    };
+    window.addEventListener("memap-open-link-sheet", open);
+    return () => window.removeEventListener("memap-open-link-sheet", open);
+  }, [routes]);
   // "See the island" after it grew: its card
   useEffect(() => {
     const open = (e: Event) => { const d = (e as CustomEvent).detail as { island: IslandId } | undefined; if (d) window.setTimeout(() => setOpen(d.island), 200); };

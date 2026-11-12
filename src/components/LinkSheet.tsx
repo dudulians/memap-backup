@@ -2,20 +2,16 @@
 // Globe (her note, Nov 5 2026, WORLD-BIBLE "Решения 5 ноября" #4): which two
 // questions, how many times out of how many, and, honestly, that this is what
 // happened together in her days, not proof of a cause.
+// Since Nov 12 2026 (her pick) the same look as a link in Links (LinkParts): the sentence, the count large with a
+// small "Chart" at its side, the dots, the other days, and on the same day "What comes first?" with what else to watch.
 import { TipCard, tourCompleted } from "./Tips";
 import { useTranslation } from "react-i18next";
-import { BarChart3 } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { islandName, type IslandId, type Route } from "@/lib/islands";
-import { linkHead, linkNumbers, linkOtherDays, linkTimesBig, trackerLookup } from "@/lib/linkText";
-import { cap } from "@/lib/answerPhrases";
-import { art, artOf } from "@/lib/globeArt";
-import { haptics } from "@/lib/haptics";
+import { type Route } from "@/lib/islands";
+import { linkHead, trackerLookup } from "@/lib/linkText";
 import { Tracker } from "@/types/tracker";
-import { needsWords, OwnWordsPrompt } from "./AnswerWordsFields";
-
-/** A counted day's colour: hard red, good green, neutral indigo. */
-const dot = (hard: boolean | null, a = 1) => (hard === null ? `hsl(var(--data-a) / ${a})` : hard ? `hsl(var(--strong) / ${a})` : `hsl(var(--balanced) / ${a})`);
+import { OwnWordsPrompt } from "./AnswerWordsFields";
+import { LinkIsles, LinkNumbers, OrderAsk, trackedTemplates } from "./LinkParts";
 
 export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
   route: Route | null;
@@ -28,63 +24,20 @@ export const LinkSheet = ({ route, trackers, days, onClose, onChart }: {
 }) => {
   const { t } = useTranslation();
   const of = trackerLookup(trackers);
-  const pic = (id: IslandId) => {
-    const name = artOf(id, days[id] ?? 0);
-    return (
-      <span aria-hidden="true" className="block w-[96px]">
-        <img className="art-day block w-full" src={art(name, false)} alt="" />
-        <img className="art-night block w-full" src={art(name, true)} alt="" />
-      </span>
-    );
-  };
   const r = route;
-  // a "mostly" link counts from what it says: 12 of the 14 times (Nov 11 2026)
-  const num = r ? linkNumbers(r) : { k: 0, n: 0 };
   return (
     <BottomSheet open={!!r} onOpenChange={(o) => { if (!o) onClose(); }} ariaTitle={t("link.title")}>
       {r && (
-        <div className="px-5 pb-8 pt-1">
+        <div data-link-sheet className="px-5 pb-8 pt-1">
           {!tourCompleted() && <TipCard id="block:findings" className="mb-4" title={t("tour.links.title")} line={t("tour.links.line")} />}
           {/* the two islands and the dotted route between them */}
-          {r.a === r.b ? (
-            <div className="flex flex-col items-center">
-              <svg aria-hidden="true" width="96" height="28" className="-mb-1">
-                {Array.from({ length: 9 }, (_, i) => { const u = 0.1 + (i / 8) * 0.8, x = 6 + u * 84, y = 26 - Math.sin(u * Math.PI) * 22; return <circle key={i} className="planet-route" cx={x} cy={y} r={2.6} />; })}
-              </svg>
-              {pic(r.a)}<span className="mt-1 text-[14px] font-bold">{t("link.onIslandOf", { island: islandName(t, r.a) })}</span>
-            </div>
-          ) : (
-          <div className="flex items-end justify-center gap-1">
-            <div className="flex flex-col items-center">{pic(r.a)}<span className="mt-1 text-[14px] font-bold">{islandName(t, r.a)}</span></div>
-            <svg aria-hidden="true" width="74" height="40" className="mb-8 shrink-0">
-              {Array.from({ length: 7 }, (_, i) => {
-                const u = (i + 0.5) / 7, x = 6 + u * 62, y = 30 - Math.sin(u * Math.PI) * 18, e = Math.min(1, Math.min(u, 1 - u) / 0.2);
-                return <circle key={i} className="planet-route" cx={x} cy={y} r={2 + 1.6 * e} opacity={0.4 + 0.6 * e} />;
-              })}
-            </svg>
-            <div className="flex flex-col items-center">{pic(r.b)}<span className="mt-1 text-[14px] font-bold">{islandName(t, r.b)}</span></div>
-          </div>
-          )}
-
-          <p className="mt-5 text-[21px] font-bold leading-snug tracking-tight">{linkHead(t, r, of)}</p>
-          {/* her own question without words reads clumsily: she can say it her way (Nov 11 2026) */}
-          {[of(r.first), of(r.second)].filter(needsWords).slice(0, 1).map((tr) => <OwnWordsPrompt key={tr.id} tracker={tr} />)}
-
-          {/* k of n, as dots: filled = it came */}
-          <p className="mt-4 text-[34px] font-bold leading-[1.1] tracking-tight tabular-nums">{linkTimesBig(t, num.k, num.n)}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5" aria-hidden="true">
-            {Array.from({ length: Math.min(num.n, 40) }, (_, i) => (
-              <span key={i} className="h-3 w-3 rounded-full" style={{ background: i < num.k ? dot(r.secondHard) : r.secondHard === null ? "hsl(var(--foreground) / 0.12)" : dot(!r.secondHard, 0.7) }} />
-            ))}
-          </div>
-          {/* the other days, so a coincidence looks like one */}
-          <p className="mt-3 text-[16px] font-bold leading-snug">{cap(linkOtherDays(t, r))}</p>
-
-
-          <button type="button" onClick={() => { haptics.tap(); onChart([r.first, r.second]); }}
-            className="raised-btn mt-6 w-full justify-center">
-            <BarChart3 className="h-5 w-5" strokeWidth={2.4} /> {t("link.chart")}
-          </button>
+          <LinkIsles r={r} days={days} />
+          <p data-link-sentence className="mt-5 text-[21px] font-bold leading-snug tracking-tight">{linkHead(t, r, of)}</p>
+          {/* her own questions without words read clumsily: she can name them short (Nov 11–12 2026) */}
+          <OwnWordsPrompt trackers={[of(r.first), of(r.second)]} />
+          <div className="mt-4"><LinkNumbers r={r} onChart={() => onChart([r.first, r.second])} /></div>
+          {/* the same day: what comes first is the person's guess (her idea, Nov 12 2026) */}
+          {!r.nextDay && <OrderAsk r={r} of={of} tracked={trackedTemplates(trackers)} />}
         </div>
       )}
     </BottomSheet>

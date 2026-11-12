@@ -20,7 +20,7 @@ export const cleanWords = (w: AnswerWords): AnswerWords | undefined => {
   return yes || no ? { ...(yes ? { yes } : {}), ...(no ? { no } : {}) } : undefined;
 };
 
-export const AnswerWordsFields = ({ value, onChange }: { value: AnswerWords; onChange: (w: AnswerWords) => void }) => {
+export const AnswerWordsFields = ({ value, onChange, label }: { value: AnswerWords; onChange: (w: AnswerWords) => void; label?: string }) => {
   const { t } = useTranslation();
   const field = (k: "yes" | "no") => (
     <label className="flex h-12 items-center gap-2.5 rounded-2xl bg-foreground/[0.06] pl-2 pr-3">
@@ -32,7 +32,7 @@ export const AnswerWordsFields = ({ value, onChange }: { value: AnswerWords; onC
   const sample = (value.no || value.yes || "").trim();
   return (
     <div>
-      <p className="text-[19px] font-semibold">{t("answerWords.title")}</p>
+      {label ? <p className="text-[16px] font-bold leading-snug">{label}</p> : <p className="text-[19px] font-semibold">{t("answerWords.title")}</p>}
       <div className="mt-3 space-y-2">{field("yes")}{field("no")}</div>
       {sample && <p className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("answerWords.example", { w: sample })}</p>}
     </div>
@@ -44,33 +44,36 @@ export const AnswerWordsFields = ({ value, onChange }: { value: AnswerWords; onC
  *  worry about questions like «муж меня бесил или нет»): under a link with such a question, "Say … in your own
  *  words" opens the two short fields; saved on the question, every link with it reads her way. */
 export const needsWords = (tr: Tracker | undefined): tr is Tracker => !!tr && !templateIdOf(tr) && !tr.words?.yes && !tr.words?.no;
-export const OwnWordsPrompt = ({ tracker }: { tracker: Tracker }) => {
+export const OwnWordsPrompt = ({ trackers }: { trackers: (Tracker | undefined)[] }) => {
   const { t } = useTranslation();
+  const list = trackers.filter(needsWords);
   const [open, setOpen] = useState(false);
-  const [words, setWords] = useState<AnswerWords>({});
+  const [words, setWords] = useState<Record<string, AnswerWords>>({});
   const [saved, setSaved] = useState(false);
-  if (saved || !needsWords(tracker)) return null;
+  if (saved || list.length === 0) return null;
+  // one link for both questions of the link, right under its sentence (her pick, Nov 12 2026: "Name them short")
   if (!open) {
     return (
-      <button type="button" data-own-words={tracker.id} onClick={() => { haptics.tap(); track("own_words_opened"); setOpen(true); }}
-        className="mt-3 flex min-h-[44px] items-center gap-2 text-left text-[15px] font-bold text-[hsl(var(--coin-teal))]">
-        <PenLine className="h-4 w-4 shrink-0" strokeWidth={2.6} />{t("answerWords.prompt", { q: tracker.title })}
+      <button type="button" data-own-words={list.map((x) => x.id).join(" ")} onClick={() => { haptics.tap(); track("own_words_opened"); setOpen(true); }}
+        className="mt-1 flex min-h-[40px] items-center gap-2 text-left text-[15px] font-bold text-[hsl(var(--coin-teal))]">
+        <PenLine className="h-4 w-4 shrink-0" strokeWidth={2.6} />{t("answerWords.nameShort", { count: list.length })}
       </button>
     );
   }
-  const clean = cleanWords(words);
+  const clean: Record<string, AnswerWords | undefined> = Object.fromEntries(list.map((x) => [x.id, cleanWords(words[x.id] ?? {})]));
+  const any = Object.values(clean).some(Boolean);
   const save = async () => {
-    if (!clean) return;
+    if (!any) return;
     haptics.success();
     const all = await getTrackers();
-    await saveTrackers(all.map((x) => (x.id === tracker.id ? { ...x, words: clean } : x)));
-    track("own_words_saved", { yes: !!clean.yes, no: !!clean.no });
+    await saveTrackers(all.map((x) => (clean[x.id] ? { ...x, words: clean[x.id] } : x)));
+    track("own_words_saved", { yes: Object.values(clean).some((w) => !!w?.yes), no: Object.values(clean).some((w) => !!w?.no) });
     setSaved(true);
   };
   return (
-    <div data-own-words-open className="mt-3 rounded-[18px] bg-foreground/[0.035] p-3">
-      <AnswerWordsFields value={words} onChange={setWords} />
-      <button type="button" disabled={!clean} onClick={() => void save()} className="raised-btn is-small mt-3 w-full justify-center disabled:opacity-50">{t("answerWords.save")}</button>
+    <div data-own-words-open className="mt-2 space-y-4 rounded-[18px] bg-foreground/[0.035] p-3">
+      {list.map((x) => <AnswerWordsFields key={x.id} label={x.title} value={words[x.id] ?? {}} onChange={(w) => setWords((m) => ({ ...m, [x.id]: w }))} />)}
+      <button type="button" disabled={!any} onClick={() => void save()} className="raised-btn is-small w-full justify-center disabled:opacity-50">{t("answerWords.save")}</button>
     </div>
   );
 };

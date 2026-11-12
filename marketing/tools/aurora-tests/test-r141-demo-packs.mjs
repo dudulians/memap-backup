@@ -13,14 +13,14 @@ const EXPECT = {
   "work-home": [
     [/STRONGEST SO FAR (Drained after work Argument with partner|Argument with partner Drained after work) Mostly the same days On other days almost never/, "the store's pair first, large, the calm days in words"],
     [/^(?!.*On those days)/, "no chain until the person sets an order"],
-    [/Argument with partner Most often the same days as/, "two things next to the arguments"],
+    [/(Argument with partner Most often the same days as|The days you argue with your partner most often fall on days)/, "two things next to the arguments"],
     [/Looks like it.s something else. .* on days you don.t drink too/, "something else: not the alcohol"],
     [/(30 min outside Calm|Calm 30 min outside) Mostly the same days/, "calm with time outside (the good side)"],
-    [/“Did I check work email after 8 pm”/, "her own question, as typed"],
+    [/“Did I check work email after 8 pm\??”/, "her own question, as typed"],
   ],
   "migraine-cycle": [
-    [/Headache Most often the same days as (Period day Stress|Stress Period day)/, "two things next to the headache: period or stress"],
-    [/Coffee after 2 pm next day Short night/, "next day: late coffee → short night"],
+    [/Headache Most often the same days as (Period day or Stress|Stress or Period day)/, "two things next to the headache: period or stress"],
+    [/Coffee after 2 pm Short night (Usually|Often|Almost always|Always) the next day/, "next day: late coffee → short night"],
   ],
   parenting: [
     [/(Yelling at the kid Feeling like a bad parent|Feeling like a bad parent Yelling at the kid) (Almost only|Mostly) the same days/, "bad parent and yelling: the same days"],
@@ -28,9 +28,9 @@ const EXPECT = {
     [/(Me-time Calm|Calm Me-time) (Almost only|Mostly) the same days/, "calm with me-time (the good side)"],
   ],
   "good-days": [
-    [/Happy day Most often the same days as/, "two things next to the happy days"],
+    [/(Happy day Most often the same days as|days you [a-z ]*happy[a-z ]* most often fall on days)/i, "two things next to the happy days"],
     [/(Meditation Calm|Calm Meditation) Mostly the same days/, "calm on meditation days"],
-    [/“Did I call my mom”/, "her own good question"],
+    [/“Did I call my mom\??”/, "her own good question"],
   ],
 };
 

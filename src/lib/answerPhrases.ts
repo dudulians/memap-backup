@@ -336,6 +336,15 @@ const rowS = (tr: Tracker, id: string) => (S_OLD[id] && isOld(tr, id) ? S_OLD[id
 
 export const cap = (s: string) => (s ? s[0].toLocaleUpperCase() + s.slice(1) : s);
 
+/** A question the person typed, as typed (Nov 12 2026, her look at a link between «Меня сегодня бесил муж» and «Буся
+ *  сегодня опять описалась»): an English question keeps its "?" ("Did Busya pee on the floor again?"; the name is
+ *  stored without it), a statement stays a statement ("My husband drove me crazy today"). */
+const AUX_EN = /^(did|do|does|was|were|is|are|am|have|has|had|can|could|will|would|should)\b/i;
+export const ownText = (tr: Tracker): string => {
+  const title = localizeTrackerTitle(tr.title).replace(/[?？]+$/, "").trim();
+  return getLanguage() !== "ru" && AUX_EN.test(title) ? `${title}?` : title;
+};
+
 /** "short night", "migraine", "no anxiety"; her own question: "“Walked the dog”: no". */
 export const answerPhrase = (t: TFunction, tr: Tracker | undefined, yes: boolean): string => {
   if (!tr) return "";
@@ -343,7 +352,7 @@ export const answerPhrase = (t: TFunction, tr: Tracker | undefined, yes: boolean
   if (own) return own;
   const id = templateIdOf(tr);
   if (id) { const p = rowP(tr, id); return getLanguage() === "ru" ? (yes ? p[2] : p[3]) : yes ? p[0] : p[1]; }
-  return t("link.own", { q: localizeTrackerTitle(tr.title), a: t(yes ? "link.yes" : "link.no") });
+  return t("link.own", { q: ownText(tr), a: t(yes ? "link.yes" : "link.no") });
 };
 
 /** For a test that every library question has its phrases. */
@@ -369,7 +378,7 @@ export const answerClause = (t: TFunction, tr: Tracker | undefined, yes: boolean
   const s = own && !(id && S[id]) ? t("link.wordsClause", { w: own })
     : id && S[id]
     ? (() => { const r = rowS(tr, id); return getLanguage() === "ru" ? (yes ? r[2] : r[3]) : yes ? r[0] : r[1]; })()
-    : t("link.ownClause", { q: localizeTrackerTitle(tr.title).replace(/[?？]+$/, ""), a: t(yes ? "link.yes" : "link.no") });
+    : t("link.ownClause", { q: ownText(tr), a: t(yes ? "link.yes" : "link.no") });
   const [cause, result] = s.includes("|") ? s.split("|") : [s, s];
   return (role === "cause" ? cause.replace("~", "") : withOften(result, often)).replace(/\s+/g, " ").trim();
 };

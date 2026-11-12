@@ -93,7 +93,7 @@ const newPage = async (opts = {}) => {
   // the sentences open on tap since Nov 12 2026 (closed cards are two tags): open them all to read
   await p.evaluate(() => document.querySelectorAll("[data-link-card] button[aria-expanded=false]").forEach((x) => x.click())); await p.waitForTimeout(500);
   let text = (await dlg.innerText()).replace(/\s+/g, " ");
-  ok("the own-question link reads in the plain safe form", /you answer “yes” to “Did my husband annoy me or not”/.test(text), text.slice(0, 400));
+  ok("the own-question link reads in the plain safe form", /you answer “yes” to “Did my husband annoy me or not\??”/.test(text), text.slice(0, 400));
   ok("a fixed phrase: screens 'outside work'", !/screen/i.test(text) || /outside work/.test(text), text.slice(0, 600));
   // open that card and say it in her words
   await p.evaluate(() => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => /husband/.test(x.textContent)); c?.querySelector("button[aria-expanded=false]")?.click(); });

@@ -17,8 +17,8 @@ const ok = (name, cond, info = "") => { out[name] = !!cond; if (!cond) fails.pus
 const SHORT = /→|come together|бывают вместе| — and |times\.|раз\./;
 const SAY = { en: /The day after |On days you |The days you /, ru: /Если ты |В дни, когда |Дни, когда / };
 const FORCED = {
-  en: /The day after you agree to something you don't really want, you [a-z ]*have a headache (\d+ of \d+ times|Every time — \d+ of \d+) · on other days \d+ of \d+/,
-  ru: /Если ты соглашаешься на то, чего не хочешь, на следующий день [а-яё ]*болит голова (\d+ из \d+ раз(а)?|Каждый раз — \d+ из \d+) · в другие дни \d+ из \d+/,
+  en: /The day after you agree to something you don't really want, you [a-z ]*have a headache (\d+ of \d+ times|Every time — \d+ of \d+)( · on other days| Chart [\s\S]{0,200}?On other days) \d+ of \d+/,
+  ru: /Если ты соглашаешься на то, чего не хочешь, на следующий день [а-яё ]*болит голова (\d+ из \d+ раз(а)?|Каждый раз — \d+ из \d+)( · в другие дни| График [\s\S]{0,200}?В другие дни) \d+ из \d+/,
 };
 
 for (const lang of ["en", "ru"]) {
