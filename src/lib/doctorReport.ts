@@ -60,13 +60,15 @@ const M = 92, SPAN = PX.w - 2 * M, BOTTOM = PX.h - M - 50;
 const FONT = "'MeMap Sans', Manrope, system-ui, sans-serif";
 // the app's new look (src/index.css, html[data-ui="new"][data-theme="aurora-light"])
 const INK = "#3A3F4E", SOFT = "#6B7184", FAINT = "#b9bdca", LINE = "rgba(58,63,78,.12)";
-// red and green as in the app, her pick E (Nov 12 2026); in colour-blind mode orange and sky blue, good days as rings
+// red and green as in the app, her pick E (Nov 12 2026), good days as rings; in colour-blind mode orange and sky blue
 // (colorBlind.ts), set when a report is drawn
 const NEUTRAL = "#6272da", NEUTRAL_NO = "#c9cef3", NONE = "#e7e9ef";
 let HARD = "#e16096", GOOD = "#42bd98", GOOD_INK = "#0e3b2f", RINGS = false;
 const setReportColors = () => {
-  RINGS = isColorBlind();
-  [HARD, GOOD, GOOD_INK] = RINGS ? ["#d55e00", "#56b4e9", "#0b3a57"] : ["#e16096", "#42bd98", "#0e3b2f"];
+  // good days are rings on paper always: printed in black and white, berry and mint turn the same grey (her yes,
+  // Nov 12 2026, «Да, всегда»); orange and sky blue in colour-blind mode
+  RINGS = true;
+  [HARD, GOOD, GOOD_INK] = isColorBlind() ? ["#d55e00", "#56b4e9", "#0b3a57"] : ["#e16096", "#42bd98", "#0e3b2f"];
 };
 /** A day's dot: filled, or a ring for a good day in colour-blind mode. */
 const disc = (g: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string) => {

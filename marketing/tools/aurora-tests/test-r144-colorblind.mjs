@@ -1,5 +1,5 @@
 // r144 (Nov 12 2026, her idea «режим для дальтоников отдельным», her pick «O: оранжевый и голубой»): off by default (her
-// colours E, good days filled); on: orange and sky blue, good days as rings in the app, and the report draws them too.
+// colours E, good days filled); on: orange and sky blue, good days as rings in the app, and the report draws them too; the report draws good days as rings always (black-and-white printing).
 // Run from marketing/tools:  node aurora-tests/test-r144-colorblind.mjs
 import { chromium } from "playwright-core";
 const b = await chromium.launch({ executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
@@ -40,7 +40,8 @@ for (const on of [false, true]) {
   ok(`${tag}: the page knows the mode`, r.cb === (on ? "1" : "0"), r);
   ok(`${tag}: colours`, on ? r.strong === "24 100% 42%" && r.balanced === "202 77% 63%" : r.strong === "335 68% 63%" && r.balanced === "162 48% 50%", r);
   ok(`${tag}: a good day's dot ${on ? "is a ring" : "is filled"}`, r.dot && (on ? r.bg === "rgba(0, 0, 0, 0)" && /inset/.test(r.shadow) : r.bg !== "rgba(0, 0, 0, 0)" && !/inset/.test(r.shadow ?? "")), r);
-  ok(`${tag}: the report ${on ? "draws rings" : "draws no rings"} for good days`, on ? r.strokes > 50 : r.strokes < 50, r);
+  // rings on paper always, for black-and-white printing (her «Да, всегда», Nov 12 2026)
+  ok(`${tag}: the report draws good days as rings`, r.strokes > 50, r);
   await p.context().close();
 }
 console.log(JSON.stringify({ fails, errs: errs.slice(0, 3) }, null, 1));
