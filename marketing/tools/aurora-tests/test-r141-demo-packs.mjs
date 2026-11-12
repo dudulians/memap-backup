@@ -11,25 +11,25 @@ const ok = (name, cond, info = "") => { out[name] = cond ? "ok" : `FAIL ${typeof
 const EXPECT = {
   // same-day links are two tags and when the days fall, no order (her pick, Nov 12 2026); the next day keeps its order
   "work-home": [
-    [/STRONGEST SO FAR (Drained after work Argument with partner|Argument with partner Drained after work) Mostly the same days On other days almost never/, "the store's pair first, large, the calm days in words"],
+    [/STRONGEST SO FAR The days you argue with your partner mostly fall on days you feel drained after work \d+ of \d+ times/, "the store's pair first, in one sentence"],
     [/^(?!.*On those days)/, "no chain until the person sets an order"],
     [/(Argument with partner Most often the same days as|The days you argue with your partner most often fall on days)/, "two things next to the arguments"],
     [/Looks like it.s something else. .* on days you don.t drink too/, "something else: not the alcohol"],
-    [/(30 min outside Calm|Calm 30 min outside) Mostly the same days/, "calm with time outside (the good side)"],
+    [/The days you feel calm mostly fall on days you spend 30 minutes outside/, "calm with time outside (the good side)"],
     [/“Did I check work email after 8 pm\??”/, "her own question, as typed"],
   ],
   "migraine-cycle": [
-    [/Headache Most often the same days as (Period day or Stress|Stress or Period day)/, "two things next to the headache: period or stress"],
-    [/Coffee after 2 pm Short night (Usually|Often|Almost always|Always) the next day/, "next day: late coffee → short night"],
+    [/The days you have a headache most often fall on days you (have your period or you feel stressed|feel stressed or you have your period)/, "two things next to the headache: period or stress"],
+    [/The day after you have coffee after 2 pm, you (usually|often|almost always|always) sleep under 7 hours/, "next day: late coffee → short night"],
   ],
   parenting: [
-    [/(Yelling at the kid Feeling like a bad parent|Feeling like a bad parent Yelling at the kid) (Almost only|Mostly) the same days/, "bad parent and yelling: the same days"],
-    [/(No me-time Yelling at the kid|Yelling at the kid No me-time) Mostly the same days/, "yelling with no time for yourself"],
-    [/(Me-time Calm|Calm Me-time) (Almost only|Mostly) the same days/, "calm with me-time (the good side)"],
+    [/The days you feel like a bad parent (almost only|mostly) fall on days you yell at your kid/, "bad parent and yelling: the same days"],
+    [/The days you yell at your kid mostly fall on days you have no time for yourself/, "yelling with no time for yourself"],
+    [/The days you feel calm (almost only|mostly) fall on days you have time for yourself/, "calm with me-time (the good side)"],
   ],
   "good-days": [
     [/(Happy day Most often the same days as|days you [a-z ]*happy[a-z ]* most often fall on days)/i, "two things next to the happy days"],
-    [/(Meditation Calm|Calm Meditation) Mostly the same days/, "calm on meditation days"],
+    [/The days you feel calm mostly fall on days you meditate/, "calm on meditation days"],
     [/“Did I call my mom\??”/, "her own good question"],
   ],
 };

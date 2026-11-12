@@ -9,7 +9,8 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
 import { ArrowRight, ChevronDown, Link2 } from "lucide-react";
-import { chainText, linkCalmLine, linkCount, linkHead, linkWhen, trackerLookup, twoThingsLine, twoThingsText, type TrackerOf } from "@/lib/linkText";
+import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, twoThingsLine, twoThingsSegs, type Seg, type TrackerOf } from "@/lib/linkText";
+import { Chart, dayMarks, weekly, type Series } from "./ChartViews";
 import { art, artOf } from "@/lib/globeArt";
 import { LINK_ORDER_EVENT } from "@/lib/linkOrder";
 import { islandDays } from "@/lib/growth";
@@ -35,6 +36,10 @@ const STRIP_DAYS = 14;
 // жутко"): "Short night → migraine the next day", and under it "4 of 5 times · on other days 3 of 24".
 const routeOf = (c: CorrelationResult): Route => { const l = linkOf(c); return { ...l, a: "other", b: "other", first: l.first.id, second: l.second.id }; };
 
+/** A sentence with its two answers lit (her pick, Nov 12 2026). */
+const Said = ({ segs }: { segs: Seg[] }) => (
+  <>{segs.map((x, i) => (x.side ? <span key={i} className={x.side === "a" ? "hl-a" : "hl-b"}>{x.text}</span> : <span key={i}>{x.text}</span>))}</>
+);
 /** A day is a dot, coloured by what the answer means (the one look, Nov 6 2026). */
 const toneOf = (tr: Tracker | undefined, v: boolean) =>
   !tr || isNeutralQuestion(tr) || isTestQuestion(tr) ? "hsl(var(--data-a))" : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced))";
@@ -151,7 +156,7 @@ export const FindingsView = ({
   // "two things", then the rest as two tags each
   const shown = allShown ? findings : findings.slice(0, SHOWN);
   const card = (c: CorrelationResult, hero: boolean) => (
-    <LinkCard key={`${c.trackerA.id}-${c.trackerB.id}`} c={c} hero={hero} of={of} daysWith={daysWith} isleDays={isleDays} tracked={tracked} />
+    <LinkCard key={`${c.trackerA.id}-${c.trackerB.id}`} c={c} hero={hero} of={of} entries={entries} tracked={tracked} />
   );
   return (
     <div className="space-y-2.5 animate-fade-in">
@@ -307,27 +312,13 @@ const TwoCard = ({ g, of, daysWith }: { g: Route[]; of: TrackerOf; daysWith: Day
   return (
     <div data-story="two" className="surface rounded-[22px]">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="block w-full px-[18px] pb-3.5 pt-4 text-left">
-        {plates ? (
-          <>
-            <span className={cn(COLS, "items-center")}><Tag tr={res} yes={l.secondYes} /><span /><span className="flex justify-end"><Chev open={open} /></span></span>
-            <span className="mt-2.5 block text-[14px] font-bold text-muted-foreground">{t(l.nextDay ? "link.twoTagsNext" : "link.twoTagsSame")}</span>
-            <span className={cn(COLS, "mt-2 items-stretch gap-y-2")}>
-              {g.flatMap((x, i) => [
-                ...(i % 2 === 1 ? [<span key={`or-${x.first}`} className="flex items-center justify-center text-[13px] font-bold text-muted-foreground">{t("link.or")}</span>] : []),
-                <Tag key={x.first} tr={of(x.first)} yes={x.firstYes} />,
-              ])}
-            </span>
-          </>
-        ) : (
-          <span className="flex items-start gap-2">
-            <span data-link-sentence className="min-w-0 flex-1 text-[17px] font-bold leading-snug tracking-tight">{twoThingsText(t, g, of)}</span>
-            <Chev open={open} className="mt-1" />
-          </span>
-        )}
+        <span className="flex items-start gap-2">
+          <span data-link-sentence className="min-w-0 flex-1 text-[16.5px] font-bold leading-snug tracking-tight"><Said segs={twoThingsSegs(t, g, of)} /></span>
+          <Chev open={open} className="mt-1" />
+        </span>
       </button>
       {open && (
         <div data-story-numbers className="px-[18px] pb-4 animate-fade-in">
-          {plates && <p data-link-sentence className="pb-1.5 text-[16px] font-semibold leading-snug text-foreground">{twoThingsText(t, g, of)}</p>}
           <div className="space-y-1">{g.map((x) => <p key={x.first} className="text-[15px] font-semibold text-muted-foreground">{twoThingsLine(t, x, of)}</p>)}</div>
           <DayBars rows={rows} />
         </div>
@@ -335,15 +326,14 @@ const TwoCard = ({ g, of, daysWith }: { g: Route[]; of: TrackerOf; daysWith: Day
     </div>
   );
 };
-/** One link. Short answers (her pick, Nov 12 2026): two plates and when ("Mostly the same days"), the strongest large
- *  with its islands, a plate under each, and the calm other days in words. A typed question without short words: the
- *  sentence (the strongest with its islands and their names). A tap opens the sentence, the count large with a small
- *  "Chart", the two answers' last 14 days in rows, the other days, and on the same day "What comes first?". */
-export const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked, startOpen, kicker, onChart }: {
-  c: CorrelationResult; hero: boolean; of: TrackerOf; daysWith: DaysWith; isleDays: Record<string, number>; tracked: Set<string>;
+/** One link (her pick on the prototype, Nov 12 2026): one sentence with its two answers lit in the pair's colours and
+ *  how many times under it. Opening the card shows, on the same card, the week chart with the day bars under it, the
+ *  other days, and on the same day "What comes first?", which says after an answer what it took and how the link
+ *  reads now. No plates, no islands: the globe has those. */
+export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker }: {
+  c: CorrelationResult; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string>;
   /** open from the start (the globe's link sheet) */ startOpen?: boolean;
   /** the small line over the strongest ("Strongest so far"); the globe's sheet says "A link" */ kicker?: string;
-  /** the link's chart (the globe's sheet: back from the chart goes to the sheet) */ onChart?: () => void;
 }) => {
   const { t } = useTranslation();
   const r = routeOf(c);
@@ -353,11 +343,8 @@ export const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked, startOpen, 
   useEffect(() => { if (!again.current) return; reopen = null; box.current?.scrollIntoView({ block: "center" }); }, []);
   const solid = c.stage === "emerging" || c.stage === "stable";
   const a = of(r.first), b = of(r.second);
-  const plates = short(a, r.firstYes) && short(b, r.secondYes);
-  const calm = hero && plates ? linkCalmLine(t, r) : "";
-  // the same day in the person's own order (they answered "What comes first?"): said on the closed card too
-  const mine = !r.nextDay && !r.together && a ? t("link.orderMine", { what: answerPhrase(t, a, r.firstYes) }) : "";
-  const sentence = linkHead(t, r, of);
+  const segs = linkHeadSegs(t, r, of);
+  const sentence = segs.map((x) => x.text).join("");
   const said = useRef(sentence);
   const [lit, setLit] = useState(false);
   useEffect(() => {
@@ -366,56 +353,46 @@ export const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked, startOpen, 
     const id = window.setTimeout(() => setLit(false), 1600);
     return () => window.clearTimeout(id);
   }, [sentence]);
-  const rows: BarRow[] = [
-    { label: cap(answerPhrase(t, a, r.firstYes)), weeks: daysWith(r.first, r.firstYes), color: PAIR_A },
-    { label: cap(answerPhrase(t, b, r.secondYes)), weeks: daysWith(r.second, r.secondYes), color: PAIR_B },
-  ];
-  const sentenceEl = (big: boolean) => (
-    <span data-link-sentence className={cn("-mx-1.5 block rounded-lg px-1.5 py-0.5 leading-snug transition-colors duration-700", big ? "font-bold tracking-tight" : "font-semibold", lit && "bg-[hsl(var(--coin-teal)/0.16)]",
-      big ? (hero ? "mt-3 text-[20px]" : "text-[17px]") : "text-[16px]")}>{sentence}</span>
-  );
+  const { k, n } = linkNumbers(r);
+  const other = linkOtherDays(t, r);
+  const [at, setAt] = useState<number | null>(null);
+  // the two lines and their days, in the colours of the lit words
+  const series: Series[] = a && b ? [
+    { color: PAIR_A, values: weekly(a, entries, 8, r.firstYes), days: dayMarks(a, entries, 8, r.firstYes), label: cap(answerPhrase(t, a, r.firstYes)) },
+    { color: PAIR_B, values: weekly(b, entries, 8, r.secondYes), days: dayMarks(b, entries, 8, r.secondYes), label: cap(answerPhrase(t, b, r.secondYes)) },
+  ] : [];
   return (
     <div ref={box} data-link-card data-together={r.together ? "1" : undefined} className="surface rounded-[22px]">
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="block w-full px-[18px] pb-3.5 pt-4 text-left">
-        <span className="block">
-          {hero && (
-            <span className="mb-2.5 flex items-center justify-between gap-2">
-              <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{kicker ?? t("patterns.findStrongest")}</span>
-              <Chev open={open} />
-            </span>
-          )}
-          {plates ? (
-            <>
-              {hero ? <Isles r={r} of={of} isleDays={isleDays} /> : <Tags r={r} of={of} />}
-              <span className={cn("flex items-center justify-between gap-2", hero ? "mt-3" : "mt-2.5")}>
-                <span data-link-when className={cn("font-bold", hero ? "text-[17px] leading-snug" : "text-[14px] text-muted-foreground")}>{r.nextDay ? t("link.whenNextDay", { often: linkWhen(t, r) }) : linkWhen(t, r)}</span>
-                {!hero && <Chev open={open} />}
-              </span>
-            </>
-          ) : hero ? (
-            <>
-              {a && b && <LinkIsles r={{ a: islandOf(a), b: islandOf(b) }} days={isleDays} />}
-              {sentenceEl(true)}
-            </>
-          ) : (
-            <span className="flex items-start gap-2"><span className="min-w-0 flex-1">{sentenceEl(true)}</span><Chev open={open} className="mt-1" /></span>
-          )}
-          {mine && <span data-link-mine className="mt-1 block text-[13.5px] font-bold text-[hsl(var(--coin-teal))]">{mine}</span>}
-          {calm && (
-            <span data-link-calm className="mt-1.5 flex items-center gap-2 text-[16px] font-bold text-muted-foreground">
-              <img src={mapPic("sun")} alt="" aria-hidden="true" className="h-6 w-6" />{calm}
-            </span>
-          )}
+        {hero && (
+          <span className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{kicker ?? t("patterns.findStrongest")}</span>
+            <Chev open={open} />
+          </span>
+        )}
+        <span className="flex items-start gap-2">
+          <span data-link-sentence className={cn("-mx-1.5 min-w-0 flex-1 rounded-lg px-1.5 py-0.5 font-bold leading-snug tracking-tight transition-colors duration-700",
+            hero ? "text-[19px]" : "text-[16.5px]", lit && "bg-[hsl(var(--coin-teal)/0.16)]")}><Said segs={segs} /></span>
+          {!hero && <Chev open={open} className="mt-1" />}
         </span>
+        <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}</span>
       </button>
       {open && (
         <div className="px-[18px] pb-4 animate-fade-in">
-          {plates && <div className="mb-2">{sentenceEl(false)}</div>}
           {/* typed questions without short words: name them, right under the sentence */}
           <OwnWordsPrompt trackers={[a, b]} />
-          <div className="mt-2"><LinkNumbers r={r} bars={rows} onChart={onChart ?? (() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] })))} /></div>
-          {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026) */}
-          {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} />}
+          {/* the week chart and every day under it, on the card (her note: «на раскрытии… как раньше выглядел график
+              и палочки») */}
+          {series.length === 2 && (
+            <div data-link-chart-inline className="mt-1">
+              <p className="text-[12.5px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</p>
+              <Chart series={series} height={150} big at={at} onAt={setAt} />
+            </div>
+          )}
+          {other && <p data-link-other className="mt-3 text-[15px] font-semibold leading-snug">{cap(other)}</p>}
+          {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
+              the card, and after an answer it says how the link reads now */}
+          {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} readsNow={<Said segs={segs} />} />}
         </div>
       )}
     </div>

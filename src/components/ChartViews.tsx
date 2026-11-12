@@ -42,7 +42,7 @@ const weekEnd = (w: number, n: number) => {
 
 /** Days a week the question "came" (yes for a hard question, no for a good one; a link's own answer when given),
  *  oldest week first. */
-const weekly = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = tracker.problemWhen === "yes"): number[] => {
+export const weekly = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = tracker.problemWhen === "yes"): number[] => {
   const counts = Array.from({ length: n }, () => new Set<string>());
   const today = new Date();
   const start = (w: number) => isoLocal(new Date(today.getFullYear(), today.getMonth(), today.getDate() - (w * 7 + 6)));
@@ -55,7 +55,7 @@ const weekly = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = trac
 };
 
 /** Every day of the last n weeks, oldest week first, Monday… as the weeks above: did it come that day. */
-const dayMarks = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = tracker.problemWhen === "yes"): (boolean | undefined)[][] => {
+export const dayMarks = (tracker: Tracker, entries: TrackerEntry[], n = WEEKS, hit = tracker.problemWhen === "yes"): (boolean | undefined)[][] => {
   const byDate = new Map(entries.filter((e) => e.trackerId === tracker.id).map((e) => [e.date, e.value] as const));
   const today = new Date();
   return Array.from({ length: n }, (_, w) => Array.from({ length: 7 }, (_, i) => {
@@ -100,14 +100,14 @@ const useWidth = () => {
   return [ref, w] as const;
 };
 
-type Series = { color: string; values: number[]; label?: string; days?: (boolean | undefined)[][]; pic?: string };
+export type Series = { color: string; values: number[]; label?: string; days?: (boolean | undefined)[][]; pic?: string };
 
 /** The one chart look (her pick, Nov 12 2026, the store session's mock-up B): thin lines that bend without
  *  overshooting, a soft shadow and a light wash in each line's own colour, the scale ends at the data (three quiet
  *  hairlines), the latest week marked. Big: dates under it, a finger to read any week, and every day of the weeks as
  *  small upright marks under the lines (a line of "days a week" can't show whether it was the SAME days; days with
  *  both are joined by a pale capsule). */
-const Chart = ({ series, height, big = false, at = null, onAt }: { series: Series[]; height: number; big?: boolean; at?: number | null; onAt?: (k: number) => void }) => {
+export const Chart = ({ series, height, big = false, at = null, onAt }: { series: Series[]; height: number; big?: boolean; at?: number | null; onAt?: (k: number) => void }) => {
   const { i18n, t } = useTranslation();
   const [ref, W] = useWidth();
   const n = series[0]?.values.length ?? WEEKS;

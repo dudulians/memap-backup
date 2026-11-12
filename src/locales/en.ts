@@ -149,6 +149,7 @@ const en = {
     orderMineUnsure: "Not sure yet what comes first",
     orderChange: "Change",
     orderEffect: "The link above now reads in your order",
+    orderNowReads: "Now the link reads:",
     chainSameDay: "on those days {{result}}",
     chainNextDay: "the day after, {{result}}",
     advMostOften: "most often",

@@ -2,7 +2,7 @@
 // the sheet she liked when a link was found: the sentence, "13 of 15 times", the dots; then "What comes first?" and
 // what else to watch; the chart only as a small link at the side). Used by the Links list (FindingsView) and the
 // globe's link sheet (LinkSheet).
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3, Check, Plus } from "lucide-react";
 import { islandName, type IslandId, type Route } from "@/lib/islands";
@@ -161,7 +161,9 @@ const watchFor = (a: Tracker, b: Tracker, tracked: Set<string>): string[] => {
 
 /** "What comes first, do you think?" (her idea, Nov 12 2026): the person's answer orders the link (linkOrder.ts);
  *  "Not sure" offers what else may bring both. */
-export const OrderAsk = ({ r, of, tracked }: { r: Pick<Route, "first" | "second" | "firstYes" | "secondYes">; of: TrackerOf; tracked: Set<string> }) => {
+export const OrderAsk = ({ r, of, tracked, readsNow }: { r: Pick<Route, "first" | "second" | "firstYes" | "secondYes">; of: TrackerOf; tracked: Set<string>;
+  /** the link's sentence as it reads now (after an answer it is said again here, her note Nov 12 2026: «чётко дать
+   *  понять, что мы поняли, что он ответил, что мы это взяли и как-то применили») */ readsNow?: ReactNode }) => {
   const { t } = useTranslation();
   const a = of(r.first), b = of(r.second);
   const [chosen, setChosen] = useState(() => (a && b ? getLinkOrder(a.id, b.id) : null));
@@ -207,7 +209,12 @@ export const OrderAsk = ({ r, of, tracked }: { r: Pick<Route, "first" | "second"
         <span data-order-mine className="min-w-0 flex-1 text-[16px] font-bold leading-snug">{chosen === "unsure" ? t("link.orderMineUnsure") : t("link.orderMine", { what: firstOf(chosen) })}</span>
         <button type="button" data-order-change onClick={() => { haptics.tap(); setEditing(true); }} className="shrink-0 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("link.orderChange")}</button>
       </div>
-      {chosen !== "unsure" && <p className="mt-1.5 text-[14px] font-semibold text-muted-foreground">{t("link.orderEffect")}</p>}
+      {chosen !== "unsure" && (readsNow ? (
+        <div data-order-reads className="mt-3 animate-fade-in">
+          <p className="text-[13px] font-bold text-[hsl(var(--coin-teal))]">{t("link.orderNowReads")}</p>
+          <p className="mt-1 text-[16px] font-bold leading-snug">{readsNow}</p>
+        </div>
+      ) : <p className="mt-1.5 text-[14px] font-semibold text-muted-foreground">{t("link.orderEffect")}</p>)}
       {watchList}
     </div>
   );

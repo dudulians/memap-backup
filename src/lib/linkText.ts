@@ -140,3 +140,51 @@ export const linkCount = (t: TFunction, r: Counts): string => {
   // a line of its own: "Every time — 15 of 15 · …" starts with a capital (Nov 10 2026: "every time — …" in the list)
   return [cap(linkTimes(t, k, n)), linkOtherDays(t, r)].filter(Boolean).map((x) => x.replace(/ /g, " ")).join(" · ");
 };
+
+// --- The key words lit (her pick on the prototype, Nov 12 2026) ---------------------------------------------------
+/** A sentence in parts: the two answers carry their side ("a" = the link's first, "b" = its second), lit in the pair's
+ *  colours (indigo, lilac) like the link's two lines and rows of days. */
+export type Seg = { text: string; side?: "a" | "b" };
+const MA = "\u0001", MB = "\u0003", ME = "\u0002";
+/** Which parameter of each sentence is which side of the link. */
+const SIDES: Record<string, Record<string, "a" | "b">> = {
+  "link.sayNextDay": { cause: "a", result: "b" }, "link.saySameDay": { cause: "a", result: "b" },
+  "link.mostlySameDay": { cause: "a", result: "b" }, "link.mostlyNextDay": { cause: "a", result: "b" },
+  "link.onlySameDay": { cause: "a", result: "b" }, "link.onlyNextDay": { cause: "a", result: "b" },
+  "link.fallPlain": { a: "a", b: "b" }, "link.fallMostly": { a: "b", b: "a" }, "link.fallOnly": { a: "b", b: "a" },
+  "link.ownTogetherYes": { a: "a", b: "b" }, "link.ownTogether": { a: "a", b: "b" },
+  "link.twoSameDay": { result: "a", causes: "b" }, "link.twoNextDay": { result: "a", causes: "b" }, "link.twoFall": { result: "a", causes: "b" },
+};
+const marking = (t: TFunction): TFunction => ((key: string, opts?: Record<string, unknown>) => {
+  const sides = SIDES[key];
+  if (!sides || !opts) return (t as unknown as (k: string, o?: unknown) => string)(key, opts);
+  const o: Record<string, unknown> = { ...opts };
+  for (const [k, side] of Object.entries(sides)) if (typeof o[k] === "string") o[k] = (side === "a" ? MA : MB) + o[k] + ME;
+  return (t as unknown as (k: string, o?: unknown) => string)(key, o);
+}) as unknown as TFunction;
+/** "you usually" stays unlit: the answer itself is what lights up. */
+const LEAD = /^(?:(?:you|ты|вы)\s+)?(?:(?:almost always|almost never|almost only|usually|often|mostly|always|never|more often|почти всегда|почти никогда|обычно|часто|всегда|никогда|чаще|в основном)\s+)?/i;
+const toSegs = (s: string): Seg[] => {
+  const out: Seg[] = [];
+  let i = 0;
+  while (i < s.length) {
+    const rest = s.slice(i), j = rest.search(/[\u0001\u0003]/);
+    if (j < 0) { out.push({ text: rest }); break; }
+    if (j > 0) out.push({ text: rest.slice(0, j) });
+    const side: "a" | "b" = rest[j] === MA ? "a" : "b";
+    const end = s.indexOf(ME, i + j);
+    const inner = s.slice(i + j + 1, end < 0 ? s.length : end);
+    const lead = LEAD.exec(inner)?.[0] ?? "";
+    if (lead) out.push({ text: lead });
+    if (inner.length > lead.length) out.push({ text: inner.slice(lead.length), side });
+    i = end < 0 ? s.length : end + 1;
+  }
+  // the capital a mark took from the sentence's start
+  const first = out.find((x) => x.text.trim());
+  if (first) first.text = first.text.replace(/^(\s*)(\S)/, (_m, sp: string, ch: string) => sp + ch.toLocaleUpperCase());
+  return out.filter((x) => x.text);
+};
+/** The link's headline in parts (linkHead), its two answers marked. */
+export const linkHeadSegs = (t: TFunction, r: Sides, of: TrackerOf): Seg[] => toSegs(linkHead(marking(t), r, of));
+/** "Two things" in parts: the answer they come with is "a", the things "b". */
+export const twoThingsSegs = (t: TFunction, ls: Sides[], of: TrackerOf): Seg[] => toSegs(twoThingsText(marking(t), ls, of));

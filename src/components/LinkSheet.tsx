@@ -38,7 +38,7 @@ export const LinkSheet = ({ route, trackers, entries, days, onClose, onChart }: 
         <div data-link-sheet className="px-5 pb-8 pt-1">
           {!tourCompleted() && <TipCard id="block:findings" className="mb-4" title={t("tour.links.title")} line={t("tour.links.line")} />}
           {c ? (
-            <LinkCard c={c} hero of={of} daysWith={makeDaysWith(entries)} isleDays={days} tracked={trackedTemplates(trackers)} startOpen kicker={t("link.title")} onChart={() => onChart([r!.first, r!.second])} />
+            <LinkCard c={c} hero of={of} entries={entries} tracked={trackedTemplates(trackers)} startOpen kicker={t("link.title")} />
           ) : (<>
           {/* the two islands and the dotted route between them */}
           <LinkIsles r={r} days={days} />

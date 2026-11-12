@@ -2450,6 +2450,10 @@ button.link-chip:active { transform: scale(.92); }
 .planet-link-chip { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
 /* moved every frame with the globe: no transition, or it trails behind its route (her note, Nov 12 2026: «его штырит») */
 .planet-link-chip, .planet-inner-chip { transition: none !important; }
+/* a link's two answers lit in its sentence, in the pair's colours (her pick, Nov 12 2026) */
+.hl-a, .hl-b { border-radius: 6px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.hl-a { color: hsl(var(--data-a)); background: hsl(var(--data-a) / 0.13); }
+.hl-b { color: hsl(var(--pair-b)); background: hsl(var(--pair-b) / 0.16); }
 html[data-ui="new"][data-theme="aurora"] .link-chip { background: hsl(var(--surface)); }
 /* a link: a dotted boat route (globeArt routeDots, Nov 4 2026) */
 .planet-route { fill: #FFFFFF; stroke: rgba(70, 100, 170, .28); stroke-width: 1; }

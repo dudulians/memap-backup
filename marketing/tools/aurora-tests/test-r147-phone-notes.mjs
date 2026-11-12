@@ -164,23 +164,22 @@ for (const lang of ["en", "ru"]) {
   }, lang);
   await p.reload(); await p.waitForTimeout(2500);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "findings" } }))); await p.waitForTimeout(2200);
-  if (!(await p.locator("[data-isles]").count())) {
+  if (!(await p.locator("[data-link-card]").count())) {
     await p.locator("button").filter({ hasText: /^Links|^Связи/ }).first().click().catch(() => {}); await p.waitForTimeout(1800);
   }
+  // v151 (her pick): the strongest link is one sentence, its two answers lit; no plates, no islands
   const look = await p.evaluate(() => {
-    const box = document.querySelector("[data-isles]"); if (!box) return null;
-    const pics = [...box.querySelectorAll("[data-isle-pic]")].map((x) => x.getBoundingClientRect());
-    const tags = [...box.querySelectorAll("[data-tag]")].map((x) => x.getBoundingClientRect());
-    return { picTops: pics.map((r) => Math.round(r.top)), picBottoms: pics.map((r) => Math.round(r.bottom)), tagH: tags.map((r) => Math.round(r.height)), tagW: tags.map((r) => Math.round(r.width)), tagTops: tags.map((r) => Math.round(r.top)) };
+    const c = document.querySelector("[data-link-card]"); if (!c) return null;
+    return { a: c.querySelectorAll(".hl-a").length, b: c.querySelectorAll(".hl-b").length, plates: document.querySelectorAll("[data-tag]").length, isles: c.querySelectorAll("img").length };
   });
   await p.screenshot({ path: `${D}/${lang}-hero.png` });
-  ok(`${lang}: hero islands on one line`, !!look && look.picBottoms.length === 2 && look.picBottoms[0] === look.picBottoms[1] && look.picTops[0] === look.picTops[1], look);
-  ok(`${lang}: hero tags the same size`, !!look && look.tagH.length === 2 && look.tagH[0] === look.tagH[1] && Math.abs(look.tagW[0] - look.tagW[1]) <= 1 && look.tagTops[0] === look.tagTops[1], look);
+  ok(`${lang}: the strongest link in words, both answers lit`, !!look && look.a > 0 && look.b > 0, look);
+  ok(`${lang}: no plates, no islands in Links`, !!look && look.plates === 0 && look.isles === 0, look);
   // "Watch too": a same-day link, "Not sure", then a question added
   const ask = p.locator("[data-order-ask]").first();
   if (!(await ask.count())) {
     // open the cards until one asks
-    const heads = p.locator("[data-finding] > button, [data-link-card] > button");
+    const heads = p.locator("[data-link-card] > button");
     for (let i = 0; i < Math.min(8, await heads.count()) && !(await p.locator("[data-order-ask]").count()); i++) { await heads.nth(i).click().catch(() => {}); await p.waitForTimeout(400); }
   }
   if (await p.locator("[data-order-ask]").count()) {
