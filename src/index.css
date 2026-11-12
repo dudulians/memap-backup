@@ -2397,6 +2397,11 @@ html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --mu
 /* red and green, her pick E "Ягода и мята" (Nov 12 2026, marketing/research/colors-red-green.html); were 348 70% 69% / 146 45% 60% */
 html[data-ui="new"][data-theme="aurora-light"] { --strong: 335 68% 63%; --strong-foreground: 0 0% 100%; --balanced: 162 48% 50%; --balanced-foreground: 162 60% 14%; --data-a: 232 62% 62%; --data-b: 36 86% 56%; }
 html[data-ui="new"][data-theme="aurora"] { --strong: 335 72% 69%; --strong-foreground: 335 60% 14%; --balanced: 162 50% 52%; --balanced-foreground: 162 60% 10%; --data-a: 232 85% 74%; --data-b: 38 90% 62%; }
+/* colour-blind mode (her pick O, Nov 12 2026; src/lib/colorBlind.ts): orange and sky blue (Okabe & Ito), and good
+   days as rings: any round dot filled with the good colour (an inline style) becomes a ring of it */
+html[data-ui="new"][data-theme="aurora-light"][data-cb="1"] { --strong: 24 100% 42%; --strong-foreground: 0 0% 100%; --balanced: 202 77% 63%; --balanced-foreground: 205 70% 18%; }
+html[data-ui="new"][data-theme="aurora"][data-cb="1"] { --strong: 24 95% 55%; --strong-foreground: 24 60% 12%; --balanced: 202 80% 66%; --balanced-foreground: 205 70% 12%; }
+html[data-ui="new"][data-cb="1"] .rounded-full[style*="var(--balanced)"] { background: transparent !important; box-shadow: inset 0 0 0 2.5px hsl(var(--balanced)) !important; }
 /* a link's sign on its route: opens the link card (LinkSheet) */
 /* a link inside one island (board 75) */
 .planet-map-isle .inner-loop { position: absolute; left: 14%; right: 14%; top: -6%; height: 34%; width: 72%; pointer-events: none; z-index: 1; overflow: visible; }

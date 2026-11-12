@@ -12,6 +12,7 @@
 // herself (her islands on her sea, treasures on the days she earned them).
 // Plain words, nothing the reader has to learn. "Patterns, not a diagnosis."
 import i18n from "@/lib/i18n";
+import { isColorBlind } from "@/lib/colorBlind";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, LINKS_TOP, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
@@ -59,8 +60,19 @@ const M = 92, SPAN = PX.w - 2 * M, BOTTOM = PX.h - M - 50;
 const FONT = "'MeMap Sans', Manrope, system-ui, sans-serif";
 // the app's new look (src/index.css, html[data-ui="new"][data-theme="aurora-light"])
 const INK = "#3A3F4E", SOFT = "#6B7184", FAINT = "#b9bdca", LINE = "rgba(58,63,78,.12)";
-// red and green as in the app, her pick E (Nov 12 2026)
-const HARD = "#e16096", GOOD = "#42bd98", GOOD_INK = "#0e3b2f", NEUTRAL = "#6272da", NEUTRAL_NO = "#c9cef3", NONE = "#e7e9ef";
+// red and green as in the app, her pick E (Nov 12 2026); in colour-blind mode orange and sky blue, good days as rings
+// (colorBlind.ts), set when a report is drawn
+const NEUTRAL = "#6272da", NEUTRAL_NO = "#c9cef3", NONE = "#e7e9ef";
+let HARD = "#e16096", GOOD = "#42bd98", GOOD_INK = "#0e3b2f", RINGS = false;
+const setReportColors = () => {
+  RINGS = isColorBlind();
+  [HARD, GOOD, GOOD_INK] = RINGS ? ["#d55e00", "#56b4e9", "#0b3a57"] : ["#e16096", "#42bd98", "#0e3b2f"];
+};
+/** A day's dot: filled, or a ring for a good day in colour-blind mode. */
+const disc = (g: CanvasRenderingContext2D, x: number, y: number, r: number, fill: string) => {
+  g.beginPath(); g.arc(x, y, RINGS && fill === GOOD ? r - Math.max(1.5, r * 0.14) : r, 0, Math.PI * 2);
+  if (RINGS && fill === GOOD) { g.strokeStyle = fill; g.lineWidth = Math.max(3, r * 0.28); g.stroke(); } else { g.fillStyle = fill; g.fill(); }
+};
 
 const ru = () => !!i18n.language?.startsWith("ru");
 const locale = () => (ru() ? "ru-RU" : "en-GB");
@@ -261,7 +273,7 @@ const findingsBlock = (p: Pages, data: Data, max: number) => {
 // --- days as dots ------------------------------------------------------------------
 const strip = (p: Pages, data: Data, q: Tracker, x0: number, w: number, maxR = 10) => {
   const v = data.vals.get(q.id) ?? new Map(), step = w / data.days.length, rr = Math.max(2.2, Math.min(maxR, step * 0.36));
-  data.days.forEach((d, i) => { p.g.fillStyle = tone(q, v.get(d)); p.g.beginPath(); p.g.arc(x0 + step * i + step / 2, p.y, rr, 0, Math.PI * 2); p.g.fill(); });
+  data.days.forEach((d, i) => disc(p.g, x0 + step * i + step / 2, p.y, rr, tone(q, v.get(d))));
   return rr;
 };
 /** The dates under a row of dots: one a week. */
@@ -274,7 +286,7 @@ const ticks = (p: Pages, data: Data, x0 = M, w = SPAN) => {
 const legend = (p: Pages, items: [string, string][]) => {
   const g = p.g; let lx = M;
   for (const [c, l] of items) {
-    g.fillStyle = c; g.beginPath(); g.arc(lx + 11, p.y - 8, 11, 0, Math.PI * 2); g.fill();
+    disc(g, lx + 11, p.y - 8, 11, c);
     p.text(l, 22, 600, SOFT, lx + 30); g.font = `600 22px ${FONT}`; lx += 30 + g.measureText(l).width + 36;
   }
 };
@@ -357,7 +369,7 @@ const drawMonth = (g: CanvasRenderingContext2D, x: number, y: number, w: number,
     const num = Math.round(Math.min(23, cell * 0.34));
     g.textAlign = "center"; g.textBaseline = "middle";
     if (mk.fill) {
-      g.fillStyle = mk.fill; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+      disc(g, cx, cy, r, mk.fill);
       g.font = `700 ${num}px ${FONT}`; g.fillStyle = toneInk(mk.fill); g.fillText(String(d), cx, cy + 1);
     } else {
       g.font = `500 ${num}px ${FONT}`; g.fillStyle = mk.out ? "#dfe1e8" : FAINT; g.fillText(String(d), cx, cy + 1);
@@ -602,6 +614,7 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
 /** The pages as JPEG data URLs (A4, 150 dpi). */
 export const drawReport = async (r: ReportInput): Promise<string[]> => {
   try { await document.fonts?.load(`700 40px 'MeMap Sans'`); await document.fonts?.load(`800 40px 'MeMap Sans'`); } catch { /* system font */ }
+  setReportColors();
   const data = collect(r);
   const pages = r.kind === "short" ? await drawShort(r, data) : await drawFull(r, data);
   return pages.map((c) => c.toDataURL("image/jpeg", 0.9));

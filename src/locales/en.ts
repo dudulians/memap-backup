@@ -1302,6 +1302,7 @@ const en = {
   },
 
   settings: {
+    colorBlind: "Colour-blind mode",
     title: "Settings",
     sectionApp: "App",
     sectionNotifications: "Notifications",

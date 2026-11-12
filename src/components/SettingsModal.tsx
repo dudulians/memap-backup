@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { isColorBlind, setColorBlind } from "@/lib/colorBlind";
 import { useTranslation } from "react-i18next";
 import { haptics } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
@@ -145,6 +146,9 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const [theme, setThemeState] = useState<AppTheme>(() => getTheme());
   // "Games and rewards" (Nov 9 2026): bubbles, treasures, ranks, confetti, the streak flame
   const playful = usePlayful();
+  // colour-blind mode (her pick, Nov 12 2026): orange and sky blue, good days as rings
+  const [colorBlind, setColorBlindState] = useState(() => isColorBlind());
+  const handleColorBlind = (on: boolean) => { setColorBlindState(on); setColorBlind(on); track("colorblind_mode", { on }); };
   const handlePlayful = (on: boolean) => {
     setPlayful(on);
     // chosen here: Today won't ask about it later
@@ -882,6 +886,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         <div className={row}>
                           <label htmlFor="playful-toggle" className="flex-1 text-[17px] font-medium">{t("settings.games")}</label>
                           <Switch id="playful-toggle" checked={playful} onCheckedChange={handlePlayful} />
+                        </div>
+                        <div className={row}>
+                          <label htmlFor="colorblind-toggle" className="flex-1 text-[17px] font-medium">{t("settings.colorBlind")}</label>
+                          <Switch id="colorblind-toggle" data-colorblind checked={colorBlind} onCheckedChange={handleColorBlind} />
                         </div>
                         {nav("trackers", t("today.myQuestions"), String(activeTrackerCount))}
                         {nav("language", t("language.settingsLabel"), langLabel)}

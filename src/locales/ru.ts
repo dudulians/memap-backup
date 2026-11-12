@@ -1486,6 +1486,7 @@ const ru: Translation = {
   },
 
   settings: {
+    colorBlind: "Режим для дальтоников",
     title: "Настройки",
     sectionApp: "Приложение",
     sectionNotifications: "Уведомления",

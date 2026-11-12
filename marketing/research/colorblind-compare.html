@@ -1,0 +1,62 @@
+<title>Цвета для дальтоников</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: a table, one row per kind of sight, one column per palette; each cell is the same calendar week with its
+   legend. Cells keep the app's light look in both page themes, on purpose. */
+:root {
+  --bg: #eef1f5; --fg: #2c303c; --muted: #646a7c; --accent: #3c9a91; --card: #ffffff; --ink: #3b3f4f; --soft: #6c7184;
+  --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
+h1 { font-weight: 800; font-size: clamp(26px, 5vw, 34px); letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 76ch; }
+.scroll { overflow-x: auto; }
+table { border-collapse: separate; border-spacing: 12px; margin: -12px; }
+th { text-align: left; font-size: 13px; font-weight: 800; color: var(--muted); vertical-align: bottom; }
+th b { display: block; font-size: 17px; color: var(--fg); }
+td.side { font-weight: 800; font-size: 14px; color: var(--fg); vertical-align: middle; width: 150px; }
+td.side span { display: block; font-weight: 600; color: var(--muted); font-size: 12.5px; }
+.cell { background: var(--card); color: var(--ink); border-radius: 16px; padding: 12px 14px; display: grid; gap: 8px; min-width: 300px; }
+.cal { display: grid; grid-template-columns: repeat(7, 30px); gap: 6px; }
+.cal i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; box-sizing: border-box; }
+.leg { display: flex; gap: 14px; font-size: 13px; font-weight: 700; color: var(--soft); align-items: center; }
+.leg span { display: inline-flex; gap: 6px; align-items: center; }
+.leg i { width: 13px; height: 13px; border-radius: 50%; box-sizing: border-box; display: inline-block; }
+.deut { filter: url(#deut); } .prot { filter: url(#prot); } .trit { filter: url(#trit); }
+.verdict { font-size: 14px; color: var(--muted); max-width: 76ch; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- Machado et al. 2009, severity 1, linear RGB -->
+  <filter id="deut" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0  0.280085 0.672501 0.047413 0 0  -0.011820 0.042940 0.968881 0 0  0 0 0 1 0"/></filter>
+  <filter id="prot" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.152286 1.052583 -0.204868 0 0  0.114503 0.786281 0.099216 0 0  -0.003882 -0.048116 1.051998 0 0  0 0 0 1 0"/></filter>
+  <filter id="trit" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="1.255528 -0.076749 -0.178779 0 0  -0.078411 0.930809 0.147602 0 0  0.004733 0.691367 0.303900 0 0  0 0 0 1 0"/></filter>
+</svg>
+
+<div class="wrap">
+  <h1>Цвета для дальтоников: что лучше</h1>
+  <p class="lead">Одна и та же неделя календаря с легендой. Строки показывают, как её видят люди с тремя видами дальтонизма (имитация по Machado, 2009). Столбцы — три варианта для режима. Во всех, кроме первого, хорошие дни нарисованы кольцом: так легенда понятна даже без цвета.</p>
+  <div class="scroll"><table id="t"></table></div>
+  <p class="verdict" id="v"></p>
+</div>
+
+<script>
+const P = [
+  ["E", "Как сейчас", "#e16096", "#42bd98", "#fff", "#0e3b2f", false],
+  ["G", "Красный темнее, зелёный светлее", "#d22b4e", "#a6e0b7", "#fff", "#14402a", true],
+  ["O", "Оранжевый и голубой", "#d55e00", "#56b4e9", "#fff", "#0b3a57", true],
+];
+const S = [["", "Обычное зрение", ""], ["deut", "Не различает зелёный", "дейтеранопия · ~5% мужчин"], ["prot", "Не различает красный", "протанопия · ~1% мужчин"], ["trit", "Не различает синий", "тританопия · очень редко"]];
+const week = [["14", 1], ["15", 1], ["16", 0], ["17", 1], ["18", 0], ["19", 0], ["20", 1]];
+const cell = ([, , hard, good, hInk, gInk, ring]) => `
+  <div class="cal">${week.map(([n, h]) => h ? `<i style="background:${hard};color:${hInk}">${n}</i>` : ring ? `<i style="border:3px solid ${good};color:${gInk}">${n}</i>` : `<i style="background:${good};color:${gInk}">${n}</i>`).join("")}</div>
+  <div class="leg"><span><i style="background:${hard}"></i>headache</span><span><i style="${ring ? `border:3px solid ${good}` : `background:${good}`}"></i>no headache</span></div>`;
+document.getElementById("t").innerHTML = `<tr><th></th>${P.map(([k, name]) => `<th><b>${k}</b>${name}</th>`).join("")}</tr>` +
+  S.map(([cls, a, b]) => `<tr><td class="side">${a}<span>${b}</span></td>${P.map((p) => `<td><div class="cell ${cls}">${cell(p)}</div></td>`).join("")}</tr>`).join("");
+</script>

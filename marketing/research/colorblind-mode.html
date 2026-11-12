@@ -1,0 +1,103 @@
+<title>Режим для дальтоников</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<style>
+/* Layout: the same app pieces three times (normal sight, the same seen with red-green colour blindness, the mode on
+   seen the same way), then the printed report in black and white, then the Settings switch. The screens keep the app's
+   light look in both page themes, on purpose. */
+:root {
+  --bg: #eef1f5; --fg: #2c303c; --muted: #646a7c; --accent: #3c9a91;
+  --sheet: #f4f8fb; --card: #ffffff; --ink: #3b3f4f; --soft: #6c7184; --dot: rgba(59, 63, 79, 0.12);
+  --font: "Manrope", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark } }
+:root[data-theme="dark"] { --bg: #14171c; --fg: #e5e8ee; --muted: #9ba2b0; --accent: #6fcfc3; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15.5px; line-height: 1.5; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 30px; }
+header { display: grid; gap: 10px; max-width: 74ch; }
+h1 { font-weight: 800; font-size: clamp(26px, 5vw, 34px); letter-spacing: -0.02em; margin: 0; line-height: 1.15; }
+h2 { font-weight: 800; font-size: 20px; margin: 0; }
+p { margin: 0; }
+.lead, .note { color: var(--muted); }
+.note { font-size: 14px; max-width: 72ch; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; align-items: start; }
+.col { display: grid; gap: 10px; min-width: 0; }
+.label { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.label b { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
+.label span { font-weight: 700; }
+.v { background: var(--sheet); color: var(--ink); border-radius: 24px; padding: 16px; display: grid; gap: 10px; }
+.card { background: var(--card); border-radius: 18px; padding: 13px 15px; display: grid; gap: 9px; box-shadow: 0 1px 2px rgba(16, 42, 56, 0.05), 0 10px 24px -14px rgba(16, 42, 56, 0.18); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { border-radius: 12px; padding: 6px 11px; font-size: 15px; font-weight: 700; }
+.strip small { display: block; font-size: 12.5px; font-weight: 600; color: var(--soft); margin-bottom: 3px; }
+.dots { display: flex; justify-content: space-between; }
+.dots i { width: 13px; height: 13px; border-radius: 50%; background: var(--dot); box-sizing: border-box; }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal span { font-size: 10.5px; font-weight: 700; color: var(--soft); }
+.cal i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; justify-self: center; box-sizing: border-box; }
+.sim { filter: url(#deut); }
+.gray { filter: grayscale(1); }
+.paper { background: #fff; color: #3a3f4e; border-radius: 12px; padding: 18px; display: grid; gap: 10px; box-shadow: 0 1px 2px rgba(16, 42, 56, .08), 0 14px 32px -22px rgba(16, 42, 56, .5); }
+.paper h3 { margin: 0; font-size: 16px; font-weight: 800; }
+.set { background: var(--sheet); color: var(--ink); border-radius: 24px; padding: 16px; display: grid; gap: 8px; max-width: 375px; }
+.set .row1 { background: var(--card); border-radius: 18px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 16px; box-shadow: 0 1px 2px rgba(16, 42, 56, 0.05); }
+.sw { width: 50px; height: 30px; border-radius: 99px; background: #3c9a91; position: relative; flex: none; }
+.sw::after { content: ""; position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- red-green colour blindness (deuteranopia), Machado et al. 2009, severity 1, in linear RGB (the filter default) -->
+  <filter id="deut" color-interpolation-filters="linearRGB"><feColorMatrix type="matrix" values="0.367322 0.860646 -0.227968 0 0  0.280085 0.672501 0.047413 0 0  -0.011820 0.042940 0.968881 0 0  0 0 0 1 0"/></filter>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>Режим для дальтоников</h1>
+    <p class="lead">Красный и зелёный путает примерно каждый двенадцатый мужчина и одна женщина из двухсот. Ниже одни и те же кусочки приложения: как их видишь ты, как их видит такой человек, и как он увидит их с включённым режимом. Твои цвета E для всех остальных не меняются.</p>
+  </header>
+
+  <section class="row" id="three"></section>
+  <p class="note">В режиме два изменения. Цвета из варианта G: красный темнее, зелёный светлее, поэтому они различаются по светлоте, а не только по оттенку. И хорошие дни рисуются кольцом, а трудные — закрашенным кружком, так что видна ещё и форма.</p>
+
+  <section class="col">
+    <h2>Отчёт на чёрно-белом принтере</h2>
+    <p class="note">Здесь проблема у всех: при ч/б печати розовый и зелёный становятся одинаково серыми. Поэтому в PDF-отчёте кольцо для хороших дней нужно всегда, независимо от режима.</p>
+    <div class="row" id="print"></div>
+  </section>
+
+  <section class="col">
+    <h2>Где включается</h2>
+    <div class="set"><div class="row1"><span>Colour-blind mode</span><span class="sw" aria-hidden="true"></span></div></div>
+    <p class="note">Settings → «Colour-blind mode» / «Режим для дальтоников». Автоматически включать его по настройке айфона «Без цвета» (Differentiate Without Colour) можно, но для этого нужен маленький кусок кода для iOS, это отдельная работа. Сначала переключатель.</p>
+  </section>
+</div>
+
+<script>
+const E = { r: "hsl(335 68% 63%)", rt: "hsla(335, 68%, 63%, .18)", g: "hsl(162 48% 50%)", gt: "hsla(162, 48%, 50%, .26)", gInk: "#0e3b2f" };
+const G = { r: "hsl(345 68% 50%)", rt: "hsla(345, 68%, 50%, .16)", g: "hsl(140 45% 74%)", gt: "hsla(140, 45%, 74%, .4)", gInk: "#14402a" };
+const days = [0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0];
+const good = [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1];
+const week = [["14", 1], ["15", 1], ["16", 0], ["17", 1], ["18", 0], ["19", 0], ["20", 1]];
+// ring = good days drawn as a ring (the mode, and the printed report)
+const piece = (P, ring) => `
+  <div class="card">
+    <div class="tags"><span class="tag" style="background:${P.rt}">Argument with partner</span><span class="tag" style="background:${P.rt}">Drained after work</span></div>
+    <div class="tags"><span class="tag" style="background:${P.gt}">Calm</span><span class="tag" style="background:${P.gt}">30 min outside</span></div>
+  </div>
+  <div class="card">
+    <div class="strip"><small>Drained after work</small><div class="dots">${days.map((d) => `<i style="${d ? `background:${P.r}` : ""}"></i>`).join("")}</div></div>
+    <div class="strip"><small>Calm</small><div class="dots">${good.map((d) => `<i style="${d ? (ring ? `background:transparent;border:3px solid ${P.g}` : `background:${P.g}`) : ""}"></i>`).join("")}</div></div>
+    <div class="cal">${["Mo","Tu","We","Th","Fr","Sa","Su"].map((w) => `<span>${w}</span>`).join("")}${week.map(([n, h]) => h ? `<i style="background:${P.r};color:#fff">${n}</i>` : ring ? `<i style="border:3px solid ${P.g};color:${P.gInk}">${n}</i>` : `<i style="background:${P.g};color:${P.gInk}">${n}</i>`).join("")}</div>
+  </div>`;
+document.getElementById("three").innerHTML = [
+  ["Как видишь ты", "цвета E, как сейчас", E, false, ""],
+  ["Как видит дальтоник", "те же цвета E", E, false, "sim"],
+  ["Режим включён", "так его видит дальтоник", G, true, "sim"],
+].map(([a, b, P, ring, cls]) => `<div class="col"><div class="label"><b>${a}</b><span>${b}</span></div><div class="v ${cls}">${piece(P, ring)}</div></div>`).join("");
+const cal = (ring) => `<div class="paper"><h3>Calendar: Had a headache</h3><div class="cal">${["Mo","Tu","We","Th","Fr","Sa","Su"].map((w) => `<span>${w}</span>`).join("")}${week.map(([n, h]) => h ? `<i style="background:#e16096;color:#fff">${n}</i>` : ring ? `<i style="border:3px solid #42bd98;color:#0e3b2f">${n}</i>` : `<i style="background:#42bd98;color:#0e3b2f">${n}</i>`).join("")}</div></div>`;
+document.getElementById("print").innerHTML = [
+  ["Сейчас", "печать в ч/б", cal(false)],
+  ["С кольцами", "печать в ч/б", cal(true)],
+].map(([a, b, html]) => `<div class="col"><div class="label"><b>${a}</b><span>${b}</span></div><div class="gray">${html}</div></div>`).join("");
+</script>

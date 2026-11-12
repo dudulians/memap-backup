@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { applyColorBlind } from "@/lib/colorBlind";
 import App from "./App.tsx";
 import "./index.css";
 // Init i18next before any component renders so t() works everywhere
@@ -22,5 +23,6 @@ initAnalytics();
 // The new screens get their own bundled font (MeMap Sans, index.css);
 // classic keeps the one it shipped with.
 document.documentElement.setAttribute("data-ui", getUiMode());
+applyColorBlind();
 
 createRoot(document.getElementById("root")!).render(<App />);
