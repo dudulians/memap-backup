@@ -82,8 +82,8 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   mutedRef.current = muted;
 
   useEffect(() => { markUnloadPlayed(); preloadSounds("pop1", "pop2", "pop3", "pop4", "drop", "sparkle"); }, []);
-  // A quiet sea while the game is open (off when muted). While the sound is on the game plays like a player: heard
-  // on silent too, the phone's volume buttons set it (her notes, Nov 12 2026); closed, the app is quiet again.
+  // A quiet sea while the game is open (off when muted). An app sound: the phone's silent switch mutes it (her rule,
+  // Nov 12 2026: no player at the top, on silent no sound).
   useEffect(() => {
     gameSound(!muted);
     if (muted) return;

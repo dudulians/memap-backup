@@ -2448,6 +2448,8 @@ html[data-ui="new"][data-theme="aurora"] .planet-map-isle .new-tool { background
   box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .55); transition: transform .12s ease-out; }
 button.link-chip:active { transform: scale(.92); }
 .planet-link-chip { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+/* moved every frame with the globe: no transition, or it trails behind its route (her note, Nov 12 2026: «его штырит») */
+.planet-link-chip, .planet-inner-chip { transition: none !important; }
 html[data-ui="new"][data-theme="aurora"] .link-chip { background: hsl(var(--surface)); }
 /* a link: a dotted boat route (globeArt routeDots, Nov 4 2026) */
 .planet-route { fill: #FFFFFF; stroke: rgba(70, 100, 170, .28); stroke-width: 1; }

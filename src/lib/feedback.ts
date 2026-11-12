@@ -205,12 +205,11 @@ export const soundOn = (): boolean => {
 const bubbleSoundOn = (): boolean => BUBBLE_SOUNDS || soundOn();
 
 /**
- * How the phone treats the app's sound. "ambient" (the rest of the app): the silent switch mutes it and music from
- * other apps goes on. "playback" while the bubbles are open with their sound on (her notes, Nov 12 2026: in
- * headphones with the phone on silent the bubbles stayed quiet whatever she pressed, and the volume buttons changed
- * the ringer): the game's own sound button decides, the volume buttons set its loudness, other apps' music pauses.
+ * How the phone treats the app's sound: always "ambient" (her rule, Nov 12 2026: on silent no sound, with the ringer
+ * on the sounds play, and nothing else). "playback" was tried for the bubbles in build 63 and made iOS show its
+ * Now Playing player with "localhost" at the top: never again.
  */
-let sessionType: "ambient" | "playback" = "ambient";
+const sessionType = "ambient" as const;
 const applyType = (force = false) => {
   try {
     const nav = navigator as unknown as { audioSession?: { type: string } };
@@ -235,14 +234,11 @@ const renew = () => {
   if (fresh) { fresh.resume().catch(() => { /* ignore */ }); onNewCtx.forEach((f) => f()); }
 };
 
-/** The bubbles' sound on (open, sound button on) or off (sound button off, game closed). */
+/** The bubbles' sound turned on (the game opened, its sound button on): wake the sound in her tap. */
 export const gameSound = (on: boolean) => {
-  const want = on ? "playback" : "ambient";
-  if (want === sessionType) { if (on) wake(); return; }
-  sessionType = want;
+  if (!on) return;
   applyType();
-  // a running context keeps the session it started with: a new one takes the new type
-  if (on && audioCtx) renew(); else if (on) wake();
+  wake();
 };
 
 /** After the microphone (dictation sets the phone to recording): the sound and its session back as they were. */

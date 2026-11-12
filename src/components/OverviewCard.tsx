@@ -325,7 +325,13 @@ export const OverviewCard = ({
           </button>
         )}
         <button type="button" onClick={() => { haptics.tap(); setListOpen((o) => !o); }} aria-expanded={listOpen} className="min-w-0 flex-1 px-1 py-1 text-center">
-          <span className="block text-[17px] font-bold leading-snug">{cardQuestion(activeTracker)}</span>
+          {/* every question in one place, the others invisible: the box keeps the longest one's height, so paging
+              changes only the words and the marks (her note, Nov 12 2026) */}
+          <span className="grid items-center text-[17px] font-bold leading-snug">
+            {trackers.map((tr, i) => (
+              <span key={tr.id} aria-hidden={i !== activeTrackerIndex} style={{ gridArea: "1 / 1" }} className={cn("block", i !== activeTrackerIndex && "invisible")}>{cardQuestion(tr)}</span>
+            ))}
+          </span>
           <span className="mt-0.5 flex items-center justify-center gap-1 text-[13px] font-semibold text-muted-foreground">
             {t("overview.qOf", { k: activeTrackerIndex + 1, n: trackers.length })}
             <ChevronDown className={cn("h-4 w-4 transition-transform", listOpen && "rotate-180")} strokeWidth={2.4} />

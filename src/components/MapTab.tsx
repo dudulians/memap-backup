@@ -47,7 +47,8 @@ import { track } from "@/lib/analytics";
 import { markGlowSeen } from "@/lib/glowHints";
 import { usePlayful } from "@/lib/playful";
 
-type Only = "overview" | "trends" | "signals" | "findings";
+/** "linkchart": a link's own chart, opened from the link, shown in Links (not in My Days; her note, Nov 12 2026) */
+type Only = "overview" | "trends" | "signals" | "findings" | "linkchart";
 export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   initialOpen?: "all" | Only | null;
   /** back from answering an island's questions on Today: its sheet again */
@@ -73,7 +74,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     window.addEventListener("memap-set-map-view", set);
     // a link's "See the days": both questions on the chart (QA: it opened one question's calendar under "Links");
     // back (or closing the chart) returns to that link in the list (her note, Nov 10 2026)
-    const linkDays = (e: Event) => { const ids = (e as CustomEvent).detail as string[]; if (!ids?.length) return; backTo.current = { links: ids }; setOnlyIsland(null); setOnlyIds(ids); setOnly("trends"); };
+    const linkDays = (e: Event) => { const ids = (e as CustomEvent).detail as string[]; if (!ids?.length) return; backTo.current = { links: ids }; setOnlyIsland(null); setOnlyIds(ids); setOnly("linkchart"); };
     window.addEventListener("memap-link-days", linkDays);
     return () => { window.removeEventListener("memap-set-map-view", set); window.removeEventListener("memap-link-days", linkDays); };
   }, []);
@@ -262,7 +263,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // a test's push opens its own card (Nov 12 2026)
   const [helpsFocus, setHelpsFocus] = useState<string | null>(null);
   // a part opened from anywhere stops glowing (glowHints.ts)
-  useEffect(() => { if (only) markGlowSeen(only === "trends" ? "overview" : only); }, [only]);
+  useEffect(() => { if (only) markGlowSeen(only === "trends" ? "overview" : only === "linkchart" ? "findings" : only); }, [only]);
   useEffect(() => { if (helpsOpen) markGlowSeen("helps"); }, [helpsOpen]);
   const onHelps = () => setHelpsOpen(true);
   // "See" under a done task (Nov 10 2026): from When to act straight to What helps, where it is now kept
@@ -277,7 +278,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   };
   // no tour walked (variant C, or skipped): the World says once what it is; the globe's "turn me" line waits for it
   const [worldTip, setWorldTip] = useState(() => !tourCompleted() && !tipSeen("block:world"));
-  const onlyTitle = (o: Only) => t(o === "findings" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");
+  const onlyTitle = (o: Only) => t(o === "findings" || o === "linkchart" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");
 
   return (
     <div ref={boxRef} className="map-sea relative flex h-full flex-col overflow-hidden overscroll-contain" style={{ background: "transparent" }}>
@@ -374,10 +375,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         </div>
       </BottomSheet>
       {/* Calendar / chart / lighthouses for everything, straight away. */}
-      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { if ((only === "overview" || only === "trends") && backToLink()) return; backTo.current = null; setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
+      <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { if ((only === "overview" || only === "trends" || only === "linkchart") && backToLink()) return; backTo.current = null; setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
         ariaTitle={only ? onlyTitle(only) : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
-          {backTo.current && (only === "overview" || only === "trends") && (
+          {backTo.current && (only === "overview" || only === "trends" || only === "linkchart") && (
             <button type="button" data-back-to-link onClick={() => { haptics.tap(); backToLink(); }}
               className="-ml-1 mb-1 flex h-10 items-center gap-1 self-start pr-3 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
               <ChevronLeft className="h-5 w-5" strokeWidth={2.6} />{t("map.backToLink")}
@@ -385,7 +386,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {/* tighter top (her note, Nov 10 2026: the calendar didn't fit in My days) */}
           <h2 className="pb-1.5 pr-10 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
-          {only && !tourCompleted() && (
+          {only && only !== "linkchart" && !tourCompleted() && (
             <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={null}
               line={t(only === "findings" ? "tips.inLinks" : only === "signals" ? "tour.actions.line" : "tips.inMonth")} />
           )}
@@ -399,8 +400,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               ))}
             </div>
           )}
-          {/* All islands, or one. */}
-          <div className="-mx-4 mb-2 flex shrink-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide" role="tablist" aria-label={t("map.filterAria")}>
+          {/* All islands, or one (not over a link's own chart). */}
+          <div className={`-mx-4 mb-2 shrink-0 gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide ${only === "linkchart" ? "hidden" : "flex"}`} role="tablist" aria-label={t("map.filterAria")}>
             {[null, ...islands.filter((i) => i.trackerIds.length > 0).map((i) => i.id)].map((id) => {
               const on = onlyIsland === id;
               const isl = id ? islands.find((i) => i.id === id) : undefined;
@@ -416,14 +417,14 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           {/* a thought she tracks: steady, or depends on the day? (board 64) */}
           {only === "findings" && !onlyIsland && <SteadyCard trackers={trackers} entries={entries} />}
           {only && (
-            <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only} pair={!!onlyIds}
+            <PatternsTab key={`${only}-${onlyIsland ?? "all"}-${onlyIds?.join() ?? ""}`} only={only === "linkchart" ? "trends" : only} pair={!!onlyIds}
               focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)}
               onTry={(x) => { backTo.current = null; setOnly(null); window.setTimeout(() => setTrying(x), 250); }} />
           )}
         </div>
       </BottomSheet>
       <LinkSheet route={link} trackers={trackers} entries={entries} days={dayCount} onClose={() => setLink(null)}
-        onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("trends"), 250); }} />
+        onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("linkchart"), 250); }} />
       {helpsResult && (
         <ExperimentSheet mode="result" experiment={helpsResult} trackers={trackers} entries={entries} onClose={() => setHelpsResult(null)} />
       )}

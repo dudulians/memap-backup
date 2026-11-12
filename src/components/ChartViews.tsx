@@ -292,7 +292,8 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
       // the answer the link counts ("short night": the no of Slept 7+ hours); a question alone: its hard answer
       const hit = detail.yes ? detail.yes[k] : tr.problemWhen === "yes";
       return {
-        color: colorOf(tr, k, detail.ids.length > 1), values: weekly(tr, entries, n, hit), days: dayMarks(tr, entries, WEEKS, hit), pic: picOf(tr),
+        color: colorOf(tr, k, detail.ids.length > 1), values: weekly(tr, entries, n, hit), // a link chart has no day bars: the link shows them already (her note, Nov 12 2026: «палочки дублируются»)
+        days: detail.ids.length > 1 ? undefined : dayMarks(tr, entries, WEEKS, hit), pic: picOf(tr),
         label: detail.yes ? cap(answerPhrase(t, tr, detail.yes[k])) : detail.ids.length > 1 ? hardWord(tr) : name(id),
       };
     });
@@ -355,15 +356,8 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
     const card = "surface block w-full rounded-[22px] px-4 py-3.5 text-left active:scale-[0.99] transition-transform";
   return (
     <div className="animate-fade-in">
-      <div className="seg hidden" role="tablist">
-        {(["links", "each"] as const).map((v) => (
-          <button key={v} type="button" role="tab" aria-selected={view === v} onClick={() => { haptics.tap(); setView(v); }}
-            className={cn("chip", view === v && "is-on")}>
-            {t(`charts.${v}`)}
-          </button>
-        ))}
-      </div>
-      <p className="mt-2 text-[14px] font-medium text-muted-foreground">{t("charts.daysAWeek")}</p>
+      {/* no Links / Each switch: a link's chart opens from the link (her note, Nov 12 2026) */}
+      <p className="text-[14px] font-medium text-muted-foreground">{t("charts.daysAWeek")}</p>
 
       {view === "links" && (
         <div className="mt-3 space-y-3">

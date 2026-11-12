@@ -288,10 +288,10 @@ export const reminderPlan = async (
       dayBody = localizedQuestion
         ? `${localizedQuestion}\n${promptBody}`
         : promptBody;
-      // New screens (Aurora step 1 leftover): questions can be private
-      // ("A fight with your partner?"), so the lock screen shows only
-      // how much there is. Classic keeps its rotating question.
-      if (getUiMode() === "new") {
+      // Questions can be private ("A fight with your partner?"), so the lock screen shows only how much there is.
+      // The old look too since Nov 12 2026 (her call): its rotating question opened the evening from the first
+      // question, not the named one.
+      {
         // a warm line that changes from day to day, not just "MeMap" (Nov 8 2026)
         dayTitle = i18n.t(`notifications.dayTitle${(fireAt.getDate() % 5) + 1}`);
         const today = i18n.t("notifications.privateBody", {

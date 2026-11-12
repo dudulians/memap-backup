@@ -10,6 +10,7 @@ import { LIFE_STREAMS } from "@/lib/lifeStreams";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import type { Tracker } from "@/types/tracker";
 import { S } from "@/lib/answerSentences";
+import { RU_TITLE, RU_TITLE_OLD } from "@/lib/ruNeutral";
 
 /** [EN yes, EN no, RU yes, RU no], lowercase (capitalised where a line starts). */
 const P: Record<string, [string, string, string, string]> = {
@@ -283,6 +284,9 @@ const byTitle = (() => {
     if (!m) {
       m = new Map();
       for (const s of LIFE_STREAMS) for (const tpl of s.templates) for (const x of [tpl.title, tpl.titleRu, tpl.legacy?.title, tpl.legacy?.titleRu]) if (x) m.set(x.trim().toLowerCase(), tpl.id);
+      // the Russian titles without gender brackets too (ruNeutral.ts): a question stored under one read as typed by the
+      // person (the App Store session, Nov 12 2026: «Дни, когда ты отвечаешь «да» на «Ссора с партнёром»…»)
+      for (const map of [RU_TITLE, RU_TITLE_OLD]) for (const [id, x] of Object.entries(map)) { const k = x.trim().toLowerCase(); if (!m.has(k)) m.set(k, id); }
     }
     return m;
   };

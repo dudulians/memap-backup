@@ -45,6 +45,18 @@ const short = (tr: Tracker | undefined, yes: boolean) => !!tr && (!!templateIdOf
  *  "Slept 7+ hours"). */
 type DaysWith = (id: string, yes: boolean) => (boolean | undefined)[][];
 const BAR_WEEKS = 8;
+/** The days of an answer over the last weeks, from these answers. */
+export const makeDaysWith = (entries: TrackerEntry[]): DaysWith => (trackerId, yes) => {
+  const byDate = new Map(entries.filter((e) => e.trackerId === trackerId).map((e) => [e.date, e.value]));
+  return Array.from({ length: BAR_WEEKS }, (_, w) => Array.from({ length: 7 }, (_, i) => {
+    const v = byDate.get(daysAgoIso((BAR_WEEKS - 1 - w) * 7 + 6 - i));
+    return typeof v === "boolean" ? v === yes : undefined;
+  }));
+};
+/** The link between these two questions as Links shows it (the same day, or the next day), if it is shown there. */
+export const findLink = (trackers: Tracker[], entries: TrackerEntry[], a: string, b: string, nextDay: boolean): CorrelationResult | null =>
+  computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing)
+    .find((c) => ((c.trackerA.id === a && c.trackerB.id === b) || (c.trackerA.id === b && c.trackerB.id === a)) && (c.lag !== 0) === nextDay) ?? null;
 
 export const FindingsView = ({
   trackers,
@@ -131,13 +143,7 @@ export const FindingsView = ({
     );
   }
 
-  const daysWith: DaysWith = (trackerId, yes) => {
-    const byDate = new Map(entries.filter((e) => e.trackerId === trackerId).map((e) => [e.date, e.value]));
-    return Array.from({ length: BAR_WEEKS }, (_, w) => Array.from({ length: 7 }, (_, i) => {
-      const v = byDate.get(daysAgoIso((BAR_WEEKS - 1 - w) * 7 + 6 - i));
-      return typeof v === "boolean" ? v === yes : undefined;
-    }));
-  };
+  const daysWith = makeDaysWith(entries);
 
   // eight links, the rest under "More links" (every link worth showing is kept, her topics first)
   const SHOWN = 8;
@@ -333,13 +339,16 @@ const TwoCard = ({ g, of, daysWith }: { g: Route[]; of: TrackerOf; daysWith: Day
  *  with its islands, a plate under each, and the calm other days in words. A typed question without short words: the
  *  sentence (the strongest with its islands and their names). A tap opens the sentence, the count large with a small
  *  "Chart", the two answers' last 14 days in rows, the other days, and on the same day "What comes first?". */
-const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
+export const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked, startOpen, kicker, onChart }: {
   c: CorrelationResult; hero: boolean; of: TrackerOf; daysWith: DaysWith; isleDays: Record<string, number>; tracked: Set<string>;
+  /** open from the start (the globe's link sheet) */ startOpen?: boolean;
+  /** the small line over the strongest ("Strongest so far"); the globe's sheet says "A link" */ kicker?: string;
+  /** the link's chart (the globe's sheet: back from the chart goes to the sheet) */ onChart?: () => void;
 }) => {
   const { t } = useTranslation();
   const r = routeOf(c);
   const again = useRef(reopen === [r.first, r.second].join("|"));
-  const [open, setOpen] = useState(again.current);
+  const [open, setOpen] = useState(again.current || !!startOpen);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!again.current) return; reopen = null; box.current?.scrollIntoView({ block: "center" }); }, []);
   const solid = c.stage === "emerging" || c.stage === "stable";
@@ -371,7 +380,7 @@ const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
         <span className="block">
           {hero && (
             <span className="mb-2.5 flex items-center justify-between gap-2">
-              <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{t("patterns.findStrongest")}</span>
+              <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{kicker ?? t("patterns.findStrongest")}</span>
               <Chev open={open} />
             </span>
           )}
@@ -379,7 +388,7 @@ const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
             <>
               {hero ? <Isles r={r} of={of} isleDays={isleDays} /> : <Tags r={r} of={of} />}
               <span className={cn("flex items-center justify-between gap-2", hero ? "mt-3" : "mt-2.5")}>
-                <span data-link-when className={cn("font-bold", hero ? "text-[21px] leading-tight tracking-tight" : "text-[14px] text-muted-foreground")}>{r.nextDay ? t("link.whenNextDay", { often: linkWhen(t, r) }) : linkWhen(t, r)}</span>
+                <span data-link-when className={cn("font-bold", hero ? "text-[17px] leading-snug" : "text-[14px] text-muted-foreground")}>{r.nextDay ? t("link.whenNextDay", { often: linkWhen(t, r) }) : linkWhen(t, r)}</span>
                 {!hero && <Chev open={open} />}
               </span>
             </>
@@ -404,7 +413,7 @@ const LinkCard = ({ c, hero, of, daysWith, isleDays, tracked }: {
           {plates && <div className="mb-2">{sentenceEl(false)}</div>}
           {/* typed questions without short words: name them, right under the sentence */}
           <OwnWordsPrompt trackers={[a, b]} />
-          <div className="mt-2"><LinkNumbers r={r} bars={rows} onChart={() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] }))} /></div>
+          <div className="mt-2"><LinkNumbers r={r} bars={rows} onChart={onChart ?? (() => window.dispatchEvent(new CustomEvent("memap-link-days", { detail: [r.first, r.second] })))} /></div>
           {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026) */}
           {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} />}
         </div>
