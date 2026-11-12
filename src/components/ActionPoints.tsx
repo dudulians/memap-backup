@@ -871,7 +871,8 @@ const ChangeSheet = ({ tracker, name, why, onClose, couplesOff, trackers = [], e
     onClose();
   };
   return (
-    <BottomSheet open onOpenChange={(o) => { if (!o) onClose(); }} className="h-auto max-h-[88vh]" ariaTitle={t(had ? "rules.instead" : "rules.plan")}>
+    // a plan picked or typed is kept on leaving (her note, Nov 12 2026: what was marked must not be lost)
+    <BottomSheet open onOpenChange={(o) => { if (o) return; if (next) void save(); else onClose(); }} className="h-auto max-h-[88vh]" ariaTitle={t(had ? "rules.instead" : "rules.plan")}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-8">
         <div className="pr-10 pt-1">
           <KindTag kind="question" />
@@ -898,7 +899,7 @@ const ChangeSheet = ({ tracker, name, why, onClose, couplesOff, trackers = [], e
             aria-label={t("rules.plan")}
             className={cn("h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none focus:ring-2 focus:ring-[hsl(var(--coin-teal))]", own.trim() && "pick-on")} />
         </div>
-        <button type="button" onClick={save} disabled={!next} className="raised-btn mt-6 w-full justify-center">{t("common.save")}</button>
+        <button type="button" data-plan-save onClick={save} disabled={!next} className="raised-btn is-floating sticky bottom-3 z-10 mt-6 w-full shrink-0 justify-center">{t("common.save")}</button>
         <button type="button" onClick={off} className="mt-3 h-12 w-full text-[16px] font-semibold text-muted-foreground">{t("rules.turnOff")}</button>
       </div>
     </BottomSheet>

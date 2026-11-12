@@ -149,13 +149,17 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
 
   const islands = useMemo(() => buildIslands(trackers, entries), [trackers, entries]);
   const routes = useMemo(() => buildRoutes(trackers, entries, islands), [trackers, entries, islands]);
-  // the first link moment's "Open it": the link's own card
+  // the first link moment's "See" (and a link under an island): the link in Links, open, with its "What comes
+  // first?" (her note, Nov 12 2026: from the moment only charts could be reached, the question only from the map)
   useEffect(() => {
     const open = (e: Event) => {
       const d = (e as CustomEvent).detail as { a: string; b: string } | undefined;
       if (!d) return;
       setOpenRaw(null);
-      window.setTimeout(() => setLink(routes.find((r) => (r.a === d.a && r.b === d.b) || (r.a === d.b && r.b === d.a)) ?? null), 200);
+      const r = routes.find((x) => (x.a === d.a && x.b === d.b) || (x.a === d.b && x.b === d.a));
+      if (!r) return;
+      reopenLink([r.first, r.second]);
+      window.setTimeout(() => { setOnlyIds(null); setOnly("findings"); }, 200);
     };
     window.addEventListener("memap-open-link", open);
     return () => window.removeEventListener("memap-open-link", open);

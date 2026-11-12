@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUp, Check, Circle, FastForward, NotebookPen, PenLine, Pointer, Volume2, VolumeX, X } from "lucide-react";
 import { haptics } from "@/lib/haptics";
-import { BUBBLE_SOUNDS, SOUNDS_PAUSED, playBurst, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
+import { BUBBLE_SOUNDS, SOUNDS_PAUSED, gameSound, playBurst, playMerge, playPop, preloadSounds, startSea } from "@/lib/feedback";
 import { isNightMap } from "@/lib/islands";
 import { addNote } from "@/lib/notes";
 import { isoLocal } from "@/lib/doors";
@@ -76,18 +76,21 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
   useEffect(() => () => window.clearTimeout(offerTimer.current), []);
   // The loop reads these through a ref (no re-render per frame).
   const api = useRef<{ add: (s: string) => void } | null>(null);
-  // Pop sounds (her ask), with their own mute here; Settings → sounds mutes them too.
+  // Pop sounds (her ask), with their own button here and the same switch in Settings → Sound and vibration.
   const [muted, setMuted] = useState(() => { try { return localStorage.getItem("memap_unload_sound") === "off"; } catch { return false; } });
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
   useEffect(() => { markUnloadPlayed(); preloadSounds("pop1", "pop2", "pop3", "pop4", "drop", "sparkle"); }, []);
-  // A quiet sea while the game is open (off when muted).
+  // A quiet sea while the game is open (off when muted). While the sound is on the game plays like a player: heard
+  // on silent too, the phone's volume buttons set it (her notes, Nov 12 2026); closed, the app is quiet again.
   useEffect(() => {
+    gameSound(!muted);
     if (muted) return;
     const stop = startSea();
     return stop;
   }, [muted]);
+  useEffect(() => () => gameSound(false), []);
 
   useEffect(() => {
     const canvas = cv.current!, box = wrap.current!, ctx = canvas.getContext("2d")!;
@@ -416,7 +419,7 @@ export const UnloadGame = ({ onClose }: { onClose: () => void }) => {
           <X className="h-6 w-6" />
         </button>
         <p className="min-w-0 flex-1 truncate text-[17px] font-bold">{t("unload.title")}</p>
-        {(!SOUNDS_PAUSED || BUBBLE_SOUNDS) && <button type="button" onClick={() => { haptics.soft(); setMuted((m) => { try { localStorage.setItem("memap_unload_sound", m ? "on" : "off"); } catch { /* ignore */ } return !m; }); }}
+        {(!SOUNDS_PAUSED || BUBBLE_SOUNDS) && <button type="button" onClick={() => { haptics.soft(); gameSound(muted); setMuted((m) => { try { localStorage.setItem("memap_unload_sound", m ? "on" : "off"); } catch { /* ignore */ } return !m; }); }}
           aria-label={muted ? t("unload.soundOn") : t("unload.soundOff")} aria-pressed={!muted}
           className="surface flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground">
           {muted ? <VolumeX className="h-[18px] w-[18px]" strokeWidth={2.2} /> : <Volume2 className="h-[18px] w-[18px]" strokeWidth={2.2} />}

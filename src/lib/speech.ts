@@ -12,6 +12,7 @@
  */
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { getLanguage } from "@/lib/i18n";
+import { refreshAudio } from "@/lib/feedback";
 
 interface SpeechDictationPlugin {
   isAvailable(o: { lang: string }): Promise<{ available: boolean }>;
@@ -61,6 +62,8 @@ export const listen = async (onWords: (text: string) => void, onEnd: () => void)
   const end = () => {
     if (ended) return;
     ended = true;
+    // the microphone set the phone to recording: the bubbles' sound and the vibration come back (Nov 12 2026)
+    if (native()) window.setTimeout(refreshAudio, 300);
     onEnd();
   };
 

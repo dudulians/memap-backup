@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
-import { Check, ChevronDown, Link2 } from "lucide-react";
+import { Check, ChevronDown, Link2, Plus } from "lucide-react";
 import { chainText, linkCalmLine, linkCount, linkHead, linkNumbers, linkWhen, trackerLookup, twoThingsLine, twoThingsText, type TrackerOf } from "@/lib/linkText";
 import { getLinkOrder, LINK_ORDER_EVENT, setLinkOrder } from "@/lib/linkOrder";
 import { art, artOf } from "@/lib/globeArt";
@@ -220,10 +220,10 @@ export const reopenLink = (ids: string[]) => { reopen = ids.join("|"); };
 /** A tag: one answer in its own short words, tinted by what it means (hard rose, good green, neutral indigo). */
 const tintOf = (tr: Tracker | undefined, v: boolean) =>
   !tr || isNeutralQuestion(tr) || isTestQuestion(tr) ? "hsl(var(--data-a) / 0.16)" : isHardAnswer(tr, v) ? "hsl(var(--strong) / 0.16)" : "hsl(var(--balanced) / 0.24)";
-const Tag = ({ tr, yes, big }: { tr: Tracker | undefined; yes: boolean; big?: boolean }) => {
+const Tag = ({ tr, yes, big, fill }: { tr: Tracker | undefined; yes: boolean; big?: boolean; fill?: boolean }) => {
   const { t } = useTranslation();
   return (
-    <span data-tag className={cn("inline-block rounded-[12px] font-bold leading-tight text-foreground", big ? "px-2.5 py-1.5 text-[15.5px]" : "px-[11px] py-1.5 text-[16px]")} style={{ background: tintOf(tr, yes) }}>
+    <span data-tag className={cn("rounded-[12px] font-bold leading-tight text-foreground", fill ? "flex h-full w-full items-center justify-center text-center" : "inline-block", big ? "px-2 py-2 text-[15px]" : "px-[11px] py-1.5 text-[16px]")} style={{ background: tintOf(tr, yes) }}>
       {cap(answerPhrase(t, tr, yes))}
     </span>
   );
@@ -243,9 +243,9 @@ const Tags = ({ r, of }: { r: Route; of: TrackerOf }) => {
 const IslePic = ({ id, days }: { id: IslandId; days: number }) => {
   const name = artOf(id, days);
   return (
-    <span aria-hidden="true" className="block w-[104px]">
-      <img className="art-day block w-full" src={art(name, false)} alt="" />
-      <img className="art-night block w-full" src={art(name, true)} alt="" />
+    <span aria-hidden="true" data-isle-pic className="flex h-[88px] w-[104px] max-w-full items-end justify-center">
+      <img className="art-day block max-h-full w-full object-contain object-bottom" src={art(name, false)} alt="" />
+      <img className="art-night block max-h-full w-full object-contain object-bottom" src={art(name, true)} alt="" />
     </span>
   );
 };
@@ -263,13 +263,15 @@ const Isles = ({ r, of, isleDays }: { r: Route; of: TrackerOf; isleDays: Record<
     </span>
   );
   return (
-    <span className="-mx-2 grid grid-cols-[1fr_auto_1fr] items-end gap-0.5 pt-1">
-      <span className="flex min-w-0 flex-col items-center gap-2 text-center"><IslePic id={ia} days={isleDays[ia] ?? 0} /><Tag tr={a} yes={r.firstYes} big /></span>
-      <span className="mb-12 flex flex-col items-center text-[hsl(var(--coin-teal))]" aria-hidden="true">
+    <span data-isles className="-mx-1 grid grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)] grid-rows-[88px_auto] gap-x-1 gap-y-2 pt-1">
+      <span className="flex min-w-0 justify-center"><IslePic id={ia} days={isleDays[ia] ?? 0} /></span>
+      <span className="flex flex-col items-center justify-center pt-6 text-[hsl(var(--coin-teal))]" aria-hidden="true">
         <span className="flex items-center gap-1"><span className="w-2 border-t-2 border-dotted border-current opacity-60" /><span className="grid h-8 w-8 place-items-center rounded-full bg-white shadow-[0_2px_8px_rgba(16,42,56,0.16)]"><Link2 className="h-4 w-4" strokeWidth={2.4} /></span><span className="w-2 border-t-2 border-dotted border-current opacity-60" /></span>
-        {r.nextDay && <span className="mt-1 text-[12px] font-bold text-muted-foreground">{t("link.nextDayTag")}</span>}
+        {r.nextDay && <span data-next-day className="mt-1 text-center text-[12px] font-bold leading-tight text-muted-foreground">{t("link.nextDayTag")}</span>}
       </span>
-      <span className="flex min-w-0 flex-col items-center gap-2 text-center"><IslePic id={ib} days={isleDays[ib] ?? 0} /><Tag tr={b} yes={r.secondYes} big /></span>
+      <span className="flex min-w-0 justify-center"><IslePic id={ib} days={isleDays[ib] ?? 0} /></span>
+      <span className="col-start-1 min-w-0"><Tag tr={a} yes={r.firstYes} big fill /></span>
+      <span className="col-start-3 min-w-0"><Tag tr={b} yes={r.secondYes} big fill /></span>
     </span>
   );
 };
@@ -289,6 +291,8 @@ const OrderAsk = ({ r, of, tracked }: { r: Route; of: TrackerOf; tracked: Set<st
   const a = of(r.first), b = of(r.second);
   const [chosen, setChosen] = useState(() => (a && b ? getLinkOrder(a.id, b.id) : null));
   const [editing, setEditing] = useState(false);
+  const [watchKept, setWatchKept] = useState<string[]>([]);
+  const [added, setAdded] = useState<string[]>([]);
   if (!a || !b) return null;
   const pick = (v: string, choice: "first" | "second" | "unsure") => { haptics.tap(); setChosen(v); setEditing(false); setLinkOrder(a.id, b.id, v); track("link_order_answered", { choice }); };
   const firstOf = (id: string) => (id === a.id ? answerPhrase(t, a, r.firstYes) : answerPhrase(t, b, r.secondYes));
@@ -296,16 +300,28 @@ const OrderAsk = ({ r, of, tracked }: { r: Route; of: TrackerOf; tracked: Set<st
   // first version, small grey chips under the dots, "я вообще не увидела этот вопрос")
   const row = (on: boolean) => cn("flex min-h-12 w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-[16px] outline-none active:scale-[0.99]", on ? "surface pick-on font-bold" : "bg-foreground/[0.05] font-semibold");
   const tick = (on: boolean) => <span aria-hidden="true" className={cn("tick", on && "is-on")}>{on && <Check className="h-4 w-4" strokeWidth={3} />}</span>;
-  const watch = chosen === "unsure" ? watchFor(a, b, tracked) : [];
+  // the list stays as it was when "Not sure" was picked: an added question keeps its row, ticked
+  const watch = chosen === "unsure" ? [...new Set([...watchKept, ...watchFor(a, b, tracked)])].slice(0, Math.max(2, watchKept.length)) : [];
+  const addWatch = async (id: string) => {
+    if (added.includes(id)) return;
+    haptics.success();
+    setWatchKept((k) => (k.includes(id) ? k : [...k, ...watch.filter((x) => !k.includes(x))]));
+    setAdded((x) => [...x, id]);
+    track("notit_watch_added");
+    await ensureTemplates([id]);
+  };
   const watchList = watch.length > 0 && (
-    <div className="mt-3">
-      <p className="text-[14px] font-bold">{t("link.orderWatch")}</p>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {watch.map((id) => { const f = findTemplate(id); return f ? (
-          <button key={id} type="button" data-watch={id} onClick={async () => { track("notit_watch_added"); await ensureTemplates([id]); }}
-            className="rounded-full bg-[hsl(var(--coin-teal)/0.12)] px-3 py-1.5 text-[14px] font-bold text-foreground">+ {templateQuestion(f.template)}</button>
-        ) : null; })}
+    <div data-watch-list className="mt-4">
+      <p className="text-[16px] font-bold leading-snug">{t("link.orderWatch")}</p>
+      <div className="mt-2 space-y-2">
+        {watch.map((id) => { const f = findTemplate(id); if (!f) return null; const on = added.includes(id); return (
+          <button key={id} type="button" data-watch={id} aria-pressed={on} onClick={() => void addWatch(id)} className={row(on)}>
+            <span className="min-w-0 flex-1">{templateQuestion(f.template)}</span>
+            {on ? tick(true) : <span aria-hidden="true" className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[hsl(var(--coin-teal))] text-white"><Plus className="h-4 w-4" strokeWidth={3} /></span>}
+          </button>
+        ); })}
       </div>
+      {added.length > 0 && <p data-watch-added className="mt-2 text-[14px] font-semibold text-muted-foreground">{t("tipDay.added")}</p>}
     </div>
   );
   // answered: one picked row says what was chosen and what it did; "Change" opens the three rows again

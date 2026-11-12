@@ -96,6 +96,9 @@ public class CoreHapticsPlugin: CAPPlugin, CAPBridgedPlugin {
         guard supports else { return }
         do {
             engine = try CHHapticEngine()
+            // vibration on its own, not tied to the app's sound: it went quiet everywhere while the
+            // microphone (dictation) held the sound, and came back later (her note, Nov 12 2026)
+            engine?.playsHapticsOnly = true
             // Restart automatically if iOS stops the engine for us
             // (audio session changes, app going to background, etc.).
             engine?.stoppedHandler = { [weak self] _ in
@@ -348,6 +351,9 @@ public class SpeechDictationPlugin: CAPPlugin, CAPBridgedPlugin {
         task?.finish()
         request = nil
         task = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        let session = AVAudioSession.sharedInstance()
+        try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        // back to the app's normal sound: left on "record", the bubbles stayed silent after speaking a thought
+        try? session.setCategory(.ambient, mode: .default, options: [])
     }
 }

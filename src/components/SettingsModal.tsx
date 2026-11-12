@@ -44,7 +44,7 @@ import { APP_STORE_REVIEW_URL } from "@/lib/appRating";
 import { captureError } from "@/lib/sentry";
 import { getDoorState } from "@/lib/doors";
 import { isSensitiveTrackerTitle } from "@/lib/correlations";
-import { SOUNDS_PAUSED } from "@/lib/feedback";
+import { BUBBLE_SOUNDS, SOUNDS_PAUSED } from "@/lib/feedback";
 
 // Shown under Data & privacy and in support emails. Bump with each release.
 const APP_VERSION = "2.0";
@@ -120,6 +120,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   useScreen("settings", open);
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings());
   const [sessionSettings, setSessionSettings] = useState(getSessionSettings());
+  // the bubbles' sound (the same switch as the button in the game)
+  const [bubbleSound, setBubbleSound] = useState(() => { try { return localStorage.getItem("memap_unload_sound") !== "off"; } catch { return true; } });
   const [avatarOpen, setAvatarOpen] = useState(false);
   // one tap switched the whole app (QA, Nov 8 2026): ask first, in place
   const [askOld, setAskOld] = useState(false);
@@ -893,8 +895,8 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                         </div>
                         {nav("trackers", t("today.myQuestions"), String(activeTrackerCount))}
                         {nav("language", t("language.settingsLabel"), langLabel)}
-                        {/* Address form only matters for Russian copy */}
-                        {currentLang === "ru" && nav("gender", t("gender.settingsLabel"), t(`gender.${currentPol}`))}
+                        {/* no gender row (her note, Nov 12 2026: «зачем в настройках остался выбор пола»): the words have
+                            no gender since the 1.8 rewrite */}
                       </div>
 
                       {/* what used to hide under "More" (her note, Nov 8 2026: "зачем more… и там повторяется
@@ -1013,6 +1015,13 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   <div className={row}>
                     <span className="flex-1 text-[17px] font-medium">{t("settings.sound")}</span>
                     <Switch id="sound-toggle" checked={sessionSettings.soundEnabled} onCheckedChange={(v) => handleSessionSettingsChange("soundEnabled", v)} />
+                  </div>
+                )}
+                {/* her question (Nov 12 2026): does this screen switch the bubbles' sound? Now it does, by name */}
+                {SOUNDS_PAUSED && BUBBLE_SOUNDS && (
+                  <div className={row}>
+                    <span className="flex-1 text-[17px] font-medium">{t("settings.bubbleSound")}</span>
+                    <Switch id="bubble-sound-toggle" checked={bubbleSound} onCheckedChange={(v) => { setBubbleSound(v); try { localStorage.setItem("memap_unload_sound", v ? "on" : "off"); } catch { /* ignore */ } }} />
                   </div>
                 )}
                 <div className={row}>

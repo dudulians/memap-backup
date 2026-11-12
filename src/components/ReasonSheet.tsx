@@ -2,7 +2,7 @@
 // скипать"): one sheet for the last days' fights or headaches. Each answer: its day and name, chips to tick
 // (as many as fit), a few words if wanted. Save, or Skip (that answer is never asked about again). The same sheet
 // changes one answer's reasons from Notes. src/lib/reasons.ts has the rules.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
@@ -46,12 +46,15 @@ export const ReasonSheet = ({ items, mode, trackers, entries, onClose }: {
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [words, setWords] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // something ticked or typed since the sheet opened: leaving saves it
+  const touched = useRef(false);
   const open = !!items && items.length > 0;
   const openKey = (items ?? []).map(reasonKey).join(",");
 
   // what each answer has already (chips on the answer, its words in a note)
   useEffect(() => {
     if (!items?.length) return;
+    touched.current = false;
     const tags: Record<string, string[]> = {};
     for (const it of items) tags[reasonKey(it)] = entries.find((e) => e.trackerId === it.trackerId && e.date === it.date)?.tags ?? [];
     setPicked(tags);
@@ -70,6 +73,7 @@ export const ReasonSheet = ({ items, mode, trackers, entries, onClose }: {
 
   const toggle = (key: string, chip: string) => {
     haptics.tap();
+    touched.current = true;
     setPicked((p) => {
       const cur = p[key] ?? [];
       return { ...p, [key]: cur.includes(chip) ? cur.filter((x) => x !== chip) : [...cur, chip] };
@@ -103,7 +107,9 @@ export const ReasonSheet = ({ items, mode, trackers, entries, onClose }: {
   };
 
   return (
-    <BottomSheet open={open} onOpenChange={(o) => { if (!o) onClose(null); }} ariaTitle={t("why.step")}>
+    // leaving saves what was marked, as everywhere else (her note, Nov 12 2026: «отметила, закрыла, и всё пропало»);
+    // nothing marked just closes (no "skipped")
+    <BottomSheet open={open} onOpenChange={(o) => { if (o || busy) return; if (touched.current && anything) void save(); else onClose(null); }} ariaTitle={t("why.step")}>
       <div data-reason-sheet className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-6">
         <h2 className="pr-10 pt-1 text-[26px] font-bold tracking-tight">{t("why.step")}</h2>
         {items.map((it) => {
@@ -119,14 +125,15 @@ export const ReasonSheet = ({ items, mode, trackers, entries, onClose }: {
                   </button>
                 ))}
               </div>
-              <input type="text" value={words[key] ?? ""} maxLength={200} onChange={(e) => setWords((w) => ({ ...w, [key]: e.target.value }))}
+              <input type="text" value={words[key] ?? ""} maxLength={200} onChange={(e) => { touched.current = true; setWords((w) => ({ ...w, [key]: e.target.value })); }}
                 placeholder={t("why.words")} aria-label={t("why.words")}
                 className="mt-2.5 h-12 w-full rounded-2xl border border-foreground/[0.12] bg-foreground/[0.04] px-4 text-[16px] font-medium outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-[hsl(var(--coin-teal))]" />
             </div>
           );
         })}
         <div className="min-h-6 flex-1" />
-        <button type="button" onClick={save} disabled={busy} className="raised-btn mt-6 w-full shrink-0 justify-center">{t("common.save")}</button>
+        {/* always in sight while the list scrolls (her note, Nov 12 2026: it sat at the very bottom) */}
+        <button type="button" data-reason-save onClick={save} disabled={busy} className="raised-btn is-floating sticky bottom-3 z-10 mt-6 w-full shrink-0 justify-center">{t("common.save")}</button>
         {mode === "ask" && (
           <button type="button" onClick={skip} disabled={busy} className="mt-1 h-11 w-full shrink-0 text-[16px] font-semibold text-muted-foreground">{t("common.skip")}</button>
         )}

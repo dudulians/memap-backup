@@ -71,10 +71,11 @@ const wake = (): AudioContext | null => {
   if (!ctx) return null;
   if (ctx.state === "running") { stuckSince = 0; return ctx; }
   ctx.resume().catch(() => { /* ignore */ });
-  if (ctx.state === "suspended") return ctx;
-  // "interrupted" or "closed"
+  // "suspended" is woken by her tap at once; still "suspended" after 1.5 s of tapping (her note, Nov 12 2026: the
+  // sound came back only after leaving and coming in again), or "interrupted" after 0.6 s: a new context
   if (!stuckSince) stuckSince = Date.now();
-  if (ctx.state === "closed" || Date.now() - stuckSince > 600) {
+  const limit = ctx.state === "suspended" ? 1500 : 600;
+  if (ctx.state === "closed" || Date.now() - stuckSince > limit) {
     try { void ctx.close(); } catch { /* already closed */ }
     audioCtx = null;
     stuckSince = 0;
@@ -203,12 +204,51 @@ export const soundOn = (): boolean => {
 /** The bubbles' own sound switch: on while BUBBLE_SOUNDS (the game's mute button decides). */
 const bubbleSoundOn = (): boolean => BUBBLE_SOUNDS || soundOn();
 
-const ready = (): AudioContext | null => {
+/**
+ * How the phone treats the app's sound. "ambient" (the rest of the app): the silent switch mutes it and music from
+ * other apps goes on. "playback" while the bubbles are open with their sound on (her notes, Nov 12 2026: in
+ * headphones with the phone on silent the bubbles stayed quiet whatever she pressed, and the volume buttons changed
+ * the ringer): the game's own sound button decides, the volume buttons set its loudness, other apps' music pauses.
+ */
+let sessionType: "ambient" | "playback" = "ambient";
+const applyType = (force = false) => {
   try {
     const nav = navigator as unknown as { audioSession?: { type: string } };
-    if (nav.audioSession && nav.audioSession.type !== "ambient") nav.audioSession.type = "ambient";
+    if (!nav.audioSession) return;
+    // through "auto" so WebKit sets the phone's sound again (after the microphone took it)
+    if (force && nav.audioSession.type === sessionType) nav.audioSession.type = "auto";
+    if (nav.audioSession.type !== sessionType) nav.audioSession.type = sessionType;
   } catch { /* older WebViews */ }
+};
+const ready = (): AudioContext | null => {
+  applyType();
   return wake();
+};
+
+/** A fresh context in the right session (the sea goes on in it); old decoded sounds are kept. */
+const renew = () => {
+  stuckSince = 0;
+  if (!audioCtx) return;
+  try { void audioCtx.close(); } catch { /* already closed */ }
+  audioCtx = null;
+  const fresh = getCtx();
+  if (fresh) { fresh.resume().catch(() => { /* ignore */ }); onNewCtx.forEach((f) => f()); }
+};
+
+/** The bubbles' sound on (open, sound button on) or off (sound button off, game closed). */
+export const gameSound = (on: boolean) => {
+  const want = on ? "playback" : "ambient";
+  if (want === sessionType) { if (on) wake(); return; }
+  sessionType = want;
+  applyType();
+  // a running context keeps the session it started with: a new one takes the new type
+  if (on && audioCtx) renew(); else if (on) wake();
+};
+
+/** After the microphone (dictation sets the phone to recording): the sound and its session back as they were. */
+export const refreshAudio = () => {
+  applyType(true);
+  renew();
 };
 
 /** Where a sound sits, left (-1) to right (1); plain output where panning isn't there. */

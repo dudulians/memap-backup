@@ -152,7 +152,7 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
   const sub = (s: string) => <span className="mt-0.5 line-clamp-3 w-full text-[11px] font-semibold leading-[1.2] text-muted-foreground [hyphens:auto]">{s}</span>;
 
   return (
-    <div className="flex gap-1.5 px-4">
+    <div data-world-tiles className="flex gap-1.5 px-4">
       <button type="button" className={card + glowOf("overview")} onClick={() => open("overview")} data-tour="calendar">
         {head("world4.myDays")}
         <span className="mt-1 grid grid-cols-7 gap-[2.5px]" aria-hidden="true">

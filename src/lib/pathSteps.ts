@@ -294,6 +294,14 @@ export const skipTask = (task: TaskId) => {
   s[task] = { ...s[task], skipped: isoLocal(new Date()) };
   writeTasks(s);
 };
+/** Changed her mind after "Not today" (Nov 12 2026): the task is open again. */
+export const unskipTask = (task: TaskId) => {
+  const s = readTasks();
+  if (!s[task]?.skipped) return;
+  const { skipped: _gone, ...rest } = s[task]!;
+  s[task] = rest;
+  writeTasks(s);
+};
 
 const ACT_KEY = "memap_act_seen";
 /** She looked at her lit rules today. */

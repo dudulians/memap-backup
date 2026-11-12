@@ -232,6 +232,19 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   innerRef.current = inner;
   const belowRef = useRef(below);
   belowRef.current = below;
+  // under the World's four tiles: the ball fades out at the tiles' top edge (her note, Nov 12 2026: «не давай при зуме
+  // глобусу выходить за пределы верхней границы иконок»); measured, so it holds on any phone
+  useEffect(() => {
+    if (!below) return;
+    const set = () => {
+      const w = wrap.current, tiles = document.querySelector("[data-world-tiles]");
+      if (!w || !tiles) return;
+      w.style.setProperty("--globe-top", `${Math.max(0, tiles.getBoundingClientRect().top - w.getBoundingClientRect().top)}px`);
+    };
+    set(); const id = window.setTimeout(set, 600);
+    window.addEventListener("resize", set);
+    return () => { window.clearTimeout(id); window.removeEventListener("resize", set); };
+  }, [below]);
   const decorRef = useRef(decor);
   decorRef.current = decor;
   const zoomRef = useRef<(f: number) => void>(() => undefined);
@@ -720,7 +733,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   }, [wakes, paused, decor]);
 
   return (
-    <div ref={wrap} className={`planet-wrap${night ? " is-night" : ""}`} aria-label={t("map.aria")}>
+    <div ref={wrap} className={`planet-wrap${night ? " is-night" : ""}${below ? " is-below" : ""}`} aria-label={t("map.aria")}>
       {/* both skies, the night one fading in over the day one (soft day and night, Nov 11 2026) */}
       {sky && <div className="planet-sky day" style={{ backgroundImage: `url(${skyDay})` }} />}
       {sky && <div className={`planet-sky night${night ? " is-on" : ""}`} style={{ backgroundImage: `url(${skyNight})` }} />}
@@ -789,9 +802,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       {hint && !decor && !quietHint && <div className="planet-hint" style={below ? { bottom: "auto", top: "12.4rem" } : undefined}>{t("map.hint")}</div>}
       {/* zoom in and out by hand too (pinch and the wheel still work) */}
       <div className={`absolute right-4 z-[5] flex flex-col overflow-hidden rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]${decor ? " hidden" : ""}`} style={{ bottom: "calc(11.5rem + env(safe-area-inset-bottom, 0px))" }}>
-        <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-11 w-11 items-center justify-center text-foreground"><Plus className="h-5 w-5" strokeWidth={2.6} /></button>
-        <span className="mx-2.5 h-px bg-foreground/10" />
-        <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-11 w-11 items-center justify-center text-foreground"><Minus className="h-5 w-5" strokeWidth={2.6} /></button>
+        <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-9 w-9 items-center justify-center text-foreground"><Plus className="h-4 w-4" strokeWidth={2.6} /></button>
+        <span className="mx-2 h-px bg-foreground/10" />
+        <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-9 w-9 items-center justify-center text-foreground"><Minus className="h-4 w-4" strokeWidth={2.6} /></button>
       </div>
       {/* a new island, always at hand (on the flat map it was a tile) */}
       {onNewIsland && !decor && (

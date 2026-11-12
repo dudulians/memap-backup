@@ -2380,6 +2380,10 @@ header h1 { transition: opacity 200ms ease; }
 
 /* The globe, new look (PlanetGlobe, Nov 4 2026): her painted sky and planet, her island pack, soft wakes. */
 .planet-wrap { position: relative; height: 100%; width: 100%; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+/* under the World's tiles the ball never shows above their top edge (Nov 12 2026); --globe-top is measured */
+.planet-wrap.is-below > .planet-canvas, .planet-wrap.is-below > .planet-wakes, .planet-wrap.is-below > .planet-things {
+  -webkit-mask-image: linear-gradient(to bottom, transparent var(--globe-top, 0px), #000 calc(var(--globe-top, 0px) + 36px));
+  mask-image: linear-gradient(to bottom, transparent var(--globe-top, 0px), #000 calc(var(--globe-top, 0px) + 36px)); }
 .planet-sky { position: absolute; inset: 0; pointer-events: none; background-position: center top; background-repeat: no-repeat; }
 .planet-sky.day { background-size: cover; background-color: #E4DDF4; }
 /* her night sky is shorter than the screen: it fills the width, the ball covers what is below it */

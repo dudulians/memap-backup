@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pathModel, skipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pathModel, skipTask, unskipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { tipFor } from "@/lib/observeTips";
 import { buildIslands, buildRoutes, LINKS_TOP } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
@@ -902,7 +902,9 @@ export const EveningPath = ({
     if (n.kind === "end") {
       // before today is answered: say plainly it comes later, and take her to her step (phone test, Nov 7 2026)
       // with "Games and rewards" off it promises no bubbles: just how many steps are left
-      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), playful ? t(new Date().getHours() >= 17 ? "path.end.notYetEvening" : "path.end.notYet", { count: openLeft }) : t("path.end.left", { count: openLeft }))}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); })}</>);
+      // the bubbles are open any time of day (her note, Nov 12 2026: «полопать пузыри должно открываться в любой момент
+      // дня… а это надо ждать вечера»); the rest of the end comes after the last step
+      if (!eveningDone) return (<>{head(t("path.end.titleAhead"), playful ? t(new Date().getHours() >= 17 ? "path.end.notYetEvening" : "path.end.notYet", { count: openLeft }) : t("path.end.left", { count: openLeft }))}{playful && button(<><Wind className="h-5 w-5" strokeWidth={2.4} /> {t("path.popBubbles")}</>, () => { setOpen(null); track("end_card_action", { action: "bubbles_early" }); setUnloadOpen(true); }, "teal")}{button(t("tour.toStep"), () => { setOpen(null); window.dispatchEvent(new CustomEvent("memap-path-focus")); }, playful ? "plain" : undefined)}</>);
       const go = (f: () => void, action = "") => () => { setOpen(null); if (action) track("end_card_action", { action }); f(); };
       const ic = "h-5 w-5";
       // Links and the calendar only once there's something on them (her note, Nov 5
@@ -1037,6 +1039,8 @@ export const EveningPath = ({
         <>
           {head(t(`path.task.${s.task}.title`), s.done ? (s.skipped ? t("path.skipped") : t("path.done")) : t(`path.task.${s.task}.line`))}
           {!s.done && button(t("path.go"), () => startStep(s))}
+          {/* skipped today: it can still be done (her note, Nov 12 2026) */}
+          {s.done && s.skipped && button(t("path.go"), () => { unskipTask(s.task!); setTick((k) => k + 1); track("path_step_unskipped", { task: s.task }); startStep(s); }, "plain")}
           {!s.done && (
             <button type="button" onClick={() => { setOpen(null); skipTask(s.task!); setTick((k) => k + 1); }} className="mt-1 h-10 w-full text-[15px] font-semibold text-muted-foreground">
               {t("path.skip")}
