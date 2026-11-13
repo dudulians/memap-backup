@@ -152,6 +152,8 @@ const en = {
     orderNowReads: "Now the link reads:",
     tryAsk: "What to try",
     tryNow: "Trying now",
+    alsoHead: "Also with it",
+    alsoMore: "+{{count}} more with it",
     chainSameDay: "on those days {{result}}",
     chainNextDay: "the day after, {{result}}",
     advMostOften: "most often",

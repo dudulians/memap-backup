@@ -9,13 +9,13 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
 import { ArrowRight, ChevronDown, Link2 } from "lucide-react";
-import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, twoThingsLine, twoThingsSegs, type Seg, type TrackerOf } from "@/lib/linkText";
+import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, type Seg, type TrackerOf } from "@/lib/linkText";
 import { Chart, dayMarks, weekly, type Series } from "./ChartViews";
 import { art, artOf } from "@/lib/globeArt";
 import { LINK_ORDER_EVENT } from "@/lib/linkOrder";
 import { islandDays } from "@/lib/growth";
 import { answerClause } from "@/lib/answerPhrases";
-import { chainOf, notItFindings, pairOf, twoThingsOf, type NotIt } from "@/lib/findingForms";
+import { chainOf, notItFindings, pairOf, type NotIt } from "@/lib/findingForms";
 import { ensureTemplates, findTemplate } from "@/lib/doors";
 import { templateQuestion } from "@/lib/cardText";
 import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
@@ -27,7 +27,7 @@ import { factLine } from "@/lib/echo";
 import { LINKS_AT, countedDays } from "@/lib/pathSteps";
 import { ExampleLink } from "./Examples";
 import { OwnWordsPrompt } from "./AnswerWordsFields";
-import { DayBars, LinkIsles, LinkNumbers, LinkTry, OrderAsk, PAIR_A, PAIR_B, trackedTemplates, type BarRow } from "./LinkParts";
+import { LinkTry, OrderAsk, PAIR_A, PAIR_B, trackedTemplates } from "./LinkParts";
 
 const STRIP_DAYS = 14;
 
@@ -93,7 +93,14 @@ export const FindingsView = ({
   const isleDays = useMemo(() => Object.fromEntries(islandDays(trackers, entries)) as Record<string, number>, [trackers, entries]);
   const tracked = useMemo(() => trackedTemplates(trackers), [trackers]);
   const chain = useMemo(() => (focusIds ? null : chainOf(routes)), [routes, focusIds]);
-  const twos = useMemo(() => (focusIds ? [] : twoThingsOf(routes)), [routes, focusIds]);
+  // links about the same thing sit on one card (Nov 13 2026, her note on the long "two things" sentences: «что это
+  // за сочинения внизу?»): the strongest is the card's sentence, the others are short rows under it, "Also with it".
+  // Grouped by what the sentence is about (the second answer), strongest first; the order of groups is the links' own.
+  const groups = useMemo(() => {
+    const m = new Map<string, CorrelationResult[]>();
+    findings.forEach((c, i) => { const r = routes[i]; const k = `${r.second}|${r.secondYes}`; const g = m.get(k); if (g) g.push(c); else m.set(k, [c]); });
+    return [...m.values()];
+  }, [findings, routes]);
   const notIt = useMemo(() => (focusIds ? [] : notItFindings(trackers, entries, (id) => { const f = findTemplate(id); return !!f && !f.template.quiet && !f.template.sensitive && !f.template.askOnly; }, pairs)), [trackers, entries, pairs, focusIds]);
   const [allShown, setAllShown] = useState(false);
 
@@ -148,25 +155,22 @@ export const FindingsView = ({
     );
   }
 
-  const daysWith = makeDaysWith(entries);
-
-  // eight links, the rest under "More links" (every link worth showing is kept, her topics first)
+  // eight cards, the rest under "More links" (every link worth showing is kept, her topics first); a card holds every
+  // link about its thing
   const SHOWN = 8;
-  // the strongest one first and large, with its islands (the store's screen 5, her yes Nov 12 2026); then a chain and
-  // "two things", then the rest as two tags each
-  const shown = allShown ? findings : findings.slice(0, SHOWN);
-  const card = (c: CorrelationResult, hero: boolean) => (
-    <LinkCard key={`${c.trackerA.id}-${c.trackerB.id}`} c={c} hero={hero} of={of} entries={entries} tracked={tracked} />
+  // the strongest one first and large; then a chain, then the rest
+  const shown = allShown ? groups : groups.slice(0, SHOWN);
+  const card = (g: CorrelationResult[], hero: boolean) => (
+    <GroupCard key={`${routeOf(g[0]).second}-${routeOf(g[0]).secondYes}`} links={g} hero={hero} of={of} entries={entries} tracked={tracked} />
   );
   return (
     <div className="space-y-2.5 animate-fade-in">
-      {shown.slice(0, 1).map((c) => card(c, true))}
+      {shown.slice(0, 1).map((g) => card(g, true))}
       {chain && <StoryCard kind="chain" text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />}
-      {twos.map((g) => <TwoCard key={`two-${g[0].second}-${g[0].secondYes}`} g={g} of={of} daysWith={daysWith} />)}
-      {shown.slice(1).map((c) => card(c, false))}
-      {!allShown && findings.length > SHOWN && (
+      {shown.slice(1).map((g) => card(g, false))}
+      {!allShown && groups.length > SHOWN && (
         <button type="button" data-more-links onClick={() => setAllShown(true)} className="w-full rounded-[18px] py-3 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
-          {t("patterns.findAlso")} ({findings.length - SHOWN})
+          {t("patterns.findAlso")} ({groups.length - SHOWN})
         </button>
       )}
       {notIt.map((x) => <NotItCard key={`notit-${x.outcome.id}`} x={x} />)}
@@ -297,41 +301,23 @@ const Isles = ({ r, of, isleDays }: { r: Route; of: TrackerOf; isleDays: Record<
   );
 };
 
-/** "Two things next to it": the answer, "Most often the same days as", the things, as plates when all have short words,
- *  else its sentence (her pick, Nov 12 2026); on tap the sentence, each one's numbers and their last 14 days in rows. */
-const TwoCard = ({ g, of, daysWith }: { g: Route[]; of: TrackerOf; daysWith: DaysWith }) => {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const l = g[0];
-  const plates = short(of(l.second), l.secondYes) && g.every((x) => short(of(x.first), x.firstYes));
-  const res = of(l.second);
-  const rows: BarRow[] = [
-    { label: cap(answerPhrase(t, res, l.secondYes)), weeks: daysWith(l.second, l.secondYes), color: PAIR_A, main: true },
-    ...g.map((x) => ({ label: cap(answerPhrase(t, of(x.first), x.firstYes)), weeks: daysWith(x.first, x.firstYes), color: PAIR_B })),
-  ];
-  return (
-    <div data-story="two" className="surface rounded-[22px]">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="block w-full px-[18px] pb-3.5 pt-4 text-left">
-        <span className="flex items-start gap-2">
-          <span data-link-sentence className="min-w-0 flex-1 text-[16.5px] font-bold leading-snug tracking-tight"><Said segs={twoThingsSegs(t, g, of)} /></span>
-          <Chev open={open} className="mt-1" />
-        </span>
-      </button>
-      {open && (
-        <div data-story-numbers className="px-[18px] pb-4 animate-fade-in">
-          <div className="space-y-1">{g.map((x) => <p key={x.first} className="text-[15px] font-semibold text-muted-foreground">{twoThingsLine(t, x, of)}</p>)}</div>
-          <DayBars rows={rows} />
-        </div>
-      )}
-    </div>
-  );
+/** Every link about one thing on one card (Nov 13 2026): the strongest is told as the card's sentence, the others are
+ *  rows under it ("Also with it"); tapping a row makes that link the card's sentence, with its own chart, days,
+ *  "What comes first?" and "What to try". Nothing is lost: each link keeps everything it had on a card of its own. */
+const GroupCard = ({ links, hero, of, entries, tracked }: { links: CorrelationResult[]; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string> }) => {
+  const [focus, setFocus] = useState(0);
+  const [picked, setPicked] = useState(false);
+  const at = Math.min(focus, links.length - 1), c = links[at];
+  const also = links.map((x, i) => ({ r: routeOf(x), onPick: () => { setFocus(i); setPicked(true); } })).filter((_, i) => i !== at);
+  return <LinkCard key={pairOf(c)} c={c} hero={hero} of={of} entries={entries} tracked={tracked} also={also} startOpen={picked} />;
 };
 /** One link (her pick on the prototype, Nov 12 2026): one sentence with its two answers lit in the pair's colours and
  *  how many times under it. Opening the card shows, on the same card, the week chart with the day bars under it, the
  *  other days, and on the same day "What comes first?", which says after an answer what it took and how the link
  *  reads now. No plates, no islands: the globe has those. */
-export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker }: {
+export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, also = [] }: {
   c: CorrelationResult; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string>;
+  /** the other links about the same thing: rows under this one; a tap makes that link the card's own */ also?: { r: Route; onPick: () => void }[];
   /** open from the start (the globe's link sheet) */ startOpen?: boolean;
   /** the small line over the strongest ("Strongest so far"); the globe's sheet says "A link" */ kicker?: string;
 }) => {
@@ -375,7 +361,7 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker }: {
             hero ? "text-[19px]" : "text-[16.5px]", lit && "bg-[hsl(var(--coin-teal)/0.16)]")}><Said segs={segs} /></span>
           {!hero && <Chev open={open} className="mt-1" />}
         </span>
-        <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}</span>
+        <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}{!open && also.length > 0 && <span data-link-also-count>{" · "}{t("link.alsoMore", { count: also.length })}</span>}</span>
       </button>
       {open && (
         <div className="px-[18px] pb-4 animate-fade-in">
@@ -390,6 +376,21 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker }: {
             </div>
           )}
           {other && <p data-link-other className="mt-3 text-[15px] font-semibold leading-snug">{cap(other)}</p>}
+          {/* the other links about the same thing, as short rows; a tap tells that one in full on this card */}
+          {also.length > 0 && (
+            <div data-link-also className="mt-4">
+              <p className="text-[13px] font-bold text-[hsl(var(--coin-teal))]">{t("link.alsoHead")}</p>
+              <div className="mt-1.5 space-y-1.5">
+                {also.map((x) => { const n2 = linkNumbers(x.r); return (
+                  <button key={`${x.r.first}-${x.r.firstYes}`} type="button" data-also-row onClick={x.onPick}
+                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl bg-foreground/[0.05] px-4 py-2 text-left active:scale-[0.99]">
+                    <span className="min-w-0 flex-1 text-[15.5px] font-bold leading-snug">{cap(answerPhrase(t, of(x.r.first), x.r.firstYes))}{x.r.nextDay && <span className="font-semibold text-muted-foreground">{" · "}{t("link.nextDayTag")}</span>}</span>
+                    <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-muted-foreground">{linkTimes(t, n2.k, n2.n)}</span>
+                  </button>
+                ); })}
+              </div>
+            </div>
+          )}
           {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
               the card, and after an answer it says how the link reads now */}
           {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} readsNow={<Said segs={segs} />} />}

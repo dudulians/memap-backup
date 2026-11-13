@@ -161,6 +161,8 @@ const ru: Translation = {
     orderNowReads: "Теперь связь звучит так:",
     tryAsk: "Что попробовать",
     tryNow: "Сейчас пробуешь",
+    alsoHead: "Ещё вместе с этим",
+    alsoMore: "и ещё {{count}} вместе с этим",
     chainSameDay: "в такие дни {{result}}",
     chainNextDay: "на следующий день {{result}}",
     advMostOften: "чаще всего",

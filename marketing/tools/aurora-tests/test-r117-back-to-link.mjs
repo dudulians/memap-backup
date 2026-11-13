@@ -38,14 +38,15 @@ for (const lang of ["en", "ru"]) {
   await p.waitForTimeout(2200);
   const cards = p.locator("[data-link-card]");
   out[`${lang}.cards`] = await cards.count();
-  ok(`${lang}.links: two or more links`, (await cards.count()) >= 2, String(await cards.count()));
-  const second = cards.nth(1);
+  // r153 (Nov 13 2026): links about one thing share a card, so this data may show one card; the last card is opened
+  ok(`${lang}.links: a link card is there`, (await cards.count()) >= 1, String(await cards.count()));
+  const second = cards.nth(Math.min(1, (await cards.count()) - 1));
   await second.locator("button[aria-expanded]").click(); await p.waitForTimeout(700);
   await shot("open-in-list");
   const inCard = await second.evaluate((c) => ({ chart: !!c.querySelector("[data-link-chart-inline] svg"), days: !!c.querySelector("[data-chart-days]"), lit: c.querySelectorAll(".hl-a, .hl-b").length }));
   ok(`${lang}.list: the chart and the days on the card`, inCard.chart && inCard.days, inCard);
   ok(`${lang}.list: the two answers lit in the sentence`, inCard.lit >= 2, inCard);
-  ok(`${lang}.list: still in Links`, (await p.locator("[data-link-card]").count()) >= 2);
+  ok(`${lang}.list: still in Links`, (await p.locator("[data-link-card]").count()) >= 1);
   await p.keyboard.press("Escape"); await p.waitForTimeout(1000);
   ok(`${lang}.close Links → closed`, (await p.locator("[data-link-card]").count()) === 0);
 
