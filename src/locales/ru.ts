@@ -1328,6 +1328,11 @@ const ru: Translation = {
     shaping: "мир складывается",
   },
   map: {
+    share: "Поделиться",
+    shareReport: "PDF для врача или близкого",
+    shareReportLine: "Твои дни, связи и что ты пробуешь",
+    sharePicture: "Картинка моего мира",
+    sharePictureLine: "Глобус с твоими островами",
     filterAria: "Какой остров",
     allIslands: "Все",
     // back from a link's "See the days" (Nov 10 2026)

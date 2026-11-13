@@ -103,10 +103,8 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
           {/* shrink-0: in the scrolling column an overflow-hidden box would squash to nothing */}
           <div className="surface shrink-0 overflow-hidden rounded-[20px]">
             <Row icon={ListChecks} label={data ? `${t("today.myQuestions")} · ${questions}` : t("today.myQuestions")} onClick={onQuestions} />
-            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
-            <Row icon={Stethoscope} label={t("report.title")} onClick={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />
-            <div className="ml-[66px] h-px bg-foreground/[0.07]" />
-            <Row icon={Share2} label={t("share.button")} onClick={() => window.dispatchEvent(new CustomEvent("memap-share-world", { detail: { from: "you" } }))} />
+            {/* the report and "Share my world" moved to the World's Share button (Nov 13 2026: the avatar had become a
+                drawer for everything) */}
             <div className="ml-[66px] h-px bg-foreground/[0.07]" />
             <Row icon={Compass} label={t("how.title")} onClick={() => setHow(true)} />
             {/* Settings last (her note, Nov 8 2026) */}

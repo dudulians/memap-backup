@@ -285,6 +285,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     window.addEventListener("memap-link-try", go);
     return () => window.removeEventListener("memap-link-try", go);
   }, []);
+  // "Share" on the World: the PDF report or the picture (both moved here from the avatar, Nov 13 2026)
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareGo = (name: string, detail?: unknown) => { haptics.tap(); setShareOpen(false); window.setTimeout(() => window.dispatchEvent(new CustomEvent(name, { detail })), 280); };
   const pickTest = () => {
     const first = mainIsland && islands.some((i) => i.id === mainIsland) ? mainIsland : islands.find((i) => i.trackerIds.length > 0)?.id;
     if (first) setTestFor(first);
@@ -316,7 +319,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="absolute inset-0 z-0" data-tour="world">
           <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link} onNewIsland={() => setNewOpen(true)} />
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link} onNewIsland={() => setNewOpen(true)} onShare={() => setShareOpen(true)} />
         </div>
       )}
 
@@ -434,6 +437,19 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               focusIds={onlyIds ?? (onlyIsland ? islands.find((i) => i.id === onlyIsland)?.trackerIds : undefined)}
               onTry={(x) => { backTo.current = null; setOnly(null); window.setTimeout(() => setTrying(x), 250); }} />
           )}
+        </div>
+      </BottomSheet>
+      <BottomSheet open={shareOpen} onOpenChange={(o) => { if (!o) setShareOpen(false); }} className="h-auto" ariaTitle={t("map.share")}>
+        <div data-share-sheet className="flex flex-col gap-2.5 px-4 pb-10">
+          <h2 className="pb-1 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("map.share")}</h2>
+          <button type="button" data-share="report" onClick={() => shareGo("memap-doctor-report")} className="surface flex min-h-[64px] w-full flex-col justify-center rounded-[20px] px-4 py-3 text-left active:scale-[0.99]">
+            <span className="text-[17px] font-bold leading-snug">{t("map.shareReport")}</span>
+            <span className="text-[14px] font-semibold text-muted-foreground">{t("map.shareReportLine")}</span>
+          </button>
+          <button type="button" data-share="picture" onClick={() => shareGo("memap-share-world", { from: "you" })} className="surface flex min-h-[64px] w-full flex-col justify-center rounded-[20px] px-4 py-3 text-left active:scale-[0.99]">
+            <span className="text-[17px] font-bold leading-snug">{t("map.sharePicture")}</span>
+            <span className="text-[14px] font-semibold text-muted-foreground">{t("map.sharePictureLine")}</span>
+          </button>
         </div>
       </BottomSheet>
       <LinkSheet route={link} trackers={trackers} entries={entries} days={dayCount} onClose={() => setLink(null)}

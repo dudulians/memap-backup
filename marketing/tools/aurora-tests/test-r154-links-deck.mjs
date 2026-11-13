@@ -1,4 +1,4 @@
-// r154 (Nov 13 2026, branch design/one-system): Links opens as cards one by one, swiped sideways; the list is an option.
+// r154/r155 (Nov 13 2026, branch design/one-system): Links is a list that scrolls down, its first card open (the sideways deck of v154 was taken back: it fought the chart's and the calendar's own sideways gestures).
 // 1. Links shows a deck: every card open (its chart is there), "5 findings · swipe", a pager.
 // 2. Swiping to the next card lights the next pager dot.
 // 3. "See all as a list" shows the list (closed cards); "Show one by one" brings the deck back; the choice is kept.
@@ -30,21 +30,13 @@ for (const lang of ["en", "ru"]) {
   await p.locator("button").filter({ hasText: lang === "en" ? /^World$/ : /^Мир$/ }).last().click(); await p.waitForTimeout(2500);
   await p.locator('[data-tour="links-card"]').click(); await p.waitForTimeout(1400);
   const shot = async (name) => { await p.waitForTimeout(400); await p.screenshot({ path: `${D}/${String(++n).padStart(2, "0")}-${lang}-${name}.png` }); };
-  const st = await p.evaluate(() => ({ deck: !!document.querySelector("[data-links-deck]"), items: document.querySelectorAll("[data-deck-item]").length, charts: document.querySelectorAll("[data-deck-item] [data-link-chart-inline]").length, cards: document.querySelectorAll("[data-deck-item] [data-link-card]").length, head: document.querySelector("[data-deck-head]")?.textContent ?? "", dots: document.querySelectorAll("[data-deck-pager] span").length, wide: document.documentElement.scrollWidth }));
-  out[`${lang} deck`] = st;
-  check(`${lang}: Links is a deck of open cards`, st.deck && st.items >= 2 && st.charts === st.cards && st.cards >= 2, st);
-  check(`${lang}: the head counts the cards and says to swipe`, (lang === "en" ? /^\d+ findings · swipe$/ : /^\d+ наход\S+ · листай$/).test(st.head) && st.dots === st.items, st);
-  check(`${lang}: the page itself does not scroll sideways`, st.wide <= 390, st.wide);
-  await shot("deck");
-  await p.evaluate(() => { const el = document.querySelector("[data-links-deck]"); el.scrollTo({ left: el.firstElementChild.offsetWidth + 12 }); }); await p.waitForTimeout(700);
-  const on = await p.evaluate(() => [...document.querySelectorAll("[data-deck-pager] span")].findIndex((x) => x.className.includes("w-5")));
-  check(`${lang}: after a swipe the second dot is lit`, on === 1, on);
-  await shot("deck-second");
-  await p.locator("[data-links-as-list]").click(); await p.waitForTimeout(600);
-  const list = await p.evaluate(() => ({ deck: !!document.querySelector("[data-links-deck]"), closed: document.querySelectorAll("[data-link-card] button[aria-expanded=false]").length, pref: localStorage.getItem("memap_links_view") }));
-  check(`${lang}: "See all as a list" shows the list and keeps the choice`, !list.deck && list.closed >= 2 && list.pref === "list", list);
-  await p.locator("[data-links-as-deck]").scrollIntoViewIfNeeded(); await p.locator("[data-links-as-deck]").click(); await p.waitForTimeout(600);
-  check(`${lang}: "Show one by one" brings the deck back`, await p.evaluate(() => !!document.querySelector("[data-links-deck]") && localStorage.getItem("memap_links_view") === "deck"));
+  // r155: everything scrolls down. Links is a list; its first card is open from the start; nothing swipes sideways.
+  const st = await p.evaluate(() => ({ deck: !!document.querySelector("[data-links-deck]"), cards: document.querySelectorAll("[data-link-card]").length, open: [...document.querySelectorAll("[data-link-card]")].map((c) => !!c.querySelector("[data-link-chart-inline]")), buttons: document.querySelectorAll("[data-links-as-list], [data-links-as-deck]").length, wide: document.documentElement.scrollWidth }));
+  out[`${lang} list`] = st;
+  check(`${lang}: Links is a list, no sideways deck and no switch`, !st.deck && st.buttons === 0 && st.cards >= 2, st);
+  check(`${lang}: the first card is open from the start, the others closed`, st.open[0] === true && st.open.slice(1).every((x) => !x), st.open);
+  check(`${lang}: the page does not scroll sideways`, st.wide <= 390, st.wide);
+  await shot("list-first-open");
   await ctx.close();
 }
 await b.close();

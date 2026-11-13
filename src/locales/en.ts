@@ -1153,6 +1153,11 @@ const en = {
     shaping: "still taking shape",
   },
   map: {
+    share: "Share",
+    shareReport: "PDF for a doctor or someone close",
+    shareReportLine: "Your days, links and what you tried",
+    sharePicture: "Picture of my world",
+    sharePictureLine: "The globe with your islands",
     filterAria: "Which island",
     allIslands: "All",
     // back from a link's "See the days" (Nov 10 2026)

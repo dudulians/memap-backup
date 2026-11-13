@@ -11,7 +11,7 @@
 // - calm motion: drag 1:1, a short glide, no spinning on its own.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CloudLightning, CloudSun, Link2, Minus, Plus, Sun } from "lucide-react";
+import { CloudLightning, CloudSun, Link2, Minus, Plus, Sun, Share2 } from "lucide-react";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { standAt, standsOn } from "@/lib/islandSpots";
@@ -138,7 +138,7 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, quietHint = false, labels, onOpen, onNewIsland, onLink, onInner }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, quietHint = false, labels, onShare, onOpen, onNewIsland, onLink, onInner }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** another tip is on screen: the "turn me" line waits (Nov 8 2026) */
   quietHint?: boolean;
@@ -167,6 +167,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   paused?: boolean;
   onOpen: (id: IslandId) => void;
   onNewIsland?: () => void;
+  /** "Share": the report and the picture of the world */
+  onShare?: () => void;
   /** a dotted route (or its sign) tapped: the link card */
   onLink?: (a: IslandId, b: IslandId) => void;
 }) => {
@@ -808,11 +810,20 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       </div>
       {/* a new island, always at hand (on the flat map it was a tile) */}
       {onNewIsland && !decor && (
-        <button type="button" onClick={() => { haptics.tap(); onNewIsland(); }}
-          className="absolute left-4 z-[5] flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]"
-          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
-          <Plus className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("islands.new")}
-        </button>
+        <div className="absolute left-4 z-[5] flex items-center gap-2" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          <button type="button" onClick={() => { haptics.tap(); onNewIsland(); }}
+            className="flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
+            <Plus className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("islands.new")}
+          </button>
+          {/* the map is what gets shown to a partner or a doctor (her words, Nov 13 2026): the report and the picture
+              are here, not in the avatar */}
+          {onShare && !away && (
+            <button type="button" data-world-share onClick={() => { haptics.tap(); onShare(); }}
+              className="flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
+              <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("map.share")}
+            </button>
+          )}
+        </div>
       )}
       <button type="button" onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
         className={`absolute right-4 z-[5] flex h-12 items-center gap-2 rounded-full bg-white pl-2 pr-4 text-[15px] font-extrabold text-primary shadow-lg transition-all duration-200 dark:bg-[hsl(var(--surface))] ${away ? "opacity-100" : "pointer-events-none translate-y-2 opacity-0"}`}
