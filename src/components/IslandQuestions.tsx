@@ -67,7 +67,9 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
       {mine.map((tr) => (
         <div key={tr.id} className="surface rounded-[20px] px-4 py-3">
           <div className="flex items-center gap-3">
-            <p className="min-w-0 flex-1 text-[16px] font-semibold leading-snug">{cardQuestion(tr)}</p>
+            {/* the question opens its own page: days, links, when to act, what helps (ThingSheet, Nov 13 2026) */}
+            <button type="button" data-open-thing={tr.id} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-thing", { detail: { id: tr.id } })); }}
+              className="min-w-0 flex-1 text-left text-[16px] font-semibold leading-snug">{cardQuestion(tr)}</button>
             <button type="button" onClick={() => { haptics.tap(); setMenu((m) => (m === tr.id ? null : tr.id)); setRemoving(null); }}
               aria-label={t("islands.more")} aria-expanded={menu === tr.id}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] text-muted-foreground">

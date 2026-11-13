@@ -39,6 +39,7 @@ import { reopenLink } from "./FindingsView";
 import { ChevronLeft } from "lucide-react";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
+import { ThingSheet } from "./ThingSheet";
 import { DaysOverview } from "./DaysOverview";
 import { SteadyCard } from "./SteadyCard";
 import { IslandQuestions } from "./IslandQuestions";
@@ -285,6 +286,15 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     window.addEventListener("memap-link-try", go);
     return () => window.removeEventListener("memap-link-try", go);
   }, []);
+  // the page of one thing, opened from its question on an island; its rows open their own places, and closing them
+  // or it leads back (island → thing → place)
+  const [thing, setThing] = useState<string | null>(null);
+  useEffect(() => {
+    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; setOpenRaw(null); window.setTimeout(() => setThing(id), 250); };
+    window.addEventListener("memap-open-thing", go);
+    return () => window.removeEventListener("memap-open-thing", go);
+  }, []);
+  const fromThing = (f: () => void) => { setThing(null); window.setTimeout(f, 250); };
   // "Share" on the World: the PDF report or the picture (both moved here from the avatar, Nov 13 2026)
   const [shareOpen, setShareOpen] = useState(false);
   const shareGo = (name: string, detail?: unknown) => { haptics.tap(); setShareOpen(false); window.setTimeout(() => window.dispatchEvent(new CustomEvent(name, { detail })), 280); };
@@ -452,6 +462,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           </button>
         </div>
       </BottomSheet>
+      <ThingSheet tracker={thing ? trackers.find((x) => x.id === thing) ?? null : null} trackers={trackers} entries={entries}
+        onClose={() => { const tr = trackers.find((x) => x.id === thing); setThing(null); if (tr) window.setTimeout(() => setOpen(islandOf(tr)), 250); }}
+        onDays={(id) => fromThing(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds([id]); setOnly("overview"); })}
+        onLinks={(id, pair) => fromThing(() => { backTo.current = null; if (pair) reopenLink(pair); setOnlyIsland(null); setOnlyIds([id]); setOnly("findings"); })}
+        onAct={() => fromThing(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds(null); setOnly("signals"); })}
+        onTry={(isl) => fromThing(() => setTestFor(isl))} />
       <LinkSheet route={link} trackers={trackers} entries={entries} days={dayCount} onClose={() => setLink(null)}
         onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("linkchart"), 250); }} />
       {helpsResult && (

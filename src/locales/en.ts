@@ -2633,6 +2633,17 @@ const en = {
     title: "{{island}} island grew!",
     see: "See the island",
   },
+  thing: {
+    days: "{{k}} of the last {{n}} days",
+    fromDays: "From your days",
+    inWords: "In your words",
+    wordsCount: "{{k}} of {{n}} times you said why",
+    noLink: "Nothing goes with it so far",
+    often: "This is often. Time to act",
+    calm: "Calm for now",
+    trying: "Trying: {{what}}",
+    tryOne: "One small change to try",
+  },
   firstLink: {
     step: "Your first link!",
     newStep: "New link",
