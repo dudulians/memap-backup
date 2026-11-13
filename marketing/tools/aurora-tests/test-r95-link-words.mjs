@@ -61,7 +61,8 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.links`] = links.slice(0, 900);
   ok(`${lang}.links: forced yes, the next day, as a sentence`, FORCED[lang].test(links), links.slice(0, 300));
   // the same day claims no order since Nov 12 2026 (her pick): when the days fall
-  ok(`${lang}.links: same day, every time`, lang === "en" ? /The days you sleep under 7 hours always fall on days you have a headache (What comes first[^·]*? )?Every time — (\d+) of \2/.test(links) : /Дни, когда ты спишь меньше 7 часов, всегда приходятся на дни, когда болит голова (Что, по-твоему[^·]*? )?Каждый раз — (\d+) из \2/.test(links), links.slice(0, 600));
+  // r153: a second link about the same thing is a row on its card ("Also with it"), with its count
+  ok(`${lang}.links: same day, every time`, lang === "en" ? /Also with it Short night every time . ([0-9]+) of ([0-9]+)/.test(links) : /Ещё вместе с этим Короткая ночь каждый раз . ([0-9]+) из ([0-9]+)/.test(links), links.slice(0, 600));
   ok(`${lang}.links: no short headline`, !SHORT.test(links), links.slice(0, 300));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   // a link's own sheet on the map (every time: the big count)

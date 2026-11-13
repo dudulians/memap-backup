@@ -13,13 +13,13 @@ const EXPECT = {
   "work-home": [
     [/STRONGEST SO FAR The days you argue with your partner mostly fall on days you feel drained after work \d+ of \d+ times/, "the store's pair first, in one sentence"],
     [/^(?!.*On those days)/, "no chain until the person sets an order"],
-    [/(Argument with partner Most often the same days as|The days you argue with your partner most often fall on days)/, "two things next to the arguments"],
+    [/drained after work [0-9]+ of [0-9]+ times . [+][0-9]+ more with it/, "the other things next to the arguments are on its card (r153)"],
     [/Looks like it.s something else. .* on days you don.t drink too/, "something else: not the alcohol"],
     [/The days you feel calm mostly fall on days you spend 30 minutes outside/, "calm with time outside (the good side)"],
     [/“Did I check work email after 8 pm\??”/, "her own question, as typed"],
   ],
   "migraine-cycle": [
-    [/The days you have a headache most often fall on days you (have your period or you feel stressed|feel stressed or you have your period)/, "two things next to the headache: period or stress"],
+    [/have a headache [0-9]+ of [0-9]+ times . [+][0-9]+ more with it/, "the headache card holds its other links (r153)"],
     [/The day after you have coffee after 2 pm, you (usually|often|almost always|always) sleep under 7 hours/, "next day: late coffee → short night"],
   ],
   parenting: [
@@ -28,7 +28,7 @@ const EXPECT = {
     [/The days you feel calm (almost only|mostly) fall on days you have time for yourself/, "calm with me-time (the good side)"],
   ],
   "good-days": [
-    [/(Happy day Most often the same days as|days you [a-z ]*happy[a-z ]* most often fall on days)/i, "two things next to the happy days"],
+    [/feel happy .{0,40}[+][0-9]+ more with it/, "the happy days card holds its other links (r153)"],
     [/The days you feel calm mostly fall on days you meditate/, "calm on meditation days"],
     [/“Did I call my mom\??”/, "her own good question"],
   ],
@@ -56,7 +56,10 @@ for (const pack of Object.keys(EXPECT)) {
   await p.waitForTimeout(2200);
   // the whole list, folded links too
   await p.evaluate(() => document.querySelector("[data-more-links]")?.click()); await p.waitForTimeout(400);
-  const text = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ");
+  const closedText = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ");
+  // r153: links about one thing share a card; the others are rows seen when the card is open
+  await p.evaluate(() => document.querySelectorAll("[role=dialog] [data-link-card] button[aria-expanded=false]").forEach((x) => x.click())); await p.waitForTimeout(700);
+  const text = closedText + " " + (await p.locator("[role=dialog]").last().innerText()).split(/[ \n\t]+/).join(" ");
   out[`${pack} text`] = text.slice(0, 1500); writeFileSync(`${D}/${pack}.txt`, text.replace(/(Looks like|On days|The day after|You )/g, "\n$1"));
   await p.screenshot({ path: `${D}/${pack}.png`, fullPage: false });
   for (const [re, what] of EXPECT[pack]) ok(`${pack}: ${what}`, re.test(text), text.slice(0, 900));
