@@ -2635,6 +2635,8 @@ const en = {
   },
   firstLink: {
     step: "Your first link!",
+    newStep: "New link",
+    newSub: "Found in your own days",
     sub: "Something comes before something",
     see: "See it",
     title: "Your first link!",

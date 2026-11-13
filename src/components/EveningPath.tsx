@@ -56,6 +56,9 @@ import { hunchTarget, readyHunch } from "@/lib/hunches";
 import { avatarUrl, getAvatar } from "@/lib/avatar";
 import { Tracker, TrackerEntry, askedOn } from "@/types/tracker";
 import { track, onbVariant } from "@/lib/analytics";
+import { markLinksSeen } from "@/lib/newLinks";
+import { pairOf } from "@/lib/findingForms";
+import { reopenLink } from "./FindingsView";
 
 const PATH_MAX = 440;
 type Rect = { x: number; y: number; w: number; h: number };
@@ -349,6 +352,7 @@ export const EveningPath = ({
     if (s.kind === "unload") return t("unload.step");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     if (s.kind === "discover") return t("tour.step");
+    if (s.id === "link:new") return t("firstLink.newStep");
     if (s.kind === "link") return t("firstLink.step");
     if (s.kind === "report") return t("path.lastReport");
     if (s.kind === "tip") return t("tipDay.step");
@@ -427,7 +431,7 @@ export const EveningPath = ({
     if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
     if (s.kind === "tip") return { look, icon, hue, title: stepName(s), sub: tipTitle(s.tipId), action: t("tipDay.open") };
     if (s.kind === "why") return { look, icon, hue, title: stepName(s), sub: whySub, action: t("why.add") };
-    if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t("firstLink.sub"), action: t("firstLink.see") };
+    if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t(s.id === "link:new" ? "firstLink.newSub" : "firstLink.sub"), action: t("firstLink.see") };
     return {
       look, icon, hue, title: stepName(s),
       sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
@@ -738,6 +742,13 @@ export const EveningPath = ({
     else if (s.kind === "test") setTestOpen("result");
     else if (s.kind === "unload") setUnloadOpen(true);
     else if (s.kind === "discover") window.dispatchEvent(new CustomEvent("memap-start-tour"));
+    else if (s.id === "link:new") {
+      // a link found after the first: it opens in Links (the first card open), and counts as seen
+      markLinksSeen(computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).map(pairOf));
+      if (s.trackerIds.length === 2) reopenLink(s.trackerIds);
+      setTick((k) => k + 1);
+      window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "findings", back: true } }));
+    }
     else if (s.kind === "link") window.dispatchEvent(new CustomEvent("memap-link-moment"));
     else if (s.kind === "tip") setTipOpen(s.tipId ?? null);
     else if (s.kind === "why") setWhyItems(whyPending.map((e) => ({ trackerId: e.trackerId, date: e.date })));

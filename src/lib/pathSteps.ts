@@ -8,7 +8,10 @@
 import { FOLLOW_UPS } from "./bodyTemplates";
 import { templateIdOf } from "./answerPhrases";
 import { Tracker, TrackerEntry, askedOn } from "@/types/tracker";
-import { buildIslands, buildRoutes, islandOf, type IslandId } from "@/lib/islands";
+import { buildIslands, buildRoutes, islandOf, linkWorthShowing, LINKS_TOP, type IslandId } from "@/lib/islands";
+import { computeCorrelations } from "@/lib/correlations";
+import { pairOf } from "@/lib/findingForms";
+import { newLinkState } from "@/lib/newLinks";
 import { firstLinkState } from "@/lib/firstLink";
 import { grewToday } from "@/lib/globeArt";
 import { getDoorState, isoLocal } from "@/lib/doors";
@@ -809,6 +812,19 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     if (boat >= 0 && steps[boat].kind === "report") boat += 1;
     let lastQ = -1; steps.forEach((s, i) => { if (s.kind === "questions") lastQ = i; });
     steps.splice(step.done ? lastQ + 1 : boat >= 0 ? boat : steps.length, 0, step);
+  }
+  // Every link found after the first one: a "New link" step where the boat is; opened = done for today (newLinks.ts)
+  if (!fl.route && !fl.seenToday && entries.length > 0) {
+    const found = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing);
+    const nl = newLinkState(found.map(pairOf));
+    if (nl.fresh.length > 0 || nl.seenToday) {
+      const c = found.find((x) => pairOf(x) === nl.fresh[0]);
+      const step: Step = { id: "link:new", kind: "link", trackerIds: c ? [c.trackerA.id, c.trackerB.id] : [], answered: 0, done: nl.fresh.length === 0 };
+      let boat = steps.findIndex((s) => !s.done && s.kind !== "unload");
+      if (boat >= 0 && steps[boat].kind === "report") boat += 1;
+      let lastQ = -1; steps.forEach((s, i) => { if (s.kind === "questions") lastQ = i; });
+      steps.splice(step.done ? lastQ + 1 : boat >= 0 ? boat : steps.length, 0, step);
+    }
   }
   // An island that reached a new stage with today's answers: a step already
   // done, right after the questions that grew it (her note, Nov 5 2026: one

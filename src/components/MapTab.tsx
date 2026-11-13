@@ -17,7 +17,7 @@ import { growSeen } from "@/lib/growMoment";
 import { grewToday } from "@/lib/globeArt";
 import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, LINKS_TOP, mapPic, type Route } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
-import { currentExperiment, experimentOver, type Experiment } from "@/lib/experiments";
+import { currentExperiment, experimentOver, runningExperiments, type Experiment } from "@/lib/experiments";
 import { getDoorState } from "@/lib/doors";
 import { getOwnIslands, MAX_OWN } from "@/lib/ownIslands";
 import { isoLocal } from "@/lib/doors";
@@ -466,7 +466,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       )}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
-          trackers={trackers} entries={entries} onClose={() => { setTrying(null); window.setTimeout(() => setOnly("signals"), 150); }} />
+          trackers={trackers} entries={entries} onClose={() => { const started = runningExperiments().find((x) => x.from === trying.trackerId); setTrying(null); window.setTimeout(() => { if (started) { setHelpsFocus(started.id); setHelpsOpen(true); } else setOnly("signals"); }, 150); }} />
       )}
       {newOpen && (
         <NewIslandSheet islands={islands} trackers={trackers} canOwn={canMake} onClose={() => setNewOpen(false)}
