@@ -12,7 +12,7 @@ for (const lang of ["ru", "en"]) {
     const i18n = (await import("/src/lib/i18n.ts")).default; await i18n.changeLanguage(lang);
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts"), n = await import("/src/lib/notifications.ts"), c = await import("/src/lib/cardText.ts"), x = await import("/src/lib/experiments.ts");
     const iso = (k) => { const d = new Date(); d.setDate(d.getDate() - k); return dz.isoLocal(d); };
-    localStorage.clear(); localStorage.setItem("memap_ui", "new");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list");
     const [worked] = await dz.ensureTemplates(["exercised"]);
     // the old-style test: its own question «Внести 3 тренировки…?»
     const old = "Внести 3 тренировки в календарь на эту неделю";

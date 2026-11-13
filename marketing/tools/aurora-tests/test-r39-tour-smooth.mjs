@@ -14,7 +14,7 @@ await p.evaluate(async () => {
   const d = await import("/src/lib/doors.ts");
   localStorage.clear();
   await d.ensureTemplates(["migraine", "slept-enough", "felt-anxious", "ate-by-2pm", "felt-happy", "had-energy", "saw-friends"]);
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en");
   localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_map_view", "globe");
 });
 await p.reload(); await p.waitForTimeout(2200);

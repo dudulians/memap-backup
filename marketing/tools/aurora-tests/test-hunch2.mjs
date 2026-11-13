@@ -20,7 +20,7 @@ const seed = async (mode) => {
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
     localStorage.setItem("memap_path_start", [...E.map((e) => e.date)].sort()[0]);
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_unload_intro", "seen"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "08_fox");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_unload_intro", "seen"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "08_fox");
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     if (mode === "checked") {
       const h = T.find((t) => /headache/i.test(t.title));

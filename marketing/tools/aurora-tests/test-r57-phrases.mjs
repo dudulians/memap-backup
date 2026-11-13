@@ -10,7 +10,7 @@ for (const lang of ["en", "ru"]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
-  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); }, lang);
+  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); }, lang);
   await p.reload(); await p.waitForTimeout(1500);
   out[lang] = await p.evaluate(async () => {
     const L = await import("/src/lib/lifeStreams.ts"), A = await import("/src/lib/answerPhrases.ts"), T = await import("/src/lib/linkText.ts");
@@ -36,7 +36,7 @@ for (const lang of ["en", "ru"]) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   await p.evaluate(async (lang) => {
     localStorage.clear();
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" }));
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
     const { trackerId, contextTrackerIds } = await dz.ensureDoorTrackers(dz.getDoor("migraine"));

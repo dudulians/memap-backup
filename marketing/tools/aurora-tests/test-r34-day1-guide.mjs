@@ -21,7 +21,7 @@ const click = async (re) => { await p.getByRole("button", { name: re }).first().
 
 // --- onboarding, as in test-r33 -------------------------------------------------
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", theme); }, { lang, theme: process.argv[3] || "aurora-light" });
+await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", theme); }, { lang, theme: process.argv[3] || "aurora-light" });
 await p.reload(); await p.waitForTimeout(2200);
 await click(RU ? /Начать/ : /^Start/); await p.waitForTimeout(500);
 await click(RU ? /Что-то повторяется/ : /Something keeps happening/);

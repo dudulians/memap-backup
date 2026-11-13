@@ -12,7 +12,7 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(1200);
 // a person on day 3: 9 questions over 3 islands, two evenings answered
 const seed = async (hour) => p.evaluate(async (hour) => {
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
-  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_avatar", "11_otter");
+  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_avatar", "11_otter");
   const now = new Date(); now.setHours(hour, 0, 0, 0);
   const day = (k) => { const d = new Date(now); d.setDate(d.getDate() - k); return d; };
   const start = day(2); start.setHours(9, 0, 0, 0);

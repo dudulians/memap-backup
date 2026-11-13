@@ -25,7 +25,7 @@ const run = async (tag, { lang = "en", theme = "aurora-light", hour = 19, path }
   p.on("pageerror", (e) => errs.push(`${tag}: ${e.message}`)); p.on("console", (m) => m.type() === "error" && !/InAppReview|favicon|Failed to load resource/.test(m.text()) && errs.push(`${tag}: ${m.text()}`));
   await p.clock.install({ time: at(hour) });
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-  await p.evaluate(({ theme }) => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_theme", theme); }, { theme });
+  await p.evaluate(({ theme }) => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_theme", theme); }, { theme });
   await p.reload(); await p.waitForTimeout(2200);
   let n = 0;
   const shot = async (name) => { await p.waitForTimeout(650); await p.screenshot({ path: `${D}/${tag}-${String(++n).padStart(2, "0")}-${name}.png` }); };

@@ -13,7 +13,7 @@ for (const lang of (process.argv[2] ? [process.argv[2]] : ["ru", "en"])) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   await p.evaluate(async (lang) => {
     localStorage.clear();
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" }));
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
     const [mig, sleep, coffee, outside, tired, anx] = await dz.ensureTemplates(["migraine", "slept-enough", "coffee-late", "outside-30min", "felt-fatigued", "felt-anxious"]);

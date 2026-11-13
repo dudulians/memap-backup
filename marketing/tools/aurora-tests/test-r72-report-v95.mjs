@@ -27,7 +27,7 @@ for (const lang of ["en", "ru"]) {
     localStorage.setItem("memap_notes", JSON.stringify([
       { id: "n1", date: iso(3), text: lang === "ru" ? "Плохо спала, утром болела голова. Много работы перед дедлайном." : "Slept badly, headache in the morning. Lots of work before a deadline.", createdAt: now, updatedAt: now },
       { id: "n2", date: iso(10), text: lang === "ru" ? "Хороший день: гуляли с подругой два часа." : "Good day: a two-hour walk with a friend.", createdAt: now, updatedAt: now }]));
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
   }, lang);

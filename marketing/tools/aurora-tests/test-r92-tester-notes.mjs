@@ -28,7 +28,7 @@ await p.evaluate(async () => {
   const head = find(/headache/i), sleep = find(/Slept enough/i);
   // "Worked out" came with onboarding (context), 40 days ago: past the old 3 quiet weeks
   localStorage.setItem("memap_door", JSON.stringify({ id: "sleep", trackerId: sleep.id, contextTrackerIds: [ex.id], startedAt: iso(40), extra: [{ id: "migraine", trackerId: head.id }] }));
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
   localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
 });
 await p.reload(); await p.waitForTimeout(2500);
@@ -67,7 +67,7 @@ for (const lang of ["en", "ru"]) {
 // 5. the hurt evening: "partner raised their voice" answered every day for 6 days, today "yes" = a 7-day streak
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
 await p.evaluate(async () => {
-  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"])); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
+  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"])); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
   localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); localStorage.setItem("memap_tour_completed", "1");
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
   await dz.ensureTemplates(["partner-raised-voice", "felt-depressed"]);

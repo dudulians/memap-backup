@@ -9,7 +9,7 @@ for (const on of [false, true]) {
   const p = await (await b.newContext({ viewport: { width: 400, height: 860 } })).newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   await p.evaluate(async (on) => {
-    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); if (on) localStorage.setItem("memap_colorblind", "1");
     localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_first_link_seen", "before");
     localStorage.setItem("memap_examples_seen", JSON.stringify(["link", "month", "rule", "test", "chart", "chart-one"]));

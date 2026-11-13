@@ -20,7 +20,7 @@ await p.evaluate(async (lang) => {
   const find = (re) => T.find((t) => re.test(t.title));
   const head = find(/headache/i), anx = find(/anxious/i), sleep = find(/Slept enough/i);
   localStorage.setItem("memap_door", JSON.stringify({ id: "migraine", trackerId: head.id, contextTrackerIds: [], startedAt: iso(60), extra: [{ id: "stress", trackerId: anx.id }, { id: "sleep", trackerId: sleep.id }] }));
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
   localStorage.setItem("memap_theme", "aurora-light");
   localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
 }, lang);

@@ -12,7 +12,7 @@ await p.addInitScript(() => {
   wrap(AudioBufferSourceNode.prototype); wrap(OscillatorNode.prototype);
 });
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-await p.evaluate(() => { localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light"); });
+await p.evaluate(() => { localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light"); });
 await p.reload(); await p.waitForTimeout(1500);
 const out = await p.evaluate(async () => {
   const f = await import("/src/lib/feedback.ts");

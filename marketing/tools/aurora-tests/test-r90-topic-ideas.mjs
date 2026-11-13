@@ -38,7 +38,7 @@ for (const lang of ["en", "ru"]) {
     const iso = (k) => { const d = new Date(); d.setDate(d.getDate() - k); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
     localStorage.clear(); localStorage.setItem("memap_ab_onb", "A");
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order", "old-look", "report", "block:world", "block:signals", "block:findings", "block:helps"]));
     const ids = await dz.ensureTemplates(["compared-on-social", "got-recognition", "slept-enough"]);
     localStorage.setItem("memap_door", JSON.stringify({ id: "mood", trackerId: ids[0], contextTrackerIds: ids.slice(1), startedAt: iso(30) }));

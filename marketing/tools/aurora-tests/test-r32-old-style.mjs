@@ -17,7 +17,7 @@ await p.evaluate(async (theme) => {
   localStorage.clear();
   localStorage.setItem("memap_trackers", JSON.stringify(r.newTrackers)); localStorage.setItem("memap_entries", JSON.stringify(r.newEntries.filter((e) => e.date !== iso(0))));
   localStorage.setItem("memap_path_start", [...r.newEntries.map((e) => e.date)].sort()[0]);
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "05_panda");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "05_panda");
   localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
   const now = new Date().toISOString();
   localStorage.setItem("memap_notes", JSON.stringify([{ id: "n1", date: iso(24), text: "Slept badly, long day.", createdAt: now, updatedAt: now }]));

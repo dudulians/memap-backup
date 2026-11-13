@@ -27,7 +27,7 @@ const newPage = async (opts = {}) => {
   const { ctx, p } = await newPage();
   const at = new Date(); at.setHours(10, 5, 0, 0); await p.clock.install({ time: at });
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_theme", "aurora-light"); });
+  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_theme", "aurora-light"); });
   await p.reload(); await p.waitForTimeout(2200);
   const btn = (re) => p.getByRole("button", { name: re }).first();
   await btn(/^Get started/).click(); await p.waitForTimeout(400);
@@ -73,7 +73,7 @@ const newPage = async (opts = {}) => {
   const { ctx, p } = await newPage();
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   await p.evaluate(async () => {
-    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_first_link_seen", "before");
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
@@ -138,7 +138,7 @@ const newPage = async (opts = {}) => {
 {
   const { ctx, p } = await newPage();
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_examples_seen", JSON.stringify(["link", "month", "rule", "test", "chart", "chart-one"])); });
+  await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_examples_seen", JSON.stringify(["link", "month", "rule", "test", "chart", "chart-one"])); });
   const dz = await p.evaluate(async () => { const dz = await import("/src/lib/doors.ts"); const [h] = await dz.ensureTemplates(["headache"]); localStorage.setItem("memap_door", JSON.stringify({ id: "migraine", trackerId: h, contextTrackerIds: [], startedAt: dz.daysAgoIso(1) })); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: dz.daysAgoIso(1) })); return true; });
   await p.reload(); await p.waitForTimeout(2500);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "findings", back: true } })));

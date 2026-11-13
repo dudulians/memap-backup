@@ -9,7 +9,7 @@ for (const lang of ["en", "ru"]) {
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   await p.evaluate(async (lang) => {
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     const dz = await import("/src/lib/doors.ts"); await dz.ensureTemplates(["migraine"]);
   }, lang);
   await p.reload(); await p.waitForTimeout(2000);

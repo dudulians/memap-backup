@@ -17,7 +17,7 @@ const seed = async (p, { lang = "en", days = 1, cohort = "new" } = {}) => {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   await p.evaluate(async ({ lang, days, cohort }) => {
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_cohort", cohort); localStorage.setItem("memap_ab_onb", "C");
     localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"]));
     localStorage.setItem("memap_tour_seen", "true");

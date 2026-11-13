@@ -39,7 +39,7 @@ for (const pack of Object.keys(EXPECT)) {
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${pack}: ${e.message}`));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   const info = await p.evaluate(async (pack) => {
-    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_first_link_seen", "before");
     localStorage.setItem("memap_examples_seen", JSON.stringify(["link", "month", "rule", "test", "chart", "chart-one"]));

@@ -11,7 +11,7 @@ for (const who of ["new", "tracks"]) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   out[who] = await p.evaluate(async ({ who, IDS }) => {
     localStorage.clear();
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" }));
     localStorage.setItem("memap_show_sensitive", "true"); // the old switch on: still nothing offered
     const d = await import("/src/lib/doors.ts");

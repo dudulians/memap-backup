@@ -11,7 +11,7 @@ for (const [lang, first] of [["en", false], ["en", true], ["ru", true]]) {
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   await p.evaluate(async (lang) => {
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); localStorage.setItem("memap_tour_completed", "1");
     const dz = await import("/src/lib/doors.ts"); await dz.ensureTemplates(["period-day", "heavy-flow-day", "pooped-today"]);
   }, lang);
@@ -33,7 +33,7 @@ for (const [lang, first] of [["en", false], ["en", true], ["ru", true]]) {
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, timezoneId: "Asia/Dubai" });
 const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
-await p.evaluate(async () => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); const dz = await import("/src/lib/doors.ts"); await dz.ensureTemplates(["pooped-today", "heartburn"]); });
+await p.evaluate(async () => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); const dz = await import("/src/lib/doors.ts"); await dz.ensureTemplates(["pooped-today", "heartburn"]); });
 await p.reload(); await p.waitForTimeout(2200);
 await p.locator(".path-start").first().click(); await p.waitForTimeout(1500);
 // the red-flag list was removed (her content audit, Nov 10 2026): no chip

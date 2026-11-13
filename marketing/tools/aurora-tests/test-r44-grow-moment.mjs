@@ -24,7 +24,7 @@ for (const theme of ["aurora-light", "aurora"]) {
     for (const t of T) if (me.has(t.id) && !E.some((e) => e.trackerId === t.id && e.date === iso(0))) E.push({ id: "t" + t.id, trackerId: t.id, date: iso(0), value: false });
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", theme === "aurora" ? "ru" : "en"); localStorage.setItem("memap_theme", theme);
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", theme === "aurora" ? "ru" : "en"); localStorage.setItem("memap_theme", theme);
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
   }, theme);
   await p.reload(); await p.waitForTimeout(2200);

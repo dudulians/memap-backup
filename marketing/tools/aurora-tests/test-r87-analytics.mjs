@@ -13,7 +13,7 @@ await p.evaluate(async () => {
   const iso = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
   localStorage.clear();
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
   localStorage.setItem("memap_cohort", "new"); localStorage.setItem("memap_first_open", new Date(Date.now() - 2 * 864e5).toISOString());
   const ids = await dz.ensureTemplates(["migraine", "slept-enough", "felt-stressed"]);
   localStorage.setItem("memap_door", JSON.stringify({ id: "migraine", trackerId: ids[0], contextTrackerIds: [], startedAt: iso(2) }));

@@ -28,7 +28,7 @@ const click = async (re) => { await p.getByRole("button", { name: re }).first().
 const at19 = () => { const d = new Date(); d.setHours(19, 0, 0, 0); return d; };
 await p.clock.install({ time: at19() });
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", theme); }, { lang, theme: process.argv[3] || "aurora-light" });
+await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", theme); }, { lang, theme: process.argv[3] || "aurora-light" });
 await p.reload(); await p.waitForTimeout(2200);
 await click(RU ? /^Начать/ : /^Get started/); await p.waitForTimeout(500); await whyStep(p);
 await click(RU ? /Мигрен/ : /Migraine/); await click(RU ? /^Дальше|^Продолжить/ : /^Continue/); await p.waitForTimeout(600);

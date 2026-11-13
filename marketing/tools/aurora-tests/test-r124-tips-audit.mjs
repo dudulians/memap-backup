@@ -52,7 +52,7 @@ for (const [lang, theme, w, h] of [["en", "aurora-light", 390, 844], ["ru", "aur
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   await p.evaluate(async ({ lang, theme }) => {
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
     localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"]));
     const now = new Date(); now.setHours(11, 0, 0, 0);
     const day = (k) => { const d = new Date(now); d.setDate(d.getDate() - k); return d; };
@@ -92,7 +92,7 @@ for (const lang of ["en", "ru"]) {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: lang === "ru" ? "ru-RU" : "en-US" });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${lang} settings: ${e.message}`));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_onboarded_at", new Date().toISOString()); localStorage.setItem("memap_path_start", "2026-11-01"); }, lang);
+  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_onboarded_at", new Date().toISOString()); localStorage.setItem("memap_path_start", "2026-11-01"); }, lang);
   await p.reload(); await p.waitForTimeout(2200);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-you"))); await p.waitForTimeout(1600);
   await p.locator("[role=dialog]").last().getByRole("button", { name: lang === "ru" ? /Настройки/ : /^Settings$/ }).first().click().catch(() => {}); await p.waitForTimeout(1200);

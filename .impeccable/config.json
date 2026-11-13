@@ -8,6 +8,15 @@
         "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
         "createdAt": "2026-11-01T22:03:49.171Z",
         "reason": "Plan section 6 (approved): Duolingo-style press release 180ms and next card rise 200ms spring; the chest drop uses ease-out"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "src/components/FindingsView.tsx"
+        ],
+        "createdAt": "2026-11-13T19:24:39.936Z",
+        "reason": "assistant triage: line 290 is the dotted route drawn between two island pictures beside a round link badge (a connector, not a card border); it predates this change (v151) and was not edited"
       }
     ]
   }

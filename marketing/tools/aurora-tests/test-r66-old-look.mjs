@@ -18,7 +18,7 @@ for (const lang of ["en", "ru"]) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   const before = await p.evaluate(async (lang) => {
     localStorage.clear();
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" }));
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts"), ex = await import("/src/lib/experiments.ts");
     const { trackerId, contextTrackerIds } = await dz.ensureDoorTrackers(dz.getDoor("migraine"));
@@ -62,7 +62,7 @@ for (const lang of ["en", "ru"]) {
     await p.keyboard.press("Escape"); await p.waitForTimeout(500);
   }
   // back to the new look the way the invite does it: nothing lost, and the way back is shown
-  await p.evaluate(async () => { const dz = await import("/src/lib/doors.ts"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_upgrade_invite", "accepted"); localStorage.setItem("memap_path_start", dz.isoLocal(new Date())); });
+  await p.evaluate(async () => { const dz = await import("/src/lib/doors.ts"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_upgrade_invite", "accepted"); localStorage.setItem("memap_path_start", dz.isoLocal(new Date())); });
   await p.reload(); await p.waitForTimeout(4200); await scan(p, `${lang} new again`);
   await p.screenshot({ path: `${D}/${lang}-new-again.png` });
   out[`${lang} old-look card`] = await p.getByText(/Miss the old look?|Скучаешь по старому виду?/).count();

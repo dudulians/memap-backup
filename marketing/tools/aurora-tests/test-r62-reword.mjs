@@ -6,7 +6,7 @@ const errs = [], out = {};
 for (const lang of ["en", "ru"]) {
   const p = await (await b.newContext()).newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
-  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); }, lang);
+  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); }, lang);
   await p.reload(); await p.waitForTimeout(1500);
   out[lang] = await p.evaluate(async (lang) => {
     const A = await import("/src/lib/answerPhrases.ts"), I = await import("/src/lib/islands.ts"), L = await import("/src/lib/trackerLocalize.ts"), D = await import("/src/lib/doors.ts"), S = await import("/src/lib/storage.ts");

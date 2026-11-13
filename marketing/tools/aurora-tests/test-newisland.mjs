@@ -12,7 +12,7 @@ await p.evaluate(async () => {
   const ids = new Set(T.map((t) => t.id)); E = E.filter((e) => ids.has(e.trackerId));
   localStorage.clear();
   localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true");
   localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
 });
 await p.reload(); await p.waitForTimeout(1600);

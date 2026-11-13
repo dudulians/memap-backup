@@ -13,7 +13,7 @@ let n = 0; const shot = async (name) => { await p.waitForTimeout(900); await p.s
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 
 const base = (lang) => `
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true");
   localStorage.setItem("memap_language", "${lang}"); localStorage.setItem("memap_language_chosen", "1");
   localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_first_link_seen", "before");`;
 

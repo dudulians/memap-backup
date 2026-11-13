@@ -17,7 +17,7 @@ const dayOne = async (lang, hour, tag) => {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(900);
   await p.evaluate(async (lang) => {
     localStorage.clear();
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     const doors = await import("/src/lib/doors.ts");
     const door = doors.DOORS.find((d) => d.id === "energy");
@@ -82,7 +82,7 @@ for (const lang of ["en", "ru"]) {
     const ids = new Set(T.map((t) => t.id)); E = E.filter((e) => ids.has(e.trackerId));
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
     localStorage.setItem("memap_language", "ru"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" }));
   });

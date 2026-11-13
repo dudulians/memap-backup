@@ -10,7 +10,7 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 await p.evaluate(async () => {
   const d = await import("/src/lib/doors.ts"); localStorage.clear();
   await d.ensureTemplates(["migraine", "slept-enough", "felt-anxious"]);
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en");
 });
 await p.reload(); await p.waitForTimeout(2200);
 await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-you"))); await p.waitForTimeout(1200);

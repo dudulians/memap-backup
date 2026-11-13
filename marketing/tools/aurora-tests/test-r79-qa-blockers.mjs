@@ -24,7 +24,7 @@ await p.evaluate(async () => {
   for (let i = 0; i < 5; i++) E.push({ id: `h${i}`, trackerId: head.id, date: iso(i), value: true, createdAt: new Date().toISOString() });
   localStorage.clear();
   localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
   localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
   localStorage.setItem("memap_path_start", iso(60));
   localStorage.setItem("memap_experiments", JSON.stringify([

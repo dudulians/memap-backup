@@ -10,7 +10,7 @@ const p = await ctx.newPage(); const errs = []; p.on("pageerror", (e) => errs.pu
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(1200);
 await p.evaluate(async () => {
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
-  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
+  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
   localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"]));
   const now = new Date(); now.setHours(11, 0, 0, 0);
   const day = (k) => { const d = new Date(now); d.setDate(d.getDate() - k); return d; };

@@ -34,7 +34,7 @@ for (const lang of ["ru", "en"]) {
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
     localStorage.setItem("memap_path_start", iso(40));
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     for (const k of ["memap_hunch_day", "memap_act_seen"]) localStorage.setItem(k, iso(0));
     localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));

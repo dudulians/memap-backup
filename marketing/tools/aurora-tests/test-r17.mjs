@@ -25,7 +25,7 @@ for (const c of cases) {
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
     const first = [...E.map((e) => e.date)].sort()[0];
     localStorage.setItem("memap_path_start", data === "day1" ? start0 : data === "weeks" ? first : data === "chip" ? start0 : start20);
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true");
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
   }, { data: c.data, start20: iso(20), start0: iso(0) });
   await p.reload(); await p.waitForTimeout(1800);

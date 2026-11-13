@@ -47,7 +47,7 @@ const seedDemo = async (p, { lang, playful, done }) => {
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
     localStorage.setItem("memap_path_start", [...E.map((e) => e.date)].sort()[0]);
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1");
     localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order", "report"]));
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_first_link_seen", "before");
@@ -211,7 +211,7 @@ for (const playful of [false, true]) {
 const seedTen = async (p, { lang, playful, todayDone }) => {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
   await p.evaluate(async ({ lang, playful, todayDone }) => {
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order", "report"])); localStorage.setItem("memap_tour_seen", "true");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order", "report"])); localStorage.setItem("memap_tour_seen", "true");
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_first_link_seen", "before");
     if (!playful) localStorage.setItem("memap_playful", "off");

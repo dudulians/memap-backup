@@ -9,7 +9,7 @@ const ok = (name, cond, info = "") => { console.log(name, "→", cond ? "ok" : `
 const p = await (await b.newContext({ locale: "en-US" })).newPage(); p.on("pageerror", (e) => errs.push(e.message));
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(1000);
 await p.evaluate(async () => {
-  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
+  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1");
   const g = await import("/src/lib/demoDataGenerator.ts"), st = await import("/src/lib/storage.ts"), dz = await import("/src/lib/doors.ts");
   const r = g.generateDemoData("work-home"); await st.saveTrackers(r.newTrackers); await st.saveEntries(r.newEntries);
   localStorage.setItem("memap_path_start", dz.daysAgoIso(59));

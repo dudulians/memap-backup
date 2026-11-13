@@ -13,7 +13,7 @@ const plan = async (who, lang) => {
   const rows = await p.evaluate(async ({ who, lang }) => {
     const iso = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
     localStorage.clear();
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang);
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang);
     if (who === "new") {
       // day 1 after onboarding (Migraines): seven questions, yesterday answered
       const d = await import("/src/lib/doors.ts");

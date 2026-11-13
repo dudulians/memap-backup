@@ -13,7 +13,7 @@ const run = async (tag, lang, theme, branchLabel, doorLabel) => {
   const p = await ctx.newPage();
   p.on("pageerror", (e) => errs.push(`${tag}: ${e.message}`)); p.on("console", (m) => m.type() === "error" && errs.push(`${tag}: ${m.text()}`));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-  await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", theme); }, { lang, theme });
+  await p.evaluate(({ lang, theme }) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_theme", theme); }, { lang, theme });
   await p.reload(); await p.waitForTimeout(2200);
   let n = 0;
   const shot = async (name) => { await p.waitForTimeout(700); await p.screenshot({ path: `${D}/${tag}-${String(++n).padStart(2, "0")}-${name}.png` }); };

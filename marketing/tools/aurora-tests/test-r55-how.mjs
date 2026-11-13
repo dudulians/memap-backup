@@ -11,7 +11,7 @@ for (const lang of ["en", "ru"]) {
   await p.evaluate(async (lang) => {
     const g = await import("/src/lib/demoDataGenerator.ts"); const r = g.generateDemoData("showcase");
     localStorage.clear(); localStorage.setItem("memap_trackers", JSON.stringify(r.newTrackers)); localStorage.setItem("memap_entries", JSON.stringify(r.newEntries));
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1");
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" }));
   }, lang);
   await p.reload(); await p.waitForTimeout(2200);

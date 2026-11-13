@@ -17,7 +17,7 @@ const setup = async (p, lang, theme) => {
     localStorage.clear();
     localStorage.setItem("memap_trackers", JSON.stringify(T)); localStorage.setItem("memap_entries", JSON.stringify(E));
     localStorage.setItem("memap_path_start", [...E.map((e) => e.date)].sort()[0]);
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_avatar", "11_otter");
     localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", theme);
     for (const k of ["memap_hunch_day", "memap_act_seen"]) localStorage.setItem(k, iso(0));
     localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));

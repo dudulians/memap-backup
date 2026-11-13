@@ -31,7 +31,7 @@ const open = async (lang, when) => {
 /** fights, the partner shouting, headaches, sleep; `plan`: { date: { fight, voice, head, tags } } */
 const seed = (p, lang, plan, extra = {}, order = ["fight", "head", "sleep", "voice"]) => p.evaluate(async ({ lang, plan, START, extra, order }) => {
   localStorage.clear();
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1");
   localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"])); localStorage.setItem("memap_avatar", "11_otter");
   localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
   localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); localStorage.setItem("memap_first_link_seen", "before");

@@ -16,7 +16,7 @@ const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
 let n = 0; const shot = async (name) => { await p.waitForTimeout(600); await p.screenshot({ path: `${D}/${String(++n).padStart(2, "0")}-${name}.png` }); };
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 await p.evaluate(async () => {
-  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"])); localStorage.setItem("memap_tour_seen", "true");
+  localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"])); localStorage.setItem("memap_tour_seen", "true");
   localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
   localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: "2026-01-01" })); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_first_link_seen", "before");
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");

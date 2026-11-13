@@ -10,7 +10,7 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
 await p.evaluate(async () => {
   const dz = await import("/src/lib/doors.ts");
   localStorage.clear();
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_cohort", "old");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_cohort", "old");
   const ids = await dz.ensureTemplates(["migraine", "slept-enough"]);
   localStorage.setItem("memap_door", JSON.stringify({ id: "migraine", trackerId: ids[0], contextTrackerIds: [], startedAt: "2026-10-01" }));
 });

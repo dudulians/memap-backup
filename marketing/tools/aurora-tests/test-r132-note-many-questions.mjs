@@ -15,7 +15,7 @@ for (const lang of ["en", "ru"]) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   const ids = await p.evaluate(async (lang) => {
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_cohort", "old");
     const got = await dz.ensureTemplates(["slept-enough", "felt-happy", "felt-stressed"]);
     const start = new Date(); start.setDate(start.getDate() - 3);

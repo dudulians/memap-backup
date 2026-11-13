@@ -103,6 +103,12 @@ export const FindingsView = ({
   }, [findings, routes]);
   const notIt = useMemo(() => (focusIds ? [] : notItFindings(trackers, entries, (id) => { const f = findTemplate(id); return !!f && !f.template.quiet && !f.template.sensitive && !f.template.askOnly; }, pairs)), [trackers, entries, pairs, focusIds]);
   const [allShown, setAllShown] = useState(false);
+  // cards one by one, or the list (remembered)
+  const [view, setView] = useState<"deck" | "list">(() => { try { return localStorage.getItem("memap_links_view") === "list" ? "list" : "deck"; } catch { return "deck"; } });
+  const setViewPref = (v: "deck" | "list") => { try { localStorage.setItem("memap_links_view", v); } catch { /* stays for now */ } setView(v); };
+  const deckRef = useRef<HTMLDivElement>(null);
+  const [deckAt, setDeckAt] = useState(0);
+  const onDeckScroll = () => { const el = deckRef.current; const first = el?.firstElementChild as HTMLElement | null; if (!el || !first) return; setDeckAt(Math.round(el.scrollLeft / (first.offsetWidth + 12))); };
 
   // Same "value moment" bookkeeping the old Links tab did: feeds the
   // rating prompt and the correlation_viewed funnel step.
@@ -160,9 +166,32 @@ export const FindingsView = ({
   const SHOWN = 8;
   // the strongest one first and large; then a chain, then the rest
   const shown = allShown ? groups : groups.slice(0, SHOWN);
-  const card = (g: CorrelationResult[], hero: boolean) => (
-    <GroupCard key={`${routeOf(g[0]).second}-${routeOf(g[0]).secondYes}`} links={g} hero={hero} of={of} entries={entries} tracked={tracked} />
+  const card = (g: CorrelationResult[], hero: boolean, deck = false) => (
+    <GroupCard key={`${routeOf(g[0]).second}-${routeOf(g[0]).secondYes}`} links={g} hero={hero} of={of} entries={entries} tracked={tracked} deck={deck} />
   );
+  // one finding on the screen, the next one peeks in, swipe sideways (her idea, Nov 13 2026: «может, это будут как
+  // карточки, которые можно перелистывать? или список давать как опцию»); the list stays one tap away
+  if (view === "deck") {
+    const items: React.ReactNode[] = [
+      ...groups.map((g, i) => card(g, i === 0, true)),
+      ...(chain ? [<StoryCard key="chain" kind="chain" text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />] : []),
+      ...notIt.map((x) => <NotItCard key={`notit-${x.outcome.id}`} x={x} />),
+    ];
+    return (
+      <div className="animate-fade-in">
+        <p data-deck-head className="mb-2 text-[14px] font-semibold text-muted-foreground">{t("link.deckHead", { count: items.length })}</p>
+        <div ref={deckRef} data-links-deck onScroll={onDeckScroll} className="-mx-4 flex snap-x snap-mandatory items-start gap-3 overflow-x-auto px-4 pb-3 scrollbar-hide">
+          {items.map((x, i) => <div key={i} data-deck-item className={cn("shrink-0 snap-center", items.length > 1 ? "w-[88%]" : "w-full")}>{x}</div>)}
+        </div>
+        {items.length > 1 && (
+          <div data-deck-pager className="mt-1 flex justify-center gap-1.5" aria-hidden="true">
+            {items.map((_, i) => <span key={i} className={cn("h-2 rounded-full transition-all", i === deckAt ? "w-5 bg-[hsl(var(--coin-teal))]" : "w-2 bg-foreground/15")} />)}
+          </div>
+        )}
+        <button type="button" data-links-as-list onClick={() => setViewPref("list")} className="mt-3 w-full rounded-[18px] bg-foreground/[0.05] py-3 text-[16px] font-bold">{t("link.asList")}</button>
+      </div>
+    );
+  }
   return (
     <div className="space-y-2.5 animate-fade-in">
       {shown.slice(0, 1).map((g) => card(g, true))}
@@ -174,6 +203,7 @@ export const FindingsView = ({
         </button>
       )}
       {notIt.map((x) => <NotItCard key={`notit-${x.outcome.id}`} x={x} />)}
+      <button type="button" data-links-as-deck onClick={() => setViewPref("deck")} className="w-full rounded-[18px] bg-foreground/[0.05] py-3 text-[16px] font-bold">{t("link.asDeck")}</button>
     </div>
   );
 };
@@ -304,19 +334,20 @@ const Isles = ({ r, of, isleDays }: { r: Route; of: TrackerOf; isleDays: Record<
 /** Every link about one thing on one card (Nov 13 2026): the strongest is told as the card's sentence, the others are
  *  rows under it ("Also with it"); tapping a row makes that link the card's sentence, with its own chart, days,
  *  "What comes first?" and "What to try". Nothing is lost: each link keeps everything it had on a card of its own. */
-const GroupCard = ({ links, hero, of, entries, tracked }: { links: CorrelationResult[]; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string> }) => {
+const GroupCard = ({ links, hero, of, entries, tracked, deck }: { links: CorrelationResult[]; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string>; deck?: boolean }) => {
   const [focus, setFocus] = useState(0);
   const [picked, setPicked] = useState(false);
   const at = Math.min(focus, links.length - 1), c = links[at];
   const also = links.map((x, i) => ({ r: routeOf(x), onPick: () => { setFocus(i); setPicked(true); } })).filter((_, i) => i !== at);
-  return <LinkCard key={pairOf(c)} c={c} hero={hero} of={of} entries={entries} tracked={tracked} also={also} startOpen={picked} />;
+  return <LinkCard key={pairOf(c)} c={c} hero={hero} of={of} entries={entries} tracked={tracked} also={also} startOpen={picked || deck} deck={deck} />;
 };
 /** One link (her pick on the prototype, Nov 12 2026): one sentence with its two answers lit in the pair's colours and
  *  how many times under it. Opening the card shows, on the same card, the week chart with the day bars under it, the
  *  other days, and on the same day "What comes first?", which says after an answer what it took and how the link
  *  reads now. No plates, no islands: the globe has those. */
-export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, also = [] }: {
+export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, also = [], deck }: {
   c: CorrelationResult; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string>;
+  /** in the deck: always open, no arrow */ deck?: boolean;
   /** the other links about the same thing: rows under this one; a tap makes that link the card's own */ also?: { r: Route; onPick: () => void }[];
   /** open from the start (the globe's link sheet) */ startOpen?: boolean;
   /** the small line over the strongest ("Strongest so far"); the globe's sheet says "A link" */ kicker?: string;
@@ -349,17 +380,17 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   ] : [];
   return (
     <div ref={box} data-link-card data-together={r.together ? "1" : undefined} className="surface rounded-[22px]">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="block w-full px-[18px] pb-3.5 pt-4 text-left">
+      <button type="button" aria-expanded={open} onClick={() => { if (!deck) setOpen((o) => !o); }} className="block w-full px-[18px] pb-3.5 pt-4 text-left">
         {hero && (
           <span className="mb-2 flex items-center justify-between gap-2">
             <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{kicker ?? t("patterns.findStrongest")}</span>
-            <Chev open={open} />
+            {!deck && <Chev open={open} />}
           </span>
         )}
         <span className="flex items-start gap-2">
           <span data-link-sentence className={cn("-mx-1.5 min-w-0 flex-1 rounded-lg px-1.5 py-0.5 font-bold leading-snug tracking-tight transition-colors duration-700",
             hero ? "text-[19px]" : "text-[16.5px]", lit && "bg-[hsl(var(--coin-teal)/0.16)]")}><Said segs={segs} /></span>
-          {!hero && <Chev open={open} className="mt-1" />}
+          {!hero && !deck && <Chev open={open} className="mt-1" />}
         </span>
         <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}{!open && also.length > 0 && <span data-link-also-count>{" · "}{t("link.alsoMore", { count: also.length })}</span>}</span>
       </button>

@@ -9,7 +9,7 @@ const out = await p.evaluate(async () => {
   const ps = await import("/src/lib/pathSteps.ts"), dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
   const res = {};
   for (const [label, pick, hour] of [["yesterday 11:00", "yesterday", 11], ["yesterday 20:00", "yesterday", 20], ["tonight 11:00", "tonight", 11]]) {
-    localStorage.clear(); localStorage.setItem("memap_ui", "new");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list");
     const now = new Date(); now.setHours(hour, 0, 0, 0);
     const iso = (d) => dz.isoLocal(d);
     const today = iso(now), y = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));

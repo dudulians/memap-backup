@@ -16,7 +16,7 @@ for (const [v, lang, hour] of RUNS) {
   await p.clock.install({ time: new Date(`2026-11-08T${String(hour).padStart(2, "0")}:10:00`) });
   let n = 0; const shot = async (name) => { await p.waitForTimeout(500); await p.screenshot({ path: `${D}/${tag}-${++n}-${name}.png` }); };
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
-  await p.evaluate(([lang, v]) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_ab_onb", v); }, [lang, v]);
+  await p.evaluate(([lang, v]) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_ab_onb", v); }, [lang, v]);
   logs.length = 0;
   await p.reload(); await p.waitForTimeout(2200);
   o.registered = logs.filter((l) => l.includes("onb_variant")).map((l) => l.replace(/^.*would-register\]\s*/, ""));

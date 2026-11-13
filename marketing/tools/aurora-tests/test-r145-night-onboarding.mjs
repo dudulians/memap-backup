@@ -12,7 +12,7 @@ const fresh = async (scheme, seed) => {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, colorScheme: scheme, locale: "en-US" });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(600);
-  await p.evaluate((seed) => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); if (seed) localStorage.setItem("memap_trackers", JSON.stringify([{ id: "x", title: "Had a headache", questionText: "Did you have a headache today?", category: "Body", answerType: "boolean", problemWhen: "yes", periodDays: 30, threshold: 0, adviceAboveThreshold: "", createdAt: new Date().toISOString() }])); }, seed);
+  await p.evaluate((seed) => { localStorage.clear(); localStorage.setItem("memap_ab_onb", "A"); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); if (seed) localStorage.setItem("memap_trackers", JSON.stringify([{ id: "x", title: "Had a headache", questionText: "Did you have a headache today?", category: "Body", answerType: "boolean", problemWhen: "yes", periodDays: 30, threshold: 0, adviceAboveThreshold: "", createdAt: new Date().toISOString() }])); }, seed);
   await p.reload(); await p.waitForTimeout(2200);
   return { ctx, p };
 };

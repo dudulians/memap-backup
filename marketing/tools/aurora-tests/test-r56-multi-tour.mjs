@@ -26,7 +26,7 @@ for (const run of ["evening", "daytime"]) {
   const at = () => { const d = new Date(); d.setHours(run === "evening" ? 19 : 11, 0, 0, 0); return d; };
   await p.clock.install({ time: at() });
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(800);
-  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
+  await p.evaluate((lang) => { localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light"); }, lang);
   await p.reload(); await p.waitForTimeout(2200);
   const log = [];
   await click(W(/^Get started/, /^Начать/)); await whyStep(p);

@@ -69,7 +69,7 @@ const seed = (lang) => p.evaluate(async (lang) => {
   const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
   const iso = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return dz.isoLocal(d); };
   localStorage.clear();
-  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1");
+  localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_completed", "1");
   localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "1"); localStorage.setItem("memap_theme", "aurora-light");
   localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(1) }));
   localStorage.setItem("memap_path_start", iso(40)); localStorage.setItem("memap_ab_onb", "A");

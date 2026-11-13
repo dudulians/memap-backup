@@ -23,7 +23,7 @@ const seed = async (who) => {
       dz.saveDoorState({ id: "fights", trackerId, contextTrackerIds, startedAt: iso(0) });
       localStorage.setItem("memap_entries", JSON.stringify([{ id: "first", trackerId, date: iso(2), value: true }]));
     }
-    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_tour_seen", "true");
+    localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_tour_seen", "true");
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
   }, who);
   await p.reload(); await p.waitForTimeout(2200);
