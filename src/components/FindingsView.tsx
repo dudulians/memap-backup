@@ -27,7 +27,7 @@ import { factLine } from "@/lib/echo";
 import { LINKS_AT, countedDays } from "@/lib/pathSteps";
 import { ExampleLink } from "./Examples";
 import { OwnWordsPrompt } from "./AnswerWordsFields";
-import { DayBars, LinkIsles, LinkNumbers, OrderAsk, PAIR_A, PAIR_B, trackedTemplates, type BarRow } from "./LinkParts";
+import { DayBars, LinkIsles, LinkNumbers, LinkTry, OrderAsk, PAIR_A, PAIR_B, trackedTemplates, type BarRow } from "./LinkParts";
 
 const STRIP_DAYS = 14;
 
@@ -393,6 +393,8 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker }: {
           {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
               the card, and after an answer it says how the link reads now */}
           {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} readsNow={<Said segs={segs} />} />}
+          {/* the link's next step, once its order is known: what to try (her note, Nov 13 2026: a link was a dead end) */}
+          {(c.lag !== 0 || solid) && <LinkTry r={r} of={of} />}
         </div>
       )}
     </div>

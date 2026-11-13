@@ -2,12 +2,13 @@
 // the sheet she liked when a link was found: the sentence, "13 of 15 times", the dots; then "What comes first?" and
 // what else to watch; the chart only as a small link at the side). Used by the Links list (FindingsView) and the
 // globe's link sheet (LinkSheet).
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3, Check, Plus } from "lucide-react";
-import { islandName, type IslandId, type Route } from "@/lib/islands";
+import { islandName, islandOf, type IslandId, type Route } from "@/lib/islands";
 import { linkNumbers, linkOtherDays, linkTimesBig, type TrackerOf } from "@/lib/linkText";
-import { getLinkOrder, setLinkOrder } from "@/lib/linkOrder";
+import { getLinkOrder, setLinkOrder, LINK_ORDER_EVENT } from "@/lib/linkOrder";
+import { EXPERIMENT_DAYS, experimentDay, linkKey, tryOfLink } from "@/lib/experiments";
 import { art, artOf } from "@/lib/globeArt";
 import { RELATED_QUESTIONS } from "@/lib/relatedQuestions";
 import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
@@ -228,6 +229,40 @@ export const OrderAsk = ({ r, of, tracked, readsNow }: { r: Pick<Route, "first" 
       </div>
     </div>
   );
+};
+
+/** A link's next step (Nov 13 2026, her note: «когда человек увидел связи, у нас дальше нет никакого действия»).
+ *  Once the order is known (the next day, or the person's answer to "What comes first?"), "What to try" opens the try
+ *  picker on the island of the thing that comes first; with "Not sure", on the island of the thing the sentence is
+ *  about. A try started from this link shows here while it runs. */
+export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDay">; of: TrackerOf }) => {
+  const { t } = useTranslation();
+  const a = of(r.first), b = of(r.second);
+  const [, again] = useState(0);
+  useEffect(() => {
+    const on = () => again((v) => v + 1);
+    window.addEventListener(LINK_ORDER_EVENT, on);
+    window.addEventListener("memap-settings-changed", on);
+    return () => { window.removeEventListener(LINK_ORDER_EVENT, on); window.removeEventListener("memap-settings-changed", on); };
+  }, []);
+  if (!a || !b) return null;
+  const running = tryOfLink(a.id, b.id);
+  if (running) return (
+    <div data-link-try="running" className="mt-4 rounded-2xl bg-foreground/[0.05] px-4 py-3">
+      <p className="text-[13px] font-bold text-muted-foreground">{t("link.tryNow")}</p>
+      <p className="mt-0.5 text-[17px] font-bold leading-snug">{running.change}</p>
+      <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{t("world4.testDay", { k: Math.min(experimentDay(running), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</p>
+    </div>
+  );
+  const chosen = r.nextDay ? a.id : getLinkOrder(a.id, b.id);
+  if (!chosen) return null;
+  const about = chosen === b.id ? b : a;
+  const go = () => {
+    haptics.tap();
+    track("link_try_opened", { order: r.nextDay ? "next_day" : chosen === "unsure" ? "unsure" : "answered" });
+    window.dispatchEvent(new CustomEvent("memap-link-try", { detail: { island: islandOf(about), link: linkKey(a.id, b.id), ids: [r.first, r.second] } }));
+  };
+  return <button type="button" data-link-try="ask" onClick={go} className="raised-btn mt-4 w-full justify-center">{t("link.tryAsk")}</button>;
 };
 
 /** The library questions the person already has (not offered again under "Not sure"). */

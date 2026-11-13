@@ -159,6 +159,8 @@ const ru: Translation = {
     orderChange: "Изменить",
     orderEffect: "Связь выше теперь читается в твоём порядке",
     orderNowReads: "Теперь связь звучит так:",
+    tryAsk: "Что попробовать",
+    tryNow: "Сейчас пробуешь",
     chainSameDay: "в такие дни {{result}}",
     chainNextDay: "на следующий день {{result}}",
     advMostOften: "чаще всего",

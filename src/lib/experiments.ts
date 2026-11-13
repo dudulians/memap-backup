@@ -32,6 +32,8 @@ export interface Experiment {
   kept?: boolean;
   /** the action point it came from ("I'll try", Nov 5 2026): that question's id */
   from?: string;
+  /** the link it was started from ("What to try" under a link, Nov 13 2026): the two questions' ids, linkKey() */
+  link?: string;
   /** "HH:MM": a daily reminder until the try ends (board 65, Nov 6 2026) */
   remind?: string;
   /** a weekly goal for the question itself ("3 workouts a week", Nov 8 2026): no new
@@ -372,6 +374,10 @@ export const currentExperiment = (): Experiment | null => getExperiments().find(
 /** Every test running now: one per island (Nov 7 2026: two changes for the same island at once and
  *  you couldn't tell which helped; different islands run side by side). */
 export const runningExperiments = (): Experiment[] => getExperiments().filter((x) => !x.reviewed);
+/** A link's name for a try started from it: its two questions, in a fixed order. */
+export const linkKey = (a: string, b: string) => [a, b].sort().join("|");
+/** The try started from this link that is still running (the link's card shows it instead of "What to try"). */
+export const tryOfLink = (a: string, b: string): Experiment | null => runningExperiments().find((x) => x.link === linkKey(a, b)) ?? null;
 export const testOnIsland = (island: string): Experiment | null => runningExperiments().find((x) => x.island === island) ?? null;
 /** 1-based day of the test today (8+ = the week is over). */
 export const experimentDay = (x: Experiment, today = isoLocal(new Date())) => daysFrom(x.start, today) + 1;
@@ -387,9 +393,9 @@ export const overlapping = (x: Experiment): Experiment[] => {
 };
 /** Start a test: adds "Did you…?" to the island, from today (a weekly goal adds nothing:
  *  it watches the question she has). */
-export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number; night?: boolean; later?: boolean; wake?: string; doneWhen?: boolean } = {}): Promise<Experiment> => {
-  track("experiment_started", { from: from ? "action_point" : "pick", goal: !!opts.same, night: !!opts.night });
-  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.later ? { later: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}) };
+export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number; night?: boolean; later?: boolean; wake?: string; doneWhen?: boolean; link?: string } = {}): Promise<Experiment> => {
+  track("experiment_started", { from: from ? "action_point" : opts.link ? "link" : "pick", goal: !!opts.same, night: !!opts.night });
+  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.later ? { later: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}), ...(opts.link ? { link: opts.link } : {}) };
   if (opts.same && from) {
     const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}), ...extra };
     save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), g]);

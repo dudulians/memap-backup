@@ -35,7 +35,7 @@ import { EVENING_AT } from "@/lib/pathSteps";
 
 const PLAN = "__plan";
 
-export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, onClose }: {
+export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, onClose }: {
   mode: "pick" | "result";
   experiment?: Experiment | null;
   trackers: Tracker[];
@@ -46,6 +46,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   plan?: string;
   /** the action point it came from: its count starts again when the test starts */
   from?: { trackerId: string; k: number };
+  /** the link it was opened from ("What to try" under a link): the try remembers it, so the link shows it running */
+  link?: string;
   onClose: () => void;
 }) => {
   useScreen(`test:${mode}`);
@@ -97,7 +99,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     const more = { ...(night ? { night: true } : {}), ...(later ? { later: true } : {}), ...(bedHours ? { wake } : {}) };
     // a hard question watched ("Smoked hookah?"): its "no" is the step done
     const watched = watch && source ? { same: true, ...(source.problemWhen === "yes" ? { doneWhen: false } : {}) } : null;
-    const x = await startExperiment(island, change, question, from?.trackerId, goal ? { same: true, perWeek: goal } : watched ? { ...watched, ...more } : more);
+    const opts = goal ? { same: true, perWeek: goal } : watched ? { ...watched, ...more } : more;
+    const x = await startExperiment(island, change, question, from?.trackerId, link ? { ...opts, link } : opts);
     if (from) await countFromToday(from.trackerId, from.k);
     setRemindAt(bedHours ? beforeBed(bedtimeFrom(wake, bedHours)) : smartRemindTime(ideaKey, change));
     setStarted(x);

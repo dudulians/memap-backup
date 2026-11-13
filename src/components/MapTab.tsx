@@ -272,6 +272,19 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     window.addEventListener("memap-open-helps", go);
     return () => window.removeEventListener("memap-open-helps", go);
   }, []);
+  // "What to try" under a link (LinkTry, Nov 13 2026): the try picker on that island; closing it goes back to that
+  // link, open, where a started try now shows
+  const [linkTry, setLinkTry] = useState<{ island: IslandId; link: string; ids: string[] } | null>(null);
+  useEffect(() => {
+    const go = (e: Event) => {
+      const d = (e as CustomEvent).detail as { island: IslandId; link: string; ids: string[] } | undefined;
+      if (!d) return;
+      backTo.current = null; setLinkRaw(null); setOnly(null); setOnlyIds(null);
+      window.setTimeout(() => setLinkTry(d), 250);
+    };
+    window.addEventListener("memap-link-try", go);
+    return () => window.removeEventListener("memap-link-try", go);
+  }, []);
   const pickTest = () => {
     const first = mainIsland && islands.some((i) => i.id === mainIsland) ? mainIsland : islands.find((i) => i.trackerIds.length > 0)?.id;
     if (first) setTestFor(first);
@@ -303,7 +316,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="absolute inset-0 z-0" data-tour="world">
           <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!link} onNewIsland={() => setNewOpen(true)} />
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link} onNewIsland={() => setNewOpen(true)} />
         </div>
       )}
 
@@ -430,6 +443,10 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       )}
       {testFor && (
         <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
+      )}
+      {linkTry && (
+        <ExperimentSheet mode="pick" island={linkTry.island} link={linkTry.link} trackers={trackers} entries={entries}
+          onClose={() => { const ids = linkTry.ids; setLinkTry(null); reopenLink(ids); window.setTimeout(() => setOnly("findings"), 150); }} />
       )}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
