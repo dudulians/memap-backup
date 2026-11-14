@@ -131,6 +131,8 @@ for (const lang of ["en", "ru"]) {
   // (a chain needs an order: the person's, or the next day's)
   await p.evaluate(() => document.querySelectorAll("[data-link-card] button[aria-expanded=false]").forEach((x) => x.click())); await p.waitForTimeout(500);
   const text = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ");
+  // r161: the card goes in steps; the question is behind Next
+  await p.evaluate(() => document.querySelectorAll("[data-link-card]").forEach((c) => { if (!c.querySelector("[data-order]")) c.querySelector("[data-link-next]")?.click(); })); await p.waitForTimeout(600);
   await p.evaluate(() => { const b = [...document.querySelectorAll("[data-order]")].find((x) => /critic|критик/i.test(x.textContent)); b?.click(); }); await p.waitForTimeout(900);
   await p.evaluate(() => document.querySelectorAll("[data-link-card] button[aria-expanded=false], [data-story] button[aria-expanded=false]").forEach((x) => x.click())); await p.waitForTimeout(500);
   const text2 = (await p.locator("[role=dialog]").last().innerText()).replace(/\s+/g, " ");

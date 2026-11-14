@@ -42,7 +42,10 @@ for (const lang of ["en", "ru"]) {
   check(`${lang}: no "What to try" before the answer`, (await card.locator("[data-link-try]").count()) === 0);
   const lit = await card.locator(".hl-a").first().evaluate((el) => { const cs = getComputedStyle(el), ps = getComputedStyle(el.parentElement); return { same: cs.color === ps.color, bg: cs.backgroundColor }; });
   check(`${lang}: the link's words have no colour of their own`, lit.same && /rgba\(0, 0, 0, 0\)|transparent/.test(lit.bg), lit);
+  // r161: the card goes in steps; the question is behind Next
+  await card.locator("[data-link-next]").click(); await p.waitForTimeout(600);
   await card.locator('[data-order="first"]').click(); await p.waitForTimeout(700);
+  await card.locator("[data-link-next]").click(); await p.waitForTimeout(600);
   const ask = card.locator('[data-link-try="ask"]');
   check(`${lang}: "What to try" after the answer`, (await ask.count()) === 1 && (await ask.innerText()).trim() === (lang === "en" ? "What to try" : "Что попробовать"), await ask.allInnerTexts());
   await ask.scrollIntoViewIfNeeded(); await shot(p, `${lang}-link-answered`);

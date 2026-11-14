@@ -68,10 +68,14 @@ for (const lang of ["en", "ru"]) {
   const o1 = await read(PAIR);
   ok(`${lang}: on tap, when the days fall, no order`, o1.s === FALL, o1);
   ok(`${lang}: its count from the arguments, the other days in words`, lang === "en" ? o1.count === "12 of 14 times · on other days almost never: 2 of 45" : o1.count === "12 из 14 раз · в другие дни почти никогда: 2 из 45", o1.count);
+  // r161: the card goes in steps; the question is behind Next
+  const next = (pair) => p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); if (c && !c.querySelector("[data-order]")) c.querySelector("[data-link-next]")?.click(); }, pair);
+  await next(PAIR.slice(0, 2)); await p.waitForTimeout(500); o1.ask = (await read(PAIR.slice(0, 2))).ask;
   ok(`${lang}: "What comes first?" under the sentence`, o1.ask, o1);
   await p.screenshot({ path: `${D}/${lang}-2-open.png` });
   // the person's answer orders it: drained first = the store's sentence
-  const pick = (pair, which) => p.evaluate(({ pair, which }) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.slice(0, 2).every((w) => x.textContent.includes(w))); const b = [...(c?.querySelectorAll("[data-order]") ?? [])].find((x) => x.textContent.toLowerCase().includes(which.toLowerCase())); b?.click(); return !!b; }, { pair, which });
+  const pickNow = (pair, which) => p.evaluate(({ pair, which }) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.slice(0, 2).every((w) => x.textContent.includes(w))); const b = [...(c?.querySelectorAll("[data-order]") ?? [])].find((x) => x.textContent.toLowerCase().includes(which.toLowerCase())); b?.click(); return !!b; }, { pair, which });
+  const pick = async (pair, which) => { await next(pair.slice(0, 2)); await p.waitForTimeout(500); return pickNow(pair, which); };
   await pick(PAIR, BTN); await p.waitForTimeout(700);
   const o2 = await p.evaluate((pair) => { const c = [...document.querySelectorAll("[data-link-card]")].find((x) => pair.every((w) => x.textContent.includes(w))); return c?.querySelector("[data-link-sentence]")?.textContent ?? ""; }, PAIR.slice(0, 2));
   ok(`${lang}: "drained first" gives the store's sentence`, o2 === MOSTLY, o2);

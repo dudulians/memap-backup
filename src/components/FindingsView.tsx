@@ -12,7 +12,9 @@ import { ArrowRight, ChevronDown, Link2 } from "lucide-react";
 import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, type Seg, type TrackerOf } from "@/lib/linkText";
 import { Chart, dayMarks, weekly, type Series } from "./ChartViews";
 import { art, artOf } from "@/lib/globeArt";
-import { LINK_ORDER_EVENT } from "@/lib/linkOrder";
+import { LINK_ORDER_EVENT, getLinkOrder } from "@/lib/linkOrder";
+import { tryOfLink } from "@/lib/experiments";
+import { haptics } from "@/lib/haptics";
 import { islandDays } from "@/lib/growth";
 import { answerClause } from "@/lib/answerPhrases";
 import { chainOf, notItFindings, pairOf, type NotIt } from "@/lib/findingForms";
@@ -372,6 +374,18 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   const { k, n } = linkNumbers(r);
   const other = linkOtherDays(t, r);
   const [at, setAt] = useState<number | null>(null);
+  // The opened card goes in short steps with Next, not one long sheet to scroll (her note, Nov 14 2026: «слишком
+  // длинное полотно… давай всё-таки делать next: вопрос, сообщение, дальше to try»): what was found, then
+  // "What comes first?" (same-day links only), then what to try. A card with a try running opens on its last step.
+  const asksOrder = c.lag === 0 && solid;
+  const steps: ("found" | "order" | "try")[] = ["found", ...(asksOrder ? ["order" as const] : []), ...(c.lag !== 0 || solid ? ["try" as const] : [])];
+  const [, orderSaid] = useState(0);
+  useEffect(() => { const on = () => orderSaid((v) => v + 1); window.addEventListener(LINK_ORDER_EVENT, on); return () => window.removeEventListener(LINK_ORDER_EVENT, on); }, []);
+  const orderKnown = !asksOrder || (!!a && !!b && !!getLinkOrder(a.id, b.id));
+  const [stepAt, setStepAt] = useState(() => (again.current && a && b && tryOfLink(a.id, b.id) ? steps.length - 1 : 0));
+  const step = steps[Math.min(stepAt, steps.length - 1)];
+  const go = (d: number) => { haptics.tap(); setStepAt((v) => Math.max(0, Math.min(steps.length - 1, v + d))); window.setTimeout(() => box.current?.scrollIntoView({ block: "nearest" }), 60); };
+  const canNext = stepAt < steps.length - 1 && (step !== "order" || orderKnown);
   // the two lines and their days, in the colours of the lit words
   const series: Series[] = a && b ? [
     { color: PAIR_A, values: weekly(a, entries, 8, r.firstYes), days: dayMarks(a, entries, 8, r.firstYes), label: cap(answerPhrase(t, a, r.firstYes)) },
@@ -396,6 +410,7 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
       {open && (
         <div className="px-[18px] pb-4 animate-fade-in">
           {/* typed questions without short words: name them, right under the sentence */}
+          {step === "found" && (<>
           <OwnWordsPrompt trackers={[a, b]} />
           {/* the week chart and every day under it, on the card (her note: «на раскрытии… как раньше выглядел график
               и палочки») */}
@@ -406,8 +421,24 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
             </div>
           )}
           {other && <p data-link-other className="mt-3 text-[15px] font-semibold leading-snug">{cap(other)}</p>}
+          </>)}
+          {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
+              the card, and after an answer it says how the link reads now */}
+          {step === "order" && <OrderAsk r={r} of={of} tracked={tracked} readsNow={<Said segs={segs} />} />}
+          {/* the link's next step, once its order is known: what to try (her note, Nov 13 2026: a link was a dead end) */}
+          {step === "try" && <LinkTry r={r} of={of} />}
+          {steps.length > 1 && (
+            <div data-link-steps={step} className="mt-4 flex items-center gap-3">
+              {stepAt > 0 && <button type="button" data-link-back onClick={() => go(-1)} className="h-12 px-2 text-[16px] font-bold text-muted-foreground">{t("common.back")}</button>}
+              <span className="flex flex-1 items-center justify-center gap-1.5" aria-hidden="true">
+                {steps.map((x, i) => <i key={x} className={cn("h-2 rounded-full transition-all", i === stepAt ? "w-5 bg-[hsl(var(--coin-teal))]" : "w-2 bg-foreground/15")} />)}
+              </span>
+              {canNext && <button type="button" data-link-next onClick={() => go(1)} className="raised-btn h-12 px-7">{t("common.next")}</button>}
+            </div>
+          )}
+              {/* below Next, so the first step's button shows without scrolling (Nov 14 2026) */}
           {/* the other links about the same thing, as short rows; a tap tells that one in full on this card */}
-          {also.length > 0 && (
+          {step === "found" && also.length > 0 && (
             <div data-link-also className="mt-4">
               <p className="text-[13px] font-bold text-[hsl(var(--coin-teal))]">{t("link.alsoHead")}</p>
               <div className="mt-1.5 space-y-1.5">
@@ -421,11 +452,6 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
               </div>
             </div>
           )}
-          {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
-              the card, and after an answer it says how the link reads now */}
-          {c.lag === 0 && solid && <OrderAsk r={r} of={of} tracked={tracked} readsNow={<Said segs={segs} />} />}
-          {/* the link's next step, once its order is known: what to try (her note, Nov 13 2026: a link was a dead end) */}
-          {(c.lag !== 0 || solid) && <LinkTry r={r} of={of} />}
         </div>
       )}
     </div>
