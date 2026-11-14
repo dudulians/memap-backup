@@ -487,6 +487,10 @@ const lookupRaw = (m: DirectionalMap, input: string): string => {
   return dir.get(input) ?? input;
 };
 
+/** A stored Russian title back to the English one it was made from, whatever language the app is in now (an exact
+ *  match in the title lists above, never a guess). */
+export const titleInEnglish = (title: string): string => getMap().titles.ruToEn.get(title) ?? title;
+
 // Russian titles without gender brackets, shown in place of the library's bracketed ones (QA, Nov 8 2026)
 let _ruNeutral: Map<string, string> | null = null;
 const ruNeutralTitles = (): Map<string, string> => {

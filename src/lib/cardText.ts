@@ -134,6 +134,26 @@ export const cardQuestion = (tracker: Tracker): string => {
   if (getLanguage() === "ru" && id && RU_CARD[id] && tpl && (norm(shown) === norm(localizeTrackerQuestion(tpl.questionText, tpl.title)) || GENDER_BRACKETS.test(shown))) return noToday(RU_CARD[id]);
   return noToday(shown);
 };
+/** Is this still the library's own question: its wording now or before the Nov 2026 rewordings, in English or
+ *  Russian, with or without gender brackets? When she renamed it ("Did you fight with Kristina?") it is not, and her
+ *  words win everywhere a link or a chip speaks about it (her rule, Nov 13 2026; built Nov 14). The same test the
+ *  card uses above. */
+export const isLibraryWording = (tracker: Tracker, knownId?: string | null): boolean => {
+  // knownId: what the question is about when its id says so (a library question keeps its id when its title changes)
+  const id = knownId ?? matchTemplateIdByTitle(tracker.title);
+  const tpl = id ? TEMPLATES.get(id) : undefined;
+  if (!id || !tpl) return false;
+  if (!tracker.questionText?.trim()) return true;
+  const bare = (q: string) => norm(noToday(q)).split("?").join("").split("？").join("").trim();
+  const shown = bare(localizeTrackerQuestion(tracker.questionText, tracker.title));
+  const raw = bare(tracker.questionText);
+  const leg = tpl.legacy;
+  const known = [tpl.questionText, tpl.questionTextRu, leg?.questionText, leg?.questionTextRu, tpl.title, tpl.titleRu, leg?.title, leg?.titleRu,
+    CARD_TEXT[id]?.en, CARD_TEXT[id]?.ru, CARD_TEXT_OLD[id]?.en, CARD_TEXT_OLD[id]?.ru, RU_CARD[id]].filter((q): q is string => !!q);
+  if (known.some((q) => { const k = bare(q), l = bare(localizeTrackerQuestion(q, tracker.title)); return k === raw || k === shown || l === raw || l === shown; })) return true;
+  // an old Russian wording of the library, still with gender endings: no one types "(а)" in a question of their own
+  return GENDER_BRACKETS.test(tracker.questionText);
+};
 /** The card's header names the day; past days use the same card (QA, Nov 8 2026: "Did your back hurt
  *  today?" on a past day). Only the library's own wording; her own questions stay as she typed them. */
 const noToday = (q: string): string => {

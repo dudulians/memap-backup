@@ -20,7 +20,7 @@ import { answerClause } from "@/lib/answerPhrases";
 import { chainOf, notItFindings, pairOf, type NotIt } from "@/lib/findingForms";
 import { ensureTemplates, findTemplate } from "@/lib/doors";
 import { templateQuestion } from "@/lib/cardText";
-import { answerPhrase, cap, templateIdOf } from "@/lib/answerPhrases";
+import { answerPhrase, cap, templateIdOf, wordsIdOf } from "@/lib/answerPhrases";
 import { markCorrelationSeen } from "@/lib/appRating";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,7 @@ const toneOf = (tr: Tracker | undefined, v: boolean) =>
   !tr || isNeutralQuestion(tr) || isTestQuestion(tr) ? "hsl(var(--data-a))" : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced))";
 /** Short words for this answer: a library question, or a typed one she named short. Plates only then (her pick, Nov 12
  *  2026: «плашки для коротких»); a typed question as typed reads as a sentence. */
-const short = (tr: Tracker | undefined, yes: boolean) => !!tr && (!!templateIdOf(tr) || !!(yes ? tr.words?.yes : tr.words?.no));
+const short = (tr: Tracker | undefined, yes: boolean) => !!tr && (!!wordsIdOf(tr) || !!(yes ? tr.words?.yes : tr.words?.no));
 /** Every day of the last weeks with that answer, 7 a week, oldest week first (a short night: the "no" days of
  *  "Slept 7+ hours"). */
 type DaysWith = (id: string, yes: boolean) => (boolean | undefined)[][];

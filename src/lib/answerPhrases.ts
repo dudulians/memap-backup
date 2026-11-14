@@ -7,10 +7,11 @@
 import type { TFunction } from "i18next";
 import { getLanguage } from "@/lib/i18n";
 import { LIFE_STREAMS } from "@/lib/lifeStreams";
-import { localizeTrackerTitle } from "@/lib/trackerLocalize";
+import { localizeTrackerTitle, titleInEnglish } from "@/lib/trackerLocalize";
 import type { Tracker } from "@/types/tracker";
 import { S } from "@/lib/answerSentences";
 import { RU_TITLE, RU_TITLE_OLD } from "@/lib/ruNeutral";
+import { isLibraryWording } from "@/lib/cardText";
 
 /** [EN yes, EN no, RU yes, RU no], lowercase (capitalised where a line starts). */
 const P: Record<string, [string, string, string, string]> = {
@@ -294,8 +295,18 @@ const byTitle = (() => {
 export const templateIdOf = (tr: Tracker): string | null => {
   const fromId = /^\d+-(.+)-\d+$/.exec(tr.id)?.[1];
   if (fromId && P[fromId]) return fromId;
-  const id = byTitle().get((tr.title ?? "").trim().toLowerCase());
+  // then an older Russian title a question may be stored under («Ссорился(ась) с партнёром», the Russian demo;
+  // found Nov 14 2026: such a link read like a typed question): by its exact English pair, never a loose match
+  const id = byTitle().get((tr.title ?? "").trim().toLowerCase()) ?? byTitle().get(titleInEnglish((tr.title ?? "").trim()).trim().toLowerCase());
   return id && P[id] ? id : null;
+};
+
+/** The library question whose WORDS this one may use: only while its question is still the library's own. A
+ *  renamed one ("Did you fight with Kristina?") gets null here and speaks in her words; templateIdOf still knows
+ *  what it is about, so Why?, tips and rules keep working (her rule Nov 13 2026: «её слова выигрывают»). */
+export const wordsIdOf = (tr: Tracker): string | null => {
+  const id = templateIdOf(tr);
+  return id && isLibraryWording(tr, id) ? id : null;
 };
 
 // A question someone had before the Nov 7 2026 rewordings keeps the words that fit it
@@ -345,7 +356,10 @@ export const cap = (s: string) => (s ? s[0].toLocaleUpperCase() + s.slice(1) : s
  *  stored without it), a statement stays a statement ("My husband drove me crazy today"). */
 const AUX_EN = /^(did|do|does|was|were|is|are|am|have|has|had|can|could|will|would|should)\b/i;
 export const ownText = (tr: Tracker): string => {
-  const title = localizeTrackerTitle(tr.title).replace(/[?？]+$/, "").trim();
+  // a renamed library question: the question as she wrote it, not the library's title it still carries
+  const about = templateIdOf(tr);
+  const renamed = !!about && !isLibraryWording(tr, about) && !!tr.questionText?.trim();
+  const title = (renamed ? tr.questionText : localizeTrackerTitle(tr.title)).replace(/[?？]+$/, "").trim();
   return getLanguage() !== "ru" && AUX_EN.test(title) ? `${title}?` : title;
 };
 
@@ -354,7 +368,7 @@ export const answerPhrase = (t: TFunction, tr: Tracker | undefined, yes: boolean
   if (!tr) return "";
   const own = yes ? tr.words?.yes : tr.words?.no;
   if (own) return own;
-  const id = templateIdOf(tr);
+  const id = wordsIdOf(tr);
   if (id) { const p = rowP(tr, id); return getLanguage() === "ru" ? (yes ? p[2] : p[3]) : yes ? p[0] : p[1]; }
   return t("link.own", { q: ownText(tr), a: t(yes ? "link.yes" : "link.no") });
 };
@@ -377,7 +391,7 @@ export const oftenWord = (t: TFunction, k: number, n: number): string => {
  *  how often ("you usually get a migraine"). Her own question: "you answer “no” to …". */
 export const answerClause = (t: TFunction, tr: Tracker | undefined, yes: boolean, role: "cause" | "result", often = ""): string => {
   if (!tr) return "";
-  const id = templateIdOf(tr);
+  const id = wordsIdOf(tr);
   const own = yes ? tr.words?.yes : tr.words?.no;
   const s = own && !(id && S[id]) ? t("link.wordsClause", { w: own })
     : id && S[id]

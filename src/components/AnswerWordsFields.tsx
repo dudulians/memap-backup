@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { PenLine } from "lucide-react";
 import { haptics } from "@/lib/haptics";
 import { track } from "@/lib/analytics";
-import { templateIdOf } from "@/lib/answerPhrases";
+import { wordsIdOf } from "@/lib/answerPhrases";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import type { Tracker } from "@/types/tracker";
 
@@ -43,7 +43,7 @@ export const AnswerWordsFields = ({ value, onChange, label }: { value: AnswerWor
  *  The app can't rewrite free text without AI, so she says it herself, once, where she sees why (Nov 11 2026, her
  *  worry about questions like «муж меня бесил или нет»): under a link with such a question, "Say … in your own
  *  words" opens the two short fields; saved on the question, every link with it reads her way. */
-export const needsWords = (tr: Tracker | undefined): tr is Tracker => !!tr && !templateIdOf(tr) && !tr.words?.yes && !tr.words?.no;
+export const needsWords = (tr: Tracker | undefined): tr is Tracker => !!tr && !wordsIdOf(tr) && !tr.words?.yes && !tr.words?.no;
 export const OwnWordsPrompt = ({ trackers }: { trackers: (Tracker | undefined)[] }) => {
   const { t } = useTranslation();
   const list = trackers.filter(needsWords);

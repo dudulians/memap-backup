@@ -17,7 +17,7 @@
 //   count     "11 of 17 times · on other days 4 of 20" / "Every time — 6 of 6 · on other days 0 of 9"
 import type { TFunction } from "i18next";
 import type { Route } from "@/lib/islands";
-import { answerClause, answerPhrase, cap, oftenWord, ownText, templateIdOf } from "@/lib/answerPhrases";
+import { answerClause, answerPhrase, cap, oftenWord, ownText, wordsIdOf } from "@/lib/answerPhrases";
 import { calmOf, mostlyCount } from "@/lib/findingForms";
 import type { Tracker } from "@/types/tracker";
 
@@ -62,7 +62,7 @@ export const linkFallText = (t: TFunction, r: Sides, of: TrackerOf): string => {
   // two typed questions with no short words (her pick, Nov 12 2026): the questions as typed, the answers named
   // once ("The days you answer “yes” to … fall on days you answer “yes” to …" read clumsily)
   const A = of(r.first), B = of(r.second);
-  const bare = (x: Tracker | undefined, yes: boolean): x is Tracker => !!x && !templateIdOf(x) && !(yes ? x.words?.yes : x.words?.no);
+  const bare = (x: Tracker | undefined, yes: boolean): x is Tracker => !!x && !wordsIdOf(x) && !(yes ? x.words?.yes : x.words?.no);
   if (bare(A, r.firstYes) && bare(B, r.secondYes)) {
     const adv = r.mostly === "almostOnly" ? oftenWord(t, 9, 10) : r.mostly ? t("link.advMostly") : oftenWord(t, r.k, r.n);
     if (r.firstYes && r.secondYes) return cap(t("link.ownTogetherYes", { a: ownText(A), b: ownText(B), adv }));

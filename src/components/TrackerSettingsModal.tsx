@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnswerWordsFields, cleanWords, type AnswerWords } from "./AnswerWordsFields";
-import { templateIdOf } from "@/lib/answerPhrases";
+import { wordsIdOf } from "@/lib/answerPhrases";
 import { Tracker } from "@/types/tracker";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
@@ -145,7 +145,8 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
       const updatedTracker: Tracker = {
         ...tracker,
         ...validated,
-        words: templateIdOf(tracker) ? tracker.words : cleanWords(words),
+        // a renamed library question may have short words of its own (Nov 14 2026)
+        words: wordsIdOf({ ...tracker, ...validated } as Tracker) ? tracker.words : cleanWords(words),
       };
 
       await onSave(updatedTracker);
@@ -211,7 +212,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
         </div>
 
         {/* her own question: her answers in words, for links (library ones have theirs) */}
-        {tracker && !templateIdOf(tracker) && <AnswerWordsFields value={words} onChange={setWords} />}
+        {tracker && !wordsIdOf({ ...tracker, questionText: formData.questionText } as Tracker) && <AnswerWordsFields value={words} onChange={setWords} />}
 
         {/* "Yes" is… Good / Bad. Good → the signal is a No day. */}
         <div>
