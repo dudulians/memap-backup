@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, pathModel, skipTask, unskipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, markFillDay, pathModel, skipTask, unskipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { tipFor } from "@/lib/observeTips";
 import { buildIslands, buildRoutes, LINKS_TOP } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
@@ -126,7 +126,7 @@ export const EveningPath = ({
   /** After a chest's reward goes on the map: show the Map. */
   onOpenMap: () => void;
   /** Answer a missed day; redo = change a day's answers. */
-  onFillDay: (date: string, redo?: boolean) => void;
+  onFillDay: (date: string, redo?: boolean, ids?: string[]) => void;
   /** Look at a past day. */
   onOpenDay: (date: string) => void;
 }) => {
@@ -345,7 +345,7 @@ export const EveningPath = ({
   const stepName = (s: Step) => {
     if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "grew") return (s.grew?.length ?? 1) > 1 ? t("path.grewMany") : t("path.grew", { name: islandName(t, s.island!) });
-    if (s.kind === "fill") return s.onPath ? t("path.fillYesterday") : t("path.fillTitle", { day: weekdayName(s.date!) });
+    if (s.kind === "fill") { const name = s.onPath ? t("path.fillYesterday") : t("path.fillTitle", { day: weekdayName(s.date!) }); return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name; }
     if (s.kind === "game") return t("hunch.step");
     if (s.kind === "act") return t("act.step");
     if (s.kind === "test") return t("experiment.stepDone");
@@ -736,7 +736,7 @@ export const EveningPath = ({
     track("path_step_started", { kind: s.kind, week: m.week + 1, ...(s.task ? { task: s.task } : {}) });
     if (s.kind === "game") { if (canPlay) setGameOpen(true); }
     else if (s.kind === "act") { markActSeen(s.trackerIds); setTick((k) => k + 1); openActionPoints(); }
-    else if (s.kind === "fill") onFillDay(s.date!);
+    else if (s.kind === "fill") { markFillDay(s.date!); onFillDay(s.date!, false, s.trackerIds); }
     else if (s.kind === "task" && s.task === "note") { noteFromTask.current = true; noteSaved.current = false; setNoteDraft(newDraft()); }
     else if (s.kind === "task" && s.task === "experiment") setTestOpen("pick");
     else if (s.kind === "test") setTestOpen("result");

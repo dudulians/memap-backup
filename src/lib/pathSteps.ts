@@ -33,8 +33,9 @@ export const REPORT_MIN = 3;
  *  Nov 9 2026: "10 of 14 days with answers" on Links while the push said "first links in about 1 evening"). */
 export const LINKS_AT = 10;
 const MAX_PER_STEP = 7;
-/** Up to this many questions stay one step on the path (Nov 8 2026). */
-const ONE_STEP_UP_TO = 10;
+/** Up to this many questions stay one step on the path. It was 10 (Nov 8 2026); 7 since Nov 14 2026, her note:
+ *  «меня бесит 17 вопросов заполнять подряд.. надо делить в тудей». No step asks more than 7 in a row. */
+const ONE_STEP_UP_TO = 7;
 /** Steps besides the questions, a day, most important first (Nov 8 2026). */
 const MAX_EXTRAS = 3;
 const EXTRA_ORDER: Step["kind"][] = ["report", "test", "act", "link", "why", "task", "game", "tip"];
@@ -194,7 +195,9 @@ export const questionGroups = (trackers: Tracker[], opts: { together?: boolean; 
   // Up to 14 in one go, more in two halves.
   if (opts.together) {
     const all = doorFirst(act).map((t) => t.id);
-    const parts = all.length > 14 ? 2 : 1, size = Math.ceil(all.length / parts);
+    // it was up to 14 in one go; since Nov 14 2026 no more than 7 in a row (her note: 17 in a row is too many):
+    // 8 make 4 + 4, 17 make 6 + 6 + 5, each a short step of its own on Today
+    const parts = Math.ceil(all.length / MAX_PER_STEP), size = Math.ceil(all.length / parts);
     return Array.from({ length: parts }, (_, p) => ({ mixed: "all" as const, part: [p + 1, parts] as [number, number], ids: all.slice(p * size, (p + 1) * size) }));
   }
 
@@ -322,6 +325,10 @@ const actSeenToday = () => {
 
 const UNLOAD_KEY = "memap_unload_played";
 /** "Unload your mind" was played today (it stays open to play again). */
+/** The missed day she began filling from the path: its other short steps keep coming (Nov 14 2026). */
+const FILL_DAY = "memap_fill_day";
+export const markFillDay = (iso: string) => { try { localStorage.setItem(FILL_DAY, iso); } catch { /* ignore */ } };
+const fillDay = (): string | null => { try { return localStorage.getItem(FILL_DAY); } catch { return null; } };
 export const unloadPlayedToday = () => {
   try { return localStorage.getItem(UNLOAD_KEY) === isoLocal(new Date()); } catch { return false; }
 };
@@ -674,10 +681,18 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back);
     const iso = isoLocal(d);
     const onPath = back === 1 && dayOneMorning;
-    if (counted.has(iso) || (!onPath && (iso < started || !firstEntry || firstEntry >= iso))) continue;
-    const ids = activeQuestions(trackers).map((t) => t.id);
+    // a missed day goes in short steps, not every question in a row (her notes, Nov 14 2026: 17 in a row is too
+    // many; and the rest of that day must not stay empty): the first topic step with something unanswered, then
+    // the next one. The first step counts the day (countedDays); once she began filling yesterday from the path
+    // (fillDay), its other steps keep coming, "part 2 of 3", until that day is whole.
+    const going = back === 1 && fillDay() === iso;
+    if (!going && (counted.has(iso) || (!onPath && (iso < started || !firstEntry || firstEntry >= iso)))) continue;
     const got = new Set(entries.filter((e) => e.date === iso).map((e) => e.trackerId));
-    steps.push({ id: `fill:${iso}`, kind: "fill", date: iso, trackerIds: ids, answered: ids.filter((id) => got.has(id)).length, done: false, onPath });
+    const groups = questionGroups(trackers).map((g) => g.ids);
+    const at = groups.findIndex((g) => g.some((id) => !got.has(id)));
+    if (at < 0) continue;
+    const ids = groups[at];
+    steps.push({ id: `fill:${iso}`, kind: "fill", date: iso, trackerIds: ids, answered: ids.filter((id) => got.has(id)).length, done: false, onPath, part: groups.length > 1 ? [at + 1, groups.length] : undefined });
     break;
   }
 

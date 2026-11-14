@@ -66,7 +66,10 @@ export const onbVariant = (): OnbVariant => {
     const saved = localStorage.getItem(ONB_KEY);
     if (isOnb(saved)) return saved;
     if (cohort() === "old") return "A";
-    const v = (["A", "B", "C"] as const)[Math.floor(Math.random() * 3)];
+    // the check scripts drive a browser: there the draw is always A, so a check never lands in B or C by chance
+    // (a check that wants B or C names it in memap_ab_onb, read above). Real phones are never "webdriver".
+    if (typeof navigator !== "undefined" && navigator.webdriver) return "A";
+    const v =(["A", "B", "C"] as const)[Math.floor(Math.random() * 3)];
     localStorage.setItem(ONB_KEY, v);
     return v;
   } catch { return "A"; }

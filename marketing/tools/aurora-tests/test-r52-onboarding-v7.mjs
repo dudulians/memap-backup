@@ -21,6 +21,8 @@ const run = async (tag, { lang = "en", theme = "aurora-light", hour = 19, path }
   if (only && !only.includes(tag)) return;
   console.error("run", tag);
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, locale: lang === "ru" ? "ru-RU" : "en-US", timezoneId: lang === "ru" ? "Europe/Moscow" : "Asia/Dubai" });
+  // this walk is the all-topics-at-once onboarding (variant B since v112); named here so it never depends on the draw (Nov 14 2026)
+  await ctx.addInitScript(() => { try { if (!localStorage.getItem("memap_ab_onb")) localStorage.setItem("memap_ab_onb", "B"); } catch { /* ignore */ } });
   const p = await ctx.newPage();
   p.on("pageerror", (e) => errs.push(`${tag}: ${e.message}`)); p.on("console", (m) => m.type() === "error" && !/InAppReview|favicon|Failed to load resource/.test(m.text()) && errs.push(`${tag}: ${m.text()}`));
   await p.clock.install({ time: at(hour) });

@@ -982,10 +982,11 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
           window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", back: true } }));
         }}
         onOpenMap={() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))}
-        onFillDay={(date, redo) => {
+        onFillDay={(date, redo, ids) => {
           if (redo) { setDayOpen({ date }); return; }
           pendingStart.current = date;
-          setStep(redo ? { redo: true } : null);
+          // from the path a missed day is one short step (ids); from the calendar it is the whole day
+          setStep(redo ? { redo: true } : ids ? { ids } : null);
           setSelectedDate(date);
           setDailySessionOpen(true);
         }}
