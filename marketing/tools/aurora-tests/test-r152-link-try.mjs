@@ -2,7 +2,8 @@
 // 1. An opened same-day link shows no "What to try" before "What comes first?" is answered.
 // 2. After an answer the card shows "What to try" (EN) / «Что попробовать» (RU).
 // 3. It opens the try picker on the island of the thing put first; a try started there remembers the link.
-// 4. Closing the picker goes back to Links with that link open, where the try shows as "Trying now" with "Day 1 of 14".
+// 4. Started, What helps opens with the try lit ("From a link: …"); the link, opened again, shows "Trying now" with
+//    "Day 1 of 14" at once (v167, Nov 14 2026; before, the picker went back to the link).
 // 5. The lit words of a link have the text's own colour and no background.
 // Screenshots in work/r152. Run from marketing/tools with the dev server on 8080; exit 1 when a check fails.
 import { chromium } from "playwright-core";
@@ -63,12 +64,22 @@ for (const lang of ["en", "ru"]) {
   const saved = await p.evaluate(() => { const all = Object.keys(localStorage).map((k) => localStorage.getItem(k)).filter((v) => v && v.includes('"link":"')); return all.length ? all[0].slice(0, 400) : null; });
   check(`${lang}: the started try remembers its link`, !!saved && /"link":"[^"]+\|[^"]+"/.test(saved), saved);
   await shot(p, `${lang}-started`);
-  // finish the picker (the reminder step), then the link shows the try
+  // finish the picker (the reminder step): since v167 (Nov 14 2026, her note «все действия реально делаем там, где они
+  // подразумеваются») the person lands in What helps, the new try lit and saying it came from a link
   await p.locator("[role=dialog]").last().locator("button.press3d").last().click().catch(() => undefined);
-  await p.locator('[data-link-try="running"]').first().waitFor({ timeout: 8000 }).catch(() => undefined);
+  await p.locator('[data-try-lit="1"]').first().waitFor({ timeout: 8000 }).catch(() => undefined);
+  const litRow = p.locator('[data-try-lit="1"]').first();
+  const litText = (await litRow.count()) ? await litRow.innerText() : "";
+  check(`${lang}: started, the try is lit in What helps, from a link`, (lang === "en" ? /From a link: [\s\S]*day 1 of 14/i : /Из связи: [\s\S]*день 1 из 14/i).test(litText), litText || (await p.locator("[role=dialog]").last().innerText().catch(() => "")).slice(0, 200));
+  await shot(p, `${lang}-in-helps`);
+  // and the link, opened again, shows it running straight away
+  await p.keyboard.press("Escape"); await p.waitForTimeout(800);
+  await p.locator('[data-tour="links-card"]').click(); await p.waitForTimeout(1300);
+  const tc = p.locator('[data-link-card][data-link-mark="trying"]').first();
+  if (await tc.count()) { await tc.scrollIntoViewIfNeeded(); await tc.locator("button").first().click(); await p.waitForTimeout(900); }
   const run = p.locator('[data-link-try="running"]').first();
   const runText = (await run.count()) ? await run.innerText() : "";
-  check(`${lang}: back on the link, the try shows as running`, (lang === "en" ? /Trying now[\s\S]*Day 1 of 14/ : /Сейчас пробуешь[\s\S]*День 1 из 14/).test(runText), runText || (await p.locator("[role=dialog]").last().innerText().catch(() => "")).slice(0, 200));
+  check(`${lang}: the link opens on the running try`, (lang === "en" ? /Trying now[\s\S]*Day 1 of 14/ : /Сейчас пробуешь[\s\S]*День 1 из 14/).test(runText), runText.slice(0, 200));
   if (await run.count()) await run.scrollIntoViewIfNeeded();
   await shot(p, `${lang}-link-trying`);
   await ctx.close();

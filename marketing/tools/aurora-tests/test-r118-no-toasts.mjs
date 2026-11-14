@@ -75,23 +75,9 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.questions`] = before;
   ok(`${lang}.questions: three in the list`, before === 3, String(before));
 
-  // the reminder card: refused → a line on the card
-  await permission("denied");
-  await p.getByRole("button", { name: W.turnOn }).click();
-  await noPopup("reminder refused");
-  const notifErr = p.locator("[data-notif-error]");
-  ok(`${lang}.reminder refused: a line on the card says why`, (await notifErr.count()) === 1 && W.denied.test(await notifErr.innerText()));
-  await shot("reminder-refused");
-  // allowed → the card says "on · 20:00" for a moment, then goes
-  await permission("granted");
-  await p.getByRole("button", { name: W.turnOn }).click();
-  await p.waitForTimeout(250);
-  const card = p.locator("[data-notif-card]");
-  ok(`${lang}.reminder on: the card says it`, (await card.count()) === 1 && W.on.test(await card.innerText()), await card.innerText().catch(() => ""));
-  await shot("reminder-on");
-  await noPopup("reminder on");
-  await p.waitForTimeout(3200);
-  ok(`${lang}.reminder on: the card goes after a moment`, (await card.count()) === 0);
+  // the reminder card left My questions (v167, Nov 14 2026, her note: it is in Settings, "Evening reminder", which
+  // this check walks below): none here
+  ok(`${lang}.no reminder card in My questions`, (await p.locator("[data-notif-card]").count()) === 0);
 
   // Archive from a question's sheet → the "Archived: … · Undo" line
   await cards.first().click(); await p.waitForTimeout(900);

@@ -55,9 +55,12 @@ const PITCH_MIN = -0.25, PITCH_MAX = 0.62;
 // Pinch to zoom (her ask, Nov 4 2026: "зум ин зум аут"): from a little
 // smaller than usual to well over twice as big.
 const ZMIN = 0.75, ZMAX = 2.2;
-/** Where a link's sign may stand along its route, the middle first (a name can sit on the middle); 9 ± k
- *  means the middle moved k×100 px to the route's side, for two islands too close to leave room on it. */
-const CHIP_TS = [0.5, 0.42, 0.58, 0.34, 0.66, 0.27, 0.73, 9.3, 8.7, 9.45, 8.55];
+/** Where a link's sign may stand along its route, the middle first (a name can sit on the middle). Always on the
+ *  dotted line itself (her note, Nov 14 2026: with a hard zoom or a quick spin the sign left the line, «улетит в
+ *  небо»: the v162 spots beside the route were fixed pixels, far off a small zoomed-out route). */
+const CHIP_TS = [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8];
+/** How far along its route the sign slides in one frame toward a new spot (it slides, it never jumps). */
+const CHIP_STEP = 0.035;
 /** How the ball is turned and zoomed: kept for the whole visit (tabs, day/night). */
 let VIEW: { yaw: number; pitch: number; zoom: number; ox: number; oy: number } | null = null;
 
@@ -360,6 +363,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     // island names drawn this frame (for the link signs), their widths by name text, and where each sign stood
     const labelBoxes: { x: number; y: number; hw: number; hh: number }[] = [], isleBoxes: typeof labelBoxes = [];
     const labelW = new Map<string, number>(), chipT = new Map<string, number>();
+    // a sign still sliding along its route asks for the next frame
+    let chipSliding = false;
     const draw = () => {
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       const now = performance.now();
@@ -372,7 +377,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       const base = R * 0.35;
-      innerHits.length = 0; labelBoxes.length = 0; isleBoxes.length = 0;
+      innerHits.length = 0; labelBoxes.length = 0; isleBoxes.length = 0; chipSliding = false;
       for (const th of things) {
         const e = els.current.get(th.key); if (!e?.el) continue;
         const p = rot(th.v), vis = Math.max(0, Math.min(1, (p[2] - 0.04) / 0.24));
@@ -434,22 +439,23 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           // names and, when it can, of the island pictures; it keeps the spot it had while that stays free, and
           // hides when the route has no room clear of the names
           const key = `${a}|${b}`, prev = chipT.get(key);
-          // a spot: t along the route, n pixels to its side (two close islands leave no room on the route itself)
-          const at = (tn: number) => {
-            const t = Math.round(tn) === 9 ? 0.5 : tn, n = Math.round(tn) === 9 ? (tn - 9) * 100 : 0;
-            const pm = rot(slerp(A, B, t)), q = rot(slerp(A, B, Math.min(1, t + 0.02)));
-            let cx = CX + R * pm[0], cy = CY - R * pm[1];
-            if (n) { const dx = R * (q[0] - pm[0]), dy = -R * (q[1] - pm[1]), d = Math.hypot(dx, dy) || 1; cx += (-dy / d) * n; cy += (dx / d) * n; }
-            return { t: tn, pm, cx, cy };
-          };
+          // a spot: t along the route, on the dotted line itself
+          const at = (t: number) => { const pm = rot(slerp(A, B, t)); return { t, pm, cx: CX + R * pm[0], cy: CY - R * pm[1] }; };
           const off = (boxes: typeof labelBoxes, c: { cx: number; cy: number }) => !boxes.some((l) => Math.abs(c.cx - l.x) < l.hw + 19 && Math.abs(c.cy - l.y) < l.hh + 19);
+          // only where the line is drawn (the ball's front), clear of the names, and of the pictures when it can be
+          const front = (c: ReturnType<typeof at>) => c.pm[2] > 0.2;
           const ts = [...(prev !== undefined ? [prev] : []), ...CHIP_TS];
-          let spot = null as ReturnType<typeof at> | null;
-          for (const t of ts) { const c = at(t); if (off(labelBoxes, c) && off(isleBoxes, c)) { spot = c; break; } }
-          if (!spot) for (const t of ts) { const c = at(t); if (off(labelBoxes, c)) { spot = c; break; } }
-          if (spot) chipT.set(key, spot.t); else chipT.delete(key);
-          const { pm, cx, cy } = spot ?? at(0.5);
-          const cv = spot ? Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2)) : 0;
+          let goal: number | null = null;
+          for (const t of ts) { const c = at(t); if (front(c) && off(labelBoxes, c) && off(isleBoxes, c)) { goal = t; break; } }
+          if (goal === null) for (const t of ts) { const c = at(t); if (front(c) && off(labelBoxes, c)) { goal = t; break; } }
+          // it slides along the line to a new spot, a little each frame; with no spot free it fades where it stands
+          const shown = prev ?? goal ?? 0.5;
+          const now_t = goal === null ? shown : Math.abs(goal - shown) <= CHIP_STEP ? goal : shown + Math.sign(goal - shown) * CHIP_STEP;
+          chipT.set(key, now_t);
+          if (goal !== null && now_t !== goal) chipSliding = true;
+          const spot = at(now_t);
+          const { pm, cx, cy } = spot;
+          const cv = goal === null ? 0 : Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2));
           chip.style.transform = `translate(${(cx - 17).toFixed(1)}px, ${(cy - 17).toFixed(1)}px)`;
           chip.style.opacity = String(cv * (L ? L.chip : 1)); chip.style.zIndex = String(Math.round(150 + pm[2] * 100));
           if (cv > 0.5) linkHits.push({ a: a as IslandId, b: b as IslandId, x: cx, y: cy, chip: true });
@@ -555,6 +561,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       // the lights along her links
       if (lights.length) { stepLights(tm); dirty = true; if (lights.length) moving = true; }
       if (dirty) { draw(); dirty = false; VIEW = { yaw, pitch, zoom, ox, oy }; }
+      if (chipSliding) { dirty = true; moving = true; }
       if (moving && !pausedRef.current) kick(); else last = 0;
     };
     const kick = () => { if (!raf && alive) raf = requestAnimationFrame(frame); };

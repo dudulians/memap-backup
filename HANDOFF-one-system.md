@@ -58,6 +58,14 @@ Today ведёт: идти по шагам и не думать, всё ново
 - World: кнопка «All about…» / «Всё про…» в шапке (ThingsList.tsx): все вопросы по островам, у каждого «Trying now · Time to act · N links»; страница, открытая из списка, закрывается обратно в список.
 - Проверка r166 (`PORT=8081` для второго сервера).
 
+## v167 (её записки 14 нояб. вечером)
+- «Все действия там, где они подразумеваются»: окно выбора пробы (ExperimentSheet pick) с шапкой «What helps» и строкой «From a link: …» / «From When to act: …»; после старта — What helps со свежей пробой (WhatHelps litId, MapTab helpsLit), из связи и из When to act одинаково; закрыла без пробы — обратно на связь.
+- Значок связи на глобусе только на пунктире (CHIP_TS без боковых сдвигов, плавное скольжение CHIP_STEP), проверка r167.
+- Ночное небо за глобусом продолжается градиентом под картинкой (Index NIGHT_SKY_BELOW, .planet-sky.night): при отдалении нет «горизонта».
+- Режим для дальтоников: --pair-a-calm / --pair-b-calm синий и золотой (index.css, data-cb). Доска work/cb-pair/cb-pair-board.png.
+- Барашек: «My questions» → Back к барашку (Index questionsFromYou); без карточки напоминания; вопрос = TrackerDetails только Edit / Archive / Delete + «All about» (sessionStorage memap_open_thing → MapTab); TrackerSettingsModal plain (без лимита и совета); WorldStats без недели и связей.
+- Проверки r168 (проба в What helps), r169 (барашек).
+
 ## Ждёт её ответа (страница «было / стало»)
 https://claude.ai/artifact/JnvyFaPNi68wx3xtVadTRz
 1. Знак связи внутри острова: маленький значок в подписи острова, без цифр. Она спросила, так ли задумано, что он как продолжение «Love life»; да/нет не сказала.

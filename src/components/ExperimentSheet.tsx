@@ -9,7 +9,8 @@ import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, FlaskConical, X } from "lucide-react";
+import { Check, FlaskConical, Sprout, X } from "lucide-react";
+import { tryFromLines } from "@/lib/linkSeen";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { track, useScreen  } from "@/lib/analytics";
@@ -115,6 +116,10 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   // never a change her own answers say she already does (alreadyDoing.ts)
   const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries))];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
+  // picking a try is What helps, wherever it was opened from (her note, Nov 14 2026: «когда ты из связи переходишь к
+  // действию… видно где-то в заголовках… все действия реально делаем там, где они подразумеваются»), and it says
+  // where it came from: a link or a When to act card
+  const fromLine = useMemo(() => (mode === "pick" && (link || from) ? tryFromLines(t, [{ id: "pick", island: "", trackerId: "", change: "", start: "", link, from: from?.trackerId } as Experiment], trackers, entries).get("pick") ?? null : null), [mode, link, from, trackers, entries, t]);
 
   const result = useMemo(() => (mode === "result" && experiment ? experimentResult(experiment, trackers, entries) : null), [mode, experiment, trackers, entries]);
   const fromHome = (() => { const fr = trackers.find((x) => x.id === experiment?.from); return !!fr && HOME_HARM_IDS.has(templateIdOf(fr) ?? ""); })();
@@ -138,9 +143,16 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
         </button>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto px-6 pb-10">
-        <p className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
-          <FlaskConical className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{t("experiment.eyebrow")}
-        </p>
+        {mode === "pick" ? (
+          <p data-pick-head className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-[hsl(var(--coin-teal))]">
+            <Sprout className="h-4 w-4" strokeWidth={2.6} />{t("world4.whatHelps")}
+          </p>
+        ) : (
+          <p className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">
+            <FlaskConical className="h-4 w-4 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />{t("experiment.eyebrow")}
+          </p>
+        )}
+        {mode === "pick" && !started && fromLine && <p data-pick-from className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{fromLine}</p>}
 
         {mode === "pick" && !started && (
           <>

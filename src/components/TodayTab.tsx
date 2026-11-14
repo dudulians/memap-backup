@@ -1128,7 +1128,8 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
             {/* The daily reminder lives here now, not under the path. It answers
                 in place (no pop-ups, Nov 10 2026): why it couldn't turn on, or
                 "Reminder on · 20:00" for a moment before it goes. */}
-            {((!notifsEnabled && !notifBannerDismissed && regularTrackers.length > 0) || notifJustOn) && (
+            {/* not in My questions (her note, Nov 14 2026: the reminder is in Settings, "Evening reminder") */}
+            {view !== "questions" && ((!notifsEnabled && !notifBannerDismissed && regularTrackers.length > 0) || notifJustOn) && (
               <div data-notif-card className="surface rounded-[20px] pl-4 pr-2 py-2.5 animate-fade-in">
                 <div className="flex min-h-9 items-center gap-3">
                   {notifJustOn
@@ -1319,7 +1320,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
       <BottomSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-        className="h-[80vh]"
+        className="h-auto max-h-[80vh]"
         ariaTitle={selectedTrackerForDetails ? localizeTrackerTitle(selectedTrackerForDetails.title) : "Tracker details"}
       >
         {/* Body opts out of vaul drag so internal scroll is unimpeded.
@@ -1340,6 +1341,13 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
                   setTrackerToDelete(selectedTrackerForDetails);
                   setDeleteDialogOpen(true);
                 }}
+                onAll={() => {
+                  // the page of this question lives on the World (MapTab opens it when it comes up)
+                  const id = selectedTrackerForDetails.id;
+                  setSheetOpen(false);
+                  try { sessionStorage.setItem("memap_open_thing", id); } catch { /* the World opens plain */ }
+                  window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } })), 200);
+                }}
               />
             </div>
           )}
@@ -1353,6 +1361,7 @@ export const TodayTab = ({ view = "today", onBack }: { view?: "today" | "questio
           onClose={() => setSettingsModalOpen(false)}
           tracker={selectedTrackerForDetails}
           onSave={handleUpdateTracker}
+          plain
         />
       )}
 

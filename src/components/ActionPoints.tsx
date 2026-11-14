@@ -761,7 +761,8 @@ const TestSheet = ({ test, trackers, entries, line, onClose, onStop }: { test: E
 /** "What helps" (the World's 4th part; her note, Nov 8 2026: it opened an empty "Week summary"):
  *  the tests running now (each opens with its reminder), a finished one's result, the ones tried
  *  before with what they showed, and "Test one change". */
-export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocused }: { trackers: Tracker[]; entries: TrackerEntry[]; onResult: (x: Experiment) => void; onPick: () => void; focusId?: string | null; onFocused?: () => void }) => {
+export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocused, litId }: { trackers: Tracker[]; entries: TrackerEntry[]; onResult: (x: Experiment) => void; onPick: () => void; focusId?: string | null; onFocused?: () => void;
+  /** a try just started (from a link or from When to act): lit for a moment, here where it lives (Nov 14 2026) */ litId?: string | null }) => {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState<Experiment | null>(null);
   const [, setTick] = useState(0);
@@ -770,6 +771,14 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocu
   const runIds = running.map((x) => x.id).join(",");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fromOf = useMemo(() => tryFromLines(t, running, trackers, entries), [runIds, trackers, entries, t]);
+  const [lit, setLit] = useState<string | null>(litId ?? null);
+  useEffect(() => {
+    if (!litId) return;
+    setLit(litId);
+    window.setTimeout(() => document.querySelector(`[data-try-row="${litId}"]`)?.scrollIntoView({ block: "nearest" }), 120);
+    const id = window.setTimeout(() => setLit(null), 2600);
+    return () => window.clearTimeout(id);
+  }, [litId]);
   // opened from a test's push: that test's own card, its step in full (Nov 12 2026)
   useEffect(() => {
     if (!focusId) return;
@@ -804,7 +813,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocu
           <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
         </button>
       ) : (
-        <button key={x.id} type="button" onClick={() => { haptics.tap(); setOpen(x); }} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
+        <button key={x.id} type="button" data-try-row={x.id} data-try-lit={lit === x.id ? "1" : undefined} onClick={() => { haptics.tap(); setOpen(x); }} className={cn("surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left transition-shadow duration-500", lit === x.id && "pick-on")}>
           <span className="icon-dot h-11 w-11"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[17px] font-bold leading-snug">{testNameOf(x.change)}</span>

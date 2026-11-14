@@ -17,6 +17,9 @@ import planetDay from "@/assets/globe/planet-day.webp";
 import planetNight from "@/assets/globe/planet-night.webp";
 import skyDay from "@/assets/globe/sky-day.webp";
 import skyNight from "@/assets/globe/sky-night.webp";
+/** sky-night.webp is 1199 × 1312: its bottom (at 1312/1199 of the width) fades into the colour of its last row, which
+ *  goes on down the screen and deepens a little, so a zoomed-out ball still hangs in the sky */
+const NIGHT_SKY_BELOW = "linear-gradient(to bottom, rgb(99 122 214 / 0) calc(100vw * 1312 / 1199 - 90px), rgb(99 122 214) calc(100vw * 1312 / 1199), rgb(76 92 186) 100%)";
 import { AppTour } from "@/components/AppTour";
 import { LinkMoment } from "@/components/LinkMoment";
 import { GrowMoment } from "@/components/GrowMoment";
@@ -63,6 +66,8 @@ const Index = () => {
   // Her questions open from the Map (her note, Nov 3 2026: in the tab bar
   // they looked like a place she must visit); Back returns there.
   const [questionsFrom, setQuestionsFrom] = useState<Tab>("patterns");
+  // opened from the lamb's sheet: Back goes back to it (her note, Nov 14 2026: «я зашла от нее с барашка… надо возвращаться на барашек»)
+  const questionsFromYou = useRef(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   // "You": her animal, her questions, Settings, her week and treasures. Opened
@@ -172,7 +177,8 @@ const Index = () => {
       setActiveTab(tr.back);
     };
     window.addEventListener("memap-trip-done", done);
-    const questions = () => {
+    const questions = (e: Event) => {
+      questionsFromYou.current = (e as CustomEvent).detail?.from === "you";
       const from = tabRef.current;
       if (from !== "questions") setQuestionsFrom(from);
       setActiveTab("questions");
@@ -312,7 +318,9 @@ const Index = () => {
       {/* both skies, the night one fading in over the day one, as on the globe (v134; the App Store session saw
           the night sky fade away after a live change when this was one layer) */}
       {onGlobe && <div aria-hidden="true" className="planet-sky day -z-10" style={{ backgroundImage: `url(${skyDay})` }} />}
-      {onGlobe && <div aria-hidden="true" className={`planet-sky night -z-10${night ? " is-on" : ""}`} style={{ backgroundImage: `url(${skyNight})` }} />}
+      {/* her night sky is shorter than a phone: under it the sky goes on in its own colours, no line (her note, Nov 14 2026:
+          zoomed out at night half the screen was flat dark blue, the globe looked set in the sea) */}
+      {onGlobe && <div aria-hidden="true" className={`planet-sky night -z-10${night ? " is-on" : ""}`} style={{ backgroundImage: `${NIGHT_SKY_BELOW}, url(${skyNight})` }} />}
       {activeTab !== "patterns" && (
         <div aria-hidden="true" className="memap-sea-bg memap-path-bg pointer-events-none absolute inset-0 -z-10"
           // Today: the open sea of her planet, as on the Map (her note, Nov 4
@@ -371,7 +379,7 @@ const Index = () => {
             <TodayTab key={`cards-${refreshKey}`} />
           </div>
         )}
-        {activeTab === "questions" && <TodayTab key={`questions-${refreshKey}`} view="questions" onBack={() => setActiveTab(questionsFrom)} />}
+        {activeTab === "questions" && <TodayTab key={`questions-${refreshKey}`} view="questions" onBack={() => { setActiveTab(questionsFrom); if (questionsFromYou.current) { questionsFromYou.current = false; window.setTimeout(() => setYouOpen(true), 120); } }} />}
         {activeTab === "patterns" && <MapTab key={`patterns-${refreshKey}`} initialOpen={mapOpen} initialIsland={mapIsland} onOpened={() => { setMapOpen(null); setMapIsland(null); }} />}
         {activeTab === "notes" && (
           <NotesTab
@@ -460,7 +468,7 @@ const Index = () => {
       />
 
       <YouSheet open={youOpen} onClose={() => closeYou(true)}
-        onQuestions={() => { closeYou(false); window.dispatchEvent(new Event("memap-open-questions")); }}
+        onQuestions={() => { closeYou(false); window.dispatchEvent(new CustomEvent("memap-open-questions", { detail: { from: "you" } })); }}
         onSettings={() => { closeYou(false); window.setTimeout(() => setSettingsModalOpen(true), 250); }}
         onAddQuestion={() => { closeYou(false); window.setTimeout(() => setAddModalOpen(true), 250); }} />
 

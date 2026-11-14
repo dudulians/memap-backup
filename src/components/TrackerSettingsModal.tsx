@@ -58,6 +58,9 @@ interface TrackerSettingsModalProps {
   onClose: () => void;
   tracker: Tracker | null;
   onSave: (updatedTracker: Tracker) => Promise<void>;
+  /** from My questions (Nov 14 2026): the question and its words only; the rule and the plan are changed in When
+   *  to act, where they show (her note: «лимиты, какие-то номера… не в этих настройках, а там, где у нас она уже есть») */
+  plain?: boolean;
 }
 
 const trackerSettingsSchema = z.object({
@@ -71,7 +74,7 @@ const trackerSettingsSchema = z.object({
   adviceAboveThreshold: z.string().trim().max(500, "Advice must be less than 500 characters"),
 });
 
-export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: TrackerSettingsModalProps) => {
+export const TrackerSettingsModal = ({ open, onClose, tracker, onSave, plain = false }: TrackerSettingsModalProps) => {
   const { t } = useTranslation();
   // a save that didn't go through: a plain line above Save, until the next try (no pop-ups, Nov 10 2026)
   const [saveFailed, setSaveFailed] = useState(false);
@@ -239,7 +242,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
         </div>
 
         {/* The limit as one sentence: "[8] days with Yes in [30] days" */}
-        <div>
+        {!plain && <div>
           <p className="text-[19px] font-semibold">{t("addTracker.limit")}</p>
           <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-base">
             <Input
@@ -279,7 +282,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
             <span>{t("addTracker.limitDays", { count: formData.periodDays })}</span>
           </div>
           {errors.threshold && <p className="mt-2 text-sm text-destructive">{errors.threshold}</p>}
-        </div>
+        </div>}
 
         <div>
           <button
@@ -316,7 +319,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 </Select>
               </div>
 
-              <div className="space-y-1.5">
+              {!plain && <div className="space-y-1.5">
                 <Label htmlFor="adviceAboveThreshold">{t("addTracker.fieldAdvice")}</Label>
                 <Textarea
                   id="adviceAboveThreshold"
@@ -329,7 +332,7 @@ export const TrackerSettingsModal = ({ open, onClose, tracker, onSave }: Tracker
                 {errors.adviceAboveThreshold && (
                   <p className="text-sm text-destructive">{errors.adviceAboveThreshold}</p>
                 )}
-              </div>
+              </div>}
             </div>
           )}
         </div>

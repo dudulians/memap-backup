@@ -286,10 +286,7 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
   const chests = Object.keys(getChests()).length;
   // Monday to Sunday of this calendar week, and the days since the first answer
   const today = isoLocal(new Date());
-  // the last 7 days, today last: the same days as the weather and the island sheets (QA re-check, Nov 9 2026)
-  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return isoLocal(d); });
   const { i18n } = useTranslation();
-  const dayLetter = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { weekday: "short" }).slice(0, 2);
   const first = entries.reduce<string | null>((m, e) => (m === null || e.date < m ? e.date : m), null);
   const withUs = first ? Math.round((Date.parse(today + "T12:00:00") - Date.parse(first + "T12:00:00")) / 86_400_000) + 1 : 0;
   // "Games and rewards" off (Nov 9 2026): no streak tile, no treasure shelf
@@ -329,42 +326,9 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
           </div>
         </>
       )}
-      {/* the calendar week, since Monday, the same "this week" as the island sheets (her note 5,
-          Nov 8 2026); days are dots, coloured by meaning: hard rose, good green */}
-      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.thisCalWeek", { range: last7Range(i18n.language ?? "en") })}</p>
-      {withUs > 0 && <p className="-mt-1 text-[15px] font-bold leading-snug">{t("map.withUs", { count: withUs, date: new Date(first + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { month: "long", day: "numeric" }) })}</p>}
-      <div className="surface space-y-3 rounded-[20px] px-4 py-3.5">
-        <div className="flex items-center gap-3" aria-hidden="true">
-          <span className="w-[30px] shrink-0" />
-          <div className="flex flex-1 justify-between px-[3px]">
-            {week.map((d) => <span key={d} className="w-4 text-center text-[11px] font-bold uppercase text-muted-foreground">{dayLetter(d)}</span>)}
-          </div>
-          <span className="w-[28px] shrink-0" />
-        </div>
-        {islands.map((isl) => (
-          <div key={isl.id} className="flex items-center gap-3">
-            <img src={mapPic("icon_" + isl.def.icon)} alt="" width={30} height={30} />
-            <div className="min-w-0 flex-1">
-              <span className="block truncate text-[16px] font-bold">{islandName(t, isl.id)}</span>
-              <div className="mt-1 flex justify-between px-[3px]" role="img" aria-label={t("map.daysOf7", { k: isl.weekAnswered })}>
-                {week.map((d) => {
-                  const v = isl.weekDays?.[d];
-                  return <span key={d} className="h-4 w-4 rounded-full" style={v === undefined
-                    ? { border: `2px solid hsl(var(--foreground) / ${d > today ? 0.08 : 0.16})` }
-                    : { background: v ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />;
-                })}
-              </div>
-            </div>
-            {isl.weather ? <img src={mapPic(WEATHER_PIC[isl.weather])} alt={t(`map.legend.${isl.weather}`)} width={28} height={28} className="object-contain" /> : <span className="w-[28px] shrink-0" />}
-          </div>
-        ))}
-      </div>
-      {routes.length > 0 && (
-        <>
-          <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("map.links")}</p>
-          {routes.slice(0, 3).map((r, i) => <LinkLine key={i} r={r} of={trackerLookup(trackers)} />)}
-        </>
-      )}
+      {/* how long with MeMap; the week by island and the links are not repeated here (her note, Nov 14 2026: «тут и вот
+          эти кружочки опять появляются понедельные. У нас линки опять. Тут же зачем-то»): they live in My days and Links */}
+      {withUs > 0 && <p className="pt-1 text-[15px] font-bold leading-snug">{t("map.withUs", { count: withUs, date: new Date(first + "T12:00:00").toLocaleDateString(i18n.language?.startsWith("ru") ? "ru-RU" : "en-US", { month: "long", day: "numeric" }) })}</p>}
     </div>
   );
 };

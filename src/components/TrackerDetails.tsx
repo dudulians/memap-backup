@@ -1,21 +1,16 @@
-// Question card (Today → My questions → tap a question), 1.8.0: the name,
-// how many times this month, the month as dots, the limit, and Edit.
-// Answering moved out: tonight's card answers today, Patterns → Calendar
-// fixes past days. Canvas "MeMap: новая версия", page 12, RestQuestion.
-import { useState, useEffect } from "react";
-import { Tracker, TrackerEntry } from "@/types/tracker";
-import { getEntries } from "@/lib/storage";
-import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
-import { ru as ruLocale } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+// A question in My questions (the lamb → My questions → tap a question). Since Nov 14 2026 only what this list is
+// for (her note: «давай тут просто сделаем возможность его отредактировать, удалить или архивировать… а вся остальная
+// информация сутевая пусть будет… там, где у нас она уже есть»): Edit, Archive, Delete, and one way to the page of
+// this question on the World (its days, links, when to act, what helps). The month dots and the limit bar are gone:
+// the days are in My days, the rule is in When to act.
 import { useTranslation } from "react-i18next";
-import { getLanguage } from "@/lib/i18n";
-import { localizeTrackerTitle, localizeTrackerAdvice } from "@/lib/trackerLocalize";
+import { Archive, ArchiveRestore, ChevronRight, Pencil, Trash2, type LucideProps } from "lucide-react";
+import type { ComponentType } from "react";
+import { Tracker } from "@/types/tracker";
 import { haptics } from "@/lib/haptics";
-import { getDoorState, isoLocal } from "@/lib/doors";
-import { isLit, ruleState } from "@/lib/lighthouses";
+import { cardQuestion } from "@/lib/cardText";
+import { islandName, islandOf } from "@/lib/islands";
+import { cn } from "@/lib/utils";
 
 interface TrackerDetailsProps {
   tracker: Tracker;
@@ -25,168 +20,41 @@ interface TrackerDetailsProps {
   onNavigateTracker?: (direction: "prev" | "next") => void;
   selectedDate?: string;
   onDateSelect?: (date: string) => void;
-  // Management actions. When omitted, the buttons are hidden — useful
-  // for read-only contexts.
+  // Management actions. When omitted, the buttons are hidden.
   onEdit?: () => void;
   onArchive?: () => void;
   onDelete?: () => void;
+  /** the page of this question on the World */
+  onAll?: () => void;
 }
 
-export const TrackerDetails = ({
-  tracker,
-  onEdit,
-  onArchive,
-  onDelete,
-}: TrackerDetailsProps) => {
+export const TrackerDetails = ({ tracker, onEdit, onArchive, onDelete, onAll }: TrackerDetailsProps) => {
   const { t } = useTranslation();
-  const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
-  const [entries, setEntries] = useState<TrackerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const load = async () => {
-      setEntries(await getEntries());
-      setLoading(false);
-    };
-    load();
-    // Re-pull when anything else saves (the evening card, the calendar
-    // editor) while this sheet sits open.
-    window.addEventListener("memap-entries-changed", load);
-    return () => window.removeEventListener("memap-entries-changed", load);
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">{t("loading")}</p>
-      </div>
-    );
-  }
-
-  const isBad = (e: TrackerEntry) => (tracker.problemWhen === "yes" ? e.value === true : e.value === false);
-  const mine = new Map(entries.filter((e) => e.trackerId === tracker.id).map((e) => [e.date, e]));
-
-  // This month, day by day.
-  const now = new Date();
-  const today = isoLocal(now);
-  const month = eachDayOfInterval({ start: startOfMonth(now), end: endOfMonth(now) }).map((d) => {
-    const date = isoLocal(d);
-    const entry = mine.get(date);
-    return {
-      date,
-      future: date > today,
-      isToday: date === today,
-      status: entry ? (isBad(entry) ? "bad" : "ok") : "none",
-    } as const;
-  });
-  const monthCount = month.filter((d) => d.status === "bad").length;
-  const monthName = (() => {
-    const s = format(now, "LLLL", { locale: dateLocale });
-    return s.charAt(0).toUpperCase() + s.slice(1);
-  })();
-
-  // The limit window: last periodDays (today the last of them), or since the cycle started.
-  const rollingStart = new Date(now);
-  rollingStart.setHours(0, 0, 0, 0);
-  rollingStart.setDate(rollingStart.getDate() - tracker.periodDays + 1);
-  const windowStart = tracker.cycleStartDate && tracker.cycleStartDate > isoLocal(rollingStart)
-    ? tracker.cycleStartDate
-    : isoLocal(rollingStart);
-  // the same rule as When to act, the map and the push: days with no answer don't count (Nov 9 2026)
-  void windowStart;
-  const st = ruleState(tracker, entries);
-  const limitCount = st.k;
-  const crossed = isLit(tracker, entries);
-  const pct = Math.min(100, Math.round((limitCount / Math.max(1, st.need)) * 100));
-
-  // Door questions go by their door name and count in their own words.
-  const door = getDoorState();
-  const doorId = door?.trackerId === tracker.id ? door.id : door?.extra?.find((x) => x.trackerId === tracker.id)?.id;
-  const name = doorId ? t(`doors.${doorId}.name`) : localizeTrackerTitle(tracker.title);
-  const countLabel = doorId
-    ? t(`doors.${doorId}.noun`, { count: monthCount })
-    : tracker.problemWhen === "yes"
-      ? t("overview.daysYes", { count: monthCount })
-      : t("overview.daysNo", { count: monthCount });
-
+  const row = (Icon: ComponentType<LucideProps>, label: string, onClick: () => void, opts: { danger?: boolean; data: string }) => (
+    <button type="button" data-question-action={opts.data} onClick={() => { haptics.tap(); onClick(); }}
+      className={cn("flex h-[60px] w-full items-center gap-3.5 px-4 text-left active:bg-foreground/[0.04]", opts.danger && "text-destructive")}>
+      <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", opts.danger ? "bg-destructive/10" : "bg-[hsl(var(--coin-teal)/0.14)] text-[hsl(var(--coin-teal))]")}>
+        <Icon className="h-5 w-5" strokeWidth={2.2} />
+      </span>
+      <span className="min-w-0 flex-1 text-[17px] font-semibold">{label}</span>
+    </button>
+  );
   return (
     // Side padding keeps card borders off the BottomSheet's clipped edges.
-    <div className="px-5 pb-20 animate-fade-in">
-      <h2 className="text-[26px] font-bold tracking-tight leading-tight pr-10">{name}</h2>
-
-      <p className="mt-3 flex items-baseline gap-2.5">
-        <span className="text-[52px] leading-none font-bold tracking-tight tabular-nums">{monthCount}</span>
-        <span className="text-xl font-semibold">{countLabel}</span>
-      </p>
-      <p className="mt-1 text-[15px] text-muted-foreground">{monthName}</p>
-
-      <div className="mt-3 grid grid-cols-[repeat(16,minmax(0,1fr))] gap-[5px]" aria-hidden="true">
-        {month.map((d) => (
-          <span
-            key={d.date}
-            className={cn(
-              "aspect-square rounded-full box-border",
-              d.status === "bad" && "bg-strong",
-              d.status === "ok" && "bg-balanced/40",
-              d.status === "none" && !d.future && !d.isToday && "bg-foreground/[0.1]",
-              d.status === "none" && d.isToday && "border-2 border-dashed border-primary/70",
-              d.future && "border border-foreground/[0.12]",
-            )}
-          />
-        ))}
+    <div data-question-sheet className="px-5 pb-12 animate-fade-in">
+      <p className="pr-10 text-[12px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground">{islandName(t, islandOf(tracker))}</p>
+      <h2 className="mt-0.5 pr-10 text-[24px] font-bold leading-tight tracking-tight">{cardQuestion(tracker)}</h2>
+      <div className="surface mt-5 divide-y divide-foreground/[0.07] overflow-hidden rounded-[20px]">
+        {onEdit && row(Pencil, t("trackerDetails.actionEdit"), onEdit, { data: "edit" })}
+        {onArchive && row(tracker.archived ? ArchiveRestore : Archive, tracker.archived ? t("trackerDetails.actionUnarchive") : t("trackerDetails.actionArchive"), () => { haptics.warning(); onArchive(); }, { data: "archive" })}
+        {onDelete && row(Trash2, t("trackerDetails.actionDelete"), () => { haptics.warning(); onDelete(); }, { danger: true, data: "delete" })}
       </div>
-
-      <div className={cn(
-        "mt-6 rounded-[22px] border px-[18px] py-4",
-        crossed ? "border-strong/30 bg-strong/[0.1]" : "border-foreground/[0.12] bg-foreground/[0.07]",
-      )}>
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-lg font-semibold">{t("addTracker.limit")}</span>
-          <span className="tabular-nums">
-            <span className={cn("text-[26px] font-bold", crossed && "text-strong")}>{limitCount}</span>
-            <span className="text-[17px] text-muted-foreground"> / {st.need || tracker.threshold}</span>
-          </span>
-        </div>
-        <div className="mt-3 h-2 rounded-full bg-foreground/10 overflow-hidden">
-          <div className={cn("h-full rounded-full", crossed ? "bg-strong" : "bg-primary")} style={{ width: `${pct}%` }} />
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">{t("patterns.limitsWindow", { count: tracker.periodDays })}</p>
-        {crossed && tracker.adviceAboveThreshold?.trim() && (
-          <p className="mt-3 text-[17px] leading-snug">{localizeTrackerAdvice(tracker.adviceAboveThreshold)}</p>
-        )}
-      </div>
-
-      {onEdit && (
-        <Button
-          variant="outline"
-          onClick={onEdit}
-          className="mt-6 w-full h-12 rounded-full gap-2 text-base bg-transparent border-foreground/20"
-        >
-          <Pencil className="h-4 w-4" />
-          {t("trackerDetails.actionEdit")}
-        </Button>
-      )}
-      {(onArchive || onDelete) && (
-        <div className="mt-2 flex justify-center gap-2">
-          {onArchive && (
-            <Button
-              variant="ghost"
-              onClick={() => { haptics.warning(); onArchive(); }}
-              className="h-11 rounded-full px-4 text-[15px] text-muted-foreground"
-            >
-              {tracker.archived ? t("trackerDetails.actionUnarchive") : t("trackerDetails.actionArchive")}
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              onClick={() => { haptics.warning(); onDelete(); }}
-              className="h-11 rounded-full px-4 text-[15px] text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              {t("trackerDetails.actionDelete")}
-            </Button>
-          )}
-        </div>
+      {onAll && !tracker.archived && (
+        <button type="button" data-question-all onClick={() => { haptics.tap(); onAll(); }}
+          className="mt-4 flex min-h-12 w-full items-center justify-between gap-3 px-1 text-left text-[16px] font-bold text-[hsl(var(--coin-teal))]">
+          <span className="min-w-0 flex-1">{t("link.thingAll", { thing: cardQuestion(tracker) })}</span>
+          <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+        </button>
       )}
     </div>
   );

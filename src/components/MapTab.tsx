@@ -268,6 +268,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const [helpsOpen, setHelpsOpen] = useState(false);
   // a test's push opens its own card (Nov 12 2026)
   const [helpsFocus, setHelpsFocus] = useState<string | null>(null);
+  // a try just started (from a link or from When to act): lit in the list for a moment
+  const [helpsLit, setHelpsLit] = useState<string | null>(null);
   // a part opened from anywhere stops glowing (glowHints.ts)
   useEffect(() => { if (only) markGlowSeen(only === "trends" ? "overview" : only === "linkchart" ? "findings" : only); }, [only]);
   useEffect(() => { if (helpsOpen) markGlowSeen("helps"); }, [helpsOpen]);
@@ -298,6 +300,15 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // "All about…" at the top of the World: every question, by island; a page opened from it goes back to it
   const [thingsOpen, setThingsOpen] = useState(false);
   const thingFromList = useRef(false);
+  // "All about …" from My questions (the lamb → My questions → a question): the World comes up on that page
+  useEffect(() => {
+    let id: string | null = null;
+    try { id = sessionStorage.getItem("memap_open_thing"); } catch { /* none */ }
+    if (!id) return;
+    // taken only when it opens (an effect run twice in development must not lose it)
+    const go = id, timer = window.setTimeout(() => { try { sessionStorage.removeItem("memap_open_thing"); } catch { /* fine */ } setThing(go); }, 450);
+    return () => window.clearTimeout(timer);
+  }, []);
   useEffect(() => {
     // from an island, or from a link card (Nov 14 2026): the sheet it came from closes first, so sheets do not stack
     const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; thingFromList.current = false; setOpenRaw(null); setOnly(null); setOnlyIds(null); setLinkRaw(null); window.setTimeout(() => setThing(id), 250); };
@@ -364,11 +375,11 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           </button>
         </div>
       )}
-      <BottomSheet open={helpsOpen} onOpenChange={(o) => { if (!o) setHelpsOpen(false); }} className="h-auto max-h-[88vh]" ariaTitle={t("world4.whatHelps")}>
+      <BottomSheet open={helpsOpen} onOpenChange={(o) => { if (!o) { setHelpsOpen(false); setHelpsLit(null); } }} className="h-auto max-h-[88vh]" ariaTitle={t("world4.whatHelps")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
           <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("world4.whatHelps")}</h2>
           {!tourCompleted() && <TipCard id="block:helps" className="mb-3" title={t("world4.whatHelps")} line={t("tour.helps.line")} />}
-          <WhatHelps trackers={trackers} entries={entries} focusId={helpsFocus} onFocused={() => setHelpsFocus(null)}
+          <WhatHelps trackers={trackers} entries={entries} focusId={helpsFocus} onFocused={() => setHelpsFocus(null)} litId={helpsLit}
             onResult={(x) => { setHelpsOpen(false); window.setTimeout(() => setHelpsResult(x), 250); }}
             onPick={() => { setHelpsOpen(false); window.setTimeout(pickTest, 250); }} />
         </div>
@@ -498,11 +509,18 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       )}
       {linkTry && (
         <ExperimentSheet mode="pick" island={linkTry.island} link={linkTry.link} trackers={trackers} entries={entries}
-          onClose={() => { const ids = linkTry.ids; setLinkTry(null); reopenLink(ids); window.setTimeout(() => setOnly("findings"), 150); }} />
+          onClose={() => {
+            // a try started here lives in What helps: that is where it goes (her note, Nov 14 2026: «все действия
+            // реально делаем там, где они подразумеваются»); closed without one, back to the link
+            const ids = linkTry.ids, startedTry = runningExperiments().find((x) => x.link === linkTry.link);
+            setLinkTry(null);
+            if (startedTry) window.setTimeout(() => { setHelpsLit(startedTry.id); setHelpsOpen(true); }, 150);
+            else { reopenLink(ids); window.setTimeout(() => setOnly("findings"), 150); }
+          }} />
       )}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
-          trackers={trackers} entries={entries} onClose={() => { const started = runningExperiments().find((x) => x.from === trying.trackerId); setTrying(null); window.setTimeout(() => { if (started) { setHelpsFocus(started.id); setHelpsOpen(true); } else setOnly("signals"); }, 150); }} />
+          trackers={trackers} entries={entries} onClose={() => { const started = runningExperiments().find((x) => x.from === trying.trackerId); setTrying(null); window.setTimeout(() => { if (started) { setHelpsLit(started.id); setHelpsOpen(true); } else setOnly("signals"); }, 150); }} />
       )}
       {newOpen && (
         <NewIslandSheet islands={islands} trackers={trackers} canOwn={canMake} onClose={() => setNewOpen(false)}
