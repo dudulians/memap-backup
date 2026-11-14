@@ -123,6 +123,23 @@ export const pendingReasons = (trackers: Tracker[], entries: TrackerEntry[], tod
     .sort((a, b) => b.date.localeCompare(a.date) || a.trackerId.localeCompare(b.trackerId));
 };
 
+/** What one question's "Why?" answers say, all time: how many yes-answers have reasons, and the most common cause
+ *  among them (never "other" / "don't know") with its count. The page of one thing and the fights' task use it. */
+export const reasonTally = (tr: Tracker, entries: TrackerEntry[]): { said: number; top: string | null; k: number } => {
+  const chips = new Set(reasonChips(tr));
+  const tally = new Map<string, number>();
+  let said = 0;
+  if (chips.size) for (const e of entries) {
+    if (e.trackerId !== tr.id || e.value !== true) continue;
+    const tags = (e.tags ?? []).filter((x) => chips.has(x));
+    if (!tags.length) continue;
+    said++;
+    for (const x of tags) if (!NOT_A_CAUSE.has(x)) tally.set(x, (tally.get(x) ?? 0) + 1);
+  }
+  const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+  return { said, top: best?.[0] ?? null, k: best?.[1] ?? 0 };
+};
+
 /** Every yes-answer with reasons (or a reason note), newest first: Notes' "Reasons". */
 export const reasonEntries = (trackers: Tracker[], entries: TrackerEntry[], notes: Note[] = []): TrackerEntry[] => {
   const ok = new Set(trackers.filter((tr) => !tr.archived && reasonTemplate(tr)).map((tr) => tr.id));

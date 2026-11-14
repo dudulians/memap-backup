@@ -848,6 +848,11 @@ const en = {
     kindOnceLine: "Mark it when it's done. MeMap then compares your days before and after.",
     kindDailyLine: "A 2-week test: MeMap asks each evening if you did it, and compares days with it and without.",
     doneOnce: "I did it",
+    // the fights' task goes to "Why?" (Nov 14 2026): the reasons stay with their days instead of getting lost in notes
+    whyPlan: "After each fight, answer “Why?”",
+    whyAnswer: "Answer “Why?”",
+    whyNext: "After the next fight, “Why?” comes on your path",
+    whySuggest: "Each answer is kept with its day. From three answers MeMap says what comes up most often.",
     didToast: "Done. Well done!",
     didToastPlain: "Done.",
     didToastLine: "The count starts again from today. In a week MeMap shows your days before and after.",

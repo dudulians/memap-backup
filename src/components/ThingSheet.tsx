@@ -12,7 +12,7 @@ import { isHardAnswer, isNeutralQuestion, islandName, islandOf, linkOf, linkWort
 import { linkHeadSegs, linkNumbers, linkTimes, trackerLookup } from "@/lib/linkText";
 import { litTrackers } from "@/lib/lighthouses";
 import { EXPERIMENT_DAYS, experimentDay, runningExperiments } from "@/lib/experiments";
-import { reasonChips, reasonLabel } from "@/lib/reasons";
+import { reasonLabel, reasonTally } from "@/lib/reasons";
 import { cardQuestion } from "@/lib/cardText";
 import { cap } from "@/lib/answerPhrases";
 import { daysAgoIso } from "@/lib/doors";
@@ -42,10 +42,9 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
     const top = links[0];
     const route: Route | null = top ? (() => { const l = linkOf(top); return { ...l, a: "other", b: "other", first: l.first.id, second: l.second.id } as Route; })() : null;
     // what the person said in "Why?" on the hard days of this question: the most common reason
-    const chips = new Set(reasonChips(tr));
-    const tally = new Map<string, number>(); let said = 0;
-    if (chips.size) for (const e of mine.values()) { const tags = (e.tags ?? []).filter((x) => chips.has(x)); if (tags.length) { said++; for (const x of tags) tally.set(x, (tally.get(x) ?? 0) + 1); } }
-    const word = [...tally.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+    // (reasonTally, shared with the fights' task: "other" and "don't know" are never the most common reason)
+    const tl = reasonTally(tr, entries), said = tl.said;
+    const word = tl.top ? ([tl.top, tl.k] as [string, number]) : null;
     const lit = litTrackers(trackers, entries).has(tr.id);
     const pairKeys = new Set(links.map((c) => [c.trackerA.id, c.trackerB.id].sort().join("|")));
     const trying = runningExperiments().find((x) => x.from === tr.id || (!!x.link && pairKeys.has(x.link))) ?? null;

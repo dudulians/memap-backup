@@ -30,6 +30,7 @@ import { LINKS_AT, countedDays } from "@/lib/pathSteps";
 import { ExampleLink } from "./Examples";
 import { OwnWordsPrompt } from "./AnswerWordsFields";
 import { LinkTry, OrderAsk, PAIR_A, PAIR_B, trackedTemplates } from "./LinkParts";
+import { reasonLabel, reasonTally, reasonTemplate, REASON_LINE_FROM } from "@/lib/reasons";
 
 const STRIP_DAYS = 14;
 
@@ -373,6 +374,17 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   }, [sentence]);
   const { k, n } = linkNumbers(r);
   const other = linkOtherDays(t, r);
+  // the second voice (agreed Nov 13, built Nov 14 2026): what the person said in "Why?" about one of the two things
+  // (fights, headaches, migraines), the same block as on the page of one thing; shown beside the link from three
+  // answers, never counted into it (reasons exist only on the "yes" days)
+  const words = useMemo(() => {
+    for (const x of [b, a]) {
+      if (!x || !reasonTemplate(x)) continue;
+      const tl = reasonTally(x, entries);
+      if (tl.said >= REASON_LINE_FROM && tl.top) return { id: reasonTemplate(x) as string, top: tl.top, k: tl.k, said: tl.said };
+    }
+    return null;
+  }, [a, b, entries]);
   const [at, setAt] = useState<number | null>(null);
   // The opened card goes in short steps with Next, not one long sheet to scroll (her note, Nov 14 2026: «слишком
   // длинное полотно… давай всё-таки делать next: вопрос, сообщение, дальше to try»): what was found, then
@@ -421,6 +433,13 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
             </div>
           )}
           {other && <p data-link-other className="mt-3 text-[15px] font-semibold leading-snug">{cap(other)}</p>}
+          {words && (
+            <div data-link-words className="mt-3 border-t-[1.5px] border-dotted border-foreground/15 pt-3">
+              <p className="text-[13px] font-semibold text-muted-foreground">{t("thing.inWords")}{" · "}{t(`why.many.${words.id}`)}</p>
+              <p className="text-[16.5px] font-bold leading-snug">{cap(reasonLabel(t, words.top))}</p>
+              <p className="mt-0.5 text-[14px] font-semibold text-muted-foreground">{t("thing.wordsCount", { k: words.k, n: words.said })}</p>
+            </div>
+          )}
           </>)}
           {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
               the card, and after an answer it says how the link reads now */}

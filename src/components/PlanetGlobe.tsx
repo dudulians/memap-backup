@@ -55,6 +55,9 @@ const PITCH_MIN = -0.25, PITCH_MAX = 0.62;
 // Pinch to zoom (her ask, Nov 4 2026: "зум ин зум аут"): from a little
 // smaller than usual to well over twice as big.
 const ZMIN = 0.75, ZMAX = 2.2;
+/** Where a link's sign may stand along its route, the middle first (a name can sit on the middle); 9 ± k
+ *  means the middle moved k×100 px to the route's side, for two islands too close to leave room on it. */
+const CHIP_TS = [0.5, 0.42, 0.58, 0.34, 0.66, 0.27, 0.73, 9.3, 8.7, 9.45, 8.55];
 /** How the ball is turned and zoomed: kept for the whole visit (tabs, day/night). */
 let VIEW: { yaw: number; pitch: number; zoom: number; ox: number; oy: number } | null = null;
 
@@ -352,6 +355,9 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       return [x1, y * cp - z1 * sp, y * sp + z1 * cp];
     };
     const pos = new Map<string, { x: number; y: number; z: number; w: number; s: number }>();
+    // island names drawn this frame (for the link signs), their widths by name text, and where each sign stood
+    const labelBoxes: { x: number; y: number; hw: number; hh: number }[] = [], isleBoxes: typeof labelBoxes = [];
+    const labelW = new Map<string, number>(), chipT = new Map<string, number>();
     const draw = () => {
       gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       const now = performance.now();
@@ -364,7 +370,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       const base = R * 0.35;
-      innerHits.length = 0;
+      innerHits.length = 0; labelBoxes.length = 0; isleBoxes.length = 0;
       for (const th of things) {
         const e = els.current.get(th.key); if (!e?.el) continue;
         const p = rot(th.v), vis = Math.max(0, Math.min(1, (p[2] - 0.04) / 0.24));
@@ -381,6 +387,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         e.el.style.transform = `translate(${(x - full / 2).toFixed(1)}px, ${(y - full * th.ar * an).toFixed(1)}px) rotate(${(lean * 57.3).toFixed(2)}deg) scale(${(s / th.size).toFixed(3)})`;
         e.el.style.opacity = String(th.kind === "sky" ? vis * 0.92 : vis);
         e.el.style.zIndex = String(Math.round(100 + p[2] * 100 + (th.kind === "sky" ? 120 : 0)));
+        // the island's picture (its see-through edges left out), which a link's sign keeps off too when it can
+        if (th.island && vis > 0.3) isleBoxes.push({ x, y: y + w * th.ar * (0.5 - an), hw: w * 0.36, hh: w * th.ar * 0.4 });
         const ic = th.island ? innerEls.current.get(th.island.id) : null;
         if (ic) {
           const top = y - w * th.ar * an;
@@ -389,9 +397,17 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           if (vis > 0.5) innerHits.push({ id: th.island!.id, x, y: top - 4 });
         }
         if (e.lab) {
-          const off = w * th.ar * (1 - an) + 8;
-          e.lab.style.transform = `translate(${(x - Math.sin(lean) * off).toFixed(1)}px, ${(y + Math.cos(lean) * off).toFixed(1)}px) scale(${Math.max(0.82, s).toFixed(3)})`;
+          const off = w * th.ar * (1 - an) + 8, sc = Math.max(0.82, s);
+          const lx = x - Math.sin(lean) * off, ly = y + Math.cos(lean) * off;
+          e.lab.style.transform = `translate(${lx.toFixed(1)}px, ${ly.toFixed(1)}px) scale(${sc.toFixed(3)})`;
           e.lab.style.opacity = String(vis); e.lab.style.zIndex = e.el.style.zIndex;
+          // where the name stands, so a link's sign can keep off it (.planet-label: centred on lx, 28px tall from ly)
+          if (vis > 0.3) {
+            const wk = `${th.key}|${e.lab.textContent}`;
+            let lw = labelW.get(wk);
+            if (!lw) { lw = (e.lab.firstElementChild as HTMLElement | null)?.offsetWidth || 0; if (lw) labelW.set(wk, lw); }
+            if (lw) labelBoxes.push({ x: lx, y: ly + 14, hw: (lw * sc) / 2, hh: 14 * sc });
+          }
         }
       }
       // links: a dotted boat route between two islands, a sign at its middle
@@ -411,8 +427,27 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         if (!guest) for (const P of runs) for (const q of P) linkHits.push({ a: a as IslandId, b: b as IslandId, x: q.x, y: q.y });
         const chip = chipEls.current.get(`${a}|${b}`);
         if (chip) {
-          const pm = rot(slerp(A, B, 0.5)), cv = Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2));
-          const cx = CX + R * pm[0], cy = CY - R * pm[1];
+          // the sign stands at the route's middle; when two islands are close the middle can fall on a name
+          // (her note, Nov 14 2026: the sign sat on "Work"), so it slides along the route to a spot clear of the
+          // names and, when it can, of the island pictures; it keeps the spot it had while that stays free, and
+          // hides when the route has no room clear of the names
+          const key = `${a}|${b}`, prev = chipT.get(key);
+          // a spot: t along the route, n pixels to its side (two close islands leave no room on the route itself)
+          const at = (tn: number) => {
+            const t = Math.round(tn) === 9 ? 0.5 : tn, n = Math.round(tn) === 9 ? (tn - 9) * 100 : 0;
+            const pm = rot(slerp(A, B, t)), q = rot(slerp(A, B, Math.min(1, t + 0.02)));
+            let cx = CX + R * pm[0], cy = CY - R * pm[1];
+            if (n) { const dx = R * (q[0] - pm[0]), dy = -R * (q[1] - pm[1]), d = Math.hypot(dx, dy) || 1; cx += (-dy / d) * n; cy += (dx / d) * n; }
+            return { t: tn, pm, cx, cy };
+          };
+          const off = (boxes: typeof labelBoxes, c: { cx: number; cy: number }) => !boxes.some((l) => Math.abs(c.cx - l.x) < l.hw + 19 && Math.abs(c.cy - l.y) < l.hh + 19);
+          const ts = [...(prev !== undefined ? [prev] : []), ...CHIP_TS];
+          let spot = null as ReturnType<typeof at> | null;
+          for (const t of ts) { const c = at(t); if (off(labelBoxes, c) && off(isleBoxes, c)) { spot = c; break; } }
+          if (!spot) for (const t of ts) { const c = at(t); if (off(labelBoxes, c)) { spot = c; break; } }
+          if (spot) chipT.set(key, spot.t); else chipT.delete(key);
+          const { pm, cx, cy } = spot ?? at(0.5);
+          const cv = spot ? Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2)) : 0;
           chip.style.transform = `translate(${(cx - 17).toFixed(1)}px, ${(cy - 17).toFixed(1)}px)`;
           chip.style.opacity = String(cv * (L ? L.chip : 1)); chip.style.zIndex = String(Math.round(150 + pm[2] * 100));
           if (cv > 0.5) linkHits.push({ a: a as IslandId, b: b as IslandId, x: cx, y: cy, chip: true });

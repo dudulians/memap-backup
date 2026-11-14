@@ -11,6 +11,7 @@ import { uuid } from "@/lib/uuid";
 import { LIFE_STREAMS, type LifeStreamTemplate } from "@/lib/lifeStreams";
 import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
+import { reasonTemplate } from "@/lib/reasons";
 
 /** Before a week of evenings nothing is called calm: "Your world is still taking shape". */
 export const SHAPING_EVENINGS = 7;
@@ -53,6 +54,16 @@ const libraryKind = (tr: Tracker): "once" | "daily" | undefined => {
   if (!tpl?.planKind) return undefined;
   const plan = (tr.adviceAboveThreshold || "").trim();
   return plan && (plan === tpl.adviceAboveThreshold || plan === tpl.adviceAboveThresholdRu) ? tpl.planKind : undefined;
+};
+/** The fights' library task "Write down what the fights usually start from" (agreed Nov 13 2026, built Nov 14):
+ *  "Why?" was made for exactly this, so the card asks there instead of sending her to notes, where the reasons got
+ *  lost. Only a question that has "Why?" and only while its plan is still the library's own, in either language. */
+const WHY_TASKS = new Set(["argued-with-partner"]);
+export const isWhyTask = (tr: Tracker): boolean => {
+  const id = reasonTemplate(tr), tpl = id && WHY_TASKS.has(id) ? TEMPLATES.get(id) : undefined;
+  if (!tpl?.adviceAboveThreshold) return false;
+  const plan = (tr.adviceAboveThreshold || "").trim();
+  return plan === tpl.adviceAboveThreshold || plan === tpl.adviceAboveThresholdRu;
 };
 // the same answer in both languages (Nov 8 2026: "Book 3 workout slots" was "once" in English, "every day" in Russian)
 export const planKindOf = (tr: Tracker): "once" | "daily" =>

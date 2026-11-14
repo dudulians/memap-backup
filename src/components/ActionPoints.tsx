@@ -33,7 +33,9 @@ import { doneActions, fillDoneFrom, logDone } from "@/lib/actionLog";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { markActSeen } from "@/lib/pathSteps";
 import { localizeTrackerAdvice, localizeTrackerTitle } from "@/lib/trackerLocalize";
-import { answeredEvenings, countFromToday, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
+import { answeredEvenings, countFromToday, isWhyTask, patchTracker, planKindOf, SHAPING_EVENINGS } from "@/lib/actionPoints";
+import { pendingReasons, reasonLabel, reasonTally, reasonTemplate, REASON_LINE_FROM } from "@/lib/reasons";
+import { ReasonSheet, type ReasonItem } from "@/components/ReasonSheet";
 import { resultWords } from "@/lib/testResult";
 import { MIN_SIDE, experimentDay, EXPERIMENT_DAYS, experimentOver, experimentResult, finishedExperiments, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, keptExperiments, stopKept, testOnIsland, verdictOf, weekDone, type Experiment } from "@/lib/experiments";
 import i18nInstance from "@/lib/i18n";
@@ -180,6 +182,8 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const [trying, setTrying] = useState<TryAction | null>(null);
   // "Need to talk?" from a partner-harm card
   const [supportFor, setSupportFor] = useState<string | null>(null);
+  // "Why?" opened from the fights' task (Nov 14 2026)
+  const [whyFor, setWhyFor] = useState<ReasonItem[] | null>(null);
   const [homeTick, setHomeTick] = useState(0);
   const couplesOff = homeHarmLit(trackers, entries);
   const door = getDoorState();
@@ -368,6 +372,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
         // while a partner shouts or says hurtful things, no partner card asks for something together (review, Nov 9
         // 2026: "Book a couples therapist" stayed on; the Hotline and Gottman: not where there may be abuse)
         const partnerPaused = couplesOff && !home && tr.subcategory === "Partner";
+        // the fights' task asks in "Why?" (agreed Nov 13, built Nov 14 2026): the button opens it for the last days'
+        // fights with no reason yet; from three answers the card says what comes up most often
+        const why = !home && isWhyTask(tr);
+        const whyNow = why ? pendingReasons([tr], entries, isoLocal(new Date())) : [];
+        const said = why ? reasonTally(tr, entries) : null;
+        const whyTold = !!said && said.said >= REASON_LINE_FROM && !!said.top;
         return (
           <div key={tr.id} className="surface scroll-mt-4 rounded-[22px] px-4 pb-4 pt-3.5">
             {/* where it is and what MeMap noticed, small; a tap opens the details (her note, Nov 9 2026: "главная
@@ -406,9 +416,17 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                   </div>
                 )}
                 <KindTag kind="task" />
-                <p className="mt-0.5 text-[21px] font-bold leading-snug tracking-tight">{plan}</p>
+                <p className="mt-0.5 text-[21px] font-bold leading-snug tracking-tight" {...(why ? { "data-why-task": "" } : {})}>{why ? t("rules.whyPlan") : plan}</p>
                 {/* her answers say she already does it (Nov 10 2026: "я же отмечал, что сплю хорошо"): said honestly */}
-                {(() => { const d = alreadyDoing(ideaOf(tr.adviceAboveThreshold || plan), trackers, entries); return d ? <p data-already className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{t("rules.alreadyDoing", { k: d.k, count: d.n })}</p> : null; })()}
+                {!why && (() => { const d = alreadyDoing(ideaOf(tr.adviceAboveThreshold || plan), trackers, entries); return d ? <p data-already className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{t("rules.alreadyDoing", { k: d.k, count: d.n })}</p> : null; })()}
+                {why && said && (whyTold ? (
+                  <p data-why-told className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">
+                    {/* as the week report says it: "Fights — most often: tiredness (3 of 5)" */}
+                    {(() => { const l = reasonLabel(t, said.top as string); return t("why.mostOften", { name: t(`why.many.${reasonTemplate(tr)}`), reason: l.charAt(0).toLocaleLowerCase() + l.slice(1), k: said.k, n: said.said }); })()}
+                  </p>
+                ) : !whyNow.length ? (
+                  <p data-why-next className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{t("rules.whyNext")}</p>
+                ) : null)}
               </div>
             ) : null}
             {partnerPaused ? (
@@ -423,7 +441,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               )
             ) : !plan ? (
               <button type="button" onClick={() => open(tr.id, "change")} className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.noPlan")}</button>
-            ) : once ? (
+            ) : why && whyNow.length ? (
+              <button type="button" data-why-answer onClick={() => { haptics.tap(); setWhyFor(whyNow.map((e) => ({ trackerId: e.trackerId, date: e.date }))); }}
+                className="raised-btn is-small mt-3.5 w-full justify-center">{t("rules.whyAnswer")}</button>
+            ) : why && !whyTold ? null : once || why ? (
               // a one-off plan: mark it done; then MeMap compares before and after
               <button type="button" onClick={() => void didOnce(tr, k)} className="raised-btn is-small mt-3.5 w-full justify-center"><Check className="h-5 w-5" strokeWidth={2.6} /> {t("rules.doneOnce")}</button>
             ) : blocked ? (() => {
@@ -446,7 +467,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
             {opened && (
             <div className="animate-fade-in">
             {/* how it goes */}
-            {plan && !partnerPaused && <p className="mt-3 text-[15px] font-semibold leading-snug text-muted-foreground">{home ? t("rules.suggestHome") : once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
+            {plan && !partnerPaused && <p className="mt-3 text-[15px] font-semibold leading-snug text-muted-foreground">{home ? t("rules.suggestHome") : why ? t("rules.whySuggest") : once ? t("rules.suggestOnce") : t("rules.suggestDaily", { count: EXPERIMENT_DAYS, q: testQuestionOf(tr.adviceAboveThreshold) })}</p>}
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
@@ -556,6 +577,9 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
       )}
       {testOpen && <TestSheet test={testOpen} trackers={trackers} entries={entries} line={lineOf(testOpen)} onClose={() => setTestOpen(null)} />}
       <SupportSheet open={!!supportFor} onClose={() => setSupportFor(null)} about={supportFor} />
+      {/* the same "Why?" sheet as on the path; closing reloads the World's answers so the card counts them */}
+      <ReasonSheet items={whyFor} mode="ask" trackers={trackers} entries={entries}
+        onClose={() => { setWhyFor(null); window.dispatchEvent(new Event("memap-settings-changed")); window.dispatchEvent(new Event("memap-path-refresh")); }} />
       {resultOf && <ExperimentSheet mode="result" experiment={resultOf} trackers={trackers} entries={entries} onClose={() => setResultOf(null)} />}
       {trying && (
         <ExperimentSheet mode="pick" island={trying.island} plan={trying.plan} from={{ trackerId: trying.trackerId, k: trying.k }}
