@@ -141,7 +141,7 @@ void main(){
 const WEATHER_ICON = { storm: CloudLightning, clouds: CloudSun, sun: Sun } as const;
 const WEATHER_COLOR = { storm: "#7D8CC4", clouds: "#7D9CC8", sun: "#E8A93A" } as const;
 
-export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, below = false, decor = false, quietHint = false, labels, onShare, onOpen, onNewIsland, onLink, onInner }: {
+export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, treasures, garden, paused = false, sky = true, main = null, inner, innerSigns, below = false, decor = false, quietHint = false, labels, onShare, onOpen, onNewIsland, onLink, onInner }: {
   islands: Island[]; routes: Route[]; avatar?: string | null;
   /** another tip is on screen: the "turn me" line waits (Nov 8 2026) */
   quietHint?: boolean;
@@ -149,6 +149,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
   main?: IslandId | null;
   /** a link inside one island: its sign k/n over the island (board 75) */
   inner?: Map<IslandId, Route>;
+  /** islands with a link inside them: a small link sign by the name */
+  innerSigns?: Set<IslandId>;
   onInner?: (r: Route) => void;
   /** the World's 4 parts stand over it: the ball sits in the room below them */
   below?: boolean;
@@ -212,7 +214,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
     return { things: list, wakes: links };
   }, [islands, routes, lit, days]);
   // islands with a link (between two islands or inside one): at night their small light stays on
-  const linked = useMemo(() => new Set<string>([...wakes.flat(), ...(inner ? [...inner.keys()] : [])]), [wakes, inner]);
+  const linked = useMemo(() => new Set<string>([...wakes.flat(), ...(inner ? [...inner.keys()] : []), ...(innerSigns ? [...innerSigns] : [])]), [wakes, inner, innerSigns]);
   // how strong each pair's link is (the light along all of them goes strongest first)
   const strengthRef = useRef(new Map<string, number>());
   strengthRef.current = useMemo(() => { const m = new Map<string, number>(); for (const r of routes) { const k = pairKey(r.a, r.b); m.set(k, Math.max(m.get(k) ?? 0, r.n ? r.k / r.n : 0)); } return m; }, [routes]);
@@ -819,7 +821,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
               </div>
               {th.island && (!labels || labels.includes(th.island.id)) && (
                 <div ref={(el) => { elOf(th.key).lab = el; }} className="planet-label" style={{ opacity: 0 }}>
-                  <span>{th.island.id === main && <i className="main-dot" aria-hidden="true" />}{W && <W className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[th.island.weather!] }} />}{islandName(t, th.island.id)}</span>
+                  <span>{th.island.id === main && <i className="main-dot" aria-hidden="true" />}{W && <W className="h-4 w-4" strokeWidth={2.4} style={{ color: WEATHER_COLOR[th.island.weather!] }} />}{islandName(t, th.island.id)}{innerSigns?.has(th.island.id) && <Link2 data-inner-sign className="h-3.5 w-3.5" strokeWidth={2.8} style={{ color: "hsl(var(--data-a))" }} aria-label={t("world4.links")} />}</span>
                 </div>
               )}
             </div>

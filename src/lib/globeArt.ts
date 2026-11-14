@@ -3,6 +3,7 @@
 // from marketing/brand/map-assets-v2 by marketing/tools/prep-map-assets-v2.mjs.
 import { Island, IslandId, Route, bridgesOf, islandOf, isOwnIsland } from "@/lib/islands";
 import { isoLocal } from "@/lib/doors";
+import { getOwnIslands } from "@/lib/ownIslands";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 
 const named = (files: Record<string, string>) => new Map(Object.entries(files).map(([p, url]) => [p.split("/").pop()!.replace(".webp", ""), url]));
@@ -16,6 +17,7 @@ export const ASPECT: Record<string, number> = {
   "03_flower_hill": 0.514, "04_twin_hills": 0.451, "05_wide_meadow": 0.379, "06_snow_peak": 0.508, "09_waterfall": 0.462,
   "10_terraced_garden": 0.496, "11_sakura": 0.753, "14_stone_arch": 0.579, "16_cozy_cottage": 0.539, "17_lavender_garden": 0.519,
   "19_grassy_terraces": 0.513, "20_tropical_palms": 0.747, "24_oak_tree": 0.704, "26_flowery_island": 0.441,
+  "12_cypress_hill": 0.622, "07_blue_lagoon": 0.5, "08_rocky_grove": 0.514, "13_palms": 0.828, "18_zen_sakura": 0.664, "25_waterfall_garden": 0.467,
   cloud_01_large: 0.607, cloud_02_large: 0.526, cloud_03_large: 0.384, cloud_04_large: 0.424, cloud_05_large: 0.447,
   cloud_06_large: 0.406, cloud_07_large: 0.284, cloud_island_01: 0.461, cloud_island_03: 0.51, cloud_island_05: 0.415, sailboat: 1,
 };
@@ -41,13 +43,17 @@ export const toNextStage = (days: number): number | null => { const s = stageOf(
  *  plainer but taller in shape, looked bigger than the second; each stage is
  *  now clearly bigger than the one before). */
 export const STAGE_SCALE: Record<Stage, number> = { 1: 0.66, 2: 0.82, 3: 1, 4: 1.12 };
+/** Her own islands' pictures, in the order she makes them (her yes, Nov 14 2026: an own island grew into a plain meadow
+ *  while every library island shows what it is): six islands of her pack the app did not use yet. */
+export const OWN_ART = ["12_cypress_hill", "07_blue_lagoon", "08_rocky_grove", "13_palms", "18_zen_sakura", "25_waterfall_garden"];
+const ownArt = (id: IslandId) => { const own = getOwnIslands(), i = own.findIndex((x) => x.id === id); return OWN_ART[(i >= 0 ? i : own.length) % OWN_ART.length]; };
 /** The same steps in the growth ladder (% of a ladder cell). */
 export const LADDER_WIDTH: Record<Stage, number> = { 1: 58, 2: 74, 3: 90, 4: 100 };
 export const artOf = (id: IslandId, days: number) => {
   const s = stageOf(days);
   if (s === 1) return "03_flower_hill";
   if (s === 2) return "04_twin_hills";
-  return isOwnIsland(id) ? "05_wide_meadow" : ART[id] ?? ART.other;
+  return isOwnIsland(id) ? ownArt(id) : ART[id] ?? ART.other;
 };
 /** Evenings with any answer on each island, all time (as growth.ts islandDays). */
 export const islandEvenings = (trackers: Tracker[], entries: TrackerEntry[]): Map<IslandId, number> => {

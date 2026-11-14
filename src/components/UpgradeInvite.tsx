@@ -9,8 +9,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getEntries, getTrackers } from "@/lib/storage";
-import { buildIslands, buildRoutes, linkWorthShowing, LINKS_TOP, mapPic, type Island, type Route } from "@/lib/islands";
-import { computeCorrelations } from "@/lib/correlations";
+import { buildIslands, buildRoutes, linkCardCount, mapPic, type Island, type Route } from "@/lib/islands";
 import { countedDays } from "@/lib/pathSteps";
 import { isoLocal } from "@/lib/doors";
 import { haptics } from "@/lib/haptics";
@@ -73,7 +72,7 @@ export const UpgradeInvite = () => {
       const islands = buildIslands(trackers, entries);
       // links: the same count as the World tile, not only the routes drawn between islands (old-user walk, Nov 14 2026:
       // the invite said 2, the World a minute later 6)
-      setData({ trackers, islands, routes: buildRoutes(trackers, entries, islands), days: countedDays(trackers, entries).length, links: computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length });
+      setData({ trackers, islands, routes: buildRoutes(trackers, entries, islands), days: countedDays(trackers, entries).length, links: linkCardCount(trackers, entries) });
       setStage("invite");
       // the invite, and whether it's the second ask (two weeks after a "Not now")
       track("ui_invite_shown", { again });

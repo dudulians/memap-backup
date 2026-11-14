@@ -866,7 +866,10 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // а ничего не вышло, не понимаю, где их добавлять").
   const promised = (s: Step) => s.kind === "why" && !s.done && why.some((e) => e.date === today);
   const extras = steps.filter((s) => EXTRA_ORDER.includes(s.kind) && !promised(s));
-  const room = Math.max(0, MAX_EXTRAS - extras.filter((s) => s.done).length);
+  // an evening whose questions come in three short steps or more keeps two extras, not three (Nov 14 2026: 17 questions
+  // as 6 + 6 + 5 plus three extras made a long path)
+  const busy = steps.filter((s) => s.kind === "questions").length >= 3;
+  const room = Math.max(0, (busy ? MAX_EXTRAS - 1 : MAX_EXTRAS) - extras.filter((s) => s.done).length);
   const keep = new Set(extras.filter((s) => !s.done).sort((a, b) => EXTRA_ORDER.indexOf(a.kind) - EXTRA_ORDER.indexOf(b.kind)).slice(0, room));
   for (const s of steps) if (promised(s)) keep.add(s);
   for (let i = steps.length - 1; i >= 0; i--) if (EXTRA_ORDER.includes(steps[i].kind) && !steps[i].done && !keep.has(steps[i])) steps.splice(i, 1);

@@ -31,7 +31,7 @@ for (const lang of ["en", "ru"]) {
   await p.screenshot({ path: `${D}/${lang}-1-world.png` });
   await share.click(); await p.waitForTimeout(900);
   const rows = await p.locator("[data-share-sheet] [data-share]").allInnerTexts();
-  check(`${lang}: Share offers the report and the picture`, rows.length === 2 && (lang === "en" ? /PDF for a doctor/.test(rows[0]) && /Picture of my world/.test(rows[1]) : /PDF для врача/.test(rows[0]) && /Картинка моего мира/.test(rows[1])), rows);
+  check(`${lang}: Share offers the report and the picture`, rows.length === 2 && !/doctor|врач/i.test(rows.join(" ")) && (lang === "en" ? /PDF of your days/.test(rows[0]) && /Picture of my world/.test(rows[1]) : /PDF твоих дней/.test(rows[0]) && /Картинка моего мира/.test(rows[1])), rows);
   await p.screenshot({ path: `${D}/${lang}-2-share.png` });
   await p.locator('[data-share="report"]').click(); await p.waitForTimeout(1600);
   const rep = await p.locator("[role=dialog]").last().innerText().catch(() => "");

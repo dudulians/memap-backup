@@ -10,8 +10,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { track, useScreen } from "@/lib/analytics";
 import { getEntries, getTrackers } from "@/lib/storage";
-import { buildIslands, buildRoutes, islandName, linkWorthShowing, LINKS_TOP, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
-import { computeCorrelations } from "@/lib/correlations";
+import { buildIslands, buildRoutes, islandName, linkCardCount, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
 import { islandEvenings } from "@/lib/globeArt";
 import { countedDays } from "@/lib/pathSteps";
 import { litTrackers } from "@/lib/lighthouses";
@@ -55,7 +54,7 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
       const islands = buildIslands(trackers, entries);
       const active = trackers.filter((x) => !x.archived && x.source !== "play");
       setData({
-        trackers, islands, routes: buildRoutes(trackers, entries, islands), links: computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length,
+        trackers, islands, routes: buildRoutes(trackers, entries, islands), links: linkCardCount(trackers, entries),
         days: countedDays(trackers, entries).length, evenings: islandEvenings(trackers, entries),
         rules: active.filter((x) => x.threshold > 0).length, lit: litTrackers(trackers, entries).size, questions: active.length,
       });

@@ -21,6 +21,7 @@ import { ISLAND_DEFS, islandName, islandOf, mapPic, mapPicFor, type Island, type
 import { PlanetGlobe } from "./PlanetGlobe";
 import { addOwnTracker, ensureTemplates, findTemplate, getDoor, isoLocal, saveDoorState, type Door, type DoorId } from "@/lib/doors";
 import { asQuestion, templateQuestion } from "@/lib/cardText";
+import { namedBy, twinsOf } from "@/lib/nearTwins";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import type { Tracker } from "@/types/tracker";
 
@@ -369,8 +370,12 @@ const planOf = (pick: V7Pick) => {
     ? [...new Set([...turns, ...doors.flatMap((d) => (EXTRA[d.id] ? [EXTRA[d.id]!] : []))])].filter((id) => !notAround.includes(id)).slice(0, 8)
     : pick.kind === "simple" ? SIMPLE.around : OWN_AROUND;
   // ticked to start: a topic's three (one topic), one more with each topic added
-  const ticked = pick.kind === "door" ? turns.slice(0, 2 + doors.length) : aroundTpls;
-  return { doors, mains, aroundTpls, ticked };
+  // no near-copy of a main question in the list, and nothing her own words already ask ticked to start (Nov 14 2026:
+  // "Did you drink any alcohol?" was ticked under her own "Had a glass of wine in the evening?")
+  const twins = new Set(mainTpls.flatMap(twinsOf)), named = own ? namedBy(own) : new Set<string>();
+  const around = aroundTpls.filter((id) => !twins.has(id));
+  const ticked = (pick.kind === "door" ? turns.slice(0, 2 + doors.length) : aroundTpls).filter((id) => !twins.has(id) && !named.has(id));
+  return { doors, mains, aroundTpls: around, ticked };
 };
 type Plan = ReturnType<typeof planOf>;
 

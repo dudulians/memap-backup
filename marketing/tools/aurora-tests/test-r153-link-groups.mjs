@@ -37,7 +37,9 @@ for (const lang of ["en", "ru"]) {
   await seed(p, lang);
   const tile = await p.locator('[data-tour="links-card"]').count();
   await p.locator("button").filter({ hasText: lang === "en" ? /^World$/ : /^Мир$/ }).last().click(); await p.waitForTimeout(2500);
+  // since v164 the tile counts cards, as the list shows them; every link worth showing is counted here
   const found = Number((await p.locator('[data-tour="links-card"]').innerText()).match(/\d+/)?.[0] ?? 0);
+  const links = await p.evaluate(async () => { const c = await import("/src/lib/correlations.ts"), i = await import("/src/lib/islands.ts"); const T = JSON.parse(localStorage.getItem("memap_trackers")), E = JSON.parse(localStorage.getItem("memap_entries")); return c.computeCorrelations(T.filter((x) => !x.archived && x.source !== "play"), E, i.LINKS_TOP).filter(i.linkWorthShowing).length; });
   await p.locator('[data-tour="links-card"]').click(); await p.waitForTimeout(1300);
   await shot(p, `${lang}-list`);
   const more = p.locator("[data-more-links]"); if (await more.count()) { await more.click(); await p.waitForTimeout(500); }
@@ -49,9 +51,9 @@ for (const lang of ["en", "ru"]) {
   }));
   out[`${lang} cards`] = state;
   check(`${lang}: no long "two things" cards`, state.two === 0, state.two);
-  check(`${lang}: fewer cards than links`, state.cards > 0 && state.cards < found, { cards: state.cards, found });
+  check(`${lang}: fewer cards than links, and the tile says the cards`, state.cards > 0 && state.cards < links && state.cards === found, { cards: state.cards, links, found });
   const moreN = state.counts.reduce((s, x) => s + Number(x.match(/\d+/)?.[0] ?? 0), 0);
-  check(`${lang}: every link is on a card (sentences + rows = links found)`, state.cards + moreN === found, { cards: state.cards, moreN, found });
+  check(`${lang}: every link is on a card (sentences + rows = all links)`, state.cards + moreN === links, { cards: state.cards, moreN, links });
   check(`${lang}: a closed card says how many more`, state.counts.some((x) => (lang === "en" ? /^·?\s*\+\d+ more with it$/ : /^·?\s*и ещё \d+ вместе с этим$/).test(x)), state.counts);
   // open the first card: the rows
   const card = p.locator("[data-link-card]").first();

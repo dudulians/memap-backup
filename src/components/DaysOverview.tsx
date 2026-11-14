@@ -17,6 +17,7 @@ import { haptics } from "@/lib/haptics";
 import { Spline, Sprout } from "lucide-react";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments, runningExperiments } from "@/lib/experiments";
 import { cn } from "@/lib/utils";
+import { countedDays, LINKS_AT } from "@/lib/pathSteps";
 import { smooth } from "./ChartViews";
 import { doneActions } from "@/lib/actionLog";
 import { glows, markGlowSeen, type GlowPart } from "@/lib/glowHints";
@@ -171,7 +172,8 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
           <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links > 0 ? links : null}
         </span>
         {/* whole words, no "0 · …" or "12 found" (QA, Nov 8 2026) */}
-        {sub(links > 0 ? t("world4.found", { count: links }) : t("world4.soon"))}
+        {/* the same countdown as Today's header (walk, Nov 14 2026: "in about 2 evenings" there, "in 1–2 weeks" here) */}
+        {sub(links > 0 ? t("world4.found", { count: links }) : (() => { const left = LINKS_AT - countedDays(trackers, entries).length; return left > 0 ? t("path.next4.linksSoon", { count: left }) : t("path.next4.linksWait"); })())}
       </button>
       <button type="button" className={card + glowOf("signals")} onClick={() => open("signals")} data-tour="actions">
         {head("world4.whenToAct")}

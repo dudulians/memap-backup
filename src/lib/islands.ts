@@ -108,10 +108,15 @@ export const islandOf = (t: Tracker): IslandId => {
   if (t.island && (isOwnIsland(t.island) ? getOwnIslands().some((i) => i.id === t.island) : t.island in ISLAND_DEFS)) {
     return t.island as IslandId;
   }
-  const key = `${t.title}|${t.cluster ?? ""}|${t.category}`;
+  // a question she typed herself (onboarding, an island, a hunch: ids "…-own") is never matched to a library one by
+  // its words: "Had a glass of wine in the evening" went to Body & habits as the alcohol question, "Slept in the same
+  // bed" to Health as the sleep one (her decision, Nov 14 2026: her own question lives on "My own", as onboarding says,
+  // in both languages; she can move it herself)
+  const typed = /-own(-|$)/.test(t.id);
+  const key = `${typed ? "own|" : ""}${t.title}|${t.cluster ?? ""}|${t.category}`;
   const hit = islandCache.get(key);
   if (hit) return hit;
-  const tpl = matchTemplateIdByTitle(t.title);
+  const tpl = typed ? null : matchTemplateIdByTitle(t.title);
   const id: IslandId =
     (tpl && WORK_TEMPLATES.has(tpl) && "work") ||
     (tpl && BODY_TEMPLATES.has(tpl) && "body") ||
@@ -370,6 +375,13 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
 
 /** The strongest link with both questions on the same island, one per island
  *  (board 75, Nov 6 2026): drawn as a dotted loop on that island. */
+/** How many cards the Links list shows: one per thing a link is about (its second answer, in her order), the same
+ *  grouping as FindingsView. The World tile, the invite and the old users' tour say this number (Nov 14 2026: the tile
+ *  said 9 beside a list of 5 cards and a globe showing 1). */
+export const linkCardCount = (trackers: Tracker[], entries: TrackerEntry[]): number =>
+  new Set(computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing)
+    .map((c) => { const l = linkOf(c); return `${l.second.id}|${l.secondYes}`; })).size;
+
 export const buildInnerLinks = (trackers: Tracker[], entries: TrackerEntry[], islands: Island[]): Map<IslandId, Route> => {
   const where = new Map<string, IslandId>();
   for (const isl of islands) for (const id of isl.trackerIds) where.set(id, isl.id);

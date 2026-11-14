@@ -15,7 +15,7 @@ import { getTrackers, getEntries } from "@/lib/storage";
 import { firstLinkState } from "@/lib/firstLink";
 import { growSeen } from "@/lib/growMoment";
 import { grewToday } from "@/lib/globeArt";
-import { buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkWorthShowing, LINKS_TOP, mapPic, type Route } from "@/lib/islands";
+import { buildInnerLinks, buildIslands, buildRoutes, IslandId, islandName, isOwnIsland, linkCardCount, linkWorthShowing, LINKS_TOP, mapPic, type Route } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
 import { currentExperiment, experimentOver, runningExperiments, type Experiment } from "@/lib/experiments";
 import { getDoorState } from "@/lib/doors";
@@ -151,6 +151,9 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
 
   const islands = useMemo(() => buildIslands(trackers, entries), [trackers, entries]);
   const routes = useMemo(() => buildRoutes(trackers, entries, islands), [trackers, entries, islands]);
+  // islands with a link inside them (both questions on that island): a small link sign by the island's name, no
+  // numbers (Nov 14 2026: such links were nowhere on the globe; the k/n signs ON the islands were taken off Nov 7)
+  const innerSigns = useMemo(() => new Set(buildInnerLinks(trackers.filter((x) => !x.archived && x.source !== "play"), entries, islands).keys()), [trackers, entries, islands]);
   // the first link moment's "See" (and a link under an island): the link in Links, open, with its "What comes
   // first?" (her note, Nov 12 2026: from the moment only charts could be reached, the question only from the map)
   useEffect(() => {
@@ -257,7 +260,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     return tr ? islandOf(tr) : null;
   }, [trackers]);
   // every link worth showing, not only the ones drawn between islands
-  const linkCount = useMemo(() => computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length, [trackers, entries]);
+  // as many as the Links list has cards (Nov 14 2026: the tile said 9 beside 5 cards)
+  const linkCount = useMemo(() => linkCardCount(trackers, entries), [trackers, entries]);
   // What helps opens its own sheet (Nov 8 2026: it opened a test's island, and an empty "Week summary"
   // when that island wasn't there)
   const [helpsOpen, setHelpsOpen] = useState(false);
@@ -327,7 +331,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           islands (her note, Nov 7 2026); those links are in Links */}
       {loaded && islands.length > 0 && (
         <div className="absolute inset-0 z-0" data-tour="world">
-          <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} onOpen={setOpen}
+          <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} innerSigns={innerSigns} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
             paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link} onNewIsland={() => setNewOpen(true)} onShare={() => setShareOpen(true)} />
         </div>

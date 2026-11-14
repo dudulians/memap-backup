@@ -105,6 +105,9 @@ const readFillHidden = (): string[] => {
   try { const v = JSON.parse(localStorage.getItem(FILL_HIDDEN_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
 };
 
+/** The evenings the doctor-report card was shown on Today (three, then it steps back). */
+const REPORT_TIP_KEY = "memap_report_tip_days", REPORT_TIP_EVENINGS = 3;
+
 export const EveningPath = ({
   trackers,
   entries,
@@ -214,6 +217,16 @@ export const EveningPath = ({
     window.addEventListener("memap-start-tour", on); window.addEventListener("memap-tour-done", off);
     return () => { window.removeEventListener("memap-start-tour", on); window.removeEventListener("memap-tour-done", off); };
   }, []);
+  // "A report for your doctor" on Today: three evenings, then it steps back on its own (her decision, Nov 14 2026: no
+  // box that stays every evening); the report itself stays in World → Share
+  const reportDay = isoLocal(new Date());
+  const reportDays = (): string[] => { try { const v = JSON.parse(localStorage.getItem(REPORT_TIP_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const reportTipOn = m.totalDays >= 5 && !heavyMood && !(fromOld && oldLookShown) && (() => { const d = reportDays(); return d.includes(reportDay) || d.length < REPORT_TIP_EVENINGS; })();
+  useEffect(() => {
+    if (!reportTipOn) return;
+    const d = reportDays();
+    if (!d.includes(reportDay)) try { localStorage.setItem(REPORT_TIP_KEY, JSON.stringify([...d, reportDay].slice(-10))); } catch { /* shows again, harmless */ }
+  }, [reportTipOn, reportDay]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!fromOld) return; const id = window.setTimeout(() => setOldLookShown(true), 3200); return () => window.clearTimeout(id); }, [fromOld]);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
   const world = useMemo(() => { const islands = buildIslands(trackers, entries); return { islands, routes: buildRoutes(trackers, entries, islands) }; }, [trackers, entries]);
@@ -1229,7 +1242,7 @@ export const EveningPath = ({
         {/* after a few evenings: there is a report for a doctor */}
         {/* not under the old-look card, which stands over this spot in the first week (old-user walk, Nov 14 2026);
             the report stays in World → Share */}
-        {m.totalDays >= 5 && !heavyMood && !(fromOld && oldLookShown) && (
+        {reportTipOn && (
           <div className="mx-auto mt-3 w-[92%] max-w-[420px]">
             <TipCard id="report" title={t("tips.reportTitle")} line={t("tips.reportLine")} action={t("tips.reportGo")}
               onAction={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />

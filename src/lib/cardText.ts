@@ -132,7 +132,8 @@ export const cardQuestion = (tracker: Tracker): string => {
   }
   // Russian without gender brackets for the library wording (QA, Nov 8 2026)
   if (getLanguage() === "ru" && id && RU_CARD[id] && tpl && (norm(shown) === norm(localizeTrackerQuestion(tpl.questionText, tpl.title)) || GENDER_BRACKETS.test(shown))) return noToday(RU_CARD[id]);
-  return noToday(shown);
+  // her own or renamed words stay exactly as she wrote them, "today" included (her decision, Nov 14 2026)
+  return isLibraryWording(tracker, id) ? noToday(shown) : shown;
 };
 /** Is this still the library's own question: its wording now or before the Nov 2026 rewordings, in English or
  *  Russian, with or without gender brackets? When she renamed it ("Did you fight with Kristina?") it is not, and her
@@ -178,11 +179,7 @@ export const templateQuestion = (tpl: Pick<LifeStreamTemplate, "id" | "title" | 
   return noToday(localizeTrackerQuestion(tpl.questionText, tpl.title));
 };
 
-/** What she typed, as a question: a capital first letter and a "?" at the
- *  end, the same from every place she can add one. */
-export const asQuestion = (text: string): string => {
-  const q = text.trim().replace(/\s+/g, " ");
-  if (!q) return q;
-  const up = q.charAt(0).toUpperCase() + q.slice(1);
-  return /[?？]$/.test(up) ? up : `${up}?`;
-};
+/** What she typed, kept exactly as typed (her decision, Nov 14 2026: «бокал вина вечером» became «Бокал вина
+ *  вечером?»): only the spaces are tidied, no capital letter and no "?" added. The same from every place she can
+ *  add one (onboarding, Add a question, an island, a hunch). Questions saved before keep their stored text. */
+export const asQuestion = (text: string): string => text.trim().replace(/\s+/g, " ");

@@ -5,6 +5,7 @@
 import { Tracker } from "@/types/tracker";
 import { findTemplate, isoLocal } from "@/lib/doors";
 import { templateIdOf } from "@/lib/answerPhrases";
+import { coveredIds } from "@/lib/nearTwins";
 import { OBSERVE_TIPS } from "@/lib/observeTipsData";
 import { MINIMAL_MEDICINE, QUIET_TIPS } from "@/lib/medicalArchive";
 
@@ -98,7 +99,8 @@ const reasonsFor = (mine: Tracker[]) => {
  *  always about one she does. */
 export const tipForToday = (trackers: Tracker[], today = isoLocal(new Date())): { tip: ObserveTip; done: boolean } | null => {
   const mine = trackers.filter((t) => !t.archived);
-  const asked = new Set(mine.map(templateIdOf).filter(Boolean) as string[]);
+  // what she asks, and its near-copies: a tip never suggests a question she already answers in other words (Nov 14 2026)
+  const asked = new Set([...(mine.map(templateIdOf).filter(Boolean) as string[]), ...coveredIds(mine)]);
   const reasons = reasonsFor(mine);
   const s = read();
   const byId = (id: string) => OBSERVE_TIPS.find((x) => x.id === id);

@@ -418,7 +418,7 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
             hero ? "text-[19px]" : "text-[16.5px]", lit && "bg-[hsl(var(--coin-teal)/0.16)]")}><Said segs={segs} /></span>
           {!hero && !deck && <Chev open={open} className="mt-1" />}
         </span>
-        <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}{!open && also.length > 0 && <span data-link-also-count>{" · "}{t("link.alsoMore", { count: also.length })}</span>}</span>
+        <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}{c.stage === "fresh" && <span data-link-fresh>{" · "}{t("link.lastWeeks")}</span>}{!open && also.length > 0 && <span data-link-also-count>{" · "}{t("link.alsoMore", { count: also.length })}</span>}</span>
       </button>
       {open && (
         <div className="px-[18px] pb-4 animate-fade-in">

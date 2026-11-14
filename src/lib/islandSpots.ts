@@ -30,6 +30,13 @@ const SPOTS: Record<string, Spots> = {
   "20_tropical_palms": { flag: [22, 68], light: [84, 70], left: [40, 88], right: [68, 80], front: [56, 90], back: [50, 62], g1: [12, 74], g2: [90, 78] },
   "24_oak_tree": { flag: [24, 66], light: [80, 66], left: [38, 83], right: [68, 82], front: [50, 90], back: [60, 64], g1: [12, 72], g2: [88, 72] },
   "26_flowery_island": { flag: [52, 14], light: [86, 60], left: [36, 80], right: [64, 84], front: [50, 88], back: [34, 34], g1: [14, 56], g2: [80, 40] },
+  // her own islands' pictures (Nov 14 2026), picked on the same 10% grid (marketing/tools/aurora-tests/work/own-spots.mjs)
+  "12_cypress_hill": { flag: [72, 40], light: [88, 60], left: [22, 72], right: [82, 68], front: [48, 82], back: [58, 48], g1: [12, 70], g2: [90, 62] },
+  "07_blue_lagoon": { flag: [32, 16], light: [80, 42], left: [12, 62], right: [88, 60], front: [50, 86], back: [42, 26], g1: [20, 40], g2: [72, 52] },
+  "08_rocky_grove": { flag: [64, 34], light: [84, 54], left: [16, 66], right: [84, 68], front: [50, 84], back: [48, 40], g1: [12, 62], g2: [88, 62] },
+  "13_palms": { flag: [78, 64], light: [88, 68], left: [18, 74], right: [70, 82], front: [46, 86], back: [56, 64], g1: [12, 72], g2: [90, 72] },
+  "18_zen_sakura": { flag: [20, 78], light: [84, 78], left: [30, 86], right: [70, 86], front: [50, 92], back: [62, 76], g1: [12, 80], g2: [88, 80] },
+  "25_waterfall_garden": { flag: [22, 42], light: [80, 42], left: [16, 66], right: [86, 64], front: [30, 82], back: [70, 32], g1: [10, 58], g2: [92, 58] },
 };
 const FALLBACK: Spots = { flag: [50, 14], light: [86, 62], left: [22, 68], right: [70, 74], front: [46, 84], back: [34, 36], g1: [14, 60], g2: [82, 50] };
 

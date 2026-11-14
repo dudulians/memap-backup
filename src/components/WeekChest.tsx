@@ -133,7 +133,13 @@ export const WeekChest = ({
       items: ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id as string),
       bridges: routes.slice(0, 3).map((r) => `${r.a}|${r.b}`),
     };
-    const before = lastWorld();
+    // with no report before this one, what she had when the week began (old-user walk, Nov 14 2026: the first report
+    // after the update listed balloon and house, owned since before it, as grown this week)
+    const last = lastWorld();
+    const firstReport = !last.items.length && !last.growth.length && !last.bridges.length;
+    const before = firstReport
+      ? { ...last, items: ITEMS.filter((it) => owned(it.id, worldFacts(trackers, entries.filter((e) => e.date < weekDates[0]), islands, routes, notes))).map((it) => it.id as string) }
+      : last;
     const fresh = {
       growth: islands.filter((i) => stageOf(now.get(i.id) ?? 0) > stageOf(was.get(i.id) ?? 0)).map((i) => `${i.id}:stage${stageOf(now.get(i.id) ?? 0)}`),
       itemIslands: Object.fromEntries(ITEMS.map((it) => [it.id, hostOf(it.id)]).filter(([, h]) => !!h)),
@@ -397,6 +403,11 @@ export const WeekChest = ({
                 <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("memap-share-world", { detail: { from: "report" } }))}
                   className="quiet-btn mt-3 h-12 w-full justify-center gap-2 text-[16px]">
                   <Share2 className="h-5 w-5" strokeWidth={2.4} /> {t("share.button")}
+                </button>
+                {/* the PDF report of her days, to print or send (her note, Nov 14 2026: from the report on the steps) */}
+                <button type="button" data-chest-pdf onClick={() => { onClose(); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-doctor-report")), 320); }}
+                  className="quiet-btn mt-2 h-12 w-full justify-center gap-2 text-[16px]">
+                  <FileBarChart2 className="h-5 w-5" strokeWidth={2.4} /> {t("path.chest.pdf")}
                 </button>
                 </>
               )}
