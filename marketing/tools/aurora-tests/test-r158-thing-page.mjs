@@ -48,7 +48,7 @@ for (const lang of ["en", "ru"]) {
   await p.keyboard.press("Escape"); await p.waitForTimeout(900);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island: "love" } }))); await p.waitForTimeout(1500);
   await p.locator("[data-open-thing]").first().click(); await p.waitForTimeout(1200);
-  await p.locator("[data-thing-link]").click(); await p.waitForTimeout(1500);
+  await p.locator("[data-thing-link]").first().click(); await p.waitForTimeout(1500);
   check(`${lang}: the link opens in Links`, (await p.locator("[data-link-card]").count()) >= 1);
   await p.keyboard.press("Escape"); await p.waitForTimeout(900);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island: "love" } }))); await p.waitForTimeout(1500);

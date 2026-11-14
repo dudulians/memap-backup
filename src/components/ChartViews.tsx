@@ -30,8 +30,8 @@ const WEEKS = 8;
 const LONG = 26;
 // a pair's two lines: indigo and the buttons' teal, neutral (her note, Nov 12 2026: rose means "hard"; orange was off
 // the palette, QA Nov 8)
-const PAIR_A = "var(--data-a)";
-const PAIR_B = "var(--pair-b)";
+const PAIR_A = "var(--pair-a-calm)";
+const PAIR_B = "var(--pair-b-calm)";
 
 /** The end of week w (0 = oldest of n), as a date. */
 const weekEnd = (w: number, n: number) => {
@@ -107,7 +107,9 @@ export type Series = { color: string; values: number[]; label?: string; days?: (
  *  hairlines), the latest week marked. Big: dates under it, a finger to read any week, and every day of the weeks as
  *  small upright marks under the lines (a line of "days a week" can't show whether it was the SAME days; days with
  *  both are joined by a pale capsule). */
-export const Chart = ({ series, height, big = false, at = null, onAt }: { series: Series[]; height: number; big?: boolean; at?: number | null; onAt?: (k: number) => void }) => {
+// `calm` (a link's chart, her note Nov 14 2026): thin lines in soft colours, no gradient under them, no glow, and the
+// two names under the chart with their line's colour
+export const Chart = ({ series, height, big = false, calm = false, at = null, onAt }: { series: Series[]; height: number; big?: boolean; calm?: boolean; at?: number | null; onAt?: (k: number) => void }) => {
   const { i18n, t } = useTranslation();
   const [ref, W] = useWidth();
   const n = series[0]?.values.length ?? WEEKS;
@@ -165,14 +167,14 @@ export const Chart = ({ series, height, big = false, at = null, onAt }: { series
         {series.map((s, k) => {
           const pts = s.values.map((v, i) => [x(i), y(v)] as [number, number]);
           const line = smooth(pts);
-          return <path key={`w${k}`} d={`${line} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill={`url(#${id}-${k})`} />;
+          return calm ? null : <path key={`w${k}`} d={`${line} L${x(n - 1)},${y(0)} L${x(0)},${y(0)} Z`} fill={`url(#${id}-${k})`} />;
         })}
         {series.map((s, k) => {
           const pts = s.values.map((v, i) => [x(i), y(v)] as [number, number]);
           return (
             <g key={k}>
-              <path d={smooth(pts)} fill="none" stroke={`hsl(${s.color})`} strokeWidth={big ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" filter={`url(#${id}-s${k})`} />
-              <circle cx={x(n - 1)} cy={y(s.values[n - 1])} r={big ? 5 : 4} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2} />
+              <path d={smooth(pts)} fill="none" stroke={`hsl(${s.color})`} strokeWidth={calm ? 2.25 : big ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" filter={calm ? undefined : `url(#${id}-s${k})`} />
+              <circle cx={x(n - 1)} cy={y(s.values[n - 1])} r={calm ? 4 : big ? 5 : 4} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2} />
             </g>
           );
         })}
@@ -183,6 +185,15 @@ export const Chart = ({ series, height, big = false, at = null, onAt }: { series
           </g>
         )}
       </svg>
+      {calm && series.some((s) => s.label) && (
+        <div data-chart-legend className="mt-2 space-y-1">
+          {series.map((s, k) => s.label && (
+            <p key={k} className="flex items-center gap-2 text-[13.5px] font-semibold text-muted-foreground">
+              <i className="inline-block h-[3px] w-4 shrink-0 rounded-full" style={{ background: `hsl(${s.color})` }} />{s.label}
+            </p>
+          ))}
+        </div>
+      )}
       {rows.length > 0 && n <= WEEKS && (
         <div data-chart-days className="mt-4">
           <p className="mb-2.5 text-[12.5px] font-medium text-muted-foreground">{t("charts.everyDay")}</p>

@@ -294,7 +294,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // or it leads back (island → thing → place)
   const [thing, setThing] = useState<string | null>(null);
   useEffect(() => {
-    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; setOpenRaw(null); window.setTimeout(() => setThing(id), 250); };
+    // from an island, or from a link card (Nov 14 2026): the sheet it came from closes first, so sheets do not stack
+    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; setOpenRaw(null); setOnly(null); setOnlyIds(null); setLinkRaw(null); window.setTimeout(() => setThing(id), 250); };
     window.addEventListener("memap-open-thing", go);
     return () => window.removeEventListener("memap-open-thing", go);
   }, []);

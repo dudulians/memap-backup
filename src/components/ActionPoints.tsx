@@ -472,6 +472,12 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <button type="button" onClick={() => open(tr.id, "show")} className={quietBtn}>{t("rules.show")}</button>
               <button type="button" onClick={() => open(tr.id, "change")} className={quietBtn}>{t("rules.notForMe")}</button>
             </div>
+            {/* the page of this thing: its days, links, when to act, what helps (Nov 14 2026: she could not find it) */}
+            <button type="button" data-act-thing onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-thing", { detail: { id: tr.id } })); }}
+              className="mt-3 flex min-h-11 w-full items-center justify-between gap-3 text-left text-[15.5px] font-bold text-[hsl(var(--coin-teal))]">
+              <span className="min-w-0 flex-1">{t("link.thingAll", { thing: cardQuestion(tr) })}</span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+            </button>
             {/* what comes with it in her days, and the possible cause (Nov 8 2026): one quiet block, its button
                 plain so it doesn't compete with the main one. Never on a partner-harm card: her own habits are
                 not the cause of being shouted at (Refuge; Nov 9 2026) */}

@@ -68,8 +68,8 @@ export const LinkDots = ({ k, n, hard }: { k: number; n: number; hard: boolean |
 
 /** The pair's two colours with no meaning (her pick B, Nov 12 2026: rose and green are hard and good, the buttons'
  *  teal reads as green): indigo and lilac; "two things": the answer indigo, the things lilac. */
-export const PAIR_A = "var(--data-a)";
-export const PAIR_B = "var(--pair-b)";
+export const PAIR_A = "var(--pair-a-calm)";
+export const PAIR_B = "var(--pair-b-calm)";
 
 /** Every day of the last weeks with that answer, 7 a week, oldest week first (a short night: the "no" days of
  *  "Slept 7+ hours"). */

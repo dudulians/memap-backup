@@ -1,6 +1,6 @@
 // r161 (Nov 14 2026): her note «в связи слишком длинное полотно… давай всё-таки делать next: вопрос, сообщение,
 // дальше to try». The opened link card goes in short steps with Next and Back:
-// 1 what was found (sentence, chart, other days, "Also with it") · 2 What comes first? · 3 What to try.
+// 1 what was found (sentence, chart, other days, the way to the thing) · 2 What comes first? · 3 What to try.
 // Each step fits one phone screen without scrolling the card. EN and RU.
 // Run from marketing/tools with the dev server on 8080; exit 1 when a check fails.
 import { chromium } from "playwright-core";

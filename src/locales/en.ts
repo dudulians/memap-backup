@@ -153,6 +153,13 @@ const en = {
     tryAsk: "What to try",
     tryNow: "Trying now",
     alsoHead: "Also with it",
+    // under a link card: the way to the page of the thing it is about (Nov 14 2026)
+    thingAll: "All about “{{thing}}”",
+    // the sheet of a route on the globe: every link between its two islands (Nov 14 2026)
+    between_one: "{{a}} and {{b}}: {{count}} link",
+    between_other: "{{a}} and {{b}}: {{count}} links",
+    thingMore_one: "and {{count}} more link with it",
+    thingMore_other: "and {{count}} more links with it",
     // a link seen only in the last 21 days says so (walk, Nov 14 2026: "4 of 6 times" read as a fact about 3 months)
     lastWeeks: "in the last 3 weeks",
     deckHead_one: "{{count}} finding",

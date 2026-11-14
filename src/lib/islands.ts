@@ -370,7 +370,9 @@ export const buildRoutes = (trackers: Tracker[], entries: TrackerEntry[], island
     seen.add(key);
     out.push({ a, b, k: l.k, n: l.n, first: l.first.id, second: l.second.id, nextDay: l.nextDay, firstYes: l.firstYes, secondYes: l.secondYes, secondHard: l.secondHard, other: l.other, mostly: l.mostly, together: l.together });
   }
-  return out.slice(0, 4);
+  // every pair of islands with a link gets its route (her note, Nov 14 2026: only some were drawn); a route's sheet lists
+  // all the links of that pair; ten at most so the ball never turns into a web
+  return out.slice(0, 10);
 };
 
 /** The strongest link with both questions on the same island, one per island

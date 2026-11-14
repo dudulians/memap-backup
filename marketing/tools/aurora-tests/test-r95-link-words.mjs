@@ -61,8 +61,9 @@ for (const lang of ["en", "ru"]) {
   out[`${lang}.links`] = links.slice(0, 900);
   ok(`${lang}.links: forced yes, the next day, as a sentence`, FORCED[lang].test(links), links.slice(0, 300));
   // the same day claims no order since Nov 12 2026 (her pick): when the days fall
-  // r153: a second link about the same thing is a row on its card ("Also with it"), with its count
-  ok(`${lang}.links: same day, every time`, lang === "en" ? /Also with it Short night every time . ([0-9]+) of ([0-9]+)/.test(links) : /Ещё вместе с этим Короткая ночь каждый раз . ([0-9]+) из ([0-9]+)/.test(links), links.slice(0, 600));
+  // r153, since Nov 14 2026: a second link about the same thing is no longer a row on the card; the card says how many
+  // more and leads to the page of that thing, which lists them
+  ok(`${lang}.links: the second link about the same thing waits on the thing's page`, lang === "en" ? /All about “[^”]+” and 1 more link with it/.test(links) : /Всё про «[^»]+» и ещё 1 связь с этим/.test(links), links.slice(0, 600));
   ok(`${lang}.links: no short headline`, !SHORT.test(links), links.slice(0, 300));
   await p.keyboard.press("Escape"); await p.waitForTimeout(800);
   // a link's own sheet on the map (every time: the big count)

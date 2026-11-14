@@ -40,7 +40,8 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
     const links = computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing)
       .filter((c) => c.trackerA.id === tr.id || c.trackerB.id === tr.id);
     const top = links[0];
-    const route: Route | null = top ? (() => { const l = linkOf(top); return { ...l, a: "other", b: "other", first: l.first.id, second: l.second.id } as Route; })() : null;
+    const routes: Route[] = links.map((c) => { const l = linkOf(c); return { ...l, a: "other", b: "other", first: l.first.id, second: l.second.id } as Route; });
+    const route: Route | null = top ? routes[0] : null;
     // what the person said in "Why?" on the hard days of this question: the most common reason
     // (reasonTally, shared with the fights' task: "other" and "don't know" are never the most common reason)
     const tl = reasonTally(tr, entries), said = tl.said;
@@ -48,7 +49,7 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
     const lit = litTrackers(trackers, entries).has(tr.id);
     const pairKeys = new Set(links.map((c) => [c.trackerA.id, c.trackerB.id].sort().join("|")));
     const trying = runningExperiments().find((x) => x.from === tr.id || (!!x.link && pairKeys.has(x.link))) ?? null;
-    return { days, neutral, yes, hard: days.filter((d) => d === "hard").length, links, route, word, said, lit, trying };
+    return { days, neutral, yes, hard: days.filter((d) => d === "hard").length, links, routes, route, word, said, lit, trying };
   }, [tr, trackers, entries]);
   const of = trackerLookup(trackers);
   const icon = (I: typeof CalendarDays, on = false, dim = false) => (
@@ -87,16 +88,19 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
               {icon(Spline)}
               <span>
                 {part("world4.links")}
-                {data.route && (
-                  <button type="button" data-thing-link onClick={go(() => onLinks(tr.id, [data.route!.first, data.route!.second]))} className="mt-1 flex w-full items-center justify-between gap-2 text-left">
+                {data.route && <span className="mt-1 block text-[13px] font-semibold text-muted-foreground">{t("thing.fromDays")}</span>}
+                {/* every link of this thing, the strongest first, each one way to its card (Nov 14 2026: the link card no
+                    longer lists the others; this page holds them) */}
+                {data.routes.slice(0, 4).map((route, i) => (
+                  <button key={`${route.first}|${route.second}`} type="button" data-thing-link onClick={go(() => onLinks(tr.id, [route.first, route.second]))}
+                    className={cn("flex w-full items-center justify-between gap-2 text-left", i > 0 ? "mt-2.5" : "mt-0.5")}>
                     <span>
-                      <span className="block text-[13px] font-semibold text-muted-foreground">{t("thing.fromDays")}</span>
-                      <span className="block text-[16.5px] font-bold leading-snug">{linkHeadSegs(t, data.route, of).map((x) => x.text).join("")}</span>
-                      <span className={l2}>{cap(linkTimes(t, linkNumbers(data.route).k, linkNumbers(data.route).n))}{data.links.length > 1 ? ` · ${t("link.alsoMore", { count: data.links.length - 1 })}` : ""}</span>
+                      <span className={cn("block leading-snug", i === 0 ? "text-[16.5px] font-bold" : "text-[15.5px] font-semibold")}>{linkHeadSegs(t, route, of).map((x) => x.text).join("")}</span>
+                      <span className={l2}>{cap(linkTimes(t, linkNumbers(route).k, linkNumbers(route).n))}</span>
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2.4} />
                   </button>
-                )}
+                ))}
                 {data.word && (
                   <span data-thing-words className={cn("block", data.route && "mt-3 border-t-[1.5px] border-dotted border-foreground/15 pt-3")}>
                     <span className="block text-[13px] font-semibold text-muted-foreground">{t("thing.inWords")}</span>

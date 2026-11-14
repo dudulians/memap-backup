@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
-import { ArrowRight, ChevronDown, Link2 } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronRight, Link2 } from "lucide-react";
 import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, type Seg, type TrackerOf } from "@/lib/linkText";
 import { Chart, dayMarks, weekly, type Series } from "./ChartViews";
 import { art, artOf } from "@/lib/globeArt";
@@ -19,7 +19,7 @@ import { islandDays } from "@/lib/growth";
 import { answerClause } from "@/lib/answerPhrases";
 import { chainOf, notItFindings, pairOf, type NotIt } from "@/lib/findingForms";
 import { ensureTemplates, findTemplate } from "@/lib/doors";
-import { templateQuestion } from "@/lib/cardText";
+import { cardQuestion, templateQuestion } from "@/lib/cardText";
 import { answerPhrase, cap, templateIdOf, wordsIdOf } from "@/lib/answerPhrases";
 import { markCorrelationSeen } from "@/lib/appRating";
 import { track } from "@/lib/analytics";
@@ -338,7 +338,8 @@ const Isles = ({ r, of, isleDays }: { r: Route; of: TrackerOf; isleDays: Record<
  *  rows under it ("Also with it"); tapping a row makes that link the card's sentence, with its own chart, days,
  *  "What comes first?" and "What to try". Nothing is lost: each link keeps everything it had on a card of its own. */
 const GroupCard = ({ links, hero, of, entries, tracked, deck, open }: { links: CorrelationResult[]; hero: boolean; of: TrackerOf; entries: TrackerEntry[]; tracked: Set<string>; deck?: boolean; open?: boolean }) => {
-  const [focus, setFocus] = useState(0);
+  // a link opened from its thing's page shows as the card's own, open (Nov 14 2026: the rows under the card are gone)
+  const [focus, setFocus] = useState(() => Math.max(0, links.findIndex((x) => { const r = routeOf(x); return reopen === [r.first, r.second].join("|"); })));
   const [picked, setPicked] = useState(false);
   const at = Math.min(focus, links.length - 1), c = links[at];
   const also = links.map((x, i) => ({ r: routeOf(x), onPick: () => { setFocus(i); setPicked(true); } })).filter((_, i) => i !== at);
@@ -375,6 +376,8 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   }, [sentence]);
   const { k, n } = linkNumbers(r);
   const other = linkOtherDays(t, r);
+  // the thing the card is about, named as its page names it (its question, in her words when she typed or renamed it)
+  const bName = b ? cardQuestion(b) : "";
   // the second voice (agreed Nov 13, built Nov 14 2026): what the person said in "Why?" about one of the two things
   // (fights, headaches, migraines), the same block as on the page of one thing; shown beside the link from three
   // answers, never counted into it (reasons exist only on the "yes" days)
@@ -430,7 +433,7 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
           {series.length === 2 && (
             <div data-link-chart-inline className="mt-1">
               <p className="text-[12.5px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</p>
-              <Chart series={series} height={150} big at={at} onAt={setAt} />
+              <Chart series={series} height={150} big calm at={at} onAt={setAt} />
             </div>
           )}
           {other && <p data-link-other className="mt-3 text-[15px] font-semibold leading-snug">{cap(other)}</p>}
@@ -458,19 +461,18 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
           )}
               {/* below Next, so the first step's button shows without scrolling (Nov 14 2026) */}
           {/* the other links about the same thing, as short rows; a tap tells that one in full on this card */}
-          {step === "found" && also.length > 0 && (
-            <div data-link-also className="mt-4">
-              <p className="text-[13px] font-bold text-[hsl(var(--coin-teal))]">{t("link.alsoHead")}</p>
-              <div className="mt-1.5 space-y-1.5">
-                {also.map((x) => { const n2 = linkNumbers(x.r); return (
-                  <button key={`${x.r.first}-${x.r.firstYes}`} type="button" data-also-row onClick={x.onPick}
-                    className="flex min-h-11 w-full items-center justify-between gap-3 rounded-2xl bg-foreground/[0.05] px-4 py-2 text-left active:scale-[0.99]">
-                    <span className="min-w-0 flex-1 text-[15.5px] font-bold leading-snug">{cap(answerPhrase(t, of(x.r.first), x.r.firstYes))}{x.r.nextDay && <span className="font-semibold text-muted-foreground">{" · "}{t("link.nextDayTag")}</span>}</span>
-                    <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-muted-foreground">{linkTimes(t, n2.k, n2.n)}</span>
-                  </button>
-                ); })}
-              </div>
-            </div>
+          {/* the other links about the same thing are no longer rows of text under the steps (her note, Nov 14 2026:
+              «другие линки просто текстом… отвлекаешься… очень непонятно»): one way on to the page of that thing, which
+              shows all of it (My days, its links, When to act, What helps), the page she liked and could not find */}
+          {step === "found" && b && (
+            <button type="button" data-link-thing onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-thing", { detail: { id: b.id } })); }}
+              className="mt-4 flex min-h-12 w-full items-center justify-between gap-3 border-t-[1.5px] border-dotted border-foreground/15 pt-3 text-left">
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15.5px] font-bold leading-snug text-[hsl(var(--coin-teal))]">{t("link.thingAll", { thing: bName })}</span>
+                {also.length > 0 && <span className="mt-0.5 block text-[13.5px] font-semibold text-muted-foreground">{t("link.thingMore", { count: also.length })}</span>}
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+            </button>
           )}
         </div>
       )}

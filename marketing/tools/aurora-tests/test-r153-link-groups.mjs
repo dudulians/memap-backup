@@ -1,7 +1,7 @@
 // r153 (Nov 13 2026, branch design/one-system): links about one thing sit on one card.
 // 1. The long "two things" sentence cards are gone.
 // 2. Fewer cards than links: a card holds every link about its thing; closed, it says how many more ("+2 more with it").
-// 3. Opened, it lists them as short rows under "Also with it" (EN) / «Ещё вместе с этим» (RU), each with its count.
+// 3. Opened, it has one way on, "All about …", to the page of that thing, which lists all its links (Nov 14 2026).
 // 4. A tap on a row makes that link the card's sentence, open, with its own chart; the first one becomes a row.
 // 5. Every link is still reachable: sentences + rows = the links found.
 // Screenshots in work/r153. Run from marketing/tools with the dev server on 8080; exit 1 when a check fails.
@@ -55,23 +55,26 @@ for (const lang of ["en", "ru"]) {
   const moreN = state.counts.reduce((s, x) => s + Number(x.match(/\d+/)?.[0] ?? 0), 0);
   check(`${lang}: every link is on a card (sentences + rows = all links)`, state.cards + moreN === links, { cards: state.cards, moreN, links });
   check(`${lang}: a closed card says how many more`, state.counts.some((x) => (lang === "en" ? /^·?\s*\+\d+ more with it$/ : /^·?\s*и ещё \d+ вместе с этим$/).test(x)), state.counts);
-  // open the first card: the rows
+  // since Nov 14 2026 the opened card has no rows of the other links (her note: text rows under the steps distracted);
+  // one way on, "All about …", opens the page of that thing, which lists all its links
   const card = p.locator("[data-link-card]").first();
   const before = (await card.locator("[data-link-sentence]").innerText()).replace(/\s+/g, " ").trim();
   await card.locator("button").first().click(); await p.waitForTimeout(900);
-  const rows = await card.locator("[data-also-row]").allInnerTexts();
-  const head = (await card.locator("[data-link-also] p").first().innerText().catch(() => "")).trim();
-  check(`${lang}: the opened card lists the other links as rows with counts`, rows.length >= 1 && head === (lang === "en" ? "Also with it" : "Ещё вместе с этим") && rows.every((x) => /\d+ (of|из) \d+/.test(x)), { head, rows });
-  await card.locator("[data-link-also]").scrollIntoViewIfNeeded(); await shot(p, `${lang}-open-rows`);
-  // a row becomes the card
-  const rowText = rows[0].split("\n")[0].trim();
-  await card.locator("[data-also-row]").first().click(); await p.waitForTimeout(900);
-  const card2 = p.locator("[data-link-card]").first();
-  const after = (await card2.locator("[data-link-sentence]").innerText()).replace(/\s+/g, " ").trim();
-  const open2 = await card2.locator("[data-link-chart-inline]").count();
-  const rows2 = await card2.locator("[data-also-row]").count();
-  check(`${lang}: a tapped row becomes the card's sentence, open, with its chart`, after !== before && open2 === 1 && rows2 === rows.length, { before, after, open2, rows2, rowText });
-  await shot(p, `${lang}-row-picked`);
+  const rows = await card.locator("[data-also-row]").count();
+  const way = (await card.locator("[data-link-thing]").innerText().catch(() => "")).replace(/\s+/g, " ").trim();
+  check(`${lang}: the opened card has no rows of other links, one way to the thing instead`, rows === 0 && (lang === "en" ? /^All about “.+” and \d+ more links? with it$/ : /^Всё про «.+» и ещё \d+ связ\S* с этим$/).test(way), { rows, way });
+  await card.locator("[data-link-thing]").scrollIntoViewIfNeeded(); await shot(p, `${lang}-open-way`);
+  await card.locator("[data-link-thing]").click(); await p.waitForTimeout(1500);
+  const thingLinks = await p.locator("[data-thing] [data-thing-link]").allInnerTexts();
+  const moreLinks = Number(way.match(/\d+/)?.[0] ?? 0);
+  check(`${lang}: the thing's page lists its links, the strongest first`, thingLinks.length === 1 + moreLinks && thingLinks[0].replace(/\s+/g, " ").startsWith(before.slice(0, 30)), { n: thingLinks.length, moreLinks, first: thingLinks[0]?.slice(0, 80) });
+  await shot(p, `${lang}-thing`);
+  // a link on that page opens as its own card in Links, open, with its chart
+  const second = thingLinks[1]?.split("\n")[0].replace(/\s+/g, " ").trim();
+  await p.locator("[data-thing] [data-thing-link]").nth(1).click(); await p.waitForTimeout(2000);
+  const opened = await p.evaluate(() => [...document.querySelectorAll("[data-link-card]")].filter((c) => c.querySelector("[aria-expanded=true]") && c.querySelector("[data-link-chart-inline]")).map((c) => c.querySelector("[data-link-sentence]").textContent.replace(/\s+/g, " ").trim()));
+  check(`${lang}: a link on the thing's page opens as its card, with its chart`, opened.length === 1 && opened[0] === second, { opened, second });
+  await shot(p, `${lang}-link-from-thing`);
   await ctx.close();
 }
 await b.close();

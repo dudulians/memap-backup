@@ -2397,7 +2397,10 @@ header h1 { transition: opacity 200ms ease; }
    soft rose red (v73: "больше в розовинку"), a good / calm day (--balanced) soft green, by what the answer
    means, not yes/no. Indigo (--data-a) stays for neutral things: a pair's first
    line, a link's sign; warm amber the second line. The old screens keep theirs. */
-:root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; --pair-b: 282 46% 66%; }
+:root { --data-a: var(--coin-teal); --data-b: 322 40% 60%; --pair-b: 282 46% 66%;
+  /* a link's two things, calm (her note, Nov 14 2026: «не такие яркие… без градиента»; the colour page's values) */
+  --pair-a-calm: 226 40% 58%; --pair-b-calm: 282 30% 66%; }
+html[data-ui="new"][data-theme="aurora"] { --pair-a-calm: 226 46% 72%; --pair-b-calm: 282 34% 76%; }
 /* Text: soft graphite #3A3F4E, quieter text #6B7184 (her pick, Nov 5 2026, board 51) */
 html[data-ui="new"][data-theme="aurora-light"] { --foreground: 226 15% 27%; --muted-foreground: 226 10% 47%; }
 /* red and green, her pick E "Ягода и мята" (Nov 12 2026, marketing/research/colors-red-green.html); were 348 70% 69% / 146 45% 60% */
