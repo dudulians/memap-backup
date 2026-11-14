@@ -8,7 +8,7 @@
 import { TipCard, tipSeen, tourCompleted } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil, Plus } from "lucide-react";
+import { ListChecks, Pencil, Plus } from "lucide-react";
 import { art, artOf, stageOf, toNextStage } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
@@ -40,6 +40,7 @@ import { ChevronLeft } from "lucide-react";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
 import { ThingSheet } from "./ThingSheet";
+import { ThingsList } from "./ThingsList";
 import { DaysOverview } from "./DaysOverview";
 import { SteadyCard } from "./SteadyCard";
 import { IslandQuestions } from "./IslandQuestions";
@@ -273,7 +274,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   const onHelps = () => setHelpsOpen(true);
   // "See" under a done task (Nov 10 2026): from When to act straight to What helps, where it is now kept
   useEffect(() => {
-    const go = (e: Event) => { backTo.current = null; setOnly(null); setOnlyIds(null); setHelpsFocus((e as CustomEvent).detail?.id ?? null); window.setTimeout(() => setHelpsOpen(true), 250); };
+    // also from a link's "Trying now" and the page of one thing (Nov 14 2026): the sheet it came from closes first
+    const go = (e: Event) => { backTo.current = null; setOnly(null); setOnlyIds(null); setLinkRaw(null); setThing(null); setHelpsFocus((e as CustomEvent).detail?.id ?? null); window.setTimeout(() => setHelpsOpen(true), 250); };
     window.addEventListener("memap-open-helps", go);
     return () => window.removeEventListener("memap-open-helps", go);
   }, []);
@@ -293,9 +295,12 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // the page of one thing, opened from its question on an island; its rows open their own places, and closing them
   // or it leads back (island → thing → place)
   const [thing, setThing] = useState<string | null>(null);
+  // "All about…" at the top of the World: every question, by island; a page opened from it goes back to it
+  const [thingsOpen, setThingsOpen] = useState(false);
+  const thingFromList = useRef(false);
   useEffect(() => {
     // from an island, or from a link card (Nov 14 2026): the sheet it came from closes first, so sheets do not stack
-    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; setOpenRaw(null); setOnly(null); setOnlyIds(null); setLinkRaw(null); window.setTimeout(() => setThing(id), 250); };
+    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; thingFromList.current = false; setOpenRaw(null); setOnly(null); setOnlyIds(null); setLinkRaw(null); window.setTimeout(() => setThing(id), 250); };
     window.addEventListener("memap-open-thing", go);
     return () => window.removeEventListener("memap-open-thing", go);
   }, []);
@@ -319,8 +324,16 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           the code to go back to): the header, the World's 4 parts on top, and her globe in
           the room under them with everything the map had — her topic's island lit, the
           links inside one island, a new island at hand, zoom by hand. */}
-      <div className="map-head relative z-[6] px-4 pb-2.5 pt-3" style={{ background: "transparent" }}>
-        <h2 className="min-w-0 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
+      <div className="map-head relative z-[6] flex items-center gap-3 px-4 pb-2.5 pt-3" style={{ background: "transparent" }}>
+        <h2 className="min-w-0 flex-1 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
+        {/* every question's own page, one button away (her note, Nov 14 2026: those pages «могут быть одними из главных»,
+            without one more tile) */}
+        {loaded && islands.some((i) => i.trackerIds.length > 0) && (
+          <button type="button" data-world-things onClick={() => { haptics.tap(); setThingsOpen(true); }}
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
+            <ListChecks className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("thing.listButton")}
+          </button>
+        )}
       </div>
       {loaded && islands.length > 0 && (
         <div className="relative z-[6] mt-1">
@@ -334,7 +347,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="absolute inset-0 z-0" data-tour="world">
           <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} innerSigns={innerSigns} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link} onNewIsland={() => setNewOpen(true)} onShare={() => setShareOpen(true)} />
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link || thingsOpen || !!thing} onNewIsland={() => setNewOpen(true)} onShare={() => setShareOpen(true)} />
         </div>
       )}
 
@@ -468,11 +481,13 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         </div>
       </BottomSheet>
       <ThingSheet tracker={thing ? trackers.find((x) => x.id === thing) ?? null : null} trackers={trackers} entries={entries}
-        onClose={() => { const tr = trackers.find((x) => x.id === thing); setThing(null); if (tr) window.setTimeout(() => setOpen(islandOf(tr)), 250); }}
+        onClose={() => { const tr = trackers.find((x) => x.id === thing); setThing(null); if (thingFromList.current) { thingFromList.current = false; window.setTimeout(() => setThingsOpen(true), 250); } else if (tr) window.setTimeout(() => setOpen(islandOf(tr)), 250); }}
         onDays={(id) => fromThing(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds([id]); setOnly("overview"); })}
         onLinks={(id, pair) => fromThing(() => { backTo.current = null; if (pair) reopenLink(pair); setOnlyIsland(null); setOnlyIds([id]); setOnly("findings"); })}
         onAct={() => fromThing(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds(null); setOnly("signals"); })}
         onTry={(isl) => fromThing(() => setTestFor(isl))} />
+      <ThingsList open={thingsOpen} islands={islands} trackers={trackers} entries={entries} onClose={() => setThingsOpen(false)}
+        onPick={(id) => { setThingsOpen(false); window.setTimeout(() => { thingFromList.current = true; setThing(id); }, 250); }} />
       <LinkSheet route={link} trackers={trackers} entries={entries} days={dayCount} onClose={() => setLink(null)}
         onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("linkchart"), 250); }} />
       {helpsResult && (

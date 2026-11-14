@@ -7,8 +7,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
-import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
-import { ArrowRight, ChevronDown, ChevronRight, Link2 } from "lucide-react";
+import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
+import { ArrowRight, Check, ChevronDown, ChevronRight, FlaskConical, Link2 } from "lucide-react";
+import { linkMark, linkSeen, linkSeenKey, markLinkSeen } from "@/lib/linkSeen";
 import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, type Seg, type TrackerOf } from "@/lib/linkText";
 import { Chart, dayMarks, weekly, type Series } from "./ChartViews";
 import { art, artOf } from "@/lib/globeArt";
@@ -197,7 +198,7 @@ export const FindingsView = ({
     );
   }
   return (
-    <div className="space-y-2.5 animate-fade-in">
+    <div className="space-y-3.5 animate-fade-in">
       {shown.slice(0, 1).map((g) => card(g, true))}
       {chain && <StoryCard kind="chain" text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />}
       {shown.slice(1).map((g) => card(g, false))}
@@ -398,28 +399,50 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   const [, orderSaid] = useState(0);
   useEffect(() => { const on = () => orderSaid((v) => v + 1); window.addEventListener(LINK_ORDER_EVENT, on); return () => window.removeEventListener(LINK_ORDER_EVENT, on); }, []);
   const orderKnown = !asksOrder || (!!a && !!b && !!getLinkOrder(a.id, b.id));
-  const [stepAt, setStepAt] = useState(() => (again.current && a && b && tryOfLink(a.id, b.id) ? steps.length - 1 : 0));
+  // a link with a try running opens on it every time, not only when coming back from the picker (her note, Nov 14
+  // 2026: «мне нужно опять нажать Next, чтобы увидеть подпись Trying Now… как будто это опять новое»)
+  const [stepAt, setStepAt] = useState(() => (a && b && tryOfLink(a.id, b.id) ? steps.length - 1 : 0));
   const step = steps[Math.min(stepAt, steps.length - 1)];
   const go = (d: number) => { haptics.tap(); setStepAt((v) => Math.max(0, Math.min(steps.length - 1, v + d))); window.setTimeout(() => box.current?.scrollIntoView({ block: "nearest" }), 60); };
   const canNext = stepAt < steps.length - 1 && (step !== "order" || orderKnown);
+  // gone through: walked to the last step, or opened when there is one step; then the closed card says so with a tick
+  const seenKey = linkSeenKey(r.first, r.second, r.nextDay);
+  const [markV, setMarkV] = useState(0);
+  const tapped = useRef(false);
+  useEffect(() => {
+    if (!open || linkSeen(seenKey)) return;
+    if ((steps.length > 1 && stepAt === steps.length - 1) || (steps.length === 1 && tapped.current)) { markLinkSeen(seenKey); setMarkV((v) => v + 1); }
+  }, [open, stepAt, steps.length, seenKey]);
+  useEffect(() => { const on = () => setMarkV((v) => v + 1); window.addEventListener("memap-settings-changed", on); return () => window.removeEventListener("memap-settings-changed", on); }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const mark = useMemo(() => linkMark(r.first, r.second, r.nextDay), [r.first, r.second, r.nextDay, markV, open]);
+  // the card's top line, as When to act's cards have it: the link sign and the islands (or "Strongest so far"), and
+  // on the right where the person stands with it
+  const isles = a && b ? [...new Set([islandOf(a), islandOf(b)])].map((x) => islandName(t, x)).join(" · ") : "";
   // the two lines and their days, in the colours of the lit words
   const series: Series[] = a && b ? [
     { color: PAIR_A, values: weekly(a, entries, 8, r.firstYes), days: dayMarks(a, entries, 8, r.firstYes), label: cap(answerPhrase(t, a, r.firstYes)) },
     { color: PAIR_B, values: weekly(b, entries, 8, r.secondYes), days: dayMarks(b, entries, 8, r.secondYes), label: cap(answerPhrase(t, b, r.secondYes)) },
   ] : [];
   return (
-    <div ref={box} data-link-card data-together={r.together ? "1" : undefined} className="surface rounded-[22px]">
-      <button type="button" aria-expanded={open} onClick={() => { if (!deck) setOpen((o) => !o); }} className="block w-full px-[18px] pb-3.5 pt-4 text-left">
-        {hero && (
-          <span className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[hsl(var(--coin-teal))]">{kicker ?? t("patterns.findStrongest")}</span>
-            {!deck && <Chev open={open} />}
-          </span>
-        )}
+    <div ref={box} data-link-card data-together={r.together ? "1" : undefined} data-link-mark={mark?.kind ?? "new"} className="surface rounded-[22px]">
+      <button type="button" aria-expanded={open} onClick={() => { if (deck) return; tapped.current = true; setOpen((o) => !o); }} className="block w-full px-[18px] pb-3.5 pt-3.5 text-left">
+        {/* every card starts with its own top line (her note, Nov 14 2026: the next card's sentence read as more text
+            of the open one), the way When to act's cards start */}
+        <span data-link-kicker className="mb-2 flex min-h-6 items-center gap-2">
+          <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[hsl(var(--coin-teal)/0.14)] text-[hsl(var(--coin-teal))]"><Link2 className="h-3.5 w-3.5" strokeWidth={2.6} /></span>
+          <span className={cn("min-w-0 flex-1 truncate text-[12px] font-extrabold uppercase tracking-[0.08em]", hero ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")}>{hero ? kicker ?? t("patterns.findStrongest") : isles}</span>
+          {mark && (
+            <span data-link-status={mark.kind} className={cn("flex shrink-0 items-center gap-1 text-[13px] font-bold", mark.kind === "seen" ? "text-muted-foreground" : "text-[hsl(var(--coin-teal))]")}>
+              {mark.kind === "trying" ? <FlaskConical className="h-4 w-4" strokeWidth={2.4} /> : <Check className="h-4 w-4" strokeWidth={3} />}
+              {t(mark.kind === "trying" ? "link.tryNow" : mark.kind === "tried" ? "link.tried" : "link.seen")}
+            </span>
+          )}
+          {!deck && <Chev open={open} />}
+        </span>
         <span className="flex items-start gap-2">
           <span data-link-sentence className={cn("-mx-1.5 min-w-0 flex-1 rounded-lg px-1.5 py-0.5 font-bold leading-snug tracking-tight transition-colors duration-700",
             hero ? "text-[19px]" : "text-[16.5px]", lit && "bg-[hsl(var(--coin-teal)/0.16)]")}><Said segs={segs} /></span>
-          {!hero && !deck && <Chev open={open} className="mt-1" />}
         </span>
         <span data-link-times className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, k, n))}{c.stage === "fresh" && <span data-link-fresh>{" · "}{t("link.lastWeeks")}</span>}{!open && also.length > 0 && <span data-link-also-count>{" · "}{t("link.alsoMore", { count: also.length })}</span>}</span>
       </button>

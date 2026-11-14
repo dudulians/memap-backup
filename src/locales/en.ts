@@ -152,6 +152,11 @@ const en = {
     orderNowReads: "Now the link reads:",
     tryAsk: "What to try",
     tryNow: "Trying now",
+    // a closed link card says where the person stands with it (Nov 14 2026)
+    seen: "Seen",
+    tried: "Tried",
+    // under "Trying now" on a link: the try is the one in What helps
+    inHelps: "See it in What helps",
     alsoHead: "Also with it",
     // under a link card: the way to the page of the thing it is about (Nov 14 2026)
     thingAll: "All about “{{thing}}”",
@@ -2658,6 +2663,19 @@ const en = {
     calm: "Calm for now",
     trying: "Trying: {{what}}",
     tryOne: "One small change to try",
+    // "All about…" at the top of the World: every question's own page (Nov 14 2026)
+    listButton: "All about…",
+    listTitle: "All about…",
+    listAct: "Time to act",
+    listLinks_one: "{{count}} link",
+    listLinks_other: "{{count}} links",
+  },
+  // where a try came from, wherever it shows (Nov 14 2026)
+  tryFrom: {
+    link: "From a link: {{a}} → {{b}}",
+    linkSame: "From a link: {{a}} · {{b}}",
+    linkPlain: "From a link",
+    act: "From When to act: {{q}}",
   },
   firstLink: {
     step: "Your first link!",

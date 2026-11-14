@@ -129,23 +129,26 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
             </div>
           )}
 
+          {data.trying ? (
+            // the try is the one in What helps: the row goes there (Nov 14 2026)
+            <button type="button" data-thing-row="helps" onClick={go(() => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })))} className={cn(row, "pb-0")}>
+              {icon(Sprout, true)}
+              <span>
+                {part("world4.whatHelps", false, true)}
+                <span data-thing-trying className={l1}>{t("thing.trying", { what: data.trying.change })}</span>
+                <span className={l2}>{t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</span>
+              </span>
+            </button>
+          ) : (
           <div data-thing-row="helps" className={cn(row, "pb-0")}>
             {icon(Sprout, true)}
             <span>
               {part("world4.whatHelps")}
-              {data.trying ? (
-                <>
-                  <span data-thing-trying className={l1}>{t("thing.trying", { what: data.trying.change })}</span>
-                  <span className={l2}>{t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</span>
-                </>
-              ) : (
-                <>
-                  <span className={l1}>{t("thing.tryOne")}</span>
-                  <button type="button" data-thing-try onClick={go(() => (data.lit ? onAct() : onTry(islandOf(tr))))} className="raised-btn mt-3 justify-center">{t("link.tryAsk")}</button>
-                </>
-              )}
+              <span className={l1}>{t("thing.tryOne")}</span>
+              <button type="button" data-thing-try onClick={go(() => (data.lit ? onAct() : onTry(islandOf(tr))))} className="raised-btn mt-3 justify-center">{t("link.tryAsk")}</button>
             </span>
           </div>
+          )}
         </div>
       )}
     </BottomSheet>

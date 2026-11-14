@@ -4,7 +4,7 @@
 // globe's link sheet (LinkSheet).
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { BarChart3, Check, Plus } from "lucide-react";
+import { BarChart3, Check, ChevronRight, FlaskConical, Plus } from "lucide-react";
 import { islandName, islandOf, type IslandId, type Route } from "@/lib/islands";
 import { linkNumbers, linkOtherDays, linkTimesBig, type TrackerOf } from "@/lib/linkText";
 import { getLinkOrder, setLinkOrder, LINK_ORDER_EVENT } from "@/lib/linkOrder";
@@ -247,11 +247,19 @@ export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDa
   }, []);
   if (!a || !b) return null;
   const running = tryOfLink(a.id, b.id);
+  // a try started here is the same try as everywhere else: it lives in What helps (and When to act lists it under
+  // "Your tests"); one row says so and goes there (her note, Nov 14 2026: «там есть вот эти действия, которые я
+  // только что решила сделать в линках, или нет… или они только в What Helps»)
   if (running) return (
-    <div data-link-try="running" className="mt-4 rounded-2xl bg-foreground/[0.05] px-4 py-3">
-      <p className="text-[13px] font-bold text-muted-foreground">{t("link.tryNow")}</p>
+    <div data-link-try="running" className="mt-4 rounded-2xl bg-foreground/[0.05] px-4 pt-3">
+      <p className="flex items-center gap-1.5 text-[13px] font-bold text-[hsl(var(--coin-teal))]"><FlaskConical className="h-4 w-4" strokeWidth={2.4} />{t("link.tryNow")}</p>
       <p className="mt-0.5 text-[17px] font-bold leading-snug">{running.change}</p>
       <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{t("world4.testDay", { k: Math.min(experimentDay(running), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</p>
+      <button type="button" data-link-try-helps onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: running.id } })); }}
+        className="mt-2 flex min-h-12 w-full items-center justify-between gap-2 border-t-[1.5px] border-dotted border-foreground/15 text-left text-[15.5px] font-bold text-[hsl(var(--coin-teal))]">
+        <span className="min-w-0 flex-1">{t("link.inHelps")}</span>
+        <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+      </button>
     </div>
   );
   const chosen = r.nextDay ? a.id : getLinkOrder(a.id, b.id);

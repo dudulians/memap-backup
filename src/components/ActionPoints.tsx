@@ -46,6 +46,7 @@ import { SupportSheet } from "@/components/SupportSheet";
 import { isPlayful } from "@/lib/playful";
 import { alreadyDoing } from "@/lib/alreadyDoing";
 import { ExampleRule, ExampleTest } from "./Examples";
+import { tryFromLines } from "@/lib/linkSeen";
 
 /** "I'll try": the week's test to start, for the screen that holds the sheets. */
 export interface TryAction { island: IslandId; plan: string; trackerId: string; k: number }
@@ -242,6 +243,10 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
   const islandsHere = new Set(trackers.map((tr) => islandOf(tr) as string));
   const tests = runningExperiments().filter((x) => islandsHere.has(x.island) || trackers.some((tr) => tr.id === x.trackerId));
   const lineOf = (x: Experiment) => { const d = experimentDay(x); return d > EXPERIMENT_DAYS ? t("rules.testDone") : t("rules.testing", { k: d, count: EXPERIMENT_DAYS }); };
+  // where each test came from: a link or a card here (Nov 14 2026)
+  const testIds = tests.map((x) => x.id).join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fromOf = useMemo(() => tryFromLines(t, tests, trackers, entries), [testIds, trackers, entries, t]);
   const [testOpen, setTestOpen] = useState<Experiment | null>(null);
   // a finished test opens its result here (QA: "Your test is done: see it on Today" led nowhere)
   const [resultOf, setResultOf] = useState<Experiment | null>(null);
@@ -533,6 +538,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
               <FlaskConical className="h-5 w-5 shrink-0" style={{ color: TEAL }} strokeWidth={2.4} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[16px] font-bold leading-snug">{testNameOf(test.change)}</span>
+                {fromOf.get(test.id) && <span data-try-from className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{fromOf.get(test.id)}</span>}
                 <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(test)}{test.perWeek ? ` · ${t("experiment.weekOf", { k: weekDone(test, entries), n: test.perWeek })}` : ""}</span>
                 {!experimentOver(test) && <span className="mt-0.5 flex items-center gap-1 text-[13px] font-semibold text-muted-foreground"><Bell className="h-3.5 w-3.5" strokeWidth={2.4} />{test.remind ? `${t("experiment.remindAt")} ${clockTime(test.remind)}` : t("experiment.noRemind")}</span>}
               </span>
@@ -760,6 +766,10 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocu
   const [open, setOpen] = useState<Experiment | null>(null);
   const [, setTick] = useState(0);
   const running = runningExperiments();
+  // where each try came from: a link, or a When to act card (Nov 14 2026)
+  const runIds = running.map((x) => x.id).join(",");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fromOf = useMemo(() => tryFromLines(t, running, trackers, entries), [runIds, trackers, entries, t]);
   // opened from a test's push: that test's own card, its step in full (Nov 12 2026)
   useEffect(() => {
     if (!focusId) return;
@@ -798,6 +808,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocu
           <span className="icon-dot h-11 w-11"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[17px] font-bold leading-snug">{testNameOf(x.change)}</span>
+            {fromOf.get(x.id) && <span data-try-from className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{fromOf.get(x.id)}</span>}
             <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{lineOf(x)}</span>
             {x.perWeek && <span className="block text-[14px] font-semibold" style={{ color: TEAL }}>{t("experiment.weekOf", { k: weekDone(x, entries), n: x.perWeek })}</span>}
             {/* a finished test has no reminder to speak of (QA, Nov 8 2026) */}
