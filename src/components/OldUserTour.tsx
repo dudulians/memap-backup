@@ -10,7 +10,8 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { track, useScreen } from "@/lib/analytics";
 import { getEntries, getTrackers } from "@/lib/storage";
-import { buildIslands, buildRoutes, islandName, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
+import { buildIslands, buildRoutes, islandName, linkWorthShowing, LINKS_TOP, mapPic, mapPicFor, type Island, type IslandId, type Route } from "@/lib/islands";
+import { computeCorrelations } from "@/lib/correlations";
 import { islandEvenings } from "@/lib/globeArt";
 import { countedDays } from "@/lib/pathSteps";
 import { litTrackers } from "@/lib/lighthouses";
@@ -31,6 +32,7 @@ const finish = () => { try { localStorage.removeItem(KEY); localStorage.setItem(
 
 interface TourData {
   trackers: Tracker[]; islands: Island[]; routes: Route[];
+  /** every link worth showing: the same count as the World tile */ links: number;
   days: number; evenings: Map<IslandId, number>;
   rules: number; lit: number; questions: number;
 }
@@ -53,7 +55,7 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
       const islands = buildIslands(trackers, entries);
       const active = trackers.filter((x) => !x.archived && x.source !== "play");
       setData({
-        trackers, islands, routes: buildRoutes(trackers, entries, islands),
+        trackers, islands, routes: buildRoutes(trackers, entries, islands), links: computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length,
         days: countedDays(trackers, entries).length, evenings: islandEvenings(trackers, entries),
         rules: active.filter((x) => x.threshold > 0).length, lit: litTrackers(trackers, entries).size, questions: active.length,
       });
@@ -105,7 +107,7 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
               </div>
               <H1>{t("upgrade.hereWorld")}</H1>
               <div className="mt-4 grid grid-cols-3 gap-2">
-                {([[data.days, "upgrade.tileDays"], [data.islands.length, "upgrade.tileIslands"], [data.routes.length, "upgrade.tileLinks"]] as const).map(([n, k]) => (
+                {([[data.days, "upgrade.tileDays"], [data.islands.length, "upgrade.tileIslands"], [data.links, "upgrade.tileLinks"]] as const).map(([n, k]) => (
                   <div key={k} className="surface rounded-[18px] px-2 py-3 text-center">
                     <p className="text-[28px] font-bold leading-none tabular-nums">{n}</p>
                     <p className="mt-1.5 text-[14px] font-semibold text-muted-foreground">{t(k, { count: n })}</p>
@@ -132,7 +134,7 @@ export const OldUserTour = ({ onDone }: { onDone: () => void }) => {
               <div className="mt-6 space-y-2.5">
                 {[
                   { icon: <CalendarDays className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />, title: t("world4.myDays"), line: t("upgrade.partDays", { count: data.days }) },
-                  { icon: <Link2 className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />, title: t("world4.links"), line: data.routes.length ? t("upgrade.partLinks", { count: data.routes.length }) : t("world4.soon") },
+                  { icon: <Link2 className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />, title: t("world4.links"), line: data.links ? t("upgrade.partLinks", { count: data.links }) : t("world4.soon") },
                   { icon: <img src={mapPic("lighthouse")} alt="" width={30} height={34} className="h-8 w-7 object-contain" />, title: t("world4.whenToAct"), line: data.rules ? t("upgrade.partAct", { k: data.lit, count: data.rules }) : t("upgrade.partActNone") },
                   { icon: <FlaskConical className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.2} />, title: t("world4.whatHelps"), line: t("upgrade.partHelps") },
                 ].map((r) => (

@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
-import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, markFillDay, pathModel, skipTask, unskipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
+import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, markFillDay, pathModel, questionGroups, skipTask, unskipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
 import { tipFor } from "@/lib/observeTips";
 import { buildIslands, buildRoutes, LINKS_TOP } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
@@ -204,6 +204,16 @@ export const EveningPath = ({
   }, []);
   // after the first moments of the screen (a "grew" toast uses the same spot)
   const [oldLookShown, setOldLookShown] = useState(false);
+  // the old-look card's height: the missed-days card stands under it in the first week (old-user walk, Nov 14 2026:
+  // the missed days had no card while "Miss the old look?" was up)
+  const [oldH, setOldH] = useState(0);
+  // while "Look around" runs, the old-look card steps aside: the tour's first spotlight landed on it (Nov 14 2026)
+  const [touring, setTouring] = useState(false);
+  useEffect(() => {
+    const on = () => setTouring(true), off = () => setTouring(false);
+    window.addEventListener("memap-start-tour", on); window.addEventListener("memap-tour-done", off);
+    return () => { window.removeEventListener("memap-start-tour", on); window.removeEventListener("memap-tour-done", off); };
+  }, []);
   useEffect(() => { if (!fromOld) return; const id = window.setTimeout(() => setOldLookShown(true), 3200); return () => window.clearTimeout(id); }, [fromOld]);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
   const world = useMemo(() => { const islands = buildIslands(trackers, entries); return { islands, routes: buildRoutes(trackers, entries, islands) }; }, [trackers, entries]);
@@ -267,6 +277,15 @@ export const EveningPath = ({
   const whyPending = useMemo(() => pendingReasons(trackers, entries, isoDay(new Date())), [trackers, entries, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   const whySub = useMemo(() => [...new Set(whyPending.map((e) => reasonName(t, trackers.find((x) => x.id === e.trackerId))))].join(" · "), [whyPending, trackers, t]);
   const [whyItems, setWhyItems] = useState<ReasonItem[] | null>(null);
+  // A missed day from its pale light or the missed-days card is one short step too, like the path's own fill step
+  // (old-user walk, Nov 14 2026: both asked all 9 questions in a row): the first topic step of that day with
+  // something unanswered; yesterday keeps offering its next part on the path.
+  const fillMissed = (date: string) => {
+    const got = new Set(entries.filter((e) => e.date === date).map((e) => e.trackerId));
+    const ids = questionGroups(trackers).map((g) => g.ids).find((g) => g.some((id) => !got.has(id)));
+    if (ids) markFillDay(date);
+    onFillDay(date, false, ids);
+  };
   // Days to fill in (her notes: Nov 6 2026 "дать возможность заполнять за прошлые дни", Nov 9 2026
   // "если чего-то не хватает, можно попросить их дозаполнить"): a calm card with a chip per missed day
   // of the last week (it replaced the "Answer for Thursday" pill, which covered the path's names).
@@ -541,11 +560,11 @@ export const EveningPath = ({
     mid.current = (top + bottom) / 2;
   };
   // the card came or went ("Not now", the last day filled): the middle moves with it
-  const fillCardShown = fillCardOn && !(fromOld && oldLookShown);
+  const fillCardShown = fillCardOn;
   useEffect(() => {
     const main = document.querySelector("main");
     if (main && hasPath) { measure(main); frameRef.current(); }
-  }, [fillCardShown]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fillCardShown, oldH, oldLookShown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     const main = document.querySelector("main");
@@ -879,7 +898,7 @@ export const EveningPath = ({
       return (
         <>
           {head(dayTitle(n.date))}
-          {button(t("path.fillDay"), () => { setOpen(null); onFillDay(n.date); }, "plain")}
+          {button(t("path.fillDay"), () => { setOpen(null); fillMissed(n.date); }, "plain")}
         </>
       );
     }
@@ -1183,8 +1202,8 @@ export const EveningPath = ({
         {/* came from the old look: the way back stays in sight above the tabs (the path
             scrolls to today, so a card in the path would be out of view); at the top, solid,
             away from the "grew" toasts at the bottom */}
-        {fromOld && oldLookShown && (
-          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+        {fromOld && oldLookShown && !touring && (
+          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
             <TipCard id="old-look" title={t("tips.oldLookTitle")} line={t("tips.oldLookLine")} action={t("upgrade.oldLook")} onAction={() => switchToOld("card")}
               secondary={t("upgrade.keepNew")} onSecondary={() => track("ui_kept_new")} className="!bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" />
           </div>
@@ -1208,7 +1227,9 @@ export const EveningPath = ({
           </div>
         )}
         {/* after a few evenings: there is a report for a doctor */}
-        {m.totalDays >= 5 && !heavyMood && (
+        {/* not under the old-look card, which stands over this spot in the first week (old-user walk, Nov 14 2026);
+            the report stays in World → Share */}
+        {m.totalDays >= 5 && !heavyMood && !(fromOld && oldLookShown) && (
           <div className="mx-auto mt-3 w-[92%] max-w-[420px]">
             <TipCard id="report" title={t("tips.reportTitle")} line={t("tips.reportLine")} action={t("tips.reportGo")}
               onAction={() => window.dispatchEvent(new CustomEvent("memap-doctor-report"))} />
@@ -1275,7 +1296,7 @@ export const EveningPath = ({
                 {i === currentNode && open !== i && act && (
                   <StartBubble stop={p} label={v.action ?? t("path.start")} aria={`${v.title}: ${v.action ?? t("path.start")}`} onClick={act} />
                 )}
-                <LightLabel stop={p} text={v.title} dim={v.look === "locked" || v.look === "empty" || lockedGame} below={i === currentNode ? 10 : 0} />
+                <LightLabel stop={p} text={v.title} dim={v.look === "locked" || v.look === "empty" || lockedGame} below={i === currentNode ? 10 : 0} boxW={width} />
                 <PathNode stop={p} look={lockedGame ? "locked" : v.look} hue={v.hue} label={v.title} onClick={() => tap(i)} dataStop={i}
                   refEl={i === focus ? focusRef : undefined} expanded={open === i} wiggle={wiggle === i}>
                   {v.icon}
@@ -1308,14 +1329,14 @@ export const EveningPath = ({
       {/* missed days: a calm card at the top, in sight like the cards above (the path scrolls to today's
           step), solid; a chip per day opens that evening's questions; "Not now" hides it until another
           day is missed. Not while another card holds the spot, or Malu's first tip is up. */}
-      {fillCardOn && !(fromOld && oldLookShown) && !askPlayful && !(orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb)) && (
-        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+      {fillCardOn && !askPlayful && !(orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb)) && (
+        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
           <div data-fill-card role="group" aria-label={t("path.fillCard", { count: missedToFill.length })}
             className="surface relative rounded-[20px] !bg-background p-3.5 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
             <p className="text-[16px] font-bold leading-snug">{t("path.fillCard", { count: missedToFill.length })}</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {missedToFill.map((d) => (
-                <button key={d} type="button" data-fill-day={d} onClick={() => { haptics.tap(); track("fill_day_opened", { ago: Math.round((Date.parse(isoDay(new Date())) - Date.parse(d)) / 864e5), from: "card" }); onFillDay(d); }}
+                <button key={d} type="button" data-fill-day={d} onClick={() => { haptics.tap(); track("fill_day_opened", { ago: Math.round((Date.parse(isoDay(new Date())) - Date.parse(d)) / 864e5), from: "card" }); fillMissed(d); }}
                   className="quiet-btn h-10 px-3.5 tabular-nums">{shortDay(d)}</button>
               ))}
               <button type="button" onClick={() => {
@@ -1374,7 +1395,9 @@ export const EveningPath = ({
 
       {chestOpen && (
         <WeekChest week={chestOpen.week} dates={chestOpen.dates} trackers={trackers} entries={entries}
-          onClose={() => setChestOpen(null)} onPlaced={() => { setChestOpen(null); onOpenMap(); }} />
+          // closing the report counts it as read on the path at once (new-user walk, Nov 14 2026: the step stayed lit
+          // and opened the same report again until something else changed)
+          onClose={() => { setChestOpen(null); setTick((k) => k + 1); }} onPlaced={() => { setChestOpen(null); setTick((k) => k + 1); onOpenMap(); }} />
       )}
     </>
   );

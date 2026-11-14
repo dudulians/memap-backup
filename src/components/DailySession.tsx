@@ -1395,7 +1395,8 @@ export const DailySession = ({
                 : selectedDate === todayLocal()
                 ? t("dailySession.tonight")
                 : (() => {
-                    const s = format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM", { locale: dateLocale });
+                    // a weekday and date the way the rest of the app writes them (walks, Nov 14 2026: «Втр, 17 нояб.» beside «Вт 17»)
+                    const s = new Date(selectedDate + "T12:00:00").toLocaleDateString(getLanguage() === "ru" ? "ru-RU" : "en-US", { weekday: "short", day: "numeric", month: "short" });
                     return s.charAt(0).toUpperCase() + s.slice(1);
                   })()}
               {onDateChange && <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showDates && "rotate-180")} strokeWidth={2.4} />}

@@ -9,7 +9,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { getEntries, getTrackers } from "@/lib/storage";
-import { buildIslands, buildRoutes, mapPic, type Island, type Route } from "@/lib/islands";
+import { buildIslands, buildRoutes, linkWorthShowing, LINKS_TOP, mapPic, type Island, type Route } from "@/lib/islands";
+import { computeCorrelations } from "@/lib/correlations";
 import { countedDays } from "@/lib/pathSteps";
 import { isoLocal } from "@/lib/doors";
 import { haptics } from "@/lib/haptics";
@@ -58,7 +59,7 @@ export const switchToOld = (from: SwitchFrom = "settings") => {
 export const UpgradeInvite = () => {
   const { t } = useTranslation();
   const [stage, setStage] = useState<"hidden" | "invite">("hidden");
-  const [data, setData] = useState<{ trackers: Tracker[]; islands: Island[]; routes: Route[]; days: number } | null>(null);
+  const [data, setData] = useState<{ trackers: Tracker[]; islands: Island[]; routes: Route[]; days: number; links: number } | null>(null);
 
   useEffect(() => {
     let seen = true;
@@ -70,7 +71,9 @@ export const UpgradeInvite = () => {
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
       if (trackers.filter((tr) => !tr.archived).length === 0) return;
       const islands = buildIslands(trackers, entries);
-      setData({ trackers, islands, routes: buildRoutes(trackers, entries, islands), days: countedDays(trackers, entries).length });
+      // links: the same count as the World tile, not only the routes drawn between islands (old-user walk, Nov 14 2026:
+      // the invite said 2, the World a minute later 6)
+      setData({ trackers, islands, routes: buildRoutes(trackers, entries, islands), days: countedDays(trackers, entries).length, links: computeCorrelations(trackers.filter((x) => !x.archived && x.source !== "play"), entries, LINKS_TOP).filter(linkWorthShowing).length });
       setStage("invite");
       // the invite, and whether it's the second ask (two weeks after a "Not now")
       track("ui_invite_shown", { again });
@@ -94,7 +97,7 @@ export const UpgradeInvite = () => {
         <p className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{t("upgrade.worldTitle")}</p>
         {/* their own numbers (board 45: "ask, not force") */}
         <div className="mt-4 grid grid-cols-3 gap-2">
-          {([[data.days, "upgrade.tileDays"], [data.islands.length, "upgrade.tileIslands"], [data.routes.length, "upgrade.tileLinks"]] as const).map(([n, k]) => (
+          {([[data.days, "upgrade.tileDays"], [data.islands.length, "upgrade.tileIslands"], [data.links, "upgrade.tileLinks"]] as const).map(([n, k]) => (
             <div key={k} className="rounded-[18px] bg-white px-2 py-3 shadow-[0_8px_20px_-14px_rgba(16,42,56,0.3)]">
               <p className="text-[28px] font-bold leading-none tabular-nums">{n}</p>
               <p className="mt-1.5 text-[14px] font-semibold text-[hsl(205_20%_40%)]">{t(k, { count: n })}</p>

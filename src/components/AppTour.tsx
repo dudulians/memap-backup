@@ -91,7 +91,9 @@ const Dots = ({ k, n, from = 0.5 }: { k: number; n: number; from?: number }) => 
           ? <span key={i} className="tour-pop h-3 w-3 rounded-full" style={{ background: "hsl(var(--coin-gold))", ...delay(from + i * 0.12) }} />
           : <span key={i} className="h-3 w-3 rounded-full" style={{ background: "hsl(var(--foreground) / 0.12)" }} />)}
       </div>
-      <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{t("tour.yours", { k: Math.min(k, n), n })}</p>
+      {/* someone with enough evenings already (an old user, Nov 14 2026: "You have 10 evenings so far" to 68 evenings)
+          hears that it is enough, not "links usually come in 1–2 weeks" */}
+      <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{k >= n ? t("tour.yoursEnough", { k }) : t("tour.yours", { k, n, count: k })}</p>
     </div>
   );
 };
@@ -515,7 +517,7 @@ export const AppTour = () => {
       <div className="fixed left-4 right-4 mx-auto max-w-[380px]" style={place}>
       <div ref={cardRef} data-tour-card className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", moving && "is-moving")}>
         <p className="text-[22px] font-bold leading-tight tracking-tight">{title}</p>
-        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : stop.id === "you" && !isPlayful() ? "tour.you.linePlain" : `tour.${stop.id}.line`)}</p>
+        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : stop.id === "you" && !isPlayful() ? "tour.you.linePlain" : stop.id === "week" && data.days >= 21 ? "tour.week.lineOpen" : `tour.${stop.id}.line`)}</p>
         {visual}
         {/* where she is in the tour, then Skip and Next on their own line (Russian words are long) */}
         <div className="mt-3.5 flex justify-center gap-1.5" aria-hidden="true">

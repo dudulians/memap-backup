@@ -103,8 +103,10 @@ export const StartBubble = ({ stop, label, aria, onClick }: { stop: Stop; label:
 
 /** A light's name under it (her note, Nov 4 2026: "надо подписывать"), the same
  *  pill as an island's name on the Map; `below` is extra room (tonight's ring). */
-export const LightLabel = ({ stop, text, dim, below = 0 }: { stop: Stop; text: string; dim?: boolean; below?: number }) => (
-  <span aria-hidden="true" className={cn("planet-label path-label", dim && "is-dim")} style={{ left: stop.x, top: stop.y + stop.r + 14 + below }}>
+// `boxW`: the path's width; a long name ("A bit of everything, part 2 of 2") wraps and keeps inside it instead of
+// being cut at the edge (new-user walk, Nov 14 2026)
+export const LightLabel = ({ stop, text, dim, below = 0, boxW }: { stop: Stop; text: string; dim?: boolean; below?: number; boxW?: number }) => (
+  <span aria-hidden="true" className={cn("planet-label path-label", dim && "is-dim")} style={{ left: boxW ? Math.min(Math.max(stop.x, 92), boxW - 92) : stop.x, top: stop.y + stop.r + 14 + below }}>
     <span>{text}</span>
   </span>
 );

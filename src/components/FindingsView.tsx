@@ -157,7 +157,8 @@ export const FindingsView = ({
         {fact && counts && (
           <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] p-[18px]">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{t("doors.echo.soFar")}</p>
-            <p className="mt-2 text-[17px] leading-snug">{factLine(t, fact)}</p>
+            {/* with its subject, as the week report says it (new-user walk, Nov 14 2026: "4 of 4 came on a stressful day.") */}
+            <p className="mt-2 text-[17px] leading-snug">{factLine(t, fact, doorDef ? t(`doors.${doorDef.id}.name`) : undefined)}</p>
             <p className="mt-2 text-[13px] text-emerging">{t("doors.echo.early")}</p>
           </div>
         )}
