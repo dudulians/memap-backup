@@ -15,6 +15,9 @@ export const markTip = (id: string) => { try { const s = read(); if (!s.includes
 /** The tour was walked to its end (else the blocks explain themselves the first time). */
 export const TOUR_DONE_KEY = "memap_tour_completed";
 export const tourCompleted = () => { try { return localStorage.getItem(TOUR_DONE_KEY) === "1"; } catch { return false; } };
+/** The World's part of the tour (Nov 15 2026): it starts by itself the first time the World opens; "1" walked, "skipped". */
+export const WORLD_TOUR_KEY = "memap_tour_world";
+export const worldTourDue = () => { try { return !tourCompleted() && !localStorage.getItem(WORLD_TOUR_KEY); } catch { return false; } };
 
 export const maluPic = () => avatarUrl(getAvatar() ?? DEFAULT_AVATAR);
 

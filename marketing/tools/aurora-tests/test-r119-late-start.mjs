@@ -11,8 +11,8 @@ const errs = [], out = {}, fails = [];
 const ok = (name, cond, info = "") => { out[name] = !!cond; if (!cond) fails.push(`${name} ${typeof info === "string" ? info : JSON.stringify(info)}`.trim()); };
 
 for (const lang of ["en", "ru"]) for (const answered of [true, false]) {
-  const W = lang === "ru" ? { title: /Проверь одно изменение/, start: /^Начать/i, tag: "каждый вечер, с завтрашнего дня", every: "каждый вечер", cont: /^Дальше$/ }
-    : { title: /Test one change/, start: /^Start/i, tag: "every evening, from tomorrow", every: "every evening", cont: /^Continue$/ };
+  const W = lang === "ru" ? { title: /Попробовать одно изменение/, start: /^Начать/i, tag: "каждый вечер, с завтрашнего дня", every: "каждый вечер", cont: /^Дальше$/ }
+    : { title: /Try one change/, start: /^Start/i, tag: "every evening, from tomorrow", every: "every evening", cont: /^Continue$/ };
   const tag = `${lang}.${answered ? "answered" : "not-yet"}`;
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, timezoneId: "Europe/London", locale: lang === "ru" ? "ru-RU" : "en-US" });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(`${lang}: ${e.message}`));

@@ -38,7 +38,7 @@ const setup = async (p, lang, theme, played) => {
   await p.reload(); await p.waitForTimeout(2500);
 };
 const tapLast = async (p, lang, played = false) => {
-  const name = lang === "ru" ? (played ? "На сегодня всё" : "Полопать пузыри") : (played ? "Done for today" : "Pop bubbles"); // v96/v99: the last light of a done day (done after the bubbles)
+  const name = lang === "ru" ? "На сегодня всё" : "Done for today"; // v170: one name for the last light, played or not // v96/v99: the last light of a done day (done after the bubbles)
   await p.locator(`.path-node[aria-label*="${name}"]`).first().click(); await p.waitForTimeout(900);
 };
 for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "aurora-light", true], ["ru", "aurora", true]]) {
@@ -54,7 +54,7 @@ for (const [lang, theme, played] of [["en", "aurora-light", false], ["ru", "auro
   await p.screenshot({ path: `${D}/${tag}-tap.png` });
   out[tag] = await p.evaluate(() => document.querySelector(".path-bubble")?.innerText.replace(/\s+/g, " ") ?? "NO CARD");
   if (tag === "en-day-new") {
-    await p.getByRole("dialog").getByRole("button", { name: "Pop bubbles" }).click(); await p.waitForTimeout(1200);
+    await p.getByRole("dialog").getByRole("button", { name: /^Pop/ }).click(); await p.waitForTimeout(1200);
     out.bubblesOpen = await p.evaluate(() => document.body.innerText.includes("How it works") || document.body.innerText.includes("popped"));
     await p.reload(); await p.waitForTimeout(2200);
     await tapLast(p, lang, true); // after the bubbles the day is done

@@ -268,6 +268,8 @@ const en = {
   // "Time to act" on the path (Nov 2 2026)
   act: {
     step: "When to act",
+    // the path step names what lit (Nov 15 2026)
+    stepOf: "Time to act: {{things}}",
     sub_one: "Time to act on {{count}} question",
     sub_other: "Time to act on {{count}} questions",
     open: "Open",
@@ -304,6 +306,9 @@ const en = {
   // "Why?" reasons (Nov 10 2026, src/lib/reasons.ts): a skippable step, kept in Notes
   why: {
     step: "Why?",
+    // the path step names the thing (Nov 15 2026)
+    stepOf: { "argued-with-partner": "Why the fight?", headache: "Why the headache?", migraine: "Why the migraine?" },
+    answer: "Answer",
     // where, not only "later" (her note, Nov 10 2026: "не понимаю, где их добавлять")
     later: "You can add the reason later: “Why?” on your path.",
     laterOne: "{{name}}: you can add the reason later — “Why?” on your path.",
@@ -333,6 +338,9 @@ const en = {
   },
   tipDay: {
     step: "Worth watching",
+    // the path step names the question of hers the tip is for (Nov 15 2026: «это просто рандомные штуки?»)
+    stepAbout: "About your {{topic}}",
+    topic: { sleep: "sleep", mood: "mood", head: "headaches", energy: "energy", stress: "stress", kids: "kids", work: "work", partner: "relationship", friends: "friends", stomach: "stomach", moving: "moving", focus: "focus", smoking: "smoking", me: "time for yourself" },
     open: "Read",
     because: "For your question:",
     asks: "MeMap would ask every evening:",
@@ -382,7 +390,7 @@ const en = {
     suitcase: { name: "Suitcase", how: "60 days" },
   },
   experiment: {
-    title: "Test one change",
+    title: "Try one change",
     eyebrow: "Testing one change",
     planQ: "Did you do this: “{{plan}}”?",
     replaces: "“{{name}}” is running on this island (day {{k}} of {{count}}). A new test stops it.",
@@ -455,6 +463,9 @@ const en = {
     here: "Test one change here",
     hereLine: "One small change for two weeks",
     stepDone: "Your test is done",
+    // the path step (Nov 15 2026): one word for it everywhere, a try
+    stepOver: "Your 2-week try is over",
+    seeResult: "See result",
     stepSub: "See how it went",
     idea: {
       outsideMorning: { change: "Spend 10 minutes outside in the morning", q: "Were you outside for 10 minutes this morning?", today: "Spend 10 minutes outside this morning" },
@@ -822,9 +833,12 @@ const en = {
     see: "See",
     title: "Your hunch",
     step: "Your hunch",
+    // the step on the path (Nov 15 2026, her note: «your hunch — не понятно что, не нужно добавлять фразу плей»)
+    stepName: "Guess the cause",
+    guess: "Guess",
     sub: "Guess what leads to your hard days",
     go: "Go",
-    checkedSub: "A hunch is checked!",
+    checkedSub: "Your guess is checked",
     checkedKicker: "Your hunch, checked",
     doneToday: "Done for today. MeMap is checking.",
     needTwo: "Opens after you answer your first two questions",
@@ -1620,6 +1634,26 @@ const en = {
     inEvenings_other: "in {{count}} evenings",
     tonightUnlocks: "Tonight opens it",
     reportReady: "Report ready",
+    // one name for the week's report on the path, with its week (Nov 15 2026)
+    weekNReport: "Week {{n}} report",
+    reportReadySub: "Ready",
+    reportIn_one: "in {{count}} evening",
+    reportIn_other: "in {{count}} evenings",
+    quietWeekN: "Week {{n}}: a quiet week",
+    // a question added today: its own step (Nov 15 2026, her note: «не очевидно, что это доп. вопрос»)
+    newQuestion_one: "Your new question",
+    newQuestion_other: "Your {{count}} new questions",
+    fillYesterdayDay: "Yesterday, {{day}}",
+    fillDayTitle: "Fill in {{day}}",
+    notFilled: "Not filled",
+    // the week strip on top of Today (Nov 15 2026)
+    stripToday: "Today · {{day}}",
+    stripSteps_one: "{{count}} step · {{done}} done",
+    stripSteps_other: "{{count}} steps · {{done}} done",
+    stripDone_one: "Done · {{count}} answer",
+    stripDone_other: "Done · {{count}} answers",
+    stripMissed: "Not filled · tap to fill in",
+    stripAhead: "Opens later",
     openReport: "Open",
     doneTonight: "Evening saved. See you tomorrow.",
     logNow: "Happened just now?",
@@ -1685,15 +1719,15 @@ const en = {
     mixed: "A bit of everything",
     inDays_one: "In {{count}} day",
     inDays_other: "In {{count}} days",
-    auto: { topic: "Your topic", topicBubble: "Your topic: {{name}}", first: "First answer", firstBubble: "First answer saved" },
+    auto: { topic: "Your topic", topicBubble: "Your topic: {{name}}", first: "First answer", firstBubble: "First answer saved", start: "Your start", startLine: "Your topics and your first answers are in" },
     task: {
       note: { title: "Write a note", line: "Anything about today" },
-      calendar: { title: "Your calendar", line: "All your days at a glance" },
+      calendar: { title: "See your days", line: "All your days at a glance" },
       ownQuestion: { title: "Add a question", line: "Something you want to watch" },
-      chart: { title: "Look at a chart", line: "How things change" },
+      chart: { title: "See a chart", line: "How things change" },
       map: { title: "Open your world", line: "Your topics as islands" },
       newIsland: { title: "Open a new island", line: "A new topic to explore" },
-      experiment: { title: "Test one change", line: "One small change for two weeks" },
+      experiment: { title: "Try one change", line: "One small change for two weeks" },
     },
     go: "Go",
     done: "Done",
@@ -1732,7 +1766,7 @@ const en = {
     start: "Start",
     continue: "Continue",
     partsDone: "{{done}} of {{count}} done",
-    grew: "Your {{name}} island grew",
+    grew: "{{name}} grew",
     grewMany: "Your islands grew",
     stage1: "Discovered",
     stage2: "Growing",
@@ -1841,13 +1875,13 @@ const en = {
       action: "What's next?",
       left_one: "{{count}} step to go",
       left_other: "{{count}} steps to go",
-      titleAhead: "The end of today's path",
+      titleAhead: "Done for today",
       notYet_one: "Pop bubbles any time, a calm way to clear your head. Your last step today can wait: tonight is fine.",
       notYet_other: "Pop bubbles any time, a calm way to clear your head. Your {{count}} steps today can wait: tonight is fine.",
       notYetEvening_one: "Pop bubbles any time, a calm way to clear your head. One step left today.",
       notYetEvening_other: "Pop bubbles any time, a calm way to clear your head. {{count}} steps left today.",
-      playTitle: "Pop bubbles",
-      playAction: "Play",
+      playTitle: "Done for today",
+      playAction: "Pop",
     },
     answers_one: "{{count}} answer",
     answers_other: "{{count}} answers",
@@ -2680,7 +2714,7 @@ const en = {
     act: "From When to act: {{q}}",
   },
   firstLink: {
-    step: "Your first link!",
+    step: "Your first link",
     newStep: "New link",
     newSub: "Found in your own days",
     sub: "Something comes before something",
@@ -2707,6 +2741,14 @@ const en = {
     links: { title: "Your links", line: "Dots between two islands show what comes before what.", sample: "{{k}} of {{n}} times", a: "Short sleep", b: "Headache" },
     calendar: { line: "Every day is a dot. Tap to see your month." },
     week: { line: "Each week opens the next part of your world.", lineOpen: "All four parts of your world are open." },
+    // the week strip on top of Today (Nov 15 2026)
+    strip: { title: "Your week", line: "Tap a day to go to it. An empty one, to fill it in.", done: "Done", missed: "Not filled", today: "Today" },
+    // the World tab, lit from Today: the tour no longer jumps there (Nov 15 2026)
+    // the World's part (board F): her islands, then the four parts on top
+    isle: { title: "Every topic is an island", line: "Tap an island to see each question: its days, links and what helps." },
+    parts: { title: "These open as evenings add up", line_one: "My days now, links in about {{count}} evening, then when to act and what helps.", line_other: "My days now, links in about {{count}} evenings, then when to act and what helps.", lineOpen: "My days, links, when to act and what helps: they fill in as evenings add up." },
+    // over the World tab once it glows (board F)
+    worldReady: "Your world is ready — tap World",
     steps: { title: "Today's steps", line: "A few small steps a day, top to bottom. The lit one is next — tap it.", done: "Done", now: "Now", later: "Later" },
     chart: { title: "Your weeks", line: "See if your weeks get better.", sample: "Hard days a week" },
     actions: { line: "Set your rule. When it's reached, the lighthouse lights up.", sample: "If 3 nights in a week are hard, put screens away after 10 pm." },

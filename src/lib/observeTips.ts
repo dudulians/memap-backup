@@ -84,6 +84,23 @@ export const TIP_ABOUT: Record<string, string[]> = {
   "less-caffeine-than-usual": [...HEAD, "felt-fatigued", "had-energy"],
 };
 
+/** The word for her question a tip is for, in the step's name ("About your sleep", Nov 15 2026): by the question's
+ *  library id; none = the step keeps its old name. */
+const TOPIC_OF: Record<string, string> = {};
+const topicOfAll = (ids: string[], key: string) => ids.forEach((id) => { TOPIC_OF[id] = key; });
+topicOfAll(SLEEP, "sleep"); topicOfAll(MOOD, "mood"); topicOfAll(HEAD, "head"); topicOfAll(KIDS, "kids");
+topicOfAll(["had-energy", "felt-fatigued"], "energy");
+topicOfAll(["felt-stressed", "felt-anxious", "panic-attack"], "stress");
+topicOfAll(["heartburn", "stomach-issues"], "stomach");
+topicOfAll(["exercised", "outside-30min"], "moving");
+topicOfAll(["felt-lonely", "isolated-at-home"], "friends");
+topicOfAll(["felt-lonely-with-partner", "felt-close-to-partner", "partner-irritated-me", "good-time-together"], "partner");
+topicOfAll(["main-thing-done", "focus-hour", "felt-useless"], "focus");
+topicOfAll(["snapped-at-loved-ones", "didnt-want-to-work", "worked-overtime"], "work");
+topicOfAll(["smoked-hookah"], "smoking");
+topicOfAll(["time-for-myself"], "me");
+export const tipTopicOf = (templateId: string): string | null => TOPIC_OF[templateId] ?? null;
+
 const reasonsFor = (mine: Tracker[]) => {
   const ids = new Map<string, string>(); // her template id → her tracker id
   for (const t of mine) { const id = templateIdOf(t); if (id && !ids.has(id)) ids.set(id, t.id); }

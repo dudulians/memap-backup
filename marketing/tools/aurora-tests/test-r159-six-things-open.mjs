@@ -48,7 +48,7 @@ out["today"] = (await mainText()).slice(0, 700);
 let r = await step("Write a note"); let t = await top(); await p.screenshot({ path: `${D}/1-note.png` });
 check("1. Write a note opens the note", r.found && /note|Note/.test(t) , { r, t }); await p.keyboard.press("Escape"); await p.waitForTimeout(800);
 
-await seed(); r = await step("Your hunch"); t = await top(); const body2 = (await p.evaluate(() => document.body.innerText)).slice(0, 4000); await p.screenshot({ path: `${D}/2-hunch.png` });
+await seed(); r = await step("Guess the cause"); /* v170: the hunch step is "Guess the cause" */ t = await top(); const body2 = (await p.evaluate(() => document.body.innerText)).slice(0, 4000); await p.screenshot({ path: `${D}/2-hunch.png` });
 check("2. Your hunch opens the game", r.found && /hunch|Hunch|guess|Guess/.test(t + body2.slice(0, 1500)), { r, t });
 
 // 3 and 4 live on the card of "The end of today's path" once the evening is answered (the bubbles are no step of their own)

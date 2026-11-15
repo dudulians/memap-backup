@@ -44,14 +44,15 @@ await sample();
 await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-start-tour")));
 await p.waitForTimeout(250); await p.screenshot({ path: `${D}/start-250ms.png` });
 await read("start");
-for (let k = 0; k < 7; k++) {
+// v170: Today's part of the tour is two cards (the World has its own part)
+for (let k = 0; k < 1; k++) {
   await p.screenshot({ path: `${D}/stop${k}.png` });
   await sample();
   await p.locator("[data-tour-card] button").last().click();
   await p.waitForTimeout(140); await p.screenshot({ path: `${D}/stop${k}-to-${k + 1}-140ms.png` });
   await read(`stop ${k} → ${k + 1}`);
 }
-await p.screenshot({ path: `${D}/stop7.png` });
+await p.screenshot({ path: `${D}/stop1.png` });
 await p.locator("[data-tour-card] button").last().click(); await p.waitForTimeout(900);
 out.after = await p.evaluate(() => ({ tour: !!document.querySelector(".tour"), view: localStorage.getItem("memap_map_view"), tab: document.querySelector("nav [aria-current=page]")?.textContent }));
 console.log(JSON.stringify({ ...out, errs }, null, 1));

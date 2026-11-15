@@ -5,7 +5,7 @@
 // Charts / Limits (the old Patterns, just for that island). "World" shows
 // the same for everything. One view only: the rolling globe is gone (her
 // note, Nov 2: two ways into the map were confusing).
-import { TipCard, tipSeen, tourCompleted } from "./Tips";
+import { TipCard, tipSeen, tourCompleted, worldTourDue } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ListChecks, Pencil, Plus, Share2 } from "lucide-react";
@@ -324,7 +324,13 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
     if (first) setTestFor(first);
   };
   // no tour walked (variant C, or skipped): the World says once what it is; the globe's "turn me" line waits for it
-  const [worldTip, setWorldTip] = useState(() => !tourCompleted() && !tipSeen("block:world"));
+  const [worldTip, setWorldTip] = useState(() => !tourCompleted() && !tipSeen("block:world") && !worldTourDue());
+  // the World's part of the tour, the first time she opens the World on its globe with something on it (Nov 15 2026)
+  useEffect(() => {
+    if (!loaded || !worldTourDue() || only || thing || open || helpsOpen || !islands.some((i) => i.trackerIds.length > 0)) return;
+    const id = window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-start-tour", { detail: { part: "world" } })), 450);
+    return () => window.clearTimeout(id);
+  }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   const onlyTitle = (o: Only) => t(o === "findings" || o === "linkchart" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");
 
   return (

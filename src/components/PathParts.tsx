@@ -187,16 +187,16 @@ export const WeekStrip = ({
           if (i === DAYS_PER_WEEK && kind === "past" && quiet && !chest) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
-                <QuietLine stop={p} text={t("path.quietWeek")} />
+                <QuietLine stop={p} text={t("path.quietWeekN", { n: week + 1 })} />
               </div>
             );
           }
           if (i === DAYS_PER_WEEK) {
             return (
               <div key={i} data-wheel data-cy={p.y} style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
-                <LightLabel stop={p} text={t("path.weekReport")} dim={kind === "coming"} />
+                <LightLabel stop={p} text={t("path.weekNReport", { n: week + 1 })} dim={kind === "coming"} />
                 {/* gold = opened; a report not opened yet stays lit, not "done" (QA re-check, Nov 9 2026) */}
-                <PathNode stop={p} look={kind === "past" ? (chest ? "gold" : "todo") : "locked"} hue="var(--coin-gold)" label={t("path.weekReport")} onClick={kind === "past" ? onOpenChest : undefined}>
+                <PathNode stop={p} look={kind === "past" ? (chest ? "gold" : "todo") : "locked"} hue="var(--coin-gold)" label={t("path.weekNReport", { n: week + 1 })} onClick={kind === "past" ? onOpenChest : undefined}>
                   <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />
                 </PathNode>
               </div>

@@ -10,6 +10,7 @@ import { templateIdOf } from "./answerPhrases";
 import { Tracker, TrackerEntry, askedOn } from "@/types/tracker";
 import { buildIslands, buildRoutes, islandOf, linkWorthShowing, LINKS_TOP, type IslandId } from "@/lib/islands";
 import { computeCorrelations } from "@/lib/correlations";
+import { linkOf } from "@/lib/islands";
 import { pairOf } from "@/lib/findingForms";
 import { newLinkState } from "@/lib/newLinks";
 import { firstLinkState } from "@/lib/firstLink";
@@ -47,7 +48,8 @@ const MIN_PER_STEP = 3;
 export type TaskId = "note" | "calendar" | "ownQuestion" | "chart" | "map" | "newIsland" | "experiment";
 /** Week 1 teaches the app; later weeks open new islands, after her own. The
  *  calendar and the chart are shown by the "discover" steps now (Nov 5 2026). */
-const TASKS_WEEK1: TaskId[] = ["note", "ownQuestion", "map"];
+// "Open your world" is gone (Nov 15 2026): the World tab glows by itself when it is time
+const TASKS_WEEK1: TaskId[] = ["note", "ownQuestion"];
 
 /** "Look around" after the first questions: a tour of the real pages
  *  (src/components/AppTour.tsx). It replaced three pop-up cards (links, days,
@@ -93,7 +95,9 @@ export interface Step {
   date?: string;
   /** task: skipped for today */
   skipped?: boolean;
-  auto?: "topic" | "firstAnswer";
+  auto?: "topic" | "firstAnswer" | "start";
+  /** link:new: the link's two answers, so the step can say what goes with what (Nov 15 2026) */
+  sides?: { first: string; firstYes: boolean; second: string; secondYes: boolean };
   /** the topic; none for a mixed step */
   island?: IslandId;
   /** "all" = every question fits one step; "rest" = the small topics together */
@@ -660,11 +664,10 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // Day 1 after onboarding: steps already green. They are never "to do":
   // "First answer" shows only once onboarding saved one.
   const door = getDoorState();
+  // her topics and first answers are one light, "Your start" (her note, Nov 15 2026: «кнопки, которые стали жёлтыми,
+  // стали одинаковыми и непонятными»)
   if (door && door.startedAt === today) {
-    steps.push({ id: "auto:topic", kind: "auto", auto: "topic", trackerIds: [door.trackerId], answered: 0, done: true });
-    if (entries.some((e) => e.date <= today)) {
-      steps.push({ id: "auto:first", kind: "auto", auto: "firstAnswer", trackerIds: [], answered: 0, done: true });
-    }
+    steps.push({ id: "auto:start", kind: "auto", auto: "start", trackerIds: [door.trackerId], answered: 0, done: true });
   }
 
   // A missed day first (her note: someone opening the app in the morning
@@ -740,10 +743,14 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   // stays as done. On a day with them, no task (day 1 isn't longer).
   const seen = readDiscover();
   // variant C (Nov 8 2026) has no tour: the pages explain themselves on the first tap (Tips.tsx)
-  const discover = hasQuestions && onbVariant() !== "C" ? DISCOVER.filter((d) => !seen[d] || seen[d] === today) : [];
+  // no "Look around" step any more (her note, Nov 15 2026: the tour jumped Today → World → Today): the Today tour
+  // shows itself once on Today, the World's when she first opens the World (AppTour parts)
+  void seen; void DISCOVER; void onbVariant;
+  const discover: DiscoverId[] = [];
   for (const d of discover) steps.push({ id: `discover:${d}`, kind: "discover", discover: d, trackerIds: [], answered: 0, done: seen[d] === today });
   const discovering = discover.length > 0;
-  const task = discovering ? null : taskForToday(week, today);
+  // the first day has no task (it is long enough)
+  const task = discovering || (door && door.startedAt === today) ? null : taskForToday(week, today);
   if (task && hasQuestions) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
@@ -802,22 +809,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     if (!step.done || kept < 0) saveAddedAnchor(today, steps[at]?.id ?? "end");
     steps.splice(at, 0, step);
   }
-  // Day 1 with "yesterday" picked (her question, Nov 8 2026: "если я заполнила вопросы за yesterday,
-  // а потом ханч дал мне заполнить два-три новых вопроса — за вчера или за сегодня?"): questions
-  // added that morning are asked for yesterday too, so yesterday stays one whole day; tonight they
-  // come with the rest of today's.
-  let pickedYesterday = false;
-  try { pickedYesterday = localStorage.getItem("memap_first_day_pick") === "yesterday"; } catch { /* ignore */ }
-  if (dayOneMorning && pickedYesterday && addedIds.length > 0) {
-    const y = isoLocal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
-    if (!steps.some((s) => s.id === `fill:${y}`)) {
-      const gotY = new Set(entries.filter((e) => e.date === y).map((e) => e.trackerId));
-      const answeredY = addedIds.filter((id) => gotY.has(id)).length;
-      const at = steps.findIndex((s) => s.id === "q:added" || s.kind === "questions");
-      const fill: Step = { id: `fill:${y}`, kind: "fill", date: y, trackerIds: addedIds, answered: answeredY, done: answeredY === addedIds.length, onPath: true };
-      steps.splice(at >= 0 ? at : steps.length, 0, fill);
-    }
-  }
+  // A question added in the morning after yesterday was filled starts tonight: no second "Yesterday" step (her note,
+  // Nov 15 2026: «появляется шаг опять yesterday questions, и это сбивает с толку»; it reverses the Nov 8 rule that asked
+  // it for yesterday too)
   // Her first link (Nov 6 2026): where the boat is, the day it's found; seen = done.
   const fl = entries.length > 0 ? firstLinkState(buildRoutes(trackers, entries, buildIslands(trackers, entries)), true) : { route: null, seenToday: false };
   if (fl.route || fl.seenToday) {
@@ -834,7 +828,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     const nl = newLinkState(found.map(pairOf));
     if (nl.fresh.length > 0 || nl.seenToday) {
       const c = found.find((x) => pairOf(x) === nl.fresh[0]);
-      const step: Step = { id: "link:new", kind: "link", trackerIds: c ? [c.trackerA.id, c.trackerB.id] : [], answered: 0, done: nl.fresh.length === 0 };
+      const l = c ? linkOf(c) : null;
+      const step: Step = { id: "link:new", kind: "link", trackerIds: c ? [c.trackerA.id, c.trackerB.id] : [], answered: 0, done: nl.fresh.length === 0,
+        ...(l ? { sides: { first: l.first.id, firstYes: l.firstYes, second: l.second.id, secondYes: l.secondYes } } : {}) };
       let boat = steps.findIndex((s) => !s.done && s.kind !== "unload");
       if (boat >= 0 && steps[boat].kind === "report") boat += 1;
       let lastQ = -1; steps.forEach((s, i) => { if (s.kind === "questions") lastQ = i; });

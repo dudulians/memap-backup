@@ -33,7 +33,10 @@ import { haptics } from "@/lib/haptics";
 import { playWheelTick, preloadSounds } from "@/lib/feedback";
 import { isoDay } from "@/lib/eveningPath";
 import { DAYS_PER_WEEK, LINKS_AT, countedDays, getChests, markActSeen, markFillDay, pathModel, questionGroups, skipTask, unskipTask, syncTasks, unloadPlayedToday, type Step, type TaskId } from "@/lib/pathSteps";
-import { tipFor } from "@/lib/observeTips";
+import { tipFor, tipTopicOf } from "@/lib/observeTips";
+import { answerPhrase } from "@/lib/answerPhrases";
+import { cardQuestion } from "@/lib/cardText";
+import { reasonTemplate } from "@/lib/reasons";
 import { buildIslands, buildRoutes, LINKS_TOP } from "@/lib/islands";
 import { ITEMS, itemProgress, owned, worldFacts, type ItemId } from "@/lib/growth";
 import { ExperimentSheet } from "@/components/ExperimentSheet";
@@ -43,7 +46,7 @@ import { testNameOf } from "@/lib/testWords";
 import { computeCorrelations } from "@/lib/correlations";
 import { linkWorthShowing } from "@/lib/islands";
 import { litTrackers, needOf } from "@/lib/lighthouses";
-import { isHardAnswer, isNeutralQuestion, islandDef, islandName, mapPicFor, type IslandId } from "@/lib/islands";
+import { isHardAnswer, isNeutralQuestion, islandDef, islandName, islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt";
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
@@ -308,7 +311,8 @@ export const EveningPath = ({
   const missedToFill = useMemo(() => {
     const door = getDoorState();
     if (entries.length === 0 || m.steps.some((s) => s.onPath) || firstDayTonight() || door?.startedAt === isoDay(new Date())) return [];
-    return m.missedDays;
+    // this week's missed days are on the week strip (hollow, "tap to fill in"): the card keeps only the days before it
+    return m.missedDays.filter((d) => d < m.weekDates[0]);
   }, [m, entries]);
   const fillCardOn = missedToFill.length > 0 && missedToFill.some((d) => !fillHidden.includes(d));
   const nodes: PNode[] = useMemo(() => {
@@ -374,24 +378,45 @@ export const EveningPath = ({
     const ids = new Set(active.map((tr) => tr.id));
     return new Set(entries.filter((e) => e.date === date && ids.has(e.trackerId)).map((e) => e.trackerId)).size;
   };
+  // Step names say what the step is about (her notes collected Nov 15 2026, step-names page): the islands of the
+  // questions, not "part 1 of 2"; the thing a hunch, a "Why?", a tip or a lit rule is about; one word, "try"
+  const byIdTr = (id: string) => trackers.find((x) => x.id === id);
+  const lowFirst = (s: string) => (s ? s.charAt(0).toLocaleLowerCase(lang) + s.slice(1) : s);
+  const islandsLabel = (ids: string[]) => {
+    const names = [...new Set(ids.map(byIdTr).filter((x): x is Tracker => !!x).map((tr) => islandName(t, islandOf(tr))))];
+    return names.length <= 2 ? names.join(" · ") : `${names.slice(0, 2).join(" · ")} +${names.length - 2}`;
+  };
+  /** the hard answer of a question in its own short words ("argument with partner") */
+  const hardWords = (tr: Tracker | undefined) => (tr ? answerPhrase(t, tr, tr.problemWhen !== "no") : "");
+  // the Russian weekday as it reads after «Заполнить» (пятницу, субботу, среду)
+  const RU_ACC: Record<string, string> = { "среда": "среду", "пятница": "пятницу", "суббота": "субботу" };
+  const dayToFill = (iso: string) => { const w = weekdayName(iso); return lang === "ru-RU" ? RU_ACC[w] ?? w : cap(w); };
+  const tipTopic = (id?: string) => { const tr = id ? byIdTr(tipFor(id) ?? "") : undefined; return tr ? tipTopicOf(moodTemplateOf(tr) ?? "") : null; };
+  const whyOf = (s: Step) => { const ids = [...new Set(s.trackerIds.map((id) => reasonTemplate(byIdTr(id))).filter(Boolean))]; return ids.length === 1 ? ids[0] as string : null; };
   const stepName = (s: Step) => {
-    if (s.kind === "auto") return t(s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
+    if (s.kind === "auto") return t(s.auto === "start" ? "path.auto.start" : s.auto === "topic" ? "path.auto.topic" : "path.auto.first");
     if (s.kind === "grew") return (s.grew?.length ?? 1) > 1 ? t("path.grewMany") : t("path.grew", { name: islandName(t, s.island!) });
-    if (s.kind === "fill") { const name = s.onPath ? t("path.fillYesterday") : t("path.fillTitle", { day: weekdayName(s.date!) }); return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name; }
-    if (s.kind === "game") return t("hunch.step");
-    if (s.kind === "act") return t("act.step");
-    if (s.kind === "test") return t("experiment.stepDone");
+    if (s.kind === "fill") {
+      if (s.onPath) return t("path.fillYesterdayDay", { day: lang === "ru-RU" ? lowFirst(shortDay(s.date!)) : shortDay(s.date!) });
+      const where = islandsLabel(s.trackerIds);
+      return `${t("path.fillDayTitle", { day: dayToFill(s.date!) })}${where ? ` · ${where}` : ""}`;
+    }
+    if (s.kind === "game") return t("hunch.stepName");
+    if (s.kind === "act") {
+      const things = s.trackerIds.map((id) => lowFirst(hardWords(byIdTr(id)))).filter(Boolean);
+      return things.length ? t("act.stepOf", { things: things.length <= 2 ? things.join(", ") : `${things.slice(0, 2).join(", ")} +${things.length - 2}` }) : t("act.step");
+    }
+    if (s.kind === "test") return t("experiment.stepOver");
     if (s.kind === "unload") return t("unload.step");
     if (s.kind === "task") return t(`path.task.${s.task}.title`);
     if (s.kind === "discover") return t("tour.step");
     if (s.id === "link:new") return t("firstLink.newStep");
     if (s.kind === "link") return t("firstLink.step");
-    if (s.kind === "report") return t("path.lastReport");
-    if (s.kind === "tip") return t("tipDay.step");
-    if (s.kind === "why") return t("why.step");
-    if (s.added) return t("path.newQuestionsTitle");
-    const name = s.island ? islandName(t, s.island) : t(s.mixed === "all" ? "path.allQuestions" : "path.mixed");
-    return s.part ? t("path.part", { name, k: s.part[0], n: s.part[1] }) : name;
+    if (s.kind === "report") return t("path.weekNReport", { n: Math.max(1, m.week) });
+    if (s.kind === "tip") { const k = tipTopic(s.tipId); return k ? t("tipDay.stepAbout", { topic: t(`tipDay.topic.${k}`) }) : t("tipDay.step"); }
+    if (s.kind === "why") { const w = whyOf(s); return w ? t(`why.stepOf.${w}`) : t("why.step"); }
+    if (s.added) return t("path.newQuestion", { count: s.trackerIds.length });
+    return islandsLabel(s.trackerIds) || (s.island ? islandName(t, s.island) : t("path.allQuestions"));
   };
 
   /** What a node looks like and says. */
@@ -414,18 +439,20 @@ export const EveningPath = ({
   const viewOf = (n: PNode, i: number): { look: NodeLook; icon: ReactNode; title: string; sub?: string; action?: string; hue?: string } => {
     const current = i === currentNode;
     if (n.kind === "past") return { look: "done", icon: <Check className="h-6 w-6" strokeWidth={3} />, title: cap(weekdayName(n.date)) };
-    if (n.kind === "missed") return { look: "empty", icon: null, title: cap(weekdayName(n.date)) };
+    if (n.kind === "missed") return { look: "empty", icon: null, title: cap(weekdayName(n.date)), sub: t("path.notFilled") };
     if (n.kind === "future") {
       return { look: "locked", hue: DAY_AHEAD, icon: <MoonStar className="h-6 w-6" strokeWidth={2} />, title: n.offset === 1 ? t("path.tomorrow") : cap(addDays(new Date(), n.offset).toLocaleDateString(lang, { weekday: "long" })) };
     }
     if (n.kind === "chest") {
-      if (quietChest) return { look: "locked", icon: null, title: t("path.quietWeek") };
+      // one name with its week (Nov 15 2026): "Week 1 report", ready or in N evenings under it
+      const wr = t("path.weekNReport", { n: m.week + 1 });
+      if (quietChest) return { look: "locked", icon: null, title: t("path.quietWeekN", { n: m.week + 1 }) };
       // gold only once it's been opened: gold is what's done (her note, Nov 10 2026: "Report ready сразу жёлтая — это
       // путает, жёлтые я вообще не хочу открывать"); ready and not opened looks like a step to do
-      if (chestHere) return { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.weekReport") };
+      if (chestHere) return { look: "gold", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: wr };
       return m.weekComplete
-        ? { look: currentNode < 0 ? "current" : "todo", hue: "var(--coin-teal)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: t("path.reportReady"), action: currentNode < 0 ? t("path.openReport") : undefined }
-        : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: reportLabel };
+        ? { look: currentNode < 0 ? "current" : "todo", hue: "var(--coin-teal)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: wr, sub: t("path.reportReadySub"), action: currentNode < 0 ? t("path.openReport") : undefined }
+        : { look: "locked", hue: "var(--coin-gold)", icon: <FileBarChart2 className="h-7 w-7" strokeWidth={2.2} />, title: wr, sub: m.reportIn ? t("path.reportIn", { count: m.reportIn }) : undefined };
     }
     if (n.kind === "end") {
       // the day is done: the last light is the bubbles (Nov 8 2026)
@@ -453,17 +480,24 @@ export const EveningPath = ({
       const moon = <MoonStar className={current ? "h-10 w-10" : "h-6 w-6"} strokeWidth={2} />;
       return { look, icon: moon, hue, title: stepName(s), sub: t("path.tonightSub"), action: current ? t("path.answerNow") : undefined };
     }
-    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "why" && !s.done ? whySub : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : s.added && !s.done ? t("path.questions", { count: s.trackerIds.length - s.answered }) : s.fresh && !s.done ? t("path.newIsland") : undefined };
+    // what each step is about, under its name (Nov 15 2026): the thing guessed at, the try that ended, the two answers
+    // of a new link, the one question just added
+    const hunchThing = hardWords(hunchTarget(trackers, entries) ?? undefined);
+    const overTry = s.kind === "test" ? runningExperiments().find((x) => experimentOver(x)) : undefined;
+    const linkSides = s.sides ? `${cap(answerPhrase(t, byIdTr(s.sides.first), s.sides.firstYes))} · ${cap(answerPhrase(t, byIdTr(s.sides.second), s.sides.secondYes))}` : null;
+    const addedSub = s.added && !s.done ? (s.trackerIds.length - s.answered === 1 && s.trackerIds.length === 1 ? cardQuestion(byIdTr(s.trackerIds[0])!) : t("path.questions", { count: s.trackerIds.length - s.answered })) : undefined;
+    if (!current) return { look, icon, hue, title: stepName(s), sub: s.skipped ? t("path.skipped") : s.kind === "why" && !s.done ? whySub : s.kind === "game" && hunchReady ? t("hunch.checkedSub") : s.kind === "unload" ? t("unload.sub") : addedSub ?? (s.fresh && !s.done ? t("path.newIsland") : undefined) };
     const left = s.trackerIds.length - s.answered;
-    if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("path.go") };
-    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : t("hunch.sub"), action: hunchReady ? t("hunch.see") : playWord };
+    if (s.kind === "task") return { look, icon, hue, title: stepName(s), sub: t(`path.task.${s.task}.line`), action: t("act.open") };
+    if (s.kind === "game") return { look, icon, hue, title: stepName(s), sub: hunchReady ? t("hunch.checkedSub") : cap(hunchThing) || t("hunch.sub"), action: hunchReady ? t("hunch.see") : t("hunch.guess") };
     if (s.kind === "act") return { look, icon, hue, title: stepName(s), sub: t("act.sub", { count: s.trackerIds.length }), action: t("act.open") };
-    if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: t("experiment.stepSub"), action: t("hunch.see") };
+    if (s.kind === "test") return { look, icon, hue, title: stepName(s), sub: overTry ? testNameOf(overTry.change) : t("experiment.stepSub"), action: t("experiment.seeResult") };
     if (s.kind === "unload") return { look, icon, hue, title: stepName(s), sub: t("unload.sub"), action: playWord };
     if (s.kind === "discover") return { look, icon, hue, title: stepName(s), sub: t("tour.stepSub"), action: t("tour.go") };
     if (s.kind === "tip") return { look, icon, hue, title: stepName(s), sub: tipTitle(s.tipId), action: t("tipDay.open") };
-    if (s.kind === "why") return { look, icon, hue, title: stepName(s), sub: whySub, action: t("why.add") };
-    if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: t(s.id === "link:new" ? "firstLink.newSub" : "firstLink.sub"), action: t("firstLink.see") };
+    if (s.kind === "why") return { look, icon, hue, title: stepName(s), sub: whySub, action: t("why.answer") };
+    if (s.kind === "link") return { look, icon, hue, title: stepName(s), sub: linkSides ?? t(s.id === "link:new" ? "firstLink.newSub" : "firstLink.sub"), action: t("firstLink.see") };
+    if (s.added) return { look, icon, hue, title: stepName(s), sub: addedSub, action: s.answered > 0 ? t("path.continue") : t("why.answer") };
     return {
       look, icon, hue, title: stepName(s),
       sub: s.answered > 0 ? t("path.left", { count: left }) : t("path.questions", { count: left }),
@@ -558,6 +592,12 @@ export const EveningPath = ({
   const frameRef = useRef<() => void>(() => undefined);
   const reduceQuery = () => matchMedia("(prefers-reduced-motion: reduce)");
   const [away, setAway] = useState<"up" | "down" | null>(null);
+  // the week strip on top: the day of the light in the middle of the screen, and the strip's height (the cards
+  // that stand at the top go under it)
+  const [inViewDate, setInViewDate] = useState<string | null>(null);
+  const [stripH, setStripH] = useState(0);
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const pinRef = useRef<string | null>(null);
   const awayRef = useRef<"up" | "down" | null>(null);
   const hasPath = trackers.length > 0;
   const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
@@ -568,8 +608,8 @@ export const EveningPath = ({
   const measure = (main: HTMLElement) => {
     const cs = getComputedStyle(main);
     const bottom = main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0);
-    const card = fillCardRef.current?.getBoundingClientRect();
-    const top = card ? Math.max(0, card.bottom - main.getBoundingClientRect().top + 12) : 0;
+    const mt = main.getBoundingClientRect().top;
+    const top = Math.max(0, ...[fillCardRef.current, stripRef.current].map((el) => (el ? el.getBoundingClientRect().bottom - mt + 12 : 0)));
     mid.current = (top + bottom) / 2;
   };
   // the card came or went ("Not now", the last day filled): the middle moves with it
@@ -577,7 +617,7 @@ export const EveningPath = ({
   useEffect(() => {
     const main = document.querySelector("main");
     if (main && hasPath) { measure(main); frameRef.current(); }
-  }, [fillCardShown, oldH, oldLookShown]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fillCardShown, oldH, oldLookShown, stripH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     const main = document.querySelector("main");
@@ -606,6 +646,9 @@ export const EveningPath = ({
         if (lastBest && modeRef.current === "hand" && now - lastTick > 70) { haptics.tick(); lastTick = now; }
         if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") setOpen(null);
         lastBest = best;
+        // this week's lights carry their day; another week's leave the strip as it was
+        const day = (best as HTMLElement | null)?.dataset.day;
+        if (day && !pinRef.current) setInViewDate(day);
       }
       const fw = focusRef.current?.closest<HTMLElement>("[data-cy]");
       const fd = fw ? yOf(fw) - midY : NaN;
@@ -619,8 +662,8 @@ export const EveningPath = ({
     frameRef.current = frame;
     const onScroll = () => { if (!raf) raf = requestAnimationFrame(frame); };
     const onResize = () => { measure(main); onScroll(); };
-    const byHand = () => { modeRef.current = "hand"; };
-    const byKey = (e: KeyboardEvent) => { if (/^(Arrow|Page|Home$|End$| $)/.test(e.key)) modeRef.current = "hand"; };
+    const byHand = () => { modeRef.current = "hand"; pinRef.current = null; };
+    const byKey = (e: KeyboardEvent) => { if (/^(Arrow|Page|Home$|End$| $)/.test(e.key)) { modeRef.current = "hand"; pinRef.current = null; } };
     main.addEventListener("scroll", onScroll, { passive: true });
     main.addEventListener("touchstart", byHand, { passive: true });
     main.addEventListener("wheel", byHand, { passive: true });
@@ -718,6 +761,42 @@ export const EveningPath = ({
     // focus goes to her step instead of being lost with the pill
     el.focus({ preventScroll: true });
   };
+
+  // The week strip on top (her note, Nov 15 2026: «давай наверху сделаем какой-то движок, который будет переключаться в
+  // зависимости от того, на какой ты кнопке, показывать, на каком ты дне»): the day of the light in the middle of the
+  // screen (the wheel's focus), its seven days under it; a tap on a day brings its light to the middle, a missed day
+  // opens to be filled in.
+  const todayIso = isoDay(new Date());
+  const dateOfNode = (i: number): string | null => {
+    const n = nodes[i];
+    if (!n) return null;
+    if (n.kind === "past" || n.kind === "missed") return n.date;
+    if (n.kind === "step" || n.kind === "end") return todayIso;
+    if (n.kind === "future") return isoDay(addDays(new Date(), n.offset));
+    return null;
+  };
+  const inView = inViewDate ?? dateOfNode(focus) ?? todayIso;
+  // the report closes the week: its light reads as the week's last day
+  const dayOfNode = (i: number) => dateOfNode(i) ?? m.weekDates[m.weekDates.length - 1];
+  const goToDay = (date: string) => {
+    haptics.tap();
+    // a missed day already in view opens to be filled in ("Not filled · tap to fill in")
+    if (date < todayIso && !m.pastInWeek.includes(date) && date === inView) { fillMissed(date); return; }
+    const i = date === todayIso && dateOfNode(focus) === todayIso ? focus : nodes.findIndex((_, k) => dateOfNode(k) === date);
+    const at = i >= 0 ? toMiddle(i) : null;
+    if (!at) return;
+    pinRef.current = date;
+    setInViewDate(date);
+    modeRef.current = "auto";
+    at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
+  };
+  const stripLine = (() => {
+    const named = (iso: string) => `${cap(weekdayName(iso))} ${Number(iso.slice(8))}`;
+    if (inView === todayIso) return { day: t("path.stripToday", { day: named(todayIso) }), sub: t("path.stripSteps", { count: steps.length, done: steps.filter((s) => s.done).length }), today: true };
+    const name = named(inView);
+    if (inView > todayIso) return { day: name, sub: t("path.stripAhead"), today: false };
+    return m.pastInWeek.includes(inView) ? { day: name, sub: t("path.stripDone", { count: answersOn(inView) }), today: false } : { day: name, sub: t("path.stripMissed"), today: false };
+  })();
 
   if (trackers.length === 0) return null;
 
@@ -972,22 +1051,23 @@ export const EveningPath = ({
     if (s.kind === "grew") return (s.grew?.length ?? 1) > 1 ? grewManyBody(s.grew!) : grewBody(s.island!);
     if (s.kind === "auto") {
       const door = getDoorState();
+      if (s.auto === "start") return head(t("path.auto.start"), t("path.auto.startLine"));
       return head(s.auto === "topic" ? t("path.auto.topicBubble", { name: door ? t(`doors.${door.id}.name`) : "" }) : t("path.auto.firstBubble"));
     }
     if (s.kind === "act") {
       return (
         <>
-          {head(t("act.step"), t("act.sub", { count: s.trackerIds.length }))}
+          {head(stepName(s), t("act.sub", { count: s.trackerIds.length }))}
           {button(t("act.open"), () => { setOpen(null); openActionPoints(); }, "plain")}
         </>
       );
     }
     if (s.kind === "game") {
-      if (!canPlay) return head(t("hunch.step"), t("hunch.needTwo"));
+      if (!canPlay) return head(stepName(s), t("hunch.needTwo"));
       return (
         <>
-          {head(t("hunch.step"), s.done ? t("hunch.doneToday") : t("hunch.sub"))}
-          {!s.done && button(playWord, () => startStep(s))}
+          {head(stepName(s), s.done ? t("hunch.doneToday") : t("hunch.sub"))}
+          {!s.done && button(t("hunch.guess"), () => startStep(s))}
         </>
       );
     }
@@ -1004,7 +1084,7 @@ export const EveningPath = ({
     if (s.kind === "report") {
       return (
         <>
-          {head(t("path.lastReport"), t("path.lastReportLine"))}
+          {head(stepName(s), t("path.lastReportLine"))}
           {button(t("path.openReport"), () => startStep(s))}
         </>
       );
@@ -1039,7 +1119,7 @@ export const EveningPath = ({
       return (
         <>
           {head(stepName(s), whySub)}
-          {button(t("why.add"), () => startStep(s))}
+          {button(t("why.answer"), () => startStep(s))}
           <button type="button" onClick={() => {
             setOpen(null);
             markAsked(whyPending.map(reasonKey), "skipped", isoDay(new Date()), true);
@@ -1062,8 +1142,8 @@ export const EveningPath = ({
     if (s.kind === "test") {
       return (
         <>
-          {head(t("experiment.stepDone"), t("experiment.stepSub"))}
-          {button(t("hunch.see"), () => startStep(s))}
+          {head(stepName(s), (() => { const x = runningExperiments().find((e) => experimentOver(e)); return x ? testNameOf(x.change) : t("experiment.stepSub"); })())}
+          {button(t("experiment.seeResult"), () => startStep(s))}
         </>
       );
     }
@@ -1081,9 +1161,9 @@ export const EveningPath = ({
       return (
         <>
           {head(t(`path.task.${s.task}.title`), s.done ? (s.skipped ? t("path.skipped") : t("path.done")) : t(`path.task.${s.task}.line`))}
-          {!s.done && button(t("path.go"), () => startStep(s))}
+          {!s.done && button(t("act.open"), () => startStep(s))}
           {/* skipped today: it can still be done (her note, Nov 12 2026) */}
-          {s.done && s.skipped && button(t("path.go"), () => { unskipTask(s.task!); setTick((k) => k + 1); track("path_step_unskipped", { task: s.task }); startStep(s); }, "plain")}
+          {s.done && s.skipped && button(t("act.open"), () => { unskipTask(s.task!); setTick((k) => k + 1); track("path_step_unskipped", { task: s.task }); startStep(s); }, "plain")}
           {!s.done && (
             <button type="button" onClick={() => { setOpen(null); skipTask(s.task!); setTick((k) => k + 1); }} className="mt-1 h-10 w-full text-[15px] font-semibold text-muted-foreground">
               {t("path.skip")}
@@ -1196,7 +1276,7 @@ export const EveningPath = ({
       {/* The week starts with its name, plain (her note: the card that
           rolled with the path was "уродская плашка"). */}
       <div className="mt-2">
-        <div data-wheel data-tour="week" className="mx-auto w-fit max-w-[92%]">
+        <div data-wheel className="mx-auto w-fit max-w-[92%]">
           <p className="path-week-label">{t("path.weekTitle", { n: m.week + 1, title })}</p>
           <button type="button" disabled={!weekNext.open} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: weekNext.open === "world" ? { tab: "patterns" } : { tab: "patterns", open: "all", section: weekNext.open, back: true } })); }}
             className="surface mx-auto mt-2 flex h-9 max-w-full items-center gap-1.5 rounded-full px-3.5 text-[14px] font-bold">
@@ -1216,7 +1296,7 @@ export const EveningPath = ({
             scrolls to today, so a card in the path would be out of view); at the top, solid,
             away from the "grew" toasts at the bottom */}
         {fromOld && oldLookShown && !touring && (
-          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${(stripH ? 50 + stripH + 8 : 64)}px)` }}>
             <TipCard id="old-look" title={t("tips.oldLookTitle")} line={t("tips.oldLookLine")} action={t("upgrade.oldLook")} onAction={() => switchToOld("card")}
               secondary={t("upgrade.keepNew")} onSecondary={() => track("ui_kept_new")} className="!bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" />
           </div>
@@ -1225,7 +1305,7 @@ export const EveningPath = ({
             like the old-look card (the path scrolls to today's step, so a card above it is out of view):
             at the top, solid, a tip's look with two answers */}
         {askPlayful && (
-          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 64px)" }}>
+          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${(stripH ? 50 + stripH + 8 : 64)}px)` }}>
             <div data-playful-ask role="group" aria-label={t("playful.ask")} className="surface relative flex shrink-0 gap-3 rounded-[20px] !bg-background p-3 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
               {maluPic() && <img src={maluPic()!} alt="" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />}
               <div className="min-w-0 flex-1">
@@ -1267,13 +1347,13 @@ export const EveningPath = ({
             // a quiet week: one line where the report would stand, nothing to tap
             if (n.kind === "chest" && quietChest) {
               return (
-                <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+                <div key={i} data-wheel data-cy={p.y} data-day={dayOfNode(i)} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
                   <QuietLine stop={p} text={t("path.quietWeek")} />
                 </div>
               );
             }
             return (
-              <div key={i} data-wheel data-cy={p.y} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
+              <div key={i} data-wheel data-cy={p.y} data-day={dayOfNode(i)} className="relative" style={{ transformOrigin: `${p.x}px ${p.y}px`, zIndex: open === i ? 6 : undefined }}>
                 {/* her animal stands beside her step, rolls with it, and opens You */}
                 {i === focus && avatar && (
                   <button type="button" aria-label={t("map.you")} onClick={() => { haptics.tap(); nextMaluTip(); }}
@@ -1343,7 +1423,7 @@ export const EveningPath = ({
           step), solid; a chip per day opens that evening's questions; "Not now" hides it until another
           day is missed. Not while another card holds the spot, or Malu's first tip is up. */}
       {fillCardOn && !askPlayful && !(orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb)) && (
-        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
+        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${(stripH ? 50 + stripH + 8 : 64) + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
           <div data-fill-card role="group" aria-label={t("path.fillCard", { count: missedToFill.length })}
             className="surface relative rounded-[20px] !bg-background p-3.5 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
             <p className="text-[16px] font-bold leading-snug">{t("path.fillCard", { count: missedToFill.length })}</p>
@@ -1362,6 +1442,38 @@ export const EveningPath = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* The week strip (her pick, Nov 15 2026, board E): the day in view and its seven days; solid, one card. */}
+      {createPortal(
+        <div ref={(el) => { stripRef.current = el; if (el && el.offsetHeight !== stripH) setStripH(el.offsetHeight); }}
+          data-week-strip data-tour="week" className="fixed inset-x-0 z-[25] mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 50px)" }}>
+          <div className="rounded-[20px] bg-background px-3.5 pb-2.5 pt-2 shadow-[0_10px_26px_-14px_rgba(16,42,56,0.45)]">
+            <div className="flex items-baseline justify-between gap-2" aria-live="polite">
+              {inView < todayIso && !m.pastInWeek.includes(inView)
+                ? <button type="button" data-strip-day-line onClick={() => { haptics.tap(); fillMissed(inView); }} className="truncate text-left text-[16px] font-bold">{stripLine.day}</button>
+                : <span data-strip-day-line className={cn("truncate text-[16px] font-bold", stripLine.today && "text-[hsl(var(--coin-teal))]")}>{stripLine.day}</span>}
+              <span data-strip-sub className="shrink-0 text-[13px] font-semibold text-muted-foreground">{stripLine.sub}</span>
+            </div>
+            <div className="mt-1.5 grid grid-cols-7 justify-items-center">
+              {m.weekDates.map((d) => {
+                const done = m.pastInWeek.includes(d) || (d === todayIso && m.todayCounted);
+                const isToday = d === todayIso;
+                const ahead = d > todayIso;
+                const letter = new Date(d + "T00:00:00").toLocaleDateString(lang, { weekday: "narrow" });
+                return (
+                  <button key={d} type="button" data-strip-cell={d} aria-label={dayTitle(d)} aria-current={d === inView ? "date" : undefined} onClick={() => goToDay(d)}
+                    className={cn("grid h-9 w-9 place-items-center rounded-full", d === inView && "ring-2 ring-foreground/70")}>
+                    <span className={cn("grid h-7 w-7 place-items-center rounded-full text-[12px] font-extrabold",
+                      done ? "bg-[linear-gradient(180deg,#FFD866_0%,#F6B92B_100%)] text-white" : ahead ? "bg-foreground/[0.06] text-foreground/40" : isToday ? "text-[hsl(var(--coin-teal))]" : "border-2 border-foreground/20 text-foreground/50",
+                      isToday && "ring-2 ring-[hsl(var(--coin-teal))]")}>{letter}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {/* Away from her step: back to it, her avatar on the button. */}

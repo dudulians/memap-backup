@@ -89,7 +89,7 @@ for (const [lang, theme, w, h] of [["en", "aurora-light", 390, 844], ["ru", "aur
   const t11 = new Date(); t11.setHours(11, 0, 0, 0);
   await p.clock.install({ time: t11 });
   await p.reload(); await p.waitForTimeout(2500);
-  const stop = p.locator(`[data-path-stop][aria-label="${lang === "ru" ? "Стоит понаблюдать" : "Worth watching"}"]`).first();
+  const stop = p.locator(`[data-path-stop][aria-label^="${lang === "ru" ? "Про " : "About your "}"]`).first();
   if (!(await stop.count())) { ok(`${tag}: the tip step is on the path`, false, await p.$$eval("[data-path-stop]", (els) => els.map((e) => e.getAttribute("aria-label")))); await ctx.close(); continue; }
   await stop.evaluate((el) => el.scrollIntoView({ block: "center" })); await p.waitForTimeout(500);
   await stop.click(); await p.waitForTimeout(600);

@@ -107,7 +107,7 @@ export const WorldBegun = () => {
   // ending goes on to Today and the tour of it, then the World ("Look around").
   const closeAndTour = () => {
     window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
-    window.dispatchEvent(new CustomEvent("memap-start-tour"));
+    window.dispatchEvent(new CustomEvent("memap-start-tour", { detail: { part: "today" } }));
     window.setTimeout(close, 320);
   };
   const left = shown.kind === "begun" ? toNextStage(shown.days) : null;

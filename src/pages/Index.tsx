@@ -424,6 +424,15 @@ const Index = () => {
       <WorldBegun />
       <ShareWorld />
       <DoctorReport />
+      {/* the World tab glows once there are answers: a small line over it says so (board F, her pick Nov 15 2026); under
+          the tour's dim while a tour runs; gone once the World is opened */}
+      {worldGlow && activeTab !== "patterns" && (
+        <button type="button" data-world-ready onClick={() => { haptics.tap(); setTrip(null); setActiveTab("patterns"); }}
+          className="fixed inset-x-0 z-[11] mx-auto w-fit animate-fade-in rounded-full bg-background px-3.5 py-1.5 text-[13px] font-bold text-[hsl(var(--coin-teal))] shadow-[0_8px_20px_-10px_rgba(16,42,56,0.45)]"
+          style={{ bottom: "calc(5.25rem + 6px + env(safe-area-inset-bottom, 0px))" }}>
+          {t("tour.worldReady")}
+        </button>
+      )}
       <nav className="fixed bottom-0 left-0 right-0 z-10 pb-safe">
         <div className="max-w-2xl mx-auto px-4">
           <div className="nav-floating grid grid-cols-3 overflow-hidden">

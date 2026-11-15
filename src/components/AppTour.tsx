@@ -4,7 +4,7 @@
 // example picture, instead of telling her in a pop-up ("надо показать, где
 // конкретно это лежит… красивой инфографикой"). Started by the path's "Look
 // around" step (memap-start-tour); done or skipped = that step is done.
-import { TOUR_DONE_KEY } from "./Tips";
+import { TOUR_DONE_KEY, WORLD_TOUR_KEY } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,7 @@ import { getDoorState, isoLocal } from "@/lib/doors";
 import { getEntries, getTrackers } from "@/lib/storage";
 import { art, artOf, STAGE_AT, LADDER_WIDTH } from "@/lib/globeArt";
 import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
-import { countedDays, markDiscovered, pathModel } from "@/lib/pathSteps";
+import { countedDays, LINKS_AT, markDiscovered, pathModel } from "@/lib/pathSteps";
 import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
 import { track, useScreen } from "@/lib/analytics";
@@ -24,7 +24,7 @@ import { isPlayful } from "@/lib/playful";
 
 type Tab = "cards" | "patterns" | "notes";
 interface Stop {
-  id: "week" | "steps" | "world" | "links" | "calendar" | "chart" | "actions" | "helps" | "notes" | "you" | "end";
+  id: "week" | "steps" | "world" | "parts" | "links" | "calendar" | "chart" | "actions" | "helps" | "notes" | "you" | "end";
   tab: Tab;
   /** what lights up (none: the card stands in the middle) */
   target?: string;
@@ -40,18 +40,21 @@ interface Stop {
 // Today first (the week's part, then the steps), then the World's row left to right,
 // then down to her island on the map, then Notes and You. It starts by itself after
 // "Your world has begun".
-const STOPS: Stop[] = [
-  { id: "week", tab: "cards", target: '[data-tour="week"]' },
-  { id: "steps", tab: "cards", steps: true },
-  { id: "calendar", tab: "patterns", target: '[data-tour="calendar"]' },
-  { id: "links", tab: "patterns", target: '[data-tour="links-card"]' },
-  { id: "actions", tab: "patterns", target: '[data-tour="actions"]' },
-  { id: "helps", tab: "patterns", target: '[data-tour="helps"]' },
-  { id: "world", tab: "patterns", isle: "main" },
-  { id: "notes", tab: "notes", target: '[data-tour="tab-notes"]' },
-  { id: "you", tab: "cards", target: '[data-coachmark="settings-button"]' },
-  { id: "end", tab: "cards" },
-];
+// Two parts since Nov 15 2026 (her note: the tour jumped Today → World → Today; board F, her pick): Today's part on
+// Today, two cards (the week strip, the steps); then the World tab glows with a hint, and she goes there herself; the
+// World's part the first time she opens it, two cards (her islands, the four parts on top), ending there. Notes and
+// You explain themselves when first opened (their tip cards).
+type Part = "today" | "world";
+const PARTS: Record<Part, Stop[]> = {
+  today: [
+    { id: "week", tab: "cards", target: '[data-tour="week"]' },
+    { id: "steps", tab: "cards", steps: true },
+  ],
+  world: [
+    { id: "world", tab: "patterns", isle: "main" },
+    { id: "parts", tab: "patterns", target: "[data-world-tiles]" },
+  ],
+};
 
 // --- the little pictures ---------------------------------------------------------
 
@@ -182,6 +185,20 @@ const StepsLegend = () => {
     </div>
   );
 };
+/** The week strip's circles: done, not filled, today. */
+const StripLegend = () => {
+  const { t } = useTranslation();
+  const one = (look: ReactNode, label: string, i: number) => (
+    <span className="tour-pop flex items-center gap-2" style={delay(0.25 + i * 0.2)}>{look}<span className="text-[14px] font-bold">{label}</span></span>
+  );
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-1" aria-hidden="true">
+      {one(<span className="h-7 w-7 rounded-full bg-[linear-gradient(180deg,#FFD866_0%,#F6B92B_100%)]" />, t("tour.strip.done"), 0)}
+      {one(<span className="h-7 w-7 rounded-full border-2 border-foreground/20" />, t("tour.strip.missed"), 1)}
+      {one(<span className="h-7 w-7 rounded-full ring-2 ring-[hsl(var(--coin-teal))]" />, t("tour.strip.today"), 2)}
+    </div>
+  );
+};
 /** "4 of 5 times", counting up under the link on the map. */
 const LinkCount = ({ from }: { from: number }) => {
   const { t } = useTranslation();
@@ -299,6 +316,8 @@ const Treasures = () => (
 export const AppTour = () => {
   const { t } = useTranslation();
   const [at, setAt] = useState<number | null>(null);
+  const [part, setPart] = useState<Part>("today");
+  const STOPS = PARTS[part];
   useScreen("tour", at !== null);
   /** what's on screen: the stop and where its place is (null: nothing to light up) */
   const [view, setView] = useState<{ at: number; rect: DOMRect | null; link?: { a: Pt; b: Pt }; isle?: IslandId } | null>(null);
@@ -316,7 +335,8 @@ export const AppTour = () => {
   const viewBefore = useRef<string | null>(null);
 
   useEffect(() => {
-    const start = async () => {
+    const start = async (e: Event) => {
+      const which: Part = (e as CustomEvent).detail?.part === "world" ? "world" : "today";
       const [trackers, entries] = await Promise.all([getTrackers(), getEntries()]);
       const door = getDoorState(), main = door ? trackers.find((x) => x.id === door.trackerId) : undefined;
       mainIsle.current = main ? islandOf(main) : null;
@@ -326,8 +346,9 @@ export const AppTour = () => {
       // the one after it while the tour shows the path
       markDiscovered("tour");
       window.dispatchEvent(new CustomEvent("memap-path-refresh"));
+      setPart(which);
       setAt(0);
-      track("tour_started");
+      track("tour_started", { part: which });
     };
     window.addEventListener("memap-start-tour", start);
     return () => window.removeEventListener("memap-start-tour", start);
@@ -411,7 +432,7 @@ export const AppTour = () => {
       setLit(true); setMoving(false);
     })();
     return () => { alive = false; };
-  }, [at]);
+  }, [at, part]); // eslint-disable-line react-hooks/exhaustive-deps
   // the card's own height, measured while it's still invisible, so it's placed right
   useLayoutEffect(() => { if (cardRef.current) setCardH(cardRef.current.offsetHeight); }, [view]);
   // a turned phone or a resized window: measure again (nothing else moves the page under the dim)
@@ -430,16 +451,18 @@ export const AppTour = () => {
 
   if (at === null || !data) return null;
   const finish = (toStep = false) => {
-    track("tour_finished", { completed: view?.at === STOPS.length - 1, at: view ? STOPS[view.at].id : "start" });
+    track("tour_finished", { part, completed: view?.at === STOPS.length - 1, at: view ? STOPS[view.at].id : "start" });
     markDiscovered("tour");
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
-    window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
     window.dispatchEvent(new CustomEvent("memap-tour-done"));
-    // "and what now?" (her note, Nov 7 2026): Today opens her next step's card
-    if (toStep) {
-      try { localStorage.setItem(TOUR_DONE_KEY, "1"); } catch { /* the blocks explain themselves once */ }
-      window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-path-focus")), 450);
+    // the World's part ends on the World: walked to the end, the tour is done (the blocks then stay quiet); skipped, it
+    // does not start again and the blocks explain themselves once
+    if (part === "world") {
+      try { localStorage.setItem(WORLD_TOUR_KEY, toStep ? "1" : "skipped"); if (toStep) localStorage.setItem(TOUR_DONE_KEY, "1"); } catch { /* it may show again */ }
+      return;
     }
+    // "and what now?" (her note, Nov 7 2026): Today opens her next step's card
+    if (toStep) window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-path-focus")), 450);
   };
   // the dim alone until the first place is ready
   if (!view) {
@@ -450,8 +473,10 @@ export const AppTour = () => {
   const next = () => { if (moving) return; haptics.tap(); if (last) finish(true); else setAt(view.at + 1); };
   const back = () => { if (moving || view.at === 0) return; haptics.tap(); setAt(view.at - 1); };
 
-  const part = data.week % 4;
-  const title = stop.id === "week" ? `${t("path.weekN", { n: data.week + 1 })} · ${t(`path.title${part}`)}`
+  const weekPart = data.week % 4;
+  const title = stop.id === "week" ? t("tour.strip.title")
+    : stop.id === "world" ? t("tour.isle.title")
+    : stop.id === "parts" ? t("tour.parts.title")
     : stop.id === "calendar"
     ? t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any")
     : stop.id === "links" ? t("world4.links")
@@ -460,9 +485,9 @@ export const AppTour = () => {
     : stop.id === "notes" ? t("common.notes")
     : stop.id === "you" ? t("map.you")
     : t(`tour.${stop.id}.title`);
-  const visual = stop.id === "week" ? <WeekParts part={part} />
+  const visual = stop.id === "week" ? <StripLegend />
+    : stop.id === "world" || stop.id === "parts" ? null
     : stop.id === "steps" ? <StepsLegend />
-    : stop.id === "world" ? <Growth island={island} />
     : stop.id === "links" ? <Links days={data.days} />
     : stop.id === "calendar" ? <Month />
     : stop.id === "chart" ? <Weeks days={data.days} />
@@ -516,8 +541,9 @@ export const AppTour = () => {
       )}
       <div className="fixed left-4 right-4 mx-auto max-w-[380px]" style={place}>
       <div ref={cardRef} data-tour-card className={cn("tour-card surface rounded-[24px] px-5 pb-4 pt-4", moving && "is-moving")}>
+        <p data-tour-part className="mb-0.5 text-[12px] font-extrabold uppercase tracking-[0.08em] text-[hsl(var(--coin-teal))]">{t(part === "world" ? "common.world" : "common.today")}</p>
         <p className="text-[22px] font-bold leading-tight tracking-tight">{title}</p>
-        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : stop.id === "you" && !isPlayful() ? "tour.you.linePlain" : stop.id === "week" && data.days >= 21 ? "tour.week.lineOpen" : `tour.${stop.id}.line`)}</p>
+        <p className="mt-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(stop.id === "end" && !data.today ? "tour.end.lineTonight" : stop.id === "you" && !isPlayful() ? "tour.you.linePlain" : stop.id === "week" ? "tour.strip.line" : stop.id === "world" ? "tour.isle.line" : stop.id === "parts" ? (data.days < LINKS_AT ? "tour.parts.line" : "tour.parts.lineOpen") : `tour.${stop.id}.line`, { count: Math.max(1, LINKS_AT - data.days) })}</p>
         {visual}
         {/* where she is in the tour, then Skip and Next on their own line (Russian words are long) */}
         <div className="mt-3.5 flex justify-center gap-1.5" aria-hidden="true">
@@ -533,7 +559,7 @@ export const AppTour = () => {
               </button>
             )}
             <button type="button" onClick={next} className="raised-btn is-small shrink-0 gap-1 px-6">
-              {last ? t("tour.toStep") : t("tour.next")} <ArrowRight className="h-4 w-4" strokeWidth={2.6} />
+              {last ? (part === "world" ? t("tour.gotIt") : t("tour.toStep")) : t("tour.next")} {!(last && part === "world") && <ArrowRight className="h-4 w-4" strokeWidth={2.6} />}
             </button>
           </div>
         </div>
