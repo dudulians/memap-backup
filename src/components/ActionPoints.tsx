@@ -803,6 +803,8 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocu
   };
   return (
     <div className="space-y-2.5">
+      {/* what she is trying, said first (her note, Nov 15 2026: «сразу там писать: вы сейчас пробуете то-то…») */}
+      {running.length > 0 && <p data-now-trying className="px-1 text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("experiment.nowTrying")}</p>}
       {running.map((x) => experimentOver(x) ? (
         <button key={x.id} type="button" onClick={() => { haptics.tap(); onResult(x); }} className="surface flex w-full items-center gap-3 rounded-[22px] px-4 py-3.5 text-left">
           <span className="icon-dot h-11 w-11"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
@@ -835,7 +837,7 @@ export const WhatHelps = ({ trackers, entries, onResult, onPick, focusId, onFocu
         </>
       )}
       <button type="button" onClick={() => { haptics.tap(); onPick(); }} className="raised-btn w-full justify-center gap-2">
-        <FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {t("experiment.title")}
+        <FlaskConical className="h-5 w-5" strokeWidth={2.4} /> {running.length > 0 ? t("experiment.trySomethingElse") : t("experiment.title")}
       </button>
       {/* kept going first, under their own name; then the ones tried before */}
       {[["helps.keeping", tried.filter((x) => x.kept)], ["helps.tried", tried.filter((x) => !x.kept)]].filter(([, list]) => (list as Experiment[]).length > 0).map(([head, list]) => (

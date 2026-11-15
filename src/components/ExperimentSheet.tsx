@@ -12,7 +12,7 @@ import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Check, FlaskConical, Sprout, X } from "lucide-react";
+import { Check, ChevronRight, FlaskConical, Sprout, X } from "lucide-react";
 import { tryFromLines } from "@/lib/linkSeen";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
@@ -22,7 +22,7 @@ import { Tracker, TrackerEntry } from "@/types/tracker";
 import { buildIslands, islandName, mapPic, type IslandId } from "@/lib/islands";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
 import { praiseFor, resultWords } from "@/lib/testResult";
-import { BED_FROM_WAKE, NIGHT_IDEAS, WATCH_IDEAS, answeredToday, beforeBed, bedtimeFrom, comparedBy, EXPERIMENT_DAYS, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
+import { BED_FROM_WAKE, NIGHT_IDEAS, WATCH_IDEAS, answeredToday, beforeBed, bedtimeFrom, comparedBy, EXPERIMENT_DAYS, experimentDay, experimentResult, finishExperiment, ideasFor, overlapping, runningExperiments, setExperimentRemind, smartRemindTime, startExperiment, verdictOf, type Experiment } from "@/lib/experiments";
 import { templateIdOf } from "@/lib/answerPhrases";
 import { getNotificationSettings, requestNotificationPermissionDetailed, scheduleNotification } from "@/lib/notifications";
 import { Bell } from "lucide-react";
@@ -187,7 +187,26 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
 
         {mode === "pick" && !started && (
           <>
-            <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight">{t("experiment.ask", { count: EXPERIMENT_DAYS })}</p>
+            {/* what she is already trying here, on top and plain (her note, Nov 15 2026: it was a grey note at the bottom) */}
+            {runningHere.length > 0 && (
+              <div data-now-trying className="mt-3">
+                <p className="text-[13px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t("experiment.nowTrying")}</p>
+                <div className="mt-2 space-y-2">
+                  {runningHere.map((x) => (
+                    <button key={x.id} type="button" onClick={() => { haptics.tap(); onClose(); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: x.id } })), 250); }}
+                      className="flex w-full items-center gap-3 rounded-[20px] bg-[hsl(var(--coin-teal)/0.1)] px-4 py-3 text-left">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[16px] font-bold leading-snug">{testNameOf(x.change)}</span>
+                        <span className="block text-[14px] font-semibold text-muted-foreground">{t("world4.testDay", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</span>
+                      </span>
+                      <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className={cn("text-[26px] font-bold leading-tight tracking-tight", runningHere.length > 0 ? "mt-5" : "mt-2")}>{runningHere.length > 0 ? t("experiment.somethingElse") : t("experiment.ask", { count: EXPERIMENT_DAYS })}</p>
             {/* Which island (from an action point: that question's island only) */}
             <div className="-mx-6 mt-5 flex gap-2 overflow-x-auto px-6 scrollbar-hide">
               {islands.filter((isl) => !plan || isl.id === island).map((isl) => (
@@ -213,6 +232,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                     </button>
                   );
                 })}
+                {choices.length === 0 && <p data-no-more className="px-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t("experiment.noMoreIdeas")}</p>}
                 <input value={own} onChange={(e) => { setOwn(e.target.value); setIdea(null); }} placeholder={t("experiment.own")} maxLength={60}
                   className={cn("h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none", own.trim() && "pick-on")} />
               </div>
@@ -235,11 +255,6 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                 </div>
               ) : (
                 <p className="mb-3 text-center text-[15px] font-medium text-muted-foreground">{t("experiment.how")}</p>
-              )}
-              {runningHere.length > 0 && (
-                <p className="mb-3 rounded-2xl bg-foreground/[0.05] px-4 py-3 text-center text-[15px] font-semibold leading-snug text-muted-foreground">
-                  {t("experiment.alsoRunning", { list: runningHere.map((x) => quotedTestName(x.change)).join(", ") })}
-                </p>
               )}
               <Pressable tone="teal" haptic="none" onClick={start} disabled={!island || !change} className="h-[58px] w-full rounded-2xl" faceClassName="text-[16px] font-extrabold uppercase tracking-[0.06em]">
                 {t("experiment.start")}

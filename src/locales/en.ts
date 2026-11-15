@@ -395,6 +395,10 @@ const en = {
   experiment: {
     // a change on the days of a link's first thing (Nov 15 2026)
     onDays: "On days {{when}}: {{change}}",
+    nowTrying: "You're trying now",
+    somethingElse: "Something else to try?",
+    trySomethingElse: "Try something else",
+    noMoreIdeas: "No other ready ideas here. Write your own:",
     onDaysQ: "Was today a day {{when}}? If not, answer “yes”. If it was: {{q}}",
     title: "Try one change",
     eyebrow: "Testing one change",
