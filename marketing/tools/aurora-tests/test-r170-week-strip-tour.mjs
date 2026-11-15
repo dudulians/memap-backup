@@ -61,6 +61,7 @@ for (const lang of ["en", "ru"]) {
     await p.waitForTimeout(1700);
     const card = p.locator("[data-tour-card]");
     if (!(await card.count())) break;
+    if (todayCards.length === 0) { const g = await p.evaluate(() => { const el = document.querySelector('[data-tour="tab-patterns"]'); return el && el.classList.contains("glow-hint") ? getComputedStyle(el, "::after").display : "none"; }); check(`${lang}: no World glow while the Today tour is on`, g === "none", g); }
     todayCards.push(`${(await card.locator("p").nth(1).textContent()).trim()} @ ${(await p.locator(".path-box").count()) ? "Today" : "World"}`);
     await card.locator("button.raised-btn").click();
   }

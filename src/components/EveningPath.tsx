@@ -688,7 +688,9 @@ export const EveningPath = ({
         const roomBottom = mr.bottom - (parseFloat(getComputedStyle(main).scrollPaddingBottom) || 0);
         const today = isoDay(new Date());
         const todayInSight = [...main.querySelectorAll<HTMLElement>(`[data-day="${today}"]`)].some((el) => { const y = yOf(el); return y > mr.top + 8 && y < roomBottom - 8; });
-        const day = todayInSight ? today : (best as HTMLElement | null)?.dataset.day;
+        // an open card: its own day (her small phone, Nov 15 2026: today's card open, the title said Tuesday)
+        const openDay = typeof openRef.current === "number" ? main.querySelector<HTMLElement>(`[data-path-stop="${openRef.current}"]`)?.closest<HTMLElement>("[data-day]")?.dataset.day : undefined;
+        const day = openDay ?? (todayInSight ? today : (best as HTMLElement | null)?.dataset.day);
         if (day && day !== lastDayRef.current) { lastDayRef.current = day; setInViewDate(day); }
       }
       const fw = focusRef.current?.closest<HTMLElement>("[data-cy]");
@@ -774,10 +776,14 @@ export const EveningPath = ({
       if (!card || !main) return;
       const r = card.getBoundingClientRect(), l = light?.getBoundingClientRect();
       const mr = main.getBoundingClientRect();
-      const top = Math.min(r.top, l?.top ?? r.top), bottom = Math.max(r.bottom, l?.bottom ?? r.bottom);
-      const roomTop = mr.top + 32;
+      // under the header and under any card pinned at the top (games ask, old look, missed days)
+      const roomTop = Math.max(mr.top + 32, ...[...document.querySelectorAll<HTMLElement>("[data-top-card]")].map((el) => el.getBoundingClientRect().bottom + 10));
       // above the tabs and clear of the fade at the bottom of the screen (its last 120px, Index.tsx)
       const roomBottom = mr.bottom - Math.max((parseFloat(getComputedStyle(main).scrollPaddingBottom) || 0) + 14, 124);
+      // the light and its card when both fit; else the card whole, its light may go up out of sight (her note,
+      // Nov 15 2026: "Done for today" with its buttons opened half under the tabs)
+      const both = Math.max(r.bottom, l?.bottom ?? r.bottom) - Math.min(r.top, l?.top ?? r.top) <= roomBottom - roomTop;
+      const top = both ? Math.min(r.top, l?.top ?? r.top) : r.top, bottom = both ? Math.max(r.bottom, l?.bottom ?? r.bottom) : r.bottom;
       let d = 0;
       if (bottom > roomBottom) d = bottom - roomBottom;
       if (top - d < roomTop) d = top - roomTop;
@@ -1353,7 +1359,7 @@ export const EveningPath = ({
             scrolls to today, so a card in the path would be out of view); at the top, solid,
             away from the "grew" toasts at the bottom */}
         {fromOld && oldLookShown && !touring && (
-          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
+          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} data-top-card className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
             <TipCard id="old-look" title={t("tips.oldLookTitle")} line={t("tips.oldLookLine")} action={t("upgrade.oldLook")} onAction={() => switchToOld("card")}
               secondary={t("upgrade.keepNew")} onSecondary={() => track("ui_kept_new")} className="!bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" />
           </div>
@@ -1362,7 +1368,7 @@ export const EveningPath = ({
             like the old-look card (the path scrolls to today's step, so a card above it is out of view):
             at the top, solid, a tip's look with two answers */}
         {askPlayful && (
-          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
+          <div data-top-card className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
             <div data-playful-ask role="group" aria-label={t("playful.ask")} className="surface relative flex shrink-0 gap-3 rounded-[20px] !bg-background p-3 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
               {maluPic() && <img src={maluPic()!} alt="" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />}
               <div className="min-w-0 flex-1">
@@ -1480,7 +1486,7 @@ export const EveningPath = ({
           step), solid; a chip per day opens that evening's questions; "Not now" hides it until another
           day is missed. Not while another card holds the spot, or Malu's first tip is up. */}
       {fillCardOn && !askPlayful && !(orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb)) && (
-        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
+        <div ref={fillCardRef} data-top-card className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
           <div data-fill-card role="group" aria-label={t("path.fillCard", { count: missedToFill.length })}
             className="surface relative rounded-[20px] !bg-background p-3.5 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
             <p className="text-[16px] font-bold leading-snug">{t("path.fillCard", { count: missedToFill.length })}</p>
@@ -1530,7 +1536,7 @@ export const EveningPath = ({
       )}
 
       {/* Away from her step: back to it, her avatar on the button. */}
-      {away && createPortal(
+      {away && typeof open !== "number" && createPortal(
         <button type="button" onClick={backToStep}
           className="fixed right-4 z-[30] flex h-12 items-center gap-2 rounded-full bg-white pl-1.5 pr-3.5 text-[15px] font-extrabold text-foreground shadow-lg animate-fade-in active:scale-95 transition-transform dark:bg-[hsl(var(--surface))]"
           style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>

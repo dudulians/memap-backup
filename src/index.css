@@ -2604,7 +2604,10 @@ html[data-ui="new"] .map-sea::-webkit-scrollbar { display: none; }
 .tour-ring::after { content: ""; position: absolute; inset: 0; border-radius: inherit; animation: tourPulse 1.8s ease-out 2; }
 /* while a tour card is up nothing under the dim keeps moving: the tiles' glow, the islands, the path (her phone, Nov 15 2026:
    «всё дёргается, особенно когда онбординг по World»; a phone redraws all of it under the full-screen dim) */
-html.touring .glow-hint::after { animation: none; opacity: .85; }
+/* no glow and no hint line while a tour card is up (her note, Nov 15 2026: the World tab's green frame showed during the
+   Today tour); they come back when the tour ends */
+html.touring .glow-hint::after { display: none; }
+html.touring [data-world-ready], html.touring [data-today-next] { display: none; }
 /* the globe's own buttons (New island, + −, where am I, Share): see-through by day; by night the World tiles' own dark
    (her note, Nov 15 2026: the milky see-through ones looked out of place on the night globe) */
 .globe-btn { background: rgba(255, 255, 255, .55); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 6px 18px -10px rgba(16, 42, 56, .45); }
