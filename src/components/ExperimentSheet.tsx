@@ -4,8 +4,8 @@
 // full-screen frame as the games. From an action point ("I'll try", Nov 5
 // 2026) her plan is the first choice, the island is the question's own, and
 // starting the test counts that action point again from today.
-import { ideasForIsland, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
-import { answerClause } from "@/lib/answerPhrases";
+import { ideaTarget, ideasForIsland, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
+import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 /** a change on the days of a link's first thing ("On days you have your period: …") */
 const SCOPED = "on:";
 import { KindTag } from "./KindTag";
@@ -146,6 +146,14 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const busy = busyIdeas();
   // never a change her own answers say she already does (alreadyDoing.ts)
   const choices = [...(plan ? [PLAN] : []), ...(linkPool ?? pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries)))];
+  // an island's idea: the question there it is for (her note, Nov 15 2026: «не хватает, к чему я это делаю»)
+  const forLine = (k: string): string | null => {
+    if (k === PLAN || k.startsWith(SCOPED) || linkPool || plan || !island) return null;
+    const tr = ideaTarget(k, island, trackers, entries);
+    return tr ? t("experiment.forWhat", { what: cap(answerPhrase(t, tr, tr.problemWhen === "yes")) }) : null;
+  };
+  // the running tries on top: what each is for, as What helps says it
+  const nowFor = useMemo(() => tryFromLines(t, runningHere, trackers, entries), [runningHere.map((x) => x.id).join(","), trackers, entries, t]); // eslint-disable-line react-hooks/exhaustive-deps
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : k.startsWith(SCOPED) ? scopedChange(k.slice(SCOPED.length)) : t(`experiment.idea.${k}.change`));
   // picking a try is What helps, wherever it was opened from (her note, Nov 14 2026: «когда ты из связи переходишь к
   // действию… видно где-то в заголовках… все действия реально делаем там, где они подразумеваются»), and it says
@@ -198,6 +206,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--coin-teal))] text-white"><FlaskConical className="h-5 w-5" strokeWidth={2.4} /></span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[16px] font-bold leading-snug">{testNameOf(x.change)}</span>
+                        {nowFor.get(x.id) && <span className="block text-[14px] font-semibold text-muted-foreground">{nowFor.get(x.id)}</span>}
                         <span className="block text-[14px] font-semibold text-muted-foreground">{t("world4.testDay", { k: Math.min(experimentDay(x), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</span>
                       </span>
                       <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
@@ -225,7 +234,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                   return (
                     <button key={k} type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={on}
                       className={cn("surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3 text-left text-[17px] outline-none transition-shadow duration-150 active:scale-[0.99]", on ? "pick-on font-bold" : "font-semibold")}>
-                      <span className="min-w-0 flex-1">{label(k)}{k === PLAN && planDoing && <span data-already className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{t("rules.alreadyDoing", { k: planDoing.k, count: planDoing.n })}</span>}</span>
+                      <span className="min-w-0 flex-1">{label(k)}{forLine(k) && <span data-idea-for className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{forLine(k)}</span>}{k === PLAN && planDoing && <span data-already className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{t("rules.alreadyDoing", { k: planDoing.k, count: planDoing.n })}</span>}</span>
                       <span aria-hidden="true" className={cn("tick", on && "is-on")}>
                         {on && <Check className="h-4 w-4" strokeWidth={3} />}
                       </span>

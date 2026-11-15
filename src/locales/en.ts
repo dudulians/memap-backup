@@ -396,6 +396,7 @@ const en = {
     // a change on the days of a link's first thing (Nov 15 2026)
     onDays: "On days {{when}}: {{change}}",
     nowTrying: "You're trying now",
+    forWhat: "For: {{what}}",
     somethingElse: "Something else to try?",
     trySomethingElse: "Try something else",
     noMoreIdeas: "No other ready ideas here. Write your own:",

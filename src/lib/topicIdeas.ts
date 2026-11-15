@@ -102,6 +102,17 @@ export const ideasForLink = (first: Tracker, second: Tracker | undefined, couple
   return out;
 };
 
+/** What a change on an island is for: the question there it was offered for, the hardest one lately that has it among
+ *  its own changes (her note, Nov 15 2026: «не понимаю, к чему это»). */
+export const ideaTarget = (idea: string | null | undefined, island: string, trackers: Tracker[], entries: TrackerEntry[]): Tracker | undefined => {
+  if (!idea) return undefined;
+  const d = new Date(); d.setDate(d.getDate() - 30);
+  const since = isoLocal(d);
+  const hard = (tr: Tracker) => entries.filter((e) => e.trackerId === tr.id && e.date >= since && typeof e.value === "boolean" && e.value === (tr.problemWhen === "yes")).length;
+  return trackers.filter((x) => !x.archived && x.source !== "play" && !x.id.endsWith("-test") && islandOf(x) === island && !!templateIdOf(x) && ideasForQuestion(x).includes(idea))
+    .sort((a, b) => hard(b) - hard(a))[0];
+};
+
 /** "Test one change" on an island: the changes for what is hardest there lately, a few questions in
  *  turn (questions of one topic without their own list share it, so it comes once). */
 export const ideasForIsland = (island: IslandId, trackers: Tracker[], entries: TrackerEntry[]): string[] => {

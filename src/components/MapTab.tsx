@@ -394,7 +394,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       )}
       <BottomSheet open={helpsOpen} onOpenChange={(o) => { if (!o) { setHelpsOpen(false); setHelpsLit(null); } }} className="h-auto max-h-[88vh]" ariaTitle={t("world4.whatHelps")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
-          <h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("world4.whatHelps")}</h2>
+          <div data-sheet-head className="sticky top-0 z-[5] -mx-4 bg-background px-4"><h2 className="pb-3 pr-10 pt-1 text-[24px] font-bold tracking-tight">{t("world4.whatHelps")}</h2></div>
           {!tourCompleted() && <TipCard id="block:helps" className="mb-3" title={t("world4.whatHelps")} line={t("tour.helps.line")} />}
           <WhatHelps trackers={trackers} entries={entries} focusId={helpsFocus} onFocused={() => setHelpsFocus(null)} litId={helpsLit}
             onResult={(x) => { setHelpsOpen(false); window.setTimeout(() => setHelpsResult(x), 250); }}
@@ -444,6 +444,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       <BottomSheet open={!!only} onOpenChange={(o) => { if (!o) { if ((only === "overview" || only === "trends" || only === "linkchart") && backToLink()) return; backTo.current = null; setOnly(null); setOnlyIds(null); tripDone(); } }} className="h-[88vh]"
         ariaTitle={only ? onlyTitle(only) : ""}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
+          {/* the title, its tabs and the island chips stay on top while the list scrolls (her note, Nov 15 2026) */}
+          <div data-sheet-head className="sticky top-0 z-[5] -mx-4 shrink-0 bg-background px-4">
           {backTo.current && (only === "overview" || only === "trends" || only === "linkchart") && (
             <button type="button" data-back-to-link onClick={() => { haptics.tap(); backToLink(); }}
               className="-ml-1 mb-1 flex h-10 items-center gap-1 self-start pr-3 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
@@ -452,10 +454,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           )}
           {/* tighter top (her note, Nov 10 2026: the calendar didn't fit in My days) */}
           <h2 className="pb-1.5 pr-10 text-[24px] font-bold tracking-tight">{only && onlyTitle(only)}</h2>
-          {only && only !== "linkchart" && !tourCompleted() && (
-            <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={null}
-              line={t(only === "findings" ? "tips.inLinks" : only === "signals" ? "tour.actions.line" : "tips.inMonth")} />
-          )}
           {/* My days holds both the calendar and the chart (her note, Nov 6 2026) */}
           {(only === "overview" || only === "trends") && (
             <div className="seg mb-2 w-full" role="tablist" aria-label={t("world4.myDays")}>
@@ -480,6 +478,11 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
               );
             })}
           </div>
+          </div>
+          {only && only !== "linkchart" && !tourCompleted() && (
+            <TipCard id={`block:${only === "trends" ? "overview" : only}`} className="mb-3" title={null}
+              line={t(only === "findings" ? "tips.inLinks" : only === "signals" ? "tour.actions.line" : "tips.inMonth")} />
+          )}
           {/* a thought she tracks: steady, or depends on the day? (board 64) */}
           {only === "findings" && !onlyIsland && <SteadyCard trackers={trackers} entries={entries} />}
           {only && (

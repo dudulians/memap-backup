@@ -430,6 +430,7 @@ const ru: Translation = {
   experiment: {
     onDays: "В дни, когда {{when}}: {{change}}",
     nowTrying: "Сейчас пробуешь",
+    forWhat: "К чему: {{what}}",
     somethingElse: "Попробовать что-то ещё?",
     trySomethingElse: "Попробовать что-то ещё",
     noMoreIdeas: "Других готовых идей здесь нет. Напиши свою:",

@@ -8,6 +8,8 @@ import { finishedExperiments, runningExperiments, type Experiment } from "./expe
 import { linkOf, linkWorthShowing, LINKS_TOP } from "./islands";
 import { answerPhrase, cap } from "./answerPhrases";
 import { cardQuestion } from "./cardText";
+import { ideaTarget } from "./topicIdeas";
+import { ideaOf } from "./testWords";
 
 const KEY = "memap_links_seen";
 
@@ -53,7 +55,10 @@ export const tryFromLines = (t: TFunction, xs: Experiment[], trackers: Tracker[]
       continue;
     }
     const from = x.from ? q(x.from) : undefined;
-    if (from) out.set(x.id, t("tryFrom.act", { q: cardQuestion(from) }));
+    if (from) { out.set(x.id, t("tryFrom.act", { q: cardQuestion(from) })); continue; }
+    // picked on an island: the question there it is for (her note, Nov 15 2026: «к чему это?»)
+    const target = ideaTarget(ideaOf(x.change), x.island, trackers, entries);
+    if (target) out.set(x.id, t("experiment.forWhat", { what: cap(answerPhrase(t, target, target.problemWhen === "yes")) }));
   }
   return out;
 };
