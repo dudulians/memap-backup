@@ -16,7 +16,7 @@ import { getLanguage } from "@/lib/i18n";
 import { ru as ruLocale } from "date-fns/locale";
 import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { haptics } from "@/lib/haptics";
-import { isNeutralQuestion } from "@/lib/islands";
+import { isNeutralQuestion, isTestQuestion } from "@/lib/islands";
 import { getDoorState } from "@/lib/doors";
 import { answerPhrase, cap } from "@/lib/answerPhrases";
 import { ExampleMonth } from "./Examples";
@@ -45,7 +45,9 @@ export const OverviewCard = ({
 }: OverviewCardProps) => {
   const { t } = useTranslation();
   const dateLocale = getLanguage() === "ru" ? ruLocale : undefined;
-  const trackers = useMemo(() => allTrackers.filter((tr) => !tr.archived), [allTrackers]);
+  // a try's evening question is not one of her questions: it lives in What helps (her note, Nov 15 2026: "что это за
+  // странный вопрос, откуда он вылез" — "No nausea today counts as yes…" stood here as "Question 8 of 8")
+  const trackers = useMemo(() => allTrackers.filter((tr) => !tr.archived && !isTestQuestion(tr)), [allTrackers]);
 
   // Door questions count in their own words ("7 fights").
   const doorOf = useMemo(() => {

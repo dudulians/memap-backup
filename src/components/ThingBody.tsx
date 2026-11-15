@@ -14,6 +14,7 @@ import { isHardAnswer, isNeutralQuestion, islandOf, linkOf, linkWorthShowing, LI
 import { linkHeadSegs, linkNumbers, linkTimes, trackerLookup } from "@/lib/linkText";
 import { litTrackers } from "@/lib/lighthouses";
 import { EXPERIMENT_DAYS, experimentDay, runningExperiments } from "@/lib/experiments";
+import { testNameOf } from "@/lib/testWords";
 import { reasonLabel, reasonTally } from "@/lib/reasons";
 import { cap } from "@/lib/answerPhrases";
 import { daysAgoIso } from "@/lib/doors";
@@ -74,7 +75,7 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
   const go = (f: () => void) => () => { haptics.tap(); f(); };
   // Now: where this question stands, one button for its next step (Nov 15 2026)
   const now = data.trying
-    ? { kind: "trying", icon: FlaskConical, line: t("thingNow.trying", { what: data.trying.change }), sub: t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })) }
+    ? { kind: "trying", icon: FlaskConical, line: t("thingNow.trying", { what: testNameOf(data.trying.change) }), sub: t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })) }
     : data.doneOnce
     ? { kind: "done", icon: Check, line: t("thingNow.done", { what: data.doneOnce.kind === "home" ? t(data.doneOnce.plan) : data.doneOnce.plan }), sub: t("thingNow.doneSub"), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps")) }
     : data.lit
@@ -162,7 +163,7 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
           {icon(Sprout, true)}
           <span>
             {part("world4.whatHelps", false, true)}
-            <span data-thing-trying className={l1}>{t("thing.trying", { what: data.trying.change })}</span>
+            <span data-thing-trying className={l1}>{t("thing.trying", { what: testNameOf(data.trying.change) })}</span>
             <span className={l2}>{t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</span>
           </span>
         </button>

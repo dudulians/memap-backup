@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
-import { islandName, type Island } from "@/lib/islands";
+import { isTestQuestion, islandName, type Island } from "@/lib/islands";
 import { cardQuestion } from "@/lib/cardText";
 import { yoursOf } from "@/lib/yours";
 import { haptics } from "@/lib/haptics";
@@ -21,7 +21,8 @@ export const IslandThings = ({ island, islands, trackers, entries, pick, ...acts
   const { t } = useTranslation();
   // hers first, then the suggested ones, each in the order they came
   const list = useMemo(() => {
-    const mine = trackers.filter((tr) => island.trackerIds.includes(tr.id) && !tr.archived);
+    // a try's evening question lives in What helps, not among the island's questions (Nov 15 2026)
+    const mine = trackers.filter((tr) => island.trackerIds.includes(tr.id) && !tr.archived && !isTestQuestion(tr));
     return [...mine.filter((tr) => yoursOf(tr)), ...mine.filter((tr) => !yoursOf(tr))];
   }, [trackers, island]);
   const [at, setAt] = useState(() => Math.max(0, list.findIndex((tr) => tr.id === pick)));

@@ -14,7 +14,7 @@ import { ChevronDown, MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { Tracker } from "@/types/tracker";
-import { islandName, mapPic, type Island, type IslandId } from "@/lib/islands";
+import { isTestQuestion, islandName, mapPic, type Island, type IslandId } from "@/lib/islands";
 import { addQuestionToIsland, removeQuestion, setTrackerIsland } from "@/lib/ownIslands";
 import { cardQuestion, templateQuestion } from "@/lib/cardText";
 import { Pressable } from "@/components/ui/pressable";
@@ -30,7 +30,7 @@ const GUIDE_KEY = "memap_first_question_seen";
 /** `onPick`: the list under the island's question switcher (Nov 15 2026): a tap picks the question, hers first */
 export const IslandQuestions = ({ island, islands, trackers, onPick, current }: { island: Island; islands: Island[]; trackers: Tracker[]; onPick?: (id: string) => void; current?: string }) => {
   const { t } = useTranslation();
-  const all = trackers.filter((tr) => island.trackerIds.includes(tr.id) && !tr.archived);
+  const all = trackers.filter((tr) => island.trackerIds.includes(tr.id) && !tr.archived && !isTestQuestion(tr));
   const mine = onPick ? [...all.filter((tr) => yoursOf(tr)), ...all.filter((tr) => !yoursOf(tr))] : all;
   const head = (tr: Tracker, k: number) => {
     if (!onPick) return null;
