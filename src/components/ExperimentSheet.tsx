@@ -131,6 +131,9 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   // 2 pm" is the try even if most days have none), the other's unless she already does them; not one already running
   const linkPool = !plan && linkQs.length ? (() => {
     const running = busyIdeas(), harm = homeHarmLit(trackers, entries);
+    // a link from a partner shouting or saying hurtful things: no "on those days, walk 20 minutes" (it read as making it hers
+    // to fix); only her own words, and the support those questions have
+    if (HOME_HARM_IDS.has(templateIdOf(linkQs[0]) ?? "")) return [];
     // something she can change (a library question with its own changes): those changes, the link's own try
     const cause = templateIdOf(linkQs[0]) ? ideasForQuestion(linkQs[0], harm).filter((k) => !running.has(k)) : [];
     if (cause.length) return cause.slice(0, 4);
