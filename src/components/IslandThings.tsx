@@ -36,6 +36,9 @@ export const IslandThings = ({ island, islands, trackers, entries, pick, ...acts
   const arrow = "grid h-10 w-8 shrink-0 place-items-center rounded-full text-muted-foreground disabled:opacity-25";
   return (
     <div data-island-things>
+      {/* the question stays at the top while its rows scroll (her note, Nov 15 2026 evening: "верхняя часть с вопросом
+          будет зафиксирована"): the sheet's own colour, no line; room on top for the sheet's ×, which stands over it once stuck */}
+      <div data-question-head className="sticky top-0 z-[5] -mx-4 -mt-3 bg-background px-4 pt-5">
       {/* like the calendar (her note, Nov 15 2026): arrows at both ends of the question, no card around it */}
       <div data-question-switcher className="flex items-center gap-1">
         <button type="button" onClick={() => step(-1)} disabled={i === 0} aria-label={t("islandQ.prev")} className={arrow}>
@@ -55,6 +58,7 @@ export const IslandThings = ({ island, islands, trackers, entries, pick, ...acts
           className="inline-flex h-8 items-center gap-0.5 tabular-nums text-muted-foreground">
           {t("islandQ.of", { k: i + 1, n: list.length })}<ChevronDown className="h-3.5 w-3.5" strokeWidth={2.6} />
         </button>
+      </div>
       </div>
       <ThingBody key={tr.id} tracker={tr} trackers={trackers} entries={entries} {...acts} />
 

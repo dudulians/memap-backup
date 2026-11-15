@@ -698,16 +698,13 @@ export const EveningPath = ({
         if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") setOpen(null);
         lastBest = best;
       }
-      // the strip's day: today while any of today's lights is on screen (the middle of a short page can fall on a coming
-      // day, her phone, Nov 15 2026); else the day of the light in the middle (another week's lights leave it as it was)
+      // the strip's day: the day of the light in the middle, so scrolling goes day by day (her phone, Nov 15 2026 evening:
+      // "today while any of today's lights is on screen" held Sunday until the middle was already on Wednesday, Monday and
+      // Tuesday were skipped); another week's lights leave it as it was
       if (!pinRef.current) {
-        const mr = main.getBoundingClientRect();
-        const roomBottom = mr.bottom - (parseFloat(getComputedStyle(main).scrollPaddingBottom) || 0);
-        const today = isoDay(new Date());
-        const todayInSight = [...main.querySelectorAll<HTMLElement>(`[data-day="${today}"]`)].some((el) => { const y = yOf(el); return y > mr.top + 8 && y < roomBottom - 8; });
         // an open card: its own day (her small phone, Nov 15 2026: today's card open, the title said Tuesday)
         const openDay = typeof openRef.current === "number" ? main.querySelector<HTMLElement>(`[data-path-stop="${openRef.current}"]`)?.closest<HTMLElement>("[data-day]")?.dataset.day : undefined;
-        const day = openDay ?? (todayInSight ? today : (best as HTMLElement | null)?.dataset.day);
+        const day = openDay ?? (best as HTMLElement | null)?.dataset.day;
         if (day && day !== lastDayRef.current) { lastDayRef.current = day; setInViewDate(day); }
       }
       const fw = focusRef.current?.closest<HTMLElement>("[data-cy]");

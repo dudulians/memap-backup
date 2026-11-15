@@ -237,7 +237,17 @@ export const TopicV7 = ({ tone, onBack, onPick, onOwn, onClearOwn, initial, own,
       head={<>
         <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
         <H1 className="mt-5">{t(tone === "all" ? "onb7.topicTitle" : tone === "good" ? "doors.goodTitle" : "doors.pickTitle")}</H1>
-        <p className={cn("mt-1.5 pb-3 text-[16px] font-semibold", full ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")} aria-live="polite">{full ? t("onb7.topicMax") : t("onb7.topicSub")}</p>
+        {/* "3 to start, more later" in sight (her note, Nov 15 2026 evening: «ярче выделим, что можно 3 только для начала и
+            дальше добавишь»): three dots fill as topics are picked; a 4th pick shakes them */}
+        <div data-topic-count className="mt-2.5 flex items-center gap-2.5" aria-live="polite" aria-label={full ? t("onb7.topicMax") : `${t("onb7.topicThree")}. ${t("onb7.topicMore")}`}>
+          <span className={cn("flex shrink-0 gap-1.5", full && "path-wiggle-flat")} aria-hidden="true">
+            {Array.from({ length: MAX_TOPICS }, (_, k) => (
+              <span key={k} className={cn("h-3.5 w-3.5 rounded-full transition-colors", k < sel.length + (own ? 1 : 0) ? "bg-[hsl(var(--coin-teal))]" : "bg-foreground/[0.14]")} />
+            ))}
+          </span>
+          <span className="text-[18px] font-extrabold leading-tight text-[hsl(var(--coin-teal))]">{t("onb7.topicThree")}</span>
+        </div>
+        <p className="mt-1 pb-3 text-[16px] font-semibold text-muted-foreground" aria-hidden="true">{t("onb7.topicMore")}</p>
       </>}
       foot={<Main disabled={sel.length === 0 && !own} onClick={() => { track("door_selected", { own: !!own, count: sel.length + (own ? 1 : 0), tone }); onPick(sel); }}>{t("doors.continue")}</Main>}>
       <div className="mt-1 flex flex-col gap-2">

@@ -2880,6 +2880,8 @@ const en = {
     agreePrivacy: "Privacy Policy",
     topicTitle: "What would you like to understand?",
     topicSub: "Start with up to 3. Add more anytime.",
+    topicThree: "3 topics to start",
+    topicMore: "Add more anytime later",
     topicMax: "Up to 3 to start — add more anytime.",
     lowEnergy: "Low energy",
     moreTopics: "More topics",
