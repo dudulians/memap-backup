@@ -173,7 +173,7 @@ export const Chart = ({ series, height, big = false, calm = false, at = null, on
           const pts = s.values.map((v, i) => [x(i), y(v)] as [number, number]);
           return (
             <g key={k}>
-              <path d={smooth(pts)} fill="none" stroke={`hsl(${s.color})`} strokeWidth={calm ? 2.25 : big ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" filter={calm ? undefined : `url(#${id}-s${k})`} />
+              <path data-series={k} d={smooth(pts)} fill="none" stroke={`hsl(${s.color})`} strokeWidth={calm ? 2.25 : big ? 3 : 2.5} strokeLinecap="round" strokeLinejoin="round" filter={calm ? undefined : `url(#${id}-s${k})`} />
               <circle cx={x(n - 1)} cy={y(s.values[n - 1])} r={calm ? 4 : big ? 5 : 4} fill={`hsl(${s.color})`} stroke="hsl(var(--surface))" strokeWidth={2} />
             </g>
           );
@@ -189,7 +189,7 @@ export const Chart = ({ series, height, big = false, calm = false, at = null, on
         <div data-chart-legend className="mt-2 space-y-1">
           {series.map((s, k) => s.label && (
             <p key={k} className="flex items-center gap-2 text-[13.5px] font-semibold text-muted-foreground">
-              <i className="inline-block h-[3px] w-4 shrink-0 rounded-full" style={{ background: `hsl(${s.color})` }} />{s.label}
+              <i data-legend-swatch={k} className="inline-block h-[3px] w-4 shrink-0 rounded-full" style={{ background: `hsl(${s.color})`, "--sw": `hsl(${s.color})` } as React.CSSProperties} />{s.label}
             </p>
           ))}
         </div>

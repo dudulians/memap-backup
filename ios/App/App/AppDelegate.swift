@@ -357,3 +357,33 @@ public class SpeechDictationPlugin: CAPPlugin, CAPBridgedPlugin {
         try? session.setCategory(.ambient, mode: .default, options: [])
     }
 }
+
+// MARK: - Accessibility plugin
+//
+// Her ask (Nov 15 2026): the colour-blind mode turns on by itself when iOS Settings → Accessibility → Display & Text
+// Size → "Differentiate Without Color" is on (the App Store's "Differentiate Without Color Alone" label). Same pattern
+// as CoreHapticsPlugin above (class in this file, name injected into packageClassList by codemagic.yaml after cap sync).
+// JS side: src/lib/colorBlind.ts.
+
+@objc(A11yPlugin)
+public class A11yPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "A11yPlugin"
+    public let jsName = "A11y"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "differentiateWithoutColor", returnType: CAPPluginReturnPromise),
+    ]
+
+    public override func load() {
+        NotificationCenter.default.addObserver(self, selector: #selector(settingChanged), name: UIAccessibility.differentiateWithoutColorDidChangeNotification, object: nil)
+    }
+
+    @objc func settingChanged() {
+        notifyListeners("change", data: ["on": UIAccessibility.shouldDifferentiateWithoutColor])
+    }
+
+    @objc func differentiateWithoutColor(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            call.resolve(["on": UIAccessibility.shouldDifferentiateWithoutColor])
+        }
+    }
+}

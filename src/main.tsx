@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { applyTheme, followPhoneOnFirstRun, getTheme } from "@/lib/theme";
-import { applyColorBlind } from "@/lib/colorBlind";
+import { applyColorBlind, followSystemColorBlind } from "@/lib/colorBlind";
 import App from "./App.tsx";
 import "./index.css";
 // Init i18next before any component renders so t() works everywhere
@@ -25,6 +25,8 @@ initAnalytics();
 // classic keeps the one it shipped with.
 document.documentElement.setAttribute("data-ui", getUiMode());
 applyColorBlind();
+// an iPhone with "Differentiate Without Color" on gets the colour-blind mode, unless she chose in MeMap (Nov 15 2026)
+followSystemColorBlind();
 // a new install starts in the phone's own dark or light (Nov 12 2026)
 if (getUiMode() === "new") { followPhoneOnFirstRun(); applyTheme(getTheme()); }
 
