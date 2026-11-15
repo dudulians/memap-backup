@@ -173,6 +173,8 @@ const en = {
     asDeck: "Show one by one",
     alsoMore: "+{{count}} more with it",
     chainSameDay: "on those days {{result}}",
+    // the top line of a chain card (Nov 15 2026)
+    kindChain: "Two links in a row",
     chainNextDay: "the day after, {{result}}",
     advMostOften: "most often",
     twoSameDay: "{{result}} on days {{causes}}",

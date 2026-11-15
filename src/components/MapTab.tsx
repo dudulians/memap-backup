@@ -8,7 +8,7 @@
 import { TipCard, tipSeen, tourCompleted } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ListChecks, Pencil, Plus } from "lucide-react";
+import { ListChecks, Pencil, Plus, Share2 } from "lucide-react";
 import { art, artOf, stageOf, toNextStage } from "@/lib/globeArt";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { getTrackers, getEntries } from "@/lib/storage";
@@ -339,6 +339,14 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <h2 className="min-w-0 flex-1 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
         {/* every question's own page, one button away (her note, Nov 14 2026: those pages «могут быть одними из главных»,
             without one more tile) */}
+        {/* Share up here, a round sign as phones show it (her note, Nov 15 2026: on the globe it came and went and was too
+            big among everything there) */}
+        {loaded && islands.some((i) => i.trackerIds.length > 0) && (
+          <button type="button" data-world-share onClick={() => { haptics.tap(); setShareOpen(true); }} aria-label={t("map.share")}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]">
+            <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
+          </button>
+        )}
         {loaded && islands.some((i) => i.trackerIds.length > 0) && (
           <button type="button" data-world-things onClick={() => { haptics.tap(); setThingsOpen(true); }}
             className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
@@ -358,7 +366,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="absolute inset-0 z-0" data-tour="world">
           <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} innerSigns={innerSigns} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link || thingsOpen || !!thing} onNewIsland={() => setNewOpen(true)} onShare={() => setShareOpen(true)} />
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link || thingsOpen || !!thing} onNewIsland={() => setNewOpen(true)} />
         </div>
       )}
 

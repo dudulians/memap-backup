@@ -183,6 +183,7 @@ const ru: Translation = {
     asDeck: "Показать по одной",
     alsoMore: "и ещё {{count}} вместе с этим",
     chainSameDay: "в такие дни {{result}}",
+    kindChain: "Две связи подряд",
     chainNextDay: "на следующий день {{result}}",
     advMostOften: "чаще всего",
     twoSameDay: "{{result}} в дни, когда {{causes}}",

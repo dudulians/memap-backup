@@ -11,7 +11,7 @@
 // - calm motion: drag 1:1, a short glide, no spinning on its own.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CloudLightning, CloudSun, Link2, Minus, Plus, Sun, Share2 } from "lucide-react";
+import { CloudLightning, CloudSun, Link2, LocateFixed, Minus, Plus, Sun, Share2 } from "lucide-react";
 import { Island, IslandId, Route, islandName, isNightMap, mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
 import { standAt, standsOn } from "@/lib/islandSpots";
@@ -852,28 +852,32 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         <span className="mx-2 h-px bg-foreground/10" />
         <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-9 w-9 items-center justify-center text-foreground"><Minus className="h-4 w-4" strokeWidth={2.6} /></button>
       </div>
-      {/* a new island, always at hand (on the flat map it was a tile) */}
+      {/* a new island, always at hand (on the flat map it was a tile); half see-through, so it is quieter than the
+          islands (her note, Nov 15 2026: «сейчас ярче остальных») */}
       {onNewIsland && !decor && (
         <div className="absolute left-4 z-[5] flex items-center gap-2" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
-          <button type="button" onClick={() => { haptics.tap(); onNewIsland(); }}
-            className="flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
+          <button type="button" data-new-island onClick={() => { haptics.tap(); onNewIsland(); }}
+            className="flex h-11 items-center gap-1.5 rounded-full bg-white/55 pl-3 pr-4 text-[15px] font-bold text-foreground/85 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
             <Plus className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("islands.new")}
           </button>
-          {/* the map is what gets shown to a partner or a doctor (her words, Nov 13 2026): the report and the picture
-              are here, not in the avatar */}
-          {onShare && !away && (
-            <button type="button" data-world-share onClick={() => { haptics.tap(); onShare(); }}
-              className="flex h-12 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
-              <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("map.share")}
+          {/* Share: an older place; the World now shows it in its header (MapTab), so nothing jumps here */}
+          {onShare && (
+            <button type="button" data-world-share onClick={() => { haptics.tap(); onShare(); }} aria-label={t("map.share")}
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
+              <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
             </button>
           )}
         </div>
       )}
-      <button type="button" onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
-        className={`absolute right-4 z-[5] flex h-12 items-center gap-2 rounded-full bg-white pl-2 pr-4 text-[15px] font-extrabold text-primary shadow-lg transition-all duration-200 dark:bg-[hsl(var(--surface))] ${away ? "opacity-100" : "pointer-events-none translate-y-2 opacity-0"}`}
-        style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
-        <img src={mapPic("sailboat")} alt="" className="h-8 w-8 rounded-full bg-sky-50 object-contain p-0.5 ring-2 ring-primary" />{t("map.backToMe")}
-      </button>
+      {/* back to where you are, as maps do it (her note, Nov 15 2026: no words, and it no longer comes and goes):
+          always under + and −, lit when the ball has been turned away or zoomed */}
+      {!decor && (
+        <button type="button" data-where-am-i onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
+          className={`absolute right-4 z-[5] grid h-11 w-11 place-items-center rounded-full bg-white shadow-lg transition-colors duration-200 dark:bg-[hsl(var(--surface))] ${away ? "text-[hsl(var(--coin-teal))]" : "text-foreground/40"}`}
+          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          <LocateFixed className="h-5 w-5" strokeWidth={2.4} />
+        </button>
+      )}
       {note && (
         <div className="absolute left-4 right-4 z-[5] flex items-center gap-3 rounded-[22px] bg-white/95 p-3.5 shadow-lg dark:bg-[hsl(var(--surface))]" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
           <img src={art("cloud_island_03", night)} alt="" className="h-11 w-16 shrink-0 object-contain" />

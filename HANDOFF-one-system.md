@@ -66,6 +66,12 @@ Today ведёт: идти по шагам и не думать, всё ново
 - Барашек: «My questions» → Back к барашку (Index questionsFromYou); без карточки напоминания; вопрос = TrackerDetails только Edit / Archive / Delete + «All about» (sessionStorage memap_open_thing → MapTab); TrackerSettingsModal plain (без лимита и совета); WorldStats без недели и связей.
 - Проверки r168 (проба в What helps), r169 (барашек).
 
+## v168 (15 нояб.)
+- StoryCard (цепочка, «Похоже, дело в другом») со строкой сверху (link.kindChain).
+- Глобус: data-where-am-i — круглая кнопка LocateFixed, всегда видна (серая дома, бирюзовая, когда шар повёрнут/увеличен); Share — круглый значок в шапке MapTab (data-world-share); «New island» полупрозрачная (data-new-island).
+- Макет «All about как главное» нарисован (work/all-about-mock/all-about-mock.png), ждёт её ответа; в коде его нет.
+- Её вопрос про пятницу: на тестовых данных заполнение с карточки «Fri 13» делает день жёлтым; спрошено, где она заполняла.
+
 ## Ждёт её ответа (страница «было / стало»)
 https://claude.ai/artifact/JnvyFaPNi68wx3xtVadTRz
 1. Знак связи внутри острова: маленький значок в подписи острова, без цифр. Она спросила, так ли задумано, что он как продолжение «Love life»; да/нет не сказала.

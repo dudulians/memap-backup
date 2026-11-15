@@ -88,7 +88,7 @@ for (const lang of ["en", "ru"]) {
   ok(`${lang}: a chain once the person set the order (short night → drained → arguments)`, !!chain && (lang === "en" ? /under 7 hours.*drained after work\. On those days .*argue/.test(chain.text) : /меньше 7 часов.*не остаётся сил\. В такие дни .*ссоритесь/.test(chain.text)), stories);
   // r153 (Nov 13 2026): the long "two things" sentence is gone; links about one thing are rows on its card (test-r153)
   ok(`${lang}: no long "two things" card (its links are rows on the card of their thing)`, !two, stories);
-  ok(`${lang}: "something else" for headache and alcohol`, notits.some((n) => (lang === "en" ? /Looks like it.s something else\. .*headache on days you don.t drink too/i : /Похоже, дело в другом\. .*голова и в дни, когда ты не пьёшь алкоголь/i).test(n.text)), stories);
+  ok(`${lang}: "something else" for headache and alcohol`, notits.some((n) => (lang === "en" ? /Looks like it.s something else\.?\s*.*headache on days you don.t drink too/i : /Похоже, дело в другом\.?\s*.*голова и в дни, когда ты не пьёшь алкоголь/i).test(n.text)), stories);
   ok(`${lang}: at most 3 "something else" cards, one per question`, notits.length > 0 && notits.length <= 3, notits.length);
   // its numbers and what to watch open on tap
   await p.evaluate(() => document.querySelector("[data-story=notit] button[aria-expanded]")?.click()); await p.waitForTimeout(400);

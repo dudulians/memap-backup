@@ -27,7 +27,8 @@ for (const lang of ["en", "ru"]) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(1800);
   await p.locator("button").filter({ hasText: lang === "en" ? /^World$/ : /^Мир$/ }).last().click(); await p.waitForTimeout(3000);
   const share = p.locator("[data-world-share]");
-  check(`${lang}: World has Share`, (await share.count()) === 1 && (await share.innerText()).trim() === (lang === "en" ? "Share" : "Поделиться"), await share.allInnerTexts());
+  // since v168 (Nov 15 2026) a round sign in the World's header, named for screen readers
+  check(`${lang}: World has Share`, (await share.count()) === 1 && (await share.getAttribute("aria-label")) === (lang === "en" ? "Share" : "Поделиться"), await share.getAttribute("aria-label"));
   await p.screenshot({ path: `${D}/${lang}-1-world.png` });
   await share.click(); await p.waitForTimeout(900);
   const rows = await p.locator("[data-share-sheet] [data-share]").allInnerTexts();

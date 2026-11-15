@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations, CorrelationResult } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, isTestQuestion, islandName, islandOf, linkOf, linkWorthShowing, LINKS_TOP, mapPic, rankLinks, type IslandId, type Route } from "@/lib/islands";
-import { ArrowRight, Check, ChevronDown, ChevronRight, FlaskConical, Link2 } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, ChevronRight, FlaskConical, Link2, Unlink } from "lucide-react";
 import { linkMark, linkSeen, linkSeenKey, markLinkSeen } from "@/lib/linkSeen";
 import { chainText, linkCount, linkHeadSegs, linkNumbers, linkOtherDays, linkTimes, trackerLookup, type Seg, type TrackerOf } from "@/lib/linkText";
 import { Chart, dayMarks, weekly, type Series } from "./ChartViews";
@@ -180,7 +180,7 @@ export const FindingsView = ({
   if (view === "deck") {
     const items: React.ReactNode[] = [
       ...groups.map((g, i) => card(g, i === 0, true)),
-      ...(chain ? [<StoryCard key="chain" kind="chain" text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />] : []),
+      ...(chain ? [<StoryCard key="chain" kind="chain" kicker={t("link.kindChain")} text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />] : []),
       ...notIt.map((x) => <NotItCard key={`notit-${x.outcome.id}`} x={x} />),
     ];
     return (
@@ -200,7 +200,7 @@ export const FindingsView = ({
   return (
     <div className="space-y-3.5 animate-fade-in">
       {shown.slice(0, 1).map((g) => card(g, true))}
-      {chain && <StoryCard kind="chain" text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />}
+      {chain && <StoryCard kind="chain" kicker={t("link.kindChain")} text={chainText(t, chain[0], chain[1], of)} details={[linkCount(t, chain[0]), linkCount(t, chain[1])]} />}
       {shown.slice(1).map((g) => card(g, false))}
       {!allShown && groups.length > SHOWN && (
         <button type="button" data-more-links onClick={() => setAllShown(true)} className="w-full rounded-[18px] py-3 text-[16px] font-bold text-[hsl(var(--coin-teal))]">
@@ -214,13 +214,21 @@ export const FindingsView = ({
 
 /** A finding told in words; its numbers open on tap (her note, Nov 11 2026: «сначала более простую формулировку
  *  без цифр, а цифры только если нужно поподробнее»). */
-const StoryCard = ({ kind, text, details, children }: { kind: string; text: string; details: string[]; children?: React.ReactNode }) => {
+const StoryCard = ({ kind, kicker, text, details, children }: { kind: string; kicker: string; text: string; details: string[]; children?: React.ReactNode }) => {
   const [open, setOpen] = useState(false);
   return (
     <div data-story={kind} className="surface rounded-[22px]">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex w-full items-start gap-2 px-[18px] pb-3 pt-4 text-left">
-        <span className="min-w-0 flex-1 text-[17px] font-bold leading-snug tracking-tight">{text}</span>
-        <ChevronDown className={cn("mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} strokeWidth={2.4} />
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="block w-full px-[18px] pb-3.5 pt-3.5 text-left">
+        {/* its own top line, as every link card has (her note, Nov 15 2026: a chain read as «просто рандомная фраза
+            между strongest so far и другой связью») */}
+        <span data-link-kicker className="mb-2 flex min-h-6 items-center gap-2">
+          <span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[hsl(var(--coin-teal)/0.14)] text-[hsl(var(--coin-teal))]">
+            {kind === "notit" ? <Unlink className="h-3.5 w-3.5" strokeWidth={2.6} /> : <Link2 className="h-3.5 w-3.5" strokeWidth={2.6} />}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{kicker}</span>
+          <Chev open={open} />
+        </span>
+        <span className="block text-[16.5px] font-bold leading-snug tracking-tight">{text}</span>
       </button>
       {open && (
         <div data-story-numbers className="space-y-1 px-[18px] pb-4 animate-fade-in">
@@ -242,7 +250,7 @@ const NotItCard = ({ x }: { x: NotIt }) => {
   const line = cap(t("link.notItLine", { result, without }));
   const body = cap(t("link.notItBody", { result, without, with: withIt, k1: x.k1, n1: x.n1, k2: x.k2, n2: x.n2 }));
   return (
-    <StoryCard kind="notit" text={`${head}. ${line}`} details={[body]}>
+    <StoryCard kind="notit" kicker={head} text={line} details={[body]}>
       {x.watch.length > 0 && (
         <div className="pt-2">
           <p className="text-[14px] font-bold text-foreground">{t("link.notItWatch")}</p>
