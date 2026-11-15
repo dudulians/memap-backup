@@ -2724,6 +2724,23 @@ const en = {
     open: "Open it",
     close: "Close",
   },
+  // an island's questions, one at a time (Nov 15 2026, board C)
+  islandQ: {
+    of: "{{k}} of {{n}}",
+    ofAria: "Question {{k}} of {{n}}: all questions",
+    prev: "Previous question",
+    next: "Next question",
+    yoursCame: "Yours · you came with this",
+    yoursOwn: "Yours · in your words",
+    suggested: "MeMap suggested",
+    yoursHead: "Yours",
+    suggestedHead: "MeMap suggested",
+    listTitle: "{{island}} questions",
+    // the island head, short (her note, Nov 15 2026: too much room on the name)
+    stageFull: "{{stage}} · fully grown",
+    stageNext_one: "{{stage}} · next stage in {{count}} evening",
+    stageNext_other: "{{stage}} · next stage in {{count}} evenings",
+  },
   tour: {
     step: "Look around",
     stepSub: "Where everything lives",

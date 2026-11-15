@@ -4,7 +4,7 @@
 // 2. A link walked to its last step says "Seen" with a tick when closed.
 // 3. A link with a try running says "Trying now" when closed, and opens straight on the try (no Next needed).
 // 4. Under "Trying now" one row goes to What helps; When to act's tests and What helps' tries say "From a link: … → …".
-// 5. "All about…" at the top of the World lists every question by island; a row opens its page, closing goes back.
+// 5. (v171) no "All about…" on the World: a question lives on its island, switched one at a time (test-r171).
 // Screenshots in work/r166. Run from marketing/tools with the dev server on 8080 (PORT env to change); exit 1 on a failure.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
@@ -98,22 +98,9 @@ for (const lang of ["en", "ru"]) {
   await shot(p, `${lang}-helps-from`);
   await closeSheet(p);
 
-  // "All about…" on the World
-  const btn = p.locator("[data-world-things]");
-  check(`${lang}: "All about…" sits at the top of the World`, (await btn.count()) === 1 && (await btn.innerText()).trim() === (lang === "en" ? "All about…" : "Всё про…"), await btn.innerText().catch(() => ""));
+  // v171 (her pick, Nov 15 2026): no "All about…" on the World; a question lives on its island, one at a time
+  check(`${lang}: no "All about…" on the World`, (await p.locator("[data-world-things]").count()) === 0);
   await shot(p, `${lang}-world`);
-  await btn.click(); await p.waitForTimeout(1300);
-  const rows = p.locator("[data-things-row]");
-  const rowN = await rows.count();
-  const T = await p.evaluate(() => JSON.parse(localStorage.getItem("memap_trackers")).filter((x) => !x.archived && x.source !== "play").length);
-  check(`${lang}: the list holds every question`, rowN === T, { rowN, T });
-  await shot(p, `${lang}-all-about`);
-  const id = await rows.first().getAttribute("data-things-row");
-  await rows.first().click(); await p.waitForTimeout(1500);
-  check(`${lang}: a row opens the page of its question`, (await p.locator(`[data-thing="${id}"]`).count()) === 1);
-  await shot(p, `${lang}-thing-from-list`);
-  await closeSheet(p); await p.waitForTimeout(600);
-  check(`${lang}: closing the page goes back to the list`, (await p.locator("[data-things-list]").count()) === 1);
   await ctx.close();
 }
 await b.close();

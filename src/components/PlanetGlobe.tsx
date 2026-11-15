@@ -850,6 +850,13 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           as maps do it: one column, one width, centred, as pale as "New island" (her notes, Nov 15 2026) */}
       {!decor && (
         <div data-globe-controls className="absolute right-4 z-[5] flex flex-col items-center gap-3" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          {/* Share: as pale as the rest of the column, over + and − (her pick B, Nov 15 2026) */}
+          {onShare && (
+            <button type="button" data-world-share onClick={() => { haptics.tap(); onShare(); }} aria-label={t("map.share")}
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
+              <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
+            </button>
+          )}
           <div className="flex w-11 flex-col overflow-hidden rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
             <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-10 w-11 items-center justify-center text-foreground/80"><Plus className="h-4 w-4" strokeWidth={2.6} /></button>
             <span className="mx-2.5 h-px bg-foreground/10" />
@@ -870,13 +877,6 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
             className="flex h-11 items-center gap-1.5 rounded-full bg-white/55 pl-3 pr-4 text-[15px] font-bold text-foreground/85 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
             <Plus className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("islands.new")}
           </button>
-          {/* Share: an older place; the World now shows it in its header (MapTab), so nothing jumps here */}
-          {onShare && (
-            <button type="button" data-world-share onClick={() => { haptics.tap(); onShare(); }} aria-label={t("map.share")}
-              className="grid h-11 w-11 place-items-center rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
-              <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
-            </button>
-          )}
         </div>
       )}
       {note && (

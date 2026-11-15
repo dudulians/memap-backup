@@ -39,8 +39,7 @@ import { reopenLink } from "./FindingsView";
 import { ChevronLeft } from "lucide-react";
 import { IslandEditor } from "./IslandEditor";
 import { NewIslandSheet } from "./NewIslandSheet";
-import { ThingSheet } from "./ThingSheet";
-import { ThingsList } from "./ThingsList";
+import { IslandThings } from "./IslandThings";
 import { DaysOverview } from "./DaysOverview";
 import { SteadyCard } from "./SteadyCard";
 import { IslandQuestions } from "./IslandQuestions";
@@ -298,8 +297,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // or it leads back (island → thing → place)
   const [thing, setThing] = useState<string | null>(null);
   // "All about…" at the top of the World: every question, by island; a page opened from it goes back to it
-  const [thingsOpen, setThingsOpen] = useState(false);
-  const thingFromList = useRef(false);
   // "All about …" from My questions (the lamb → My questions → a question): the World comes up on that page
   useEffect(() => {
     let id: string | null = null;
@@ -311,11 +308,23 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   }, []);
   useEffect(() => {
     // from an island, or from a link card (Nov 14 2026): the sheet it came from closes first, so sheets do not stack
-    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; thingFromList.current = false; setOpenRaw(null); setOnly(null); setOnlyIds(null); setLinkRaw(null); window.setTimeout(() => setThing(id), 250); };
+    const go = (e: Event) => { const id = (e as CustomEvent).detail?.id as string | undefined; if (!id) return; setOpenRaw(null); setOnly(null); setOnlyIds(null); setLinkRaw(null); window.setTimeout(() => setThing(id), 250); };
     window.addEventListener("memap-open-thing", go);
     return () => window.removeEventListener("memap-open-thing", go);
   }, []);
   const fromThing = (f: () => void) => { setThing(null); window.setTimeout(f, 250); };
+  void fromThing;
+  // the question to show first on its island, and its places opened from there (the island closes first)
+  const [pick, setPick] = useState<string | null>(null);
+  const fromIsland = (f: () => void) => { setOpen(null); window.setTimeout(f, 250); };
+  useEffect(() => {
+    if (!thing || !loaded) return;
+    const tr = trackers.find((x) => x.id === thing);
+    setThing(null);
+    if (!tr) return;
+    const isl = islandOf(tr);
+    if (islands.some((i) => i.id === isl)) { setPick(tr.id); setOpenRaw(isl); }
+  }, [thing, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   // "Share" on the World: the PDF report or the picture (both moved here from the avatar, Nov 13 2026)
   const [shareOpen, setShareOpen] = useState(false);
   const shareGo = (name: string, detail?: unknown) => { haptics.tap(); setShareOpen(false); window.setTimeout(() => window.dispatchEvent(new CustomEvent(name, { detail })), 280); };
@@ -343,23 +352,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           links inside one island, a new island at hand, zoom by hand. */}
       <div className="map-head relative z-[6] flex items-center gap-3 px-4 pb-2.5 pt-3" style={{ background: "transparent" }}>
         <h2 className="min-w-0 flex-1 truncate text-[26px] font-bold leading-tight tracking-tight">{t("map.title")}</h2>
-        {/* every question's own page, one button away (her note, Nov 14 2026: those pages «могут быть одними из главных»,
-            without one more tile) */}
-        {/* Share up here, a round sign as phones show it (her note, Nov 15 2026: on the globe it came and went and was too
-            big among everything there) */}
-        {loaded && islands.some((i) => i.trackerIds.length > 0) && (
-          <button type="button" data-world-share onClick={() => { haptics.tap(); setShareOpen(true); }} aria-label={t("map.share")}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]">
-            <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
-          </button>
-        )}
-        {loaded && islands.some((i) => i.trackerIds.length > 0) && (
-          <button type="button" data-world-things onClick={() => { haptics.tap(); setThingsOpen(true); }}
-            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white pl-3 pr-4 text-[15px] font-extrabold text-foreground shadow-lg dark:bg-[hsl(var(--surface))]">
-            <ListChecks className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("thing.listButton")}
-          </button>
-        )}
-      </div>
+            </div>
       {loaded && islands.length > 0 && (
         <div className="relative z-[6] mt-1">
           <DaysOverview trackers={trackers} entries={entries} links={linkCount} onHelps={onHelps} onOpen={(v) => { backTo.current = null; setOnlyIsland(null); setOnly(v); }} />
@@ -372,7 +365,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <div className="absolute inset-0 z-0" data-tour="world">
           <PlanetGlobe sky={false} below quietHint={worldTip} islands={islands} routes={routes} avatar={avatarPic} lit={lit} main={mainIsland} days={dayCount} treasures={treasures} garden={garden} innerSigns={innerSigns} onOpen={setOpen}
             onLink={(a, b) => setLink(routes.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a)) ?? null)}
-            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link || thingsOpen || !!thing} onNewIsland={() => setNewOpen(true)} />
+            paused={!!open || !!only || newOpen || !!editor || !!testFor || !!trying || !!linkTry || !!link || !!thing} onNewIsland={() => setNewOpen(true)} onShare={islands.some((i) => i.trackerIds.length > 0) ? () => setShareOpen(true) : undefined} />
         </div>
       )}
 
@@ -399,19 +392,19 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         </div>
       </BottomSheet>
       {/* an island's sheet only when the island is there (never an empty one) */}
-      <BottomSheet open={!!island && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
+      <BottomSheet open={!!island && loaded} onOpenChange={(o) => { if (!o) { setOpen(null); setPick(null); tripDone(); } }} className="h-[88vh]" ariaTitle={island ? islandName(t, island.id) : t("map.summary")}>
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-10">
-          <div className="flex items-center gap-3 pb-3 pr-10 pt-1">
+          <div className="flex items-center gap-2.5 pb-3 pr-10">
             {/* the island as it stands now, and how far its next stage is (WORLD-BIBLE, "Рост острова") */}
             {island ? (
               // the island exactly as on the globe, with its treasures (Nov 11 2026)
-              <IslandAsOnGlobe island={island.id} days={dayCount[island.id] ?? 0} className="w-[76px] shrink-0"
+              <IslandAsOnGlobe island={island.id} days={dayCount[island.id] ?? 0} className="w-[50px] shrink-0"
                 treasures={treasures.get(island.id)} garden={garden.get(island.id)} lit={lit.has(island.id)} />
             ) : <img src={mapPic("icon_growth")} alt="" className="h-12 w-12" />}
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[24px] font-bold tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
+              <h2 className="truncate text-[20px] font-bold leading-tight tracking-tight">{island ? islandName(t, island.id) : t("map.summary")}</h2>
               {island && (() => { const n = dayCount[island.id] ?? 0, left = toNextStage(n); return (
-                <p className="text-[15px] font-semibold leading-snug text-muted-foreground">{left === null ? t("path.stageFull", { stage: t(`path.stage${stageOf(n)}`) }) : t("path.stageLine", { stage: t(`path.stage${stageOf(n)}`), count: left })}</p>
+                <p className="text-[13.5px] font-semibold leading-snug text-muted-foreground">{left === null ? t("islandQ.stageFull", { stage: t(`path.stage${stageOf(n)}`) }) : t("islandQ.stageNext", { stage: t(`path.stage${stageOf(n)}`), count: left })}</p>
               ); })()}
             </div>
             {island && isOwnIsland(island.id) && (
@@ -423,22 +416,16 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           </div>
           {island ? (
             <>
-              {/* In order (her note: "куча всего, дублируется"): this week in
-                  words, what to answer today, the questions, then this
-                  island's calendar / chart / action points, links, test, growth. */}
-              <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0}
-                real={{ treasures: treasures.get(island.id), garden: garden.get(island.id), lit: lit.has(island.id) }} />
-              {playful && <IslandTreasures placed={treasures.get(island.id)} facts={facts}
-                onAll={() => { setOpen(null); window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-you")), 260); }} />}
-              {island.trackerIds.length > 0 && <IslandWeek island={island} trackers={trackers} />}
-              <div className="mb-1 mt-2"><AnswerNow island={island} trackers={trackers} entries={entries} /></div>
-              <IslandQuestions key={island.id} island={island} islands={islands} trackers={trackers} />
-              {island.trackerIds.length > 0 && (
-                <IslandMore island={island} routes={routes} trackers={trackers} growth={growth[island.id] ?? []} islands={islands} entries={entries}
-                  days={islandDays(trackers, entries).get(island.id) ?? 0}
-                  onTest={() => { const id = island.id; fromOutside.current = false; setOpen(null); window.setTimeout(() => setTestFor(id), 250); }}
-                  onView={(v: IslandView) => { const id = island.id; setOpen(null); window.setTimeout(() => { backTo.current = null; setOnlyIsland(id); setOnly(v); }, 250); }} />
-              )}
+              {/* her pick, Nov 15 2026 (board C): the question switcher and its four rows; how the island grows below */}
+              <IslandThings key={island.id} island={island} islands={islands} trackers={trackers} entries={entries} pick={pick}
+                onDays={(id) => fromIsland(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds([id]); setOnly("overview"); })}
+                onLinks={(id, pair) => fromIsland(() => { backTo.current = null; if (pair) reopenLink(pair); setOnlyIsland(null); setOnlyIds([id]); setOnly("findings"); })}
+                onAct={() => fromIsland(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds(null); setOnly("signals"); })}
+                onTry={(isl) => fromIsland(() => { fromOutside.current = false; setTestFor(isl); })} />
+              <div className="mt-6">
+                <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0}
+                  real={{ treasures: treasures.get(island.id), garden: garden.get(island.id), lit: lit.has(island.id) }} />
+              </div>
             </>
           ) : null}
         </div>
@@ -505,14 +492,6 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
           </button>
         </div>
       </BottomSheet>
-      <ThingSheet tracker={thing ? trackers.find((x) => x.id === thing) ?? null : null} trackers={trackers} entries={entries}
-        onClose={() => { const tr = trackers.find((x) => x.id === thing); setThing(null); if (thingFromList.current) { thingFromList.current = false; window.setTimeout(() => setThingsOpen(true), 250); } else if (tr) window.setTimeout(() => setOpen(islandOf(tr)), 250); }}
-        onDays={(id) => fromThing(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds([id]); setOnly("overview"); })}
-        onLinks={(id, pair) => fromThing(() => { backTo.current = null; if (pair) reopenLink(pair); setOnlyIsland(null); setOnlyIds([id]); setOnly("findings"); })}
-        onAct={() => fromThing(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds(null); setOnly("signals"); })}
-        onTry={(isl) => fromThing(() => setTestFor(isl))} />
-      <ThingsList open={thingsOpen} islands={islands} trackers={trackers} entries={entries} onClose={() => setThingsOpen(false)}
-        onPick={(id) => { setThingsOpen(false); window.setTimeout(() => { thingFromList.current = true; setThing(id); }, 250); }} />
       <LinkSheet route={link} trackers={trackers} entries={entries} days={dayCount} onClose={() => setLink(null)}
         onChart={(ids) => { if (link) backTo.current = { route: link }; setLink(null); setOnlyIsland(null); setOnlyIds(ids); window.setTimeout(() => setOnly("linkchart"), 250); }} />
       {helpsResult && (

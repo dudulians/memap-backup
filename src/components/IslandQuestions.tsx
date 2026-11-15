@@ -23,12 +23,21 @@ import { ensureTemplates } from "@/lib/doors";
 import { localizeTrackerQuestion } from "@/lib/trackerLocalize";
 import { RuleChips } from "@/components/RuleChips";
 import { RULES, type RuleKey } from "@/lib/rules";
+import { yoursOf } from "@/lib/yours";
 
 const GUIDE_KEY = "memap_first_question_seen";
 
-export const IslandQuestions = ({ island, islands, trackers }: { island: Island; islands: Island[]; trackers: Tracker[] }) => {
+/** `onPick`: the list under the island's question switcher (Nov 15 2026): a tap picks the question, hers first */
+export const IslandQuestions = ({ island, islands, trackers, onPick, current }: { island: Island; islands: Island[]; trackers: Tracker[]; onPick?: (id: string) => void; current?: string }) => {
   const { t } = useTranslation();
-  const mine = trackers.filter((tr) => island.trackerIds.includes(tr.id) && !tr.archived);
+  const all = trackers.filter((tr) => island.trackerIds.includes(tr.id) && !tr.archived);
+  const mine = onPick ? [...all.filter((tr) => yoursOf(tr)), ...all.filter((tr) => !yoursOf(tr))] : all;
+  const head = (tr: Tracker, k: number) => {
+    if (!onPick) return null;
+    const y = !!yoursOf(tr), before = k > 0 && !!yoursOf(mine[k - 1]);
+    if (k > 0 && y === before) return null;
+    return <p key={`h${k}`} className="px-1 pt-1 text-[12px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{t(y ? "islandQ.yoursHead" : "islandQ.suggestedHead")}</p>;
+  };
   // The open "⋯" menu (move / remove), and a remove waiting for "Yes".
   const [menu, setMenu] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -63,12 +72,12 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
 
   return (
     <div className="space-y-2.5 pb-2">
-      <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("islands.questionsHere", { count: mine.length })}</p>
-      {mine.map((tr) => (
-        <div key={tr.id} className="surface rounded-[20px] px-4 py-3">
+      {!onPick && <p className="pt-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">{t("islands.questionsHere", { count: mine.length })}</p>}
+      {mine.map((tr, k) => [head(tr, k), (
+        <div key={tr.id} className={cn("surface rounded-[20px] px-4 py-3", current === tr.id && "ring-2 ring-[hsl(var(--coin-teal))]")}>
           <div className="flex items-center gap-3">
             {/* the question opens its own page: days, links, when to act, what helps (ThingSheet, Nov 13 2026) */}
-            <button type="button" data-open-thing={tr.id} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-thing", { detail: { id: tr.id } })); }}
+            <button type="button" data-open-thing={tr.id} onClick={() => { haptics.tap(); if (onPick) onPick(tr.id); else window.dispatchEvent(new CustomEvent("memap-open-thing", { detail: { id: tr.id } })); }}
               className="min-w-0 flex-1 text-left text-[16px] font-semibold leading-snug">{cardQuestion(tr)}</button>
             <button type="button" onClick={() => { haptics.tap(); setMenu((m) => (m === tr.id ? null : tr.id)); setRemoving(null); }}
               aria-label={t("islands.more")} aria-expanded={menu === tr.id}
@@ -116,7 +125,7 @@ export const IslandQuestions = ({ island, islands, trackers }: { island: Island;
             </div>
           )}
         </div>
-      ))}
+      )])}
 
       {saved && <p className="px-1 text-[15px] font-semibold text-[hsl(var(--coin-teal))]">{t("islands.added")}</p>}
 

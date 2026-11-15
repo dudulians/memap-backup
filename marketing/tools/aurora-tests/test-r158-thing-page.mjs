@@ -28,10 +28,9 @@ for (const lang of ["en", "ru"]) {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(1800);
   await p.locator("button").filter({ hasText: lang === "en" ? /^World$/ : /^Мир$/ }).last().click(); await p.waitForTimeout(2800);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island: "love" } }))); await p.waitForTimeout(1600);
-  const q = p.locator("[data-open-thing]").first();
-  check(`${lang}: a question on the island can be opened`, (await q.count()) === 1 || (await p.locator("[data-open-thing]").count()) >= 1);
-  await q.scrollIntoViewIfNeeded(); await q.click(); await p.waitForTimeout(1300);
-  const page = p.locator("[data-thing]");
+  // v171: the island shows its question's page itself, under the question switcher
+  check(`${lang}: the island shows a question's page`, (await p.locator("[data-island-things] [data-thing]").count()) === 1);
+  const page = p.locator("[data-island-things] [data-thing]");
   const rows = await page.locator("[data-thing-row]").evaluateAll((els) => els.map((e) => e.getAttribute("data-thing-row")));
   check(`${lang}: four rows in the app's order`, rows.join() === "days,links,act,helps", rows);
   const text = (await page.innerText()).replace(/\s+/g, " ");
@@ -47,15 +46,12 @@ for (const lang of ["en", "ru"]) {
   check(`${lang}: the My days row opens My days`, (lang === "en" ? /My days/ : /Мои дни/).test(days) && !/\[data-thing\]/.test(days), days.slice(0, 120));
   await p.keyboard.press("Escape"); await p.waitForTimeout(900);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island: "love" } }))); await p.waitForTimeout(1500);
-  await p.locator("[data-open-thing]").first().click(); await p.waitForTimeout(1200);
   await p.locator("[data-thing-link]").first().click(); await p.waitForTimeout(1500);
   check(`${lang}: the link opens in Links`, (await p.locator("[data-link-card]").count()) >= 1);
   await p.keyboard.press("Escape"); await p.waitForTimeout(900);
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island: "love" } }))); await p.waitForTimeout(1500);
-  await p.locator("[data-open-thing]").first().click(); await p.waitForTimeout(1200);
-  await p.keyboard.press("Escape"); await p.waitForTimeout(1200);
   const back = (await p.locator("[role=dialog]").last().innerText().catch(() => "")).replace(/\s+/g, " ");
-  check(`${lang}: closing the page goes back to the island`, (lang === "en" ? /Love life/ : /Личная жизнь|Любовь|Отношения/).test(back) && (await p.locator("[data-open-thing]").count()) >= 1, back.slice(0, 100));
+  check(`${lang}: the page is the island itself`, (lang === "en" ? /Love life/ : /Личная жизнь|Любовь|Отношения/).test(back) && (await p.locator("[data-question-switcher]").count()) === 1, back.slice(0, 100));
   await ctx.close();
 }
 await b.close();
