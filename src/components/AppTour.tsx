@@ -17,6 +17,8 @@ import { getEntries, getTrackers } from "@/lib/storage";
 import { art, artOf, STAGE_AT, LADDER_WIDTH } from "@/lib/globeArt";
 import { islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { countedDays, LINKS_AT, markDiscovered, pathModel } from "@/lib/pathSteps";
+import { answerPhrase } from "@/lib/answerPhrases";
+import { ideasFor } from "@/lib/experiments";
 import { centre, curveDots, findTarget, focusGlobe, frames, isleRects, still, union, useCount, wait, type Pt } from "@/lib/spotlight";
 import type { Tracker } from "@/types/tracker";
 import { track, useScreen } from "@/lib/analytics";
@@ -50,13 +52,18 @@ const PARTS: Record<Part, Stop[]> = {
     { id: "week", tab: "cards", target: '[data-tour="week"]' },
     { id: "steps", tab: "cards", steps: true },
   ],
+  // her note (Nov 15 2026): each tile shown, with an example made of her own questions
   world: [
     { id: "world", tab: "patterns", isle: "main" },
-    { id: "parts", tab: "patterns", target: "[data-world-tiles]" },
+    { id: "calendar", tab: "patterns", target: '[data-tour="calendar"]' },
+    { id: "links", tab: "patterns", target: '[data-tour="links-card"]' },
+    { id: "actions", tab: "patterns", target: '[data-tour="actions"]' },
+    { id: "helps", tab: "patterns", target: '[data-tour="helps"]' },
   ],
 };
 
 // --- the little pictures ---------------------------------------------------------
+const cap1 = (x: string) => x.charAt(0).toLocaleUpperCase() + x.slice(1);
 
 const Example = () => {
   const { t } = useTranslation();
@@ -115,7 +122,7 @@ const Growth = ({ island }: { island: IslandId }) => {
 /** Two islands and the dots between them, drawn in the card (the light stays on the
  *  row's Links tile, so the tour doesn't jump down to the map and back), then how far
  *  hers is. */
-const Links = ({ days }: { days: number }) => {
+const Links = ({ days, mine }: { days: number; mine?: { a: string; b: string; ia: IslandId; ib: IslandId } | null }) => {
   const { t } = useTranslation();
   const k = useCount(4, 1050, 280);
   const dots = Array.from({ length: 9 }, (_, i) => { const u = (i + 1) / 10; return { x: 62 + u * 158, y: 64 - Math.sin(u * Math.PI) * 26 }; });
@@ -125,18 +132,18 @@ const Links = ({ days }: { days: number }) => {
         <img className="art-day block w-full" src={art(name, false)} alt="" />
         <img className="art-night block w-full" src={art(name, true)} alt="" />
       </span>
-      <span className="mt-0.5 max-w-full truncate text-[13px] font-bold">{label}</span>
+      <span className="mt-0.5 line-clamp-2 max-w-full text-center text-[13px] font-bold leading-tight">{label}</span>
     </span>
   );
   return (
     <>
       <Box example>
-        <div className="relative mx-auto h-[104px] w-[282px] max-w-full">
+        <div className="relative mx-auto h-[118px] w-[282px] max-w-full">
           <svg viewBox="0 0 282 104" className="absolute inset-0 h-full w-full" aria-hidden="true">
             {dots.map((p, i) => <circle key={i} className="tour-pop" style={delay(0.3 + i * 0.07)} cx={p.x} cy={p.y} r="3.6" fill="hsl(var(--data-a))" />)}
           </svg>
-          {isle("19_grassy_terraces", t("tour.links.a"), true)}
-          {isle("09_waterfall", t("tour.links.b"), false)}
+          {isle(mine ? artOf(mine.ia, 21) : "19_grassy_terraces", mine ? cap1(mine.a) : t("tour.links.a"), true)}
+          {isle(mine ? artOf(mine.ib, 21) : "09_waterfall", mine ? cap1(mine.b) : t("tour.links.b"), false)}
           <span className="tour-pop absolute left-1/2 top-[2px] flex -translate-x-1/2 items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[13px] font-extrabold text-[hsl(var(--data-a))] shadow-sm dark:bg-[hsl(var(--surface))]" style={delay(1)}>
             <Link2 className="h-3.5 w-3.5" strokeWidth={2.8} /><span className="tabular-nums">{t("tour.links.sample", { k: Math.max(1, k), n: 5 })}</span>
           </span>
@@ -243,7 +250,7 @@ const Weeks = ({ days }: { days: number }) => {
 };
 
 /** Three hard nights fill the meter, then the lighthouse lights up. */
-const Rule = () => {
+const Rule = ({ mine }: { mine?: string | null }) => {
   const { t } = useTranslation();
   return (
     <Box example>
@@ -253,7 +260,7 @@ const Rule = () => {
           <img aria-hidden="true" className="relative h-14 w-14 object-contain" src={mapPicFor("lighthouse", false)} alt="" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold leading-snug">{t("tour.actions.sample")}</p>
+          <p className="text-[15px] font-bold leading-snug">{mine ?? t("tour.actions.sample")}</p>
           <div className="mt-1.5 flex gap-1" aria-hidden="true">
             {Array.from({ length: 7 }, (_, i) => i < 3
               ? <span key={i} className="tour-pop h-3 w-3 rounded-full" style={{ background: "hsl(var(--strong))", ...delay(0.4 + i * 0.22) }} />
@@ -266,7 +273,7 @@ const Rule = () => {
 };
 
 /** One small change, two weeks: the days fill in. */
-const Try = () => {
+const Try = ({ mine }: { mine?: string | null }) => {
   const { t } = useTranslation();
   return (
     <Box example>
@@ -275,7 +282,7 @@ const Try = () => {
           <Sprout className="h-7 w-7 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold leading-snug">{t("tour.helps.sample")}</p>
+          <p className="text-[15px] font-bold leading-snug">{mine ?? t("tour.helps.sample")}</p>
           <div className="mt-1.5 flex items-center gap-[3px]" aria-hidden="true">
             {Array.from({ length: 14 }, (_, i) => i < 5
               ? <span key={i} className="tour-pop h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--coin-teal))", ...delay(0.4 + i * 0.18) }} />
@@ -482,6 +489,14 @@ export const AppTour = () => {
   const back = () => { if (moving || view.at === 0) return; haptics.tap(); setAt(view.at - 1); };
 
   const weekPart = data.week % 4;
+  // examples made of her own questions (her note, Nov 15 2026): her main question and one more
+  const mainQ = data.trackers.find((x) => x.id === door?.trackerId && !x.archived) ?? data.trackers.find((x) => !x.archived);
+  const otherQ = data.trackers.find((x) => !x.archived && x.id !== mainQ?.id && x.source !== "play");
+  const hardOf = (x: Tracker) => answerPhrase(t, x, x.problemWhen !== "no");
+  const mineLinks = mainQ && otherQ ? { a: hardOf(otherQ), b: hardOf(mainQ), ia: islandOf(otherQ), ib: islandOf(mainQ) } : null;
+  const mineRule = mainQ ? cap1(t("tour.actionsMine", { what: hardOf(mainQ) })) : null;
+  const idea = mainQ ? ideasFor(islandOf(mainQ))[0] : undefined;
+  const mineTry = idea ? t("tour.helpsMine", { change: t(`experiment.idea.${idea}.change`) }) : null;
   const title = stop.id === "week" ? t("tour.strip.title")
     : stop.id === "world" ? t("tour.isle.title")
     : stop.id === "parts" ? t("tour.parts.title")
@@ -496,11 +511,11 @@ export const AppTour = () => {
   const visual = stop.id === "week" ? <StripLegend />
     : stop.id === "world" || stop.id === "parts" ? null
     : stop.id === "steps" ? <StepsLegend />
-    : stop.id === "links" ? <Links days={data.days} />
+    : stop.id === "links" ? <Links days={data.days} mine={mineLinks} />
     : stop.id === "calendar" ? <Month />
     : stop.id === "chart" ? <Weeks days={data.days} />
-    : stop.id === "actions" ? <Rule />
-    : stop.id === "helps" ? <Try />
+    : stop.id === "actions" ? <Rule mine={mineRule} />
+    : stop.id === "helps" ? <Try mine={mineTry} />
     : stop.id === "notes" ? <NoteExample />
     : stop.id === "you" ? (isPlayful() ? <Treasures /> : null)
     : null;

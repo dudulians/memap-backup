@@ -854,7 +854,9 @@ const en = {
     dayBefore: "{{x}} the day before",
     newQ: "new question",
     ownIdea: "My own idea…",
-    ownPlaceholder: "For example: coffee after 4 pm",
+    ownPlaceholder: "As a question: Did I have coffee after 4 pm?",
+    ownAsQuestion: "Write it as a yes/no question, with “?” at the end",
+    ownWhere: "It goes to the “My own” island",
     check: "Check",
     noted: "Hunch noted",
     notedLine: "MeMap will check if they come before the days when {{x}}.",
@@ -1649,6 +1651,13 @@ const en = {
     newQuestion_other: "Your {{count}} new questions",
     fillYesterdayDay: "Yesterday, {{day}}",
     fillDayTitle: "Fill in {{day}}",
+    // "Done for today" asks her back (Nov 15 2026)
+    comeBack: "Come back tomorrow evening",
+    comeBackLinks_one: "{{count}} more evening to your first links",
+    comeBackLinks_other: "{{count}} more evenings to your first links",
+    comeBackReport_one: "Your week report in {{count}} evening",
+    comeBackReport_other: "Your week report in {{count}} evenings",
+    comeBackDefault: "Your questions take a minute",
     // a step with questions from more than two islands (no "+2", her note Nov 15 2026)
     islandsMore: "{{names}} and more",
     notFilled: "Not filled",
@@ -2800,6 +2809,9 @@ const en = {
     strip: { title: "Your week", line: "Tap a day to go to it. An empty one, to fill it in.", done: "Done", missed: "Not filled", today: "Today" },
     // the World tab, lit from Today: the tour no longer jumps there (Nov 15 2026)
     // the World's part (board F): her islands, then the four parts on top
+    // examples made of her own questions (Nov 15 2026)
+    actionsMine: "{{what}} 3 days in a week: time for your plan",
+    helpsMine: "{{change}}",
     isle: { title: "Every topic is an island", line: "Tap an island to see each question: its days, links and what helps." },
     parts: { title: "These open as evenings add up", line_one: "My days now, links in about {{count}} evening, then when to act and what helps.", line_other: "My days now, links in about {{count}} evenings, then when to act and what helps.", lineOpen: "My days, links, when to act and what helps: they fill in as evenings add up." },
     // over the World tab once it glows (board F)

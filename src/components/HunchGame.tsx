@@ -112,7 +112,8 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
         const label = ownText.replace(/[?？]+$/, "");
         // what she typed is something that happens: "yes" is the hard answer (persona walk, Nov 9 2026: her
         // "comparing myself on Instagram" was saved hard-when-no and shown green for 3 weeks)
-        ids.push(await addQuestionToIsland(ownText, islandOf(target), true));
+        // her own question goes to her own island (her note, Nov 15 2026), not the island of what she guesses about
+        ids.push(await addQuestionToIsland(ownText, "mine", true));
         names.push(label);
         added.push(label);
       }
@@ -217,6 +218,11 @@ export const HunchGame = ({ trackers, entries, onClose }: { trackers: Tracker[];
                     aria-label={t("hunch.ownIdea")} className="h-12 min-w-0 flex-1 bg-transparent text-[17px] font-semibold outline-none placeholder:font-medium" />
                   {tick(!!ownText)}
                 </label>
+              ) : null}
+              {ownOpen ? (
+                <p data-own-hint className={cn("px-2 text-[13.5px] font-semibold leading-snug", ownText && !/[?？]\s*$/.test(ownText) ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")}>
+                  {ownText && !/[?？]\s*$/.test(ownText) ? t("hunch.ownAsQuestion") : t("hunch.ownWhere")}
+                </p>
               ) : (
                 <button type="button" onClick={() => { haptics.tap(); setOwnOpen(true); }}
                   className="flex min-h-14 w-full items-center gap-3 rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-left text-[17px] font-semibold text-muted-foreground">

@@ -73,7 +73,7 @@ for (const lang of ["en", "ru"]) {
   // the World's part
   await hint.click();
   const worldCards = [];
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 7; i++) {
     await p.waitForTimeout(i === 0 ? 2800 : 1700);
     const card = p.locator("[data-tour-card]");
     if (!(await card.count())) break;
@@ -82,7 +82,7 @@ for (const lang of ["en", "ru"]) {
     await card.locator("button.raised-btn").click();
   }
   await p.waitForTimeout(1200);
-  check(`${lang}: the World's part is two cards, on the World`, worldCards.length === 2 && worldCards.every((c) => c.endsWith("World")), worldCards);
+  check(`${lang}: the World's part is five cards (islands and each tile), on the World`, worldCards.length === 5 && worldCards.every((c) => c.endsWith("World")), worldCards);
   check(`${lang}: it ends on the World`, (await p.locator(".path-box").count()) === 0);
   check(`${lang}: the line over the tab is gone`, (await p.locator("[data-world-ready]").count()) === 0);
   // what to tap next (her rule, Nov 15 2026): after the World's tour the Today tab lights up with a line over it

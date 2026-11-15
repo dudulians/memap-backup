@@ -72,6 +72,31 @@ const ExampleLinkCard = () => {
     </ExampleBox>
   );
 };
+/** A link over less than four weeks (her note, Nov 15 2026: the chart of two weeks and its thin marks looked odd): its
+ *  two answers as two rows of days, a dot a day, lit in the answer's colour; days with both sit on a pale band. */
+const DayRows = ({ series, sameDay = true }: { series: Series[]; sameDay?: boolean }) => {
+  const rows = series.map((x) => (x.days ?? []).flat());
+  const n = Math.max(...rows.map((r) => r.length), 0);
+  if (n === 0) return null;
+  // the band only for same-day links: for "the day after" the two days are not under each other
+  const both = (i: number) => sameDay && rows.every((r) => r[i] === true);
+  return (
+    <div data-link-day-rows className="mt-2 space-y-3">
+      {series.map((x, k) => (
+        <div key={k}>
+          <p className="mb-1.5 flex items-center gap-2 text-[13.5px] font-semibold text-muted-foreground"><i className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: `hsl(${x.color})` }} />{x.label}</p>
+          <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+            {rows[k].map((v, i) => (
+              <span key={i} className={cn("flex h-5 items-center justify-center rounded-full", both(i) && "bg-foreground/[0.06]")}>
+                <i className="block h-3 w-3 rounded-full" style={v === true ? { background: `hsl(${x.color})` } : v === false ? { background: "hsl(var(--foreground) / 0.12)" } : { boxShadow: "inset 0 0 0 1.5px hsl(var(--foreground) / 0.14)" }} />
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 /** A day is a dot, coloured by what the answer means (the one look, Nov 6 2026). */
 const toneOf = (tr: Tracker | undefined, v: boolean) =>
   !tr || isNeutralQuestion(tr) || isTestQuestion(tr) ? "hsl(var(--data-a))" : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced))";
@@ -496,8 +521,17 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
               и палочки») */}
           {series.length === 2 && (
             <div data-link-chart-inline className="mt-1">
-              <p className="text-[12.5px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</p>
-              <Chart series={series} height={150} big calm at={at} onAt={setAt} />
+              {W < 4 ? (
+                <>
+                  <p className="text-[12.5px] font-medium text-muted-foreground">{t("charts.everyDay", { count: W })}</p>
+                  <DayRows series={series} sameDay={!r.nextDay} />
+                </>
+              ) : (
+                <>
+                  <p className="text-[12.5px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</p>
+                  <Chart series={series} height={150} big calm at={at} onAt={setAt} />
+                </>
+              )}
             </div>
           )}
           {other && <p data-link-other className="mt-3 text-[15px] font-semibold leading-snug">{cap(other)}</p>}

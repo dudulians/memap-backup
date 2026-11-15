@@ -1078,6 +1078,20 @@ export const EveningPath = ({
           {/* a hurtful evening with a partner ends gently, no "Great work!" and no game (persona walk, Nov 9 2026) */}
           {/* "Games and rewards" off (Nov 9 2026): a neutral line, no bubbles, no next treasure */}
           {hardHome ? head(t("path.eveningSoft"), t("path.eveningSoftSub")) : playful ? head(t("path.eveningDone"), t("path.eveningDoneSub")) : head(t("path.eveningAll"))}
+          {/* come back tomorrow, and what is waiting (her note, Nov 15 2026) */}
+          {(() => {
+            const evenings = countedDays(trackers, entries).length;
+            const why = evenings < LINKS_AT ? t("path.comeBackLinks", { count: LINKS_AT - evenings }) : (m.reportIn ?? 0) > 0 ? t("path.comeBackReport", { count: m.reportIn }) : t("path.comeBackDefault");
+            return (
+              <div data-come-back className="mb-3 mt-1 flex items-center gap-3 rounded-[16px] bg-[hsl(var(--coin-teal)/0.1)] px-3.5 py-2.5">
+                <MoonStar className="h-5 w-5 shrink-0 text-[hsl(var(--coin-teal))]" strokeWidth={2.4} />
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-bold leading-snug">{t("path.comeBack")}</span>
+                  <span className="block text-[13.5px] font-semibold text-muted-foreground">{why}</span>
+                </span>
+              </div>
+            );
+          })()}
           {hardHome && button(t("support.chip"), go(() => setSupport("home"), "support"), "teal")}
           {!hardHome && playful && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
           {/* the next treasure ("Moon · 3 evenings in a row" → You) is out for now: it said nothing she could use */}
