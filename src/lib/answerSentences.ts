@@ -235,7 +235,7 @@ export const S: Record<string, [string, string, string, string]> = {
   "hot-day": ["it is ~hot", "the weather ~is comfortable", "~жарко", "жары ~нет"],
   "weather-change": ["the weather ~changes sharply", "the weather ~is steady", "погода ~резко меняется", "погода ~ровная"],
   "phones-together": ["phones ~get in the way of your time together", "your time together ~is phone-free", "телефоны ~мешают побыть вдвоём", "время вдвоём ~без телефонов"],
-  "bedtime-battle": ["your child's bedtime is ~a struggle", "bedtime ~goes smoothly", "отбой ребёнка ~даётся тяжело", "отбой ~проходит спокойно"],
+  "bedtime-battle": ["your child's bedtime is ~a struggle", "bedtime ~goes smoothly", "ребёнка ~трудно уложить спать", "ребёнок ~спокойно засыпает"],
   "unfair-chores": ["you ~carry an unfair load of chores", "the chores ~feel fair", "на тебе ~несправедливо много домашних дел", "дела ~делятся честно"],
   "many-interruptions": ["you ~get interrupted all day", "your day ~runs without interruptions", "тебя ~отвлекают весь день", "день ~идёт без отвлечений"],
   "social-media-hour": ["you ~spend over an hour on social media", "you ~spend under an hour on social media", "ты ~сидишь в соцсетях больше часа", "ты ~проводишь в соцсетях меньше часа"],

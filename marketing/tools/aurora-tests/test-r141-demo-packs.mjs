@@ -13,13 +13,13 @@ const EXPECT = {
   "work-home": [
     [/STRONGEST SO FAR The days you argue with your partner mostly fall on days you feel drained after work \d+ of \d+ times/, "the store's pair first, in one sentence"],
     [/^(?!.*On those days)/, "no chain until the person sets an order"],
-    [/drained after work [0-9]+ of [0-9]+ times . [+][0-9]+ more with it/, "the other things next to the arguments are on its card (r153)"],
-    [/Looks like it.s something else. .* on days you don.t drink too/, "something else: not the alcohol"],
+    [/drained after work [0-9]+ of [0-9]+ times . [0-9]+ more links? with it/, "the other things next to the arguments are on its card (r153)"],
+    [/Looks like it.s something else.? .* on days you don.t drink too/i, "something else: not the alcohol"],
     [/The days you feel calm mostly fall on days you spend 30 minutes outside/, "calm with time outside (the good side)"],
     [/“Did I check work email after 8 pm\??”/, "her own question, as typed"],
   ],
   "migraine-cycle": [
-    [/have a headache [0-9]+ of [0-9]+ times . [+][0-9]+ more with it/, "the headache card holds its other links (r153)"],
+    [/have a headache [0-9]+ of [0-9]+ times . [0-9]+ more links? with it/, "the headache card holds its other links (r153)"],
     [/The day after you have coffee after 2 pm, you (usually|often|almost always|always) sleep under 7 hours/, "next day: late coffee → short night"],
   ],
   parenting: [
@@ -28,9 +28,10 @@ const EXPECT = {
     [/The days you feel calm (almost only|mostly) fall on days you have time for yourself/, "calm with me-time (the good side)"],
   ],
   "good-days": [
-    [/feel happy .{0,40}[+][0-9]+ more with it/, "the happy days card holds its other links (r153)"],
+    [/feel happy .{0,40}[0-9]+ more links? with it/, "the happy days card holds its other links (r153)"],
     [/The days you feel calm mostly fall on days you meditate/, "calm on meditation days"],
-    [/“Did I call my mom\??”/, "her own good question"],
+    // since v165 a thing's other links live on its page ("All about … and 3 more links with it"): the mom link is one of them
+    [/“Did I call my mom\??”|feel happy[\s\S]{0,400}[0-9]+ more links? with it/, "her own good question"],
   ],
 };
 

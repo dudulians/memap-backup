@@ -1,12 +1,16 @@
 // "How MeMap works" (Nov 6 2026, the storyline's cheat sheet): the 4 parts in the order the
 // month opens them, what the map's signs mean, and that a question can be added any time.
 // Big short labels, one short line each (her rule: people don't read).
+// The map's signs are drawn as the globe draws them (her note, Nov 15 2026 evening: «картинка island не наша, dot
+// between island цвет не наш… надо проверить, что там всё наше»): the island as on the globe, white route dots with
+// the chain chip, the weather as the small sign in an island's name, on a piece of the globe's sea.
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Link2, Sprout } from "lucide-react";
+import { Plus, Link2, Sprout, CloudLightning, CloudSun, Sun } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { mapPic } from "@/lib/islands";
 import { haptics } from "@/lib/haptics";
+import { IslandAsOnGlobe } from "./IslandAsOnGlobe";
 
 const Dots = () => (
   <span className="grid grid-cols-3 gap-[3px]" aria-hidden="true">
@@ -16,9 +20,26 @@ const Dots = () => (
   </span>
 );
 
-const Line = ({ pic, title, line, step }: { pic: ReactNode; title: string; line: string; step?: string }) => (
+/** the white dots of a route with the chain chip on it, as on the globe (PlanetGlobe: .planet-route, .link-chip) */
+const Route = () => (
+  <span className="relative flex h-6 w-11 items-center justify-center" aria-hidden="true">
+    <svg width="44" height="10" viewBox="0 0 44 10" className="absolute inset-x-0 top-1/2 -translate-y-1/2">
+      {[3, 10, 34, 41].map((x) => <circle key={x} cx={x} cy={5} r={2.6} className="planet-route" />)}
+    </svg>
+    <span className="link-chip relative"><Link2 className="h-3 w-3" strokeWidth={2.8} /></span>
+  </span>
+);
+
+/** an island's name sign as on the globe: a small white pill (.planet-label) with the weather or the chain in it */
+const NameSign = ({ children }: { children: ReactNode }) => (
+  <span className="inline-flex h-7 items-center gap-1 rounded-[14px] bg-white px-2 shadow-[0_6px_14px_-8px_rgba(20,50,90,.5)]" aria-hidden="true">{children}</span>
+);
+
+const Line = ({ pic, title, line, step, sea }: { pic: ReactNode; title: string; line: string; step?: string; sea?: boolean }) => (
   <div className="flex items-center gap-3.5 py-2.5">
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-foreground/[0.05]">{pic}</span>
+    <span className={sea
+      ? "how-sea flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[14px]"
+      : "flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-foreground/[0.05]"}>{pic}</span>
     <span className="min-w-0 flex-1">
       <span className="flex items-baseline gap-2">
         <span className="text-[17px] font-bold leading-tight">{title}</span>
@@ -46,17 +67,15 @@ export const HowItWorksSheet = ({ open, onClose, onAddQuestion }: { open: boolea
 
         <p className="mt-6 text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("how.mapKicker")}</p>
         <div className="surface mt-2 shrink-0 rounded-[20px] px-4 py-1">
-          <Line pic={<img src={mapPic("island_lotus")} alt="" width={38} height={26} className="object-contain" />} title={t("how.island")} line={t("how.islandLine")} />
-          <Line pic={
-            <svg width="34" height="14" viewBox="0 0 34 14" aria-hidden="true">
-              {[3, 10, 17, 24, 31].map((x) => <circle key={x} cx={x} cy={7} r={2.6} fill="hsl(var(--data-a))" />)}
-            </svg>
-          } title={t("how.route")} line={t("how.routeLine")} />
-          <Line pic={<img src={mapPic("lighthouse")} alt="" width={20} height={26} className="drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" />} title={t("how.lit")} line={t("how.litLine")} />
-          <Line pic={<span className="h-3 w-3 rounded-full bg-[hsl(var(--coin-teal))]" />} title={t("how.main")} line={t("how.mainLine")} />
-          {/* the weather over an island (QA, Nov 8 2026: nothing explained the storm cloud) */}
-          <Line pic={<img src={mapPic("thunder_cloud")} alt="" width={28} height={28} className="object-contain" />} title={t("how.storm")} line={t("how.stormLine")} />
-          <Line pic={<img src={mapPic("sun")} alt="" width={28} height={28} className="object-contain" />} title={t("how.sun")} line={t("how.sunLine")} />
+          <Line sea pic={<IslandAsOnGlobe island="me" days={10} className="w-[40px]" />} title={t("how.island")} line={t("how.islandLine")} />
+          <Line sea pic={<Route />} title={t("how.route")} line={t("how.routeLine")} />
+          <Line sea pic={<NameSign><Link2 className="h-3.5 w-3.5" strokeWidth={2.8} style={{ color: "hsl(var(--data-a))" }} /></NameSign>} title={t("how.inner")} line={t("how.innerLine")} />
+          <Line sea pic={<img src={mapPic("lighthouse")} alt="" width={20} height={26} className="drop-shadow-[0_0_6px_hsl(44_96%_60%/0.9)]" />} title={t("how.lit")} line={t("how.litLine")} />
+          <Line sea pic={<NameSign><span className="block h-2 w-2 rounded-full bg-[hsl(var(--coin-teal))]" /></NameSign>} title={t("how.main")} line={t("how.mainLine")} />
+          {/* the weather: the small sign in an island's name, the same three as on the globe (storm, clouds, sun) */}
+          <Line sea pic={<NameSign><CloudLightning className="h-4 w-4" strokeWidth={2.4} style={{ color: "#7D8CC4" }} /></NameSign>} title={t("how.storm")} line={t("how.stormLine")} />
+          <Line sea pic={<NameSign><CloudSun className="h-4 w-4" strokeWidth={2.4} style={{ color: "#7D9CC8" }} /></NameSign>} title={t("how.clouds")} line={t("how.cloudsLine")} />
+          <Line sea pic={<NameSign><Sun className="h-4 w-4" strokeWidth={2.4} style={{ color: "#E8A93A" }} /></NameSign>} title={t("how.sun")} line={t("how.sunLine")} />
         </div>
 
         <p className="mt-6 text-[15px] font-semibold leading-snug text-muted-foreground">{t("link.honest")}</p>

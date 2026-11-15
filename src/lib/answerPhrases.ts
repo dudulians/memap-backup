@@ -243,7 +243,7 @@ const P: Record<string, [string, string, string, string]> = {
   "hot-day": ["hot day", "comfortable weather", "жара", "без жары"],
   "weather-change": ["weather change", "steady weather", "смена погоды", "ровная погода"],
   "phones-together": ["phones in the way", "phone-free time together", "телефоны между вами", "время вдвоём без телефонов"],
-  "bedtime-battle": ["bedtime struggle", "easy bedtime", "тяжёлый отбой", "спокойный отбой"],
+  "bedtime-battle": ["bedtime struggle", "easy bedtime", "трудно уложить спать", "ребёнок уснул спокойно"],
   "unfair-chores": ["unfair share of chores", "fair share of chores", "неравные домашние дела", "дела поровну"],
   "many-interruptions": ["constant interruptions", "uninterrupted day", "постоянные отвлечения", "день без отвлечений"],
   "social-media-hour": ["1+ hour on social media", "under an hour on social media", "соцсети больше часа", "соцсети меньше часа"],

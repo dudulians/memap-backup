@@ -65,9 +65,10 @@ const Index = () => {
     if (activeTab === "cards" && todayNext) { setTodayNext(false); try { localStorage.removeItem("memap_today_next"); } catch { /* fine */ } }
   }, [activeTab, todayNext]);
   useEffect(() => {
-    if (activeTab === "patterns") markGlowSeen("world");
+    if (activeTab === "patterns") { markGlowSeen("world"); try { localStorage.removeItem("memap_world_next"); } catch { /* fine */ } }
     let live = true;
-    const check = async () => { const es = await getEntries(); if (live) setWorldGlow(glows("world", es.length > 0)); };
+    const worldNext = () => { try { return localStorage.getItem("memap_world_next") === "1"; } catch { return false; } };
+    const check = async () => { const es = await getEntries(); if (live) setWorldGlow(glows("world", es.length > 0) || worldNext()); };
     check();
     window.addEventListener("memap-entries-changed", check);
     window.addEventListener("memap-glow-changed", check);
@@ -510,6 +511,12 @@ const Index = () => {
         onStartTour={() => {
           setSettingsModalOpen(false);
           setTourOpen(true);
+        }}
+        onAppTour={() => {
+          // Today's part first; when it ends, the World tab glows and its part runs there (AppTour, MapTab)
+          setSettingsModalOpen(false);
+          setActiveTab("cards");
+          window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-start-tour", { detail: { part: "today" } })), 450);
         }}
       />
 

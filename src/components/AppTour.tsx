@@ -467,11 +467,15 @@ export const AppTour = () => {
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
     document.documentElement.classList.remove("touring");
     if (part === "today") { try { localStorage.setItem(TODAY_TOUR_KEY, "1"); } catch { /* the hints may come early */ } }
+    // started again from Settings: after Today, the World tab glows and the World's part waits there
+    if (part === "today") {
+      try { if (localStorage.getItem("memap_tour_replay") === "1") { localStorage.setItem("memap_world_next", "1"); window.dispatchEvent(new Event("memap-glow-changed")); } } catch { /* World still opens its part */ }
+    }
     window.dispatchEvent(new CustomEvent("memap-tour-done"));
     // the World's part ends on the World: walked to the end, the tour is done (the blocks then stay quiet); skipped, it
     // does not start again and the blocks explain themselves once
     if (part === "world") {
-      try { localStorage.setItem(WORLD_TOUR_KEY, toStep ? "1" : "skipped"); if (toStep) localStorage.setItem(TOUR_DONE_KEY, "1"); localStorage.setItem("memap_today_next", "1"); } catch { /* it may show again */ }
+      try { localStorage.setItem(WORLD_TOUR_KEY, toStep ? "1" : "skipped"); if (toStep) localStorage.setItem(TOUR_DONE_KEY, "1"); localStorage.setItem("memap_today_next", "1"); localStorage.removeItem("memap_tour_replay"); } catch { /* it may show again */ }
       // what to tap next: the Today tab lights up (Index.tsx)
       window.dispatchEvent(new Event("memap-today-next"));
       return;

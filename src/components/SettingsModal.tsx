@@ -53,6 +53,8 @@ interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
   onStartTour?: () => void;
+  /** Help → Show app tour: the tour of Today and World (not the onboarding) */
+  onAppTour?: () => void;
 }
 
 interface SessionSettings {
@@ -116,7 +118,7 @@ const saveSessionSettings = (settings: SessionSettings) => {
   localStorage.setItem(SESSION_SETTINGS_KEY, JSON.stringify(settings));
 };
 
-export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps) => {
+export const SettingsModal = ({ open, onClose, onStartTour, onAppTour }: SettingsModalProps) => {
   useScreen("settings", open);
   const [notificationSettings, setNotificationSettings] = useState(getNotificationSettings());
   const [sessionSettings, setSessionSettings] = useState(getSessionSettings());
@@ -1076,16 +1078,14 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
                   <button
                     type="button"
                     onClick={() => {
-                      // Wipe every tour / hint flag so the whole guided
-                      // start runs again from scratch.
-                      resetTourSeen();
-                      resetCoachmarkSeen();
-                      resetTourKey("memap_patterns_tour_seen");
-                      resetTourKey("memap_add_tracker_tour_seen");
-                      resetTourKey("memap_custom_tour_seen");
-                      resetTourKey("memap_first_swipe_seen");
-                      resetTourKey("memap_added_own_tracker");
-                      onStartTour?.();
+                      // the tour of the main screens again, Today then World (her note, Nov 15 2026 evening: it opened
+                      // the whole onboarding, topics to pick and no way to skip); nothing she answered is touched
+                      try {
+                        localStorage.removeItem("memap_tour_completed");
+                        localStorage.removeItem("memap_tour_world");
+                        localStorage.setItem("memap_tour_replay", "1");
+                      } catch { /* the tour still shows Today */ }
+                      onAppTour?.();
                     }}
                     className={rowBtn}
                   >

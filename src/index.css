@@ -2681,3 +2681,6 @@ html[data-theme="aurora"] .kind-finding { color: hsl(38 90% 62%); }
   animation: glowHint 2.2s ease-in-out infinite; }
 @keyframes glowHint { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .glow-hint::after { animation: none; opacity: .85; } }
+/* "How MeMap works": a piece of the globe's sea under the map's signs, day and night (Nov 15 2026) */
+.how-sea { background: linear-gradient(160deg, #C9DCF8, #A9C6F2); }
+html[data-ui="new"][data-theme="aurora"] .how-sea { background: linear-gradient(160deg, #2B4AA6, #1F3A9E); }
