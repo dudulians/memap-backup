@@ -23,6 +23,10 @@ import { localizeTrackerTitle } from "@/lib/trackerLocalize";
 import { getDoorState, isoLocal } from "@/lib/doors";
 import { ASPECT, art, artOf, islandEvenings, stageOf } from "@/lib/globeArt";
 import { ITEMS, keptTreasures } from "@/lib/growth";
+import { EXPERIMENT_DAYS, experimentDay, experimentOver, experimentResult, getExperiments, verdictOf } from "@/lib/experiments";
+import { doneActions } from "@/lib/actionLog";
+import { reasonLines } from "@/lib/reasons";
+import { ruleKeyOf } from "@/lib/rules";
 import planetDay from "@/assets/globe/planet-day.webp";
 import memapIcon from "@/assets/memap-icon-192.png";
 
@@ -428,6 +432,45 @@ const notesSection = (p: Pages, r: ReportInput, data: Data) => {
   }
 };
 
+// --- what she did about it (Nov 15 2026) ----------------------------------------------------
+/** Her rules (When to act), the changes she tried and how they went, steps done once, her own words from "Why?":
+ *  only what touches the questions in the report and the period. */
+const didSection = (p: Pages, r: ReportInput, data: Data) => {
+  const t = i18n.t.bind(i18n);
+  const ids = new Set(data.qs.map((q) => q.id));
+  const rules = data.qs.filter((q) => q.threshold > 0 && (q.adviceAboveThreshold ?? "").trim()).map((q) => {
+    const k = ruleKeyOf(q);
+    const when = k === "week3" ? t("report.did.ruleWeek3") : k === "month10" ? t("report.did.ruleMonth10") : t("report.did.ruleCustom", { k: q.threshold, days: q.periodDays });
+    return t("report.did.ruleLine", { q: capFirst(answerPhrase(t, q, q.problemWhen !== "no")), when, plan: q.adviceAboveThreshold.trim() });
+  });
+  const endOf = (start: string) => { const d = date(start); d.setDate(d.getDate() + EXPERIMENT_DAYS - 1); return isoLocal(d); };
+  const tries = getExperiments().filter((x) => x.start <= data.last && (x.reviewed ?? endOf(x.start)) >= data.first).map((x) => {
+    if (!x.reviewed && !experimentOver(x)) return t("report.did.tryNow", { change: x.change, from: fmt(x.start), k: Math.min(experimentDay(x), EXPERIMENT_DAYS), n: EXPERIMENT_DAYS });
+    const v = verdictOf(experimentResult(x, r.trackers, r.entries));
+    return `${t("report.did.tryLine", { change: x.change, from: fmt(x.start), to: fmt(endOf(x.start)) })} — ${t(`experiment.verdict.${v}`)}`;
+  });
+  const done = doneActions().filter((a) => a.date >= data.first && a.date <= data.last && ids.has(a.trackerId))
+    .map((a) => t("report.did.doneLine", { date: fmt(a.date), plan: a.kind === "home" ? t(a.plan) : a.plan }));
+  const words = reasonLines(t, r.trackers.filter((q) => ids.has(q.id)), r.entries, data.days);
+  if (!rules.length && !tries.length && !done.length && !words.length) return;
+  p.heading(t("report.did.title"), 120);
+  const block = (label: string, lines: string[]) => {
+    if (!lines.length) return;
+    p.room(110); p.y += 58; p.label(label); p.y += 4;
+    for (const line of lines) {
+      const g = p.g; g.font = `600 23px ${FONT}`;
+      const ls = wrap(g, line, SPAN - 34);
+      p.room(ls.length * 33 + 14); p.y += 42;
+      const pg = p.g; pg.fillStyle = INK; pg.beginPath(); pg.arc(M + 7, p.y - 8, 5, 0, Math.PI * 2); pg.fill();
+      ls.forEach((l, i) => { if (i) p.y += 33; p.text(l, 23, 600, INK, M + 28); });
+    }
+  };
+  block(t("report.did.rules"), rules);
+  block(t("report.did.tries"), tries);
+  block(t("report.did.done"), done);
+  block(t("report.did.words"), words);
+};
+
 // --- the tops of the first page ------------------------------------------------------
 /** For a specialist: our name and icon, who it's for, whose, when. */
 const proTop = async (p: Pages, r: ReportInput, data: Data) => {
@@ -608,6 +651,7 @@ const drawFull = async (r: ReportInput, data: Data): Promise<HTMLCanvasElement[]
     }
     p.room(50); p.text(t("link.honest"), 20, 500, SOFT); p.y += 10;
   } else linksList(p, data, data.pairs.length);
+  didSection(p, r, data);
   notesSection(p, r, data);
   footers(p, t(me ? "report.me.footer" : "report.pro.footer"));
   return p.pages;

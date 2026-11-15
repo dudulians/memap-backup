@@ -2674,6 +2674,21 @@ const en = {
     together: "What tended to come together in this period",
     togetherNone: "Not enough days yet to see what comes together.",
     notes: "My notes",
+    // what she did about it (Nov 15 2026)
+    did: {
+      title: "What I did about it",
+      rules: "My rules: when to act",
+      tries: "Changes I tried",
+      done: "Done once",
+      words: "In my own words",
+      ruleLine: "{{q}}, {{when}}: {{plan}}",
+      ruleWeek3: "3 days in a week",
+      ruleMonth10: "10 days in a month",
+      ruleCustom: "{{k}} of {{days}} days",
+      tryNow: "{{change}} · since {{from}}, day {{k}} of {{n}}",
+      tryLine: "{{change}} · {{from}} – {{to}}",
+      doneLine: "{{date}} · {{plan}}",
+    },
     footer: "MeMap · my own daily answers · patterns, not a diagnosis",
   },
   share: {

@@ -459,7 +459,8 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   // the weeks since her first answer to either, 2 to 8 (her note, Nov 15 2026: with two weeks of answers six empty
   // weeks lay at zero and most of the day marks were grey, as if nothing had happened)
   const first = entries.reduce((m, e) => ((e.trackerId === a?.id || e.trackerId === b?.id) && (!m || e.date < m) ? e.date : m), "");
-  const W = first ? Math.min(8, Math.max(2, Math.ceil((Date.now() - new Date(first + "T00:00:00").getTime() + 1) / 6048e5))) : 8;
+  // whole weeks only: a part-week at the start drew both lines up from zero, as if things had grown
+  const W = first ? Math.min(8, Math.max(2, Math.floor((Date.now() - new Date(first + "T00:00:00").getTime()) / 6048e5))) : 8;
   const series: Series[] = a && b ? [
     { color: PAIR_A, values: weekly(a, entries, W, r.firstYes), days: dayMarks(a, entries, W, r.firstYes), label: cap(answerPhrase(t, a, r.firstYes)) },
     { color: PAIR_B, values: weekly(b, entries, W, r.secondYes), days: dayMarks(b, entries, W, r.secondYes), label: cap(answerPhrase(t, b, r.secondYes)) },
