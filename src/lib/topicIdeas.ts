@@ -9,6 +9,7 @@
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { IDEAS, QUESTION_IDEAS, TOPIC_IDEAS, ideasFor } from "@/lib/experiments";
 import { templateIdOf } from "@/lib/answerPhrases";
+import { matchTemplateIdByTitle } from "@/lib/relatedQuestions";
 import { islandOf, type IslandId } from "@/lib/islands";
 import { isoLocal } from "@/lib/doors";
 import { HOME_HARM_IDS } from "@/lib/supportLines";
@@ -81,6 +82,21 @@ const ideasOfTemplate = (id: string): string[] | null => {
 };
 
 /** Small changes that fit this question (keys into experiment.idea.*). */
+/** A change for one question, her own included: a library question's own list, or the library question her own one matches
+ *  by its words ("Did I check work email after 8 pm?" → its "stay off work mail" changes); none = [] (never the island's). */
+/** her own question's words → ready changes, when the library match finds nothing (the audit, Nov 16 2026) */
+const OWN_IDEA_WORDS: Array<[RegExp, string[]]> = [
+  [/work\s*e?-?mail|рабоч\S*\s+почт/i, ["noMailEvening", "stop19"]],
+];
+
+export const ideasOfQuestion = (tr: Tracker, couplesOff = false): string[] => {
+  const id = templateIdOf(tr) ?? matchTemplateIdByTitle(tr.title);
+  // words the library match misses, for ideas only (its answers keep her words): work mail in the evening
+  const byWords = OWN_IDEA_WORDS.find(([re]) => re.test(`${tr.title} ${tr.questionText ?? ""}`))?.[1];
+  const list = (id ? ideasOfTemplate(id) : null) ?? byWords ?? [];
+  return couplesOff ? list.filter((x) => !COUPLE_IDEAS.has(x)) : list;
+};
+
 export const ideasForQuestion = (tr: Tracker, couplesOff = false): string[] => {
   const id = templateIdOf(tr);
   // a library question: its own changes or its topic's; with neither (paperwork…), nothing unrelated;

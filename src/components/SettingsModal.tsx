@@ -800,7 +800,7 @@ export const SettingsModal = ({ open, onClose, onStartTour, onAppTour }: Setting
                     "More". Canvas "MeMap: новая версия", page 12. */}
                 {(() => {
                   const langLabel = SUPPORTED_LANGUAGES.find((l) => l.code === currentLang)?.native ?? "";
-                  const activeTrackerCount = trackers.filter((tr) => !tr.archived).length;
+                  const activeTrackerCount = trackers.filter((tr) => !tr.archived && !tr.id.endsWith("-test")).length;
                   const row = "w-full flex items-center gap-3 px-4 min-h-[60px] text-left";
                   const nav = (key: SettingsScreen, label: string, value?: string) => (
                     <button key={key} type="button" onClick={() => setScreen(key)} className={cn(row, "active:bg-muted/60 transition-colors")}>

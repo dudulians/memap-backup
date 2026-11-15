@@ -65,7 +65,8 @@ export const YouSheet = ({ open, onClose, onQuestions, onSettings, onAddQuestion
     syncTreasures(f);
     return f;
   }, [data, islands, routes]);
-  const questions = data ? data.trackers.filter((tr) => !tr.archived && tr.source !== "play").length : 0;
+  // her questions, not the evening questions of her tries (the audit, Nov 16 2026: "My questions · 11" with 9)
+  const questions = data ? data.trackers.filter((tr) => !tr.archived && tr.source !== "play" && !tr.id.endsWith("-test")).length : 0;
 
   const [pic, setPic] = useState<string | null>(() => avatarUrl(getAvatar()));
   useEffect(() => {

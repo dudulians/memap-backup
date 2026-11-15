@@ -401,8 +401,9 @@ export const ChartViews = ({ trackers, entries, focusIds, pair = false }: { trac
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {singles.map(({ tr, values }) => (
             <button key={tr.id} type="button" className={cn(card, "px-3.5")}
-              onClick={() => { haptics.tap(); setDetail({ ids: [tr.id], title: localizeTrackerTitle(tr.title) }); }}>
-              <p className="line-clamp-2 min-h-[40px] text-[15px] font-bold leading-tight">{localizeTrackerTitle(tr.title)}</p>
+              onClick={() => { haptics.tap(); setDetail({ ids: [tr.id], title: hardWord(tr) }); }}>
+              {/* named by what it counts (the audit, Nov 16 2026: "Had a good time together · 5 days" counted the days WITHOUT it) */}
+              <p className="line-clamp-2 min-h-[40px] text-[15px] font-bold leading-tight">{hardWord(tr)}</p>
               <Chart series={[{ color: islandHsl(islandOf(tr)), values }]} height={64} />
               <p className="mt-1 text-[13px] font-semibold text-muted-foreground">{t("charts.thisWeek", { count: values[WEEKS - 1] })}</p>
             </button>

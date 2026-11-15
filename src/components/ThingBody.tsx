@@ -79,7 +79,7 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
   const go = (f: () => void) => () => { haptics.tap(); f(); };
   // Now: where this question stands, one button for its next step (Nov 15 2026)
   const now = data.trying
-    ? { kind: "trying", icon: FlaskConical, line: t("thingNow.trying", { what: testNameOf(data.trying.change) }), sub: t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })) }
+    ? { kind: "trying", icon: FlaskConical, line: data.tries.length > 1 ? t("thingNow.tryingMany", { count: data.tries.length }) : t("thingNow.trying", { what: testNameOf(data.trying.change) }), sub: t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })) }
     : data.doneOnce
     ? { kind: "done", icon: Check, line: t("thingNow.done", { what: data.doneOnce.kind === "home" ? t(data.doneOnce.plan) : testNameOf(data.doneOnce.plan) }), sub: t("thingNow.doneSub"), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps")) }
     : data.lit

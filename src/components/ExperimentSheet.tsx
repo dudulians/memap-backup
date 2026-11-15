@@ -4,12 +4,13 @@
 // full-screen frame as the games. From an action point ("I'll try", Nov 5
 // 2026) her plan is the first choice, the island is the question's own, and
 // starting the test counts that action point again from today.
-import { ideaTarget, ideasForIsland, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
+import { ideaTarget, ideasForIsland, ideasForQuestion, ideasOfQuestion, homeHarmLit } from "@/lib/topicIdeas";
 import { answerClause, answerPhrase, cap } from "@/lib/answerPhrases";
 /** a change on the days of a link's first thing ("On days you have your period: …") */
 const SCOPED = "on:";
 import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
+import i18n from "@/lib/i18n";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Check, ChevronRight, FlaskConical, Sprout, X } from "lucide-react";
@@ -137,14 +138,16 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     // to fix); only her own words, and the support those questions have
     if (HOME_HARM_IDS.has(templateIdOf(linkQs[0]) ?? "")) return [];
     // something she can change (a library question with its own changes): those changes, the link's own try
-    const cause = templateIdOf(linkQs[0]) ? ideasForQuestion(linkQs[0], harm).filter((k) => !running.has(k)) : [];
+    const cause = ideasOfQuestion(linkQs[0], harm).filter((k) => !running.has(k));
     if (cause.length) return cause.slice(0, 4);
     // a state (a period, a hard day, her own question): the second's changes on the first's days (her note, Nov 15 2026)
-    return linkQs[1] ? ideasForQuestion(linkQs[1], harm).filter((k) => !running.has(k)).slice(0, 4).map((k) => SCOPED + k) : [];
+    // a daily habit makes no sense "on such days" ("…: get up at the same time every day", the audit, Nov 16 2026)
+    const daily = (k: string) => /every day|each day|daily|every (morning|evening|night)/i.test(i18n.t(`experiment.idea.${k}.change`, { lng: "en" }));
+    return linkQs[1] ? ideasOfQuestion(linkQs[1], harm).filter((k) => !running.has(k) && !daily(k)).slice(0, 4).map((k) => SCOPED + k) : [];
   })() : null;
   // from a question's page: its own changes (a library question); her own question has none ready
   const forQ = forId ? trackers.find((x) => x.id === forId) : undefined;
-  const forPool = forQ && !plan && !linkPool ? (templateIdOf(forQ) ? ideasForQuestion(forQ, homeHarmLit(trackers, entries)) : []) : null;
+  const forPool = forQ && !plan && !linkPool ? ideasOfQuestion(forQ, homeHarmLit(trackers, entries)) : null;
   const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : [])
     : linkPool ?? forPool ?? (island ? ideasForIsland(island, trackers, entries) : []);
   const planIdea = plan ? ideaOf(plan) : null;
@@ -224,7 +227,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
             <p className={cn("text-[26px] font-bold leading-tight tracking-tight", runningHere.length > 0 ? "mt-5" : "mt-2")}>{runningHere.length > 0 ? t("experiment.somethingElse") : t("experiment.ask", { count: EXPERIMENT_DAYS })}</p>
             {/* Which island (from an action point: that question's island only) */}
             <div className="-mx-6 mt-5 flex gap-2 overflow-x-auto px-6 scrollbar-hide">
-              {islands.filter((isl) => !plan || isl.id === island).map((isl) => (
+              {islands.filter((isl) => (!plan && !forQ) || isl.id === island).map((isl) => (
                 <button key={isl.id} type="button" disabled={!!plan} onClick={() => { haptics.tap(); setIsland(isl.id); setIdea(null); }} aria-pressed={island === isl.id}
                   className={cn("chip has-icon", island === isl.id && "is-on")}>
                   <img src={mapPic("icon_" + isl.def.icon)} alt="" width={28} height={28} />
@@ -253,7 +256,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
                     </div>
                   );
                 })}
-                {choices.length === 0 && <p data-no-more className="px-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t("experiment.noMoreIdeas")}</p>}
+                {choices.length === 0 && <p data-no-more className="px-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t(forQ ? "experiment.noIdeasFor" : "experiment.noMoreIdeas")}</p>}
                 <input value={own} onChange={(e) => { setOwn(e.target.value); setIdea(null); }} placeholder={t("experiment.own")} maxLength={60}
                   className={cn("h-14 w-full rounded-2xl border border-foreground/[0.14] bg-foreground/[0.04] px-5 text-[17px] outline-none", own.trim() && "pick-on")} />
               </div>

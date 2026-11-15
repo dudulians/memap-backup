@@ -302,9 +302,9 @@ export const WorldStats = ({ islands, routes, trackers, entries, facts }: { isla
   return (
     <div className="space-y-3 pb-4">
       <div className="flex gap-3">
-        <Tile n={days.length} label={t("map.daysCounted")} />
+        <Tile n={days.length} label={t("map.daysCounted", { count: days.length })} />
         {playful && <Tile n={eveningStreak(days)} label={t("map.inARow")} />}
-        <Tile n={chests} label={t("map.chests")} />
+        <Tile n={chests} label={t("map.chests", { count: chests })} />
       </div>
       {/* Her special items: earned ones in colour, the rest with how far along. */}
       {facts && playful && (

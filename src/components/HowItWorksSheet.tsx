@@ -59,10 +59,10 @@ export const HowItWorksSheet = ({ open, onClose, onAddQuestion }: { open: boolea
 
         <p className="mt-4 text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("how.partsKicker")}</p>
         <div className="surface mt-2 shrink-0 rounded-[20px] px-4 py-1">
-          <Line pic={<Dots />} title={t("world4.myDays")} step={t("how.week", { n: 1 })} line={t("how.myDays")} />
-          <Line pic={<Link2 className="h-6 w-6 text-[hsl(var(--data-a))]" strokeWidth={2.6} />} title={t("world4.links")} step={t("how.week", { n: 2 })} line={t("how.links")} />
-          <Line pic={<img src={mapPic("lighthouse")} alt="" width={20} height={26} />} title={t("world4.whenToAct")} step={t("how.week", { n: 3 })} line={t("how.whenToAct")} />
-          <Line pic={<Sprout className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />} title={t("world4.whatHelps")} step={t("how.week", { n: 4 })} line={t("how.whatHelps")} />
+          <Line pic={<Dots />} title={t("world4.myDays")} line={t("how.myDays")} />
+          <Line pic={<Link2 className="h-6 w-6 text-[hsl(var(--data-a))]" strokeWidth={2.6} />} title={t("world4.links")} line={t("how.links")} />
+          <Line pic={<img src={mapPic("lighthouse")} alt="" width={20} height={26} />} title={t("world4.whenToAct")} line={t("how.whenToAct")} />
+          <Line pic={<Sprout className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />} title={t("world4.whatHelps")} line={t("how.whatHelps")} />
         </div>
 
         <p className="mt-6 text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("how.mapKicker")}</p>
