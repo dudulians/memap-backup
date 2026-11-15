@@ -13,6 +13,7 @@
 // Plain words, nothing the reader has to learn. "Patterns, not a diagnosis."
 import i18n from "@/lib/i18n";
 import { isColorBlind } from "@/lib/colorBlind";
+import { testNameOf } from "@/lib/testWords";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import type { Note } from "@/lib/notes";
 import { islandName, islandOf, isHardAnswer, isNeutralQuestion, isTestQuestion, linkOf, linkWorthShowing, LINKS_TOP, mapPicFor, rankLinks, type IslandId } from "@/lib/islands";
@@ -450,7 +451,7 @@ const didSection = (p: Pages, r: ReportInput, data: Data) => {
     return `${t("report.did.tryLine", { change: x.change, from: fmt(x.start), to: fmt(endOf(x.start)) })} — ${t(`experiment.verdict.${v}`)}`;
   });
   const done = doneActions().filter((a) => a.date >= data.first && a.date <= data.last && ids.has(a.trackerId))
-    .map((a) => t("report.did.doneLine", { date: fmt(a.date), plan: a.kind === "home" ? t(a.plan) : a.plan }));
+    .map((a) => t("report.did.doneLine", { date: fmt(a.date), plan: a.kind === "home" ? t(a.plan) : testNameOf(a.plan) }));
   const words = reasonLines(t, r.trackers.filter((q) => ids.has(q.id)), r.entries, data.days);
   if (!rules.length && !tries.length && !done.length && !words.length) return;
   p.heading(t("report.did.title"), 120);

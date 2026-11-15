@@ -4,6 +4,7 @@
 // globe's link sheet (LinkSheet).
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { testNameOf } from "@/lib/testWords";
 import { BarChart3, Check, ChevronRight, FlaskConical, Plus } from "lucide-react";
 import { islandName, islandOf, type IslandId, type Route } from "@/lib/islands";
 import { linkNumbers, linkOtherDays, linkTimesBig, type TrackerOf } from "@/lib/linkText";
@@ -250,7 +251,7 @@ export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDa
   if (running) return (
     <div data-link-try="running" className="mt-4 rounded-2xl bg-foreground/[0.05] px-4 pt-3">
       <p className="flex items-center gap-1.5 text-[13px] font-bold text-[hsl(var(--coin-teal))]"><FlaskConical className="h-4 w-4" strokeWidth={2.4} />{t("link.tryNow")}</p>
-      <p className="mt-0.5 text-[17px] font-bold leading-snug">{running.change}</p>
+      <p className="mt-0.5 text-[17px] font-bold leading-snug">{testNameOf(running.change)}</p>
       <p className="mt-1 text-[14px] font-semibold text-muted-foreground">{t("world4.testDay", { k: Math.min(experimentDay(running), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</p>
       <button type="button" data-link-try-helps onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: running.id } })); }}
         className="mt-2 flex min-h-12 w-full items-center justify-between gap-2 border-t-[1.5px] border-dotted border-foreground/15 text-left text-[15.5px] font-bold text-[hsl(var(--coin-teal))]">

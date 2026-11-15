@@ -330,7 +330,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
           <span className="icon-dot h-11 w-11 shrink-0"><Check className="h-5 w-5" strokeWidth={2.6} /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[13px] font-extrabold uppercase tracking-[0.08em]" style={{ color: TEAL }}>{t("helps.doneTag")}</span>
-            <span className="block text-[16px] font-bold leading-snug">{justDone.plan}</span>
+            <span className="block text-[16px] font-bold leading-snug">{justDone.home ? (i18n.exists(justDone.plan) ? t(justDone.plan) : justDone.plan) : testNameOf(justDone.plan)}</span>
             <span className="mt-0.5 block text-[14px] font-semibold leading-snug text-muted-foreground">{t(justDone.home ? "helps.savedHome" : "helps.savedOnce")}</span>
           </span>
           <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new Event("memap-open-helps")); }} className="shrink-0 px-1 text-[15px] font-bold" style={{ color: TEAL }}>{t("helps.see")}</button>
@@ -414,7 +414,7 @@ export const ActionPoints = ({ trackers, entries, onTry }: {
                   <div ref={doneTop} data-just-done role="status" className="mb-3 flex items-start gap-2.5 animate-fade-in">
                     <Check className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.8} style={{ color: TEAL }} />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] font-bold leading-snug">{t("helps.doneStep", { plan: justDone.plan.replace(/[.!]+$/, "") })}</span>
+                      <span className="block text-[15px] font-bold leading-snug">{t("helps.doneStep", { plan: (justDone.home ? (i18n.exists(justDone.plan) ? t(justDone.plan) : justDone.plan) : testNameOf(justDone.plan)).replace(/[.!]+$/, "") })}</span>
                       <span className="block text-[14px] font-semibold leading-snug text-muted-foreground">{t("helps.savedHome")}</span>
                     </span>
                     <button type="button" onClick={() => { haptics.tap(); window.dispatchEvent(new Event("memap-open-helps")); }} className="shrink-0 text-[15px] font-bold" style={{ color: TEAL }}>{t("helps.see")}</button>
