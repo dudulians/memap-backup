@@ -15,8 +15,11 @@ import { art, artOf, islandEvenings, toNextStage } from "@/lib/globeArt";
 import { islandName, islandOf, mapPicFor, type IslandId } from "@/lib/islands";
 import { getNotificationSettings, requestNotificationPermissionDetailed, saveNotificationSettings, scheduleNotification } from "@/lib/notifications";
 import { GrowthLadder } from "./IslandStats";
+import { PlanetGlobe } from "./PlanetGlobe";
+import { buildIslands, type Island } from "@/lib/islands";
+import { avatarUrl, DEFAULT_AVATAR, getAvatar } from "@/lib/avatar";
 
-type Shown = { kind: "begun"; island: IslandId; days: number; date: string } | { kind: "waiting" } | { kind: "nothing"; date: string; ids?: string[] } | { kind: "remind" };
+type Shown = { kind: "begun"; island: IslandId; days: number; date: string; islands: Island[]; dayMap: Record<string, number> } | { kind: "waiting" } | { kind: "nothing"; date: string; ids?: string[] } | { kind: "remind" };
 const TIMES = ["20:00", "21:00", "22:00"];
 
 const Reminder = ({ onDone, inline = false }: { onDone: () => void; inline?: boolean }) => {
@@ -78,16 +81,22 @@ export const WorldBegun = () => {
       const main = trackers.find((x) => x.id === door?.trackerId) ?? trackers.find((x) => x.id === saved[0].trackerId);
       const island = main ? islandOf(main) : ("other" as IslandId);
       const days = islandEvenings(trackers, entries).get(island) ?? 1;
-      setShown({ kind: "begun", island, days, date });
+      // her islands on the globe, each at its stage (her pick, Nov 15 2026: «Your world has begun» with her islands)
+      const islands = buildIslands(trackers, entries).filter((i) => i.trackerIds.length > 0);
+      const dayMap = Object.fromEntries(islandEvenings(trackers, entries));
+      setShown({ kind: "begun", island, days, date, islands, dayMap });
       track("world_begun", { saved: saved.length, island });
       // the reminder comes after the joy, not over it (QA, Nov 8 2026: it slid up after 1.6 s and hid
       // "Show me around"): it's asked when she taps the button, before the tour
       asked.current = false; tourAfter.current = false;
     };
     const waiting = () => { setShown({ kind: "waiting" }); track("world_waiting"); };
+    // the end of the first evening (EveningPath): now the reminder (her pick, Nov 15 2026: not before the tour)
+    const remind = () => { if (!getNotificationSettings().enabled) setShown({ kind: "remind" }); };
     window.addEventListener("memap-world-begun", begun);
     window.addEventListener("memap-world-waiting", waiting);
-    return () => { window.removeEventListener("memap-world-begun", begun); window.removeEventListener("memap-world-waiting", waiting); };
+    window.addEventListener("memap-ask-reminder", remind);
+    return () => { window.removeEventListener("memap-world-begun", begun); window.removeEventListener("memap-world-waiting", waiting); window.removeEventListener("memap-ask-reminder", remind); };
   }, []);
 
   if (!shown) return null;
@@ -117,25 +126,28 @@ export const WorldBegun = () => {
       aria-label={shown.kind === "begun" ? t("onb7.begunTitle") : shown.kind === "waiting" ? t("onb7.waitTitle") : t("onb7.nothingTitle")}>
       <div aria-hidden="true" className="memap-sea-bg memap-path-bg pointer-events-none absolute inset-0 -z-10" />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-y-auto px-5 pb-safe pt-safe">
+        {shown.kind === "begun" ? (
+          <div data-begun-globe className="relative -mx-5 mt-4 h-[300px]" aria-hidden="true">
+            <PlanetGlobe decor sky={false} islands={shown.islands} routes={[]} avatar={avatarUrl(getAvatar() ?? DEFAULT_AVATAR)} days={shown.dayMap} labels={shown.islands.map((i) => i.id)} onOpen={() => undefined} />
+          </div>
+        ) : (
         <div className="relative mx-auto mt-10 flex h-[230px] w-full items-end justify-center" aria-hidden="true">
-          {shown.kind === "begun" && <span className="world-begun-glow absolute left-1/2 top-[44%] h-[240px] w-[240px] -translate-x-1/2 -translate-y-1/2 rounded-full" />}
-          {shown.kind === "begun" && <img src={mapPicFor("sparkles", false)} alt="" className="world-begun-spark absolute left-[18%] top-[12%] w-8" />}
-          <span className={cn("relative block", shown.kind === "begun" ? "world-begun-rise w-[52%]" : "w-[46%] opacity-90")}>
-            <img className="art-day block w-full" src={art(shown.kind === "begun" ? artOf(shown.island, shown.days) : "cloud_island_03", false)} alt="" />
-            <img className="art-night block w-full" src={art(shown.kind === "begun" ? artOf(shown.island, shown.days) : "cloud_island_03", true)} alt="" />
+          <span className="relative block w-[46%] opacity-90">
+            <img className="art-day block w-full" src={art("cloud_island_03", false)} alt="" />
+            <img className="art-night block w-full" src={art("cloud_island_03", true)} alt="" />
           </span>
         </div>
+        )}
         {shown.kind === "begun" && (
           <>
-            <h1 className="mt-6 text-center text-[30px] font-bold leading-tight tracking-tight">{t("onb7.begunTitle")}</h1>
+            <h1 className="mt-2 text-center text-[30px] font-bold leading-tight tracking-tight">{t("onb7.begunTitle")}</h1>
             <p className="mt-2 text-center text-[17px] font-semibold leading-snug text-muted-foreground">{t("onb7.begunLine", { island: islandName(t, shown.island) })}</p>
             <div className="mt-5"><GrowthLadder island={shown.island} days={shown.days} /></div>
             {left !== null && <p className="text-center text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.begunNext", { count: left })}</p>}
             <div className="min-h-6 flex-1" />
             <button type="button" onClick={() => {
               haptics.tap();
-              // the reminder is asked once, before the tour, even when the button comes first
-              if (!asked.current && !getNotificationSettings().enabled) { asked.current = true; tourAfter.current = true; setSheet(true); return; }
+              // the reminder now waits for the end of the first evening (EveningPath, Nov 15 2026)
               closeAndTour();
             }}
               className="raised-btn mb-5 w-full justify-center">{t("onb7.showAround")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></button>

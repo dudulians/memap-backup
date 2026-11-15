@@ -21,7 +21,7 @@ import { persistDefaultTheme } from "@/lib/theme";
 import { getDoor, Door, type DoorId } from "@/lib/doors";
 import { EVENING_AT, markOnboarded } from "@/lib/pathSteps";
 import type { Finish } from "./DoorOnboarding";
-import { OwnV7, QuestionsV7, quickSetup, TopicV7, ValueV7, WelcomeV7, WhyV7, type Tone, type V7Pick, type V7Setup } from "./OnboardingV7";
+import { ValueFirstV8, TopicStepsV8, OwnV7, QuestionsV7, quickSetup, TopicV7, ValueV7, WelcomeV7, WhyV7, type Tone, type V7Pick, type V7Setup } from "./OnboardingV7";
 import { isoLocal } from "@/lib/doors";
 
 const TOUR_SEEN_KEY = "memap_tour_seen";
@@ -43,9 +43,10 @@ interface OnboardingTourProps {
 // cards → a reminder (WorldBegun), and Malu's hints on the first taps instead of the tour.
 type Step = "welcome" | "why" | "topic" | "own" | "questions" | "value";
 type Dots = Record<"topic" | "q" | "v", [number, number]>;
+// v8 (Nov 15 2026): what MeMap will show comes first, then the topics, then a step per topic
 const DOTS: Record<"A" | "B" | "C", Dots> = {
-  A: { topic: [1, 5], q: [2, 5], v: [3, 5] },
-  B: { topic: [0, 4], q: [1, 4], v: [2, 4] },
+  A: { v: [1, 5], topic: [2, 5], q: [3, 5] },
+  B: { v: [0, 3], topic: [1, 3], q: [2, 3] },
   C: { topic: [0, 2], q: [0, 2], v: [0, 2] },
 };
 
@@ -152,16 +153,17 @@ export const OnboardingTour = ({ open, onClose }: OnboardingTourProps) => {
   return (
     <div className="onb fixed inset-0 z-[100] overflow-hidden bg-background">
       <div className="relative z-10 h-full w-full overflow-y-auto overscroll-none">
-        {step === "welcome" && <WelcomeV7 onStart={() => setStep(variant === "A" ? "why" : "topic")}
-          onSimple={() => { if (variant === "C") { void quick({ kind: "simple" }); return; } setPick({ kind: "simple" }); setStep("questions"); }} />}
-        {step === "why" && <WhyV7 current={tone} onBack={() => setStep("welcome")} onPick={(x) => { if (x !== tone) setTopics([]); setTone(x); setStep("topic"); }} />}
+        {step === "welcome" && <WelcomeV7 onStart={() => { if (variant === "C") { setStep("topic"); return; } setPick(null); setStep("value"); }}
+          onSimple={() => { if (variant === "C") { void quick({ kind: "simple" }); return; } setPick({ kind: "simple" }); setStep("value"); }} />}
+        {step === "value" && <ValueFirstV8 progress={dots.v} onBack={() => setStep("welcome")} onNext={() => setStep(pick?.kind === "simple" ? "questions" : variant === "A" ? "why" : "topic")} />}
+        {step === "why" && <WhyV7 current={tone} onBack={() => setStep("value")} onPick={(x) => { if (x !== tone) setTopics([]); setTone(x); setStep("topic"); }} />}
         {step === "topic" && <TopicV7 key={variant === "A" ? tone ?? "bother" : "all"} tone={variant === "A" ? tone ?? "bother" : "all"} progress={dots.topic} initial={topics} own={own}
-          onBack={() => setStep(variant === "A" ? "why" : "welcome")} onClearOwn={() => setOwn(null)}
+          onBack={() => setStep(variant === "A" ? "why" : variant === "C" ? "welcome" : "value")} onClearOwn={() => setOwn(null)}
           onOwn={(ids) => { setTopics(ids); setStep("own"); }} onPick={toTopics} />}
         {/* her own question goes back to the topics, ticked there beside them */}
         {step === "own" && <OwnV7 progress={dots.topic} initial={own ?? ""} onBack={() => setStep("topic")} onDone={(text) => { setOwn(text); setStep("topic"); }} />}
-        {step === "questions" && pick && <QuestionsV7 key={JSON.stringify(pick)} progress={dots.q} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "welcome" : "topic")} onDone={(s) => { setSetup(s); setStep("value"); }} />}
-        {step === "value" && setup && pick && <ValueV7 progress={dots.v} setup={setup} pickKind={pick.kind} onBack={() => setStep("questions")} onStart={start} />}
+        {step === "questions" && pick && <TopicStepsV8 key={JSON.stringify(pick)} progress={dots.q} pick={pick} onBack={() => setStep(pick.kind === "simple" ? "value" : "topic")}
+          onStart={(s, day) => { setSetup(s); start(day, s, pick); }} />}
       </div>
     </div>
   );

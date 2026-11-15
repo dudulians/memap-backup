@@ -21,6 +21,7 @@ import { ISLAND_DEFS, islandName, islandOf, mapPic, mapPicFor, type Island, type
 import { PlanetGlobe } from "./PlanetGlobe";
 import { addOwnTracker, ensureTemplates, findTemplate, getDoor, isoLocal, saveDoorState, type Door, type DoorId } from "@/lib/doors";
 import { asQuestion, templateQuestion } from "@/lib/cardText";
+import { answerClause, answerPhrase } from "@/lib/answerPhrases";
 import { namedBy, twinsOf } from "@/lib/nearTwins";
 import { getTrackers, saveTrackers } from "@/lib/storage";
 import type { Tracker } from "@/types/tracker";
@@ -545,5 +546,164 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }:
         </div>
       )}
     </Page>
+  );
+};
+
+// --- v8 (her picks, Nov 15 2026, boards D and E) ----------------------------------------------------------------
+// What MeMap will show comes first, before any topic, with no example tied to one ("до выбора вопросов непонятно, что
+// «it»"); then the topics; then one step per topic.
+export const ValueFirstV8 = ({ onBack, onNext, progress = [1, 5] }: { onBack: () => void; onNext: () => void; progress?: [number, number] }) => {
+  const { t } = useTranslation();
+  const row = (pic: React.ReactNode, title: string, line: string) => (
+    <div className="surface flex items-center gap-3 rounded-[18px] px-3.5 py-3">
+      <span className="flex h-[52px] w-[60px] shrink-0 items-center justify-center" aria-hidden="true">{pic}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] font-bold leading-tight">{title}</span>
+        <span data-onb-example className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-[12px] bg-foreground/[0.05] py-1 pl-1 pr-2.5">
+          <span className="shrink-0 rounded-full bg-background px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{t("onb8.eg")}</span>
+          <span className="min-w-0 text-[13.5px] font-semibold leading-snug">{line}</span>
+        </span>
+      </span>
+    </div>
+  );
+  return (
+    <Page>
+      <Top onBack={onBack} step={progress[0]} steps={progress[1]} />
+      <H1 className="mt-5 text-[27px]">{t("onb8.vTitle")}</H1>
+      <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb8.vLead")}</p>
+      <div data-onb-value className="mt-4 flex flex-col gap-2.5">
+        {row(<span className="grid grid-cols-4 gap-1">{[1, 0, 0, 1, 0, 1, 0, 0].map((h, i) => <i key={i} className="block h-3 w-3 rounded-full" style={{ background: h ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />)}</span>, t("onb8.v1t"), t("onb8.v1l"))}
+        {row(<span className="relative block h-12 w-[60px]"><Pic name="19_grassy_terraces" className="absolute bottom-0 left-0 w-[28px]" /><Pic name="09_waterfall" className="absolute bottom-1 right-0 w-[28px]" /><Spline className="absolute left-[20px] top-0 h-5 w-5 text-[hsl(var(--data-a))]" strokeWidth={2.6} /></span>, t("onb8.v2t"), t("onb8.v2l"))}
+        {row(<Pic name="lighthouse" map className="w-[30px]" />, t("onb8.v3t"), t("onb8.v3l"))}
+        {row(<Pic name="green_tree" map className="w-[40px]" />, t("onb8.v4t"), t("onb8.v4l"))}
+      </div>
+      <div className="min-h-6 flex-1" />
+      <Main onClick={onNext}>{t("doors.continue")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
+    </Page>
+  );
+};
+
+/** A library question as a tracker, for its words in a sentence */
+const tplTracker = (id: string): Tracker | null => {
+  const f = findTemplate(id);
+  return f ? ({ id, title: f.template.title, questionText: f.template.questionText ?? f.template.title, category: f.template.category, cluster: f.clusterId, problemWhen: f.template.problemWhen ?? "yes" } as unknown as Tracker) : null;
+};
+/** the answer that makes it a hard day */
+const hardAnswer = (tr: Tracker) => tr.problemWhen !== "no";
+
+/** One step per topic (board D, 3): the topic's question and where it goes, what 10 evenings will show, and two
+ *  questions that could show it, which she adds herself (nothing ticked for her). The last step starts. */
+export const TopicStepsV8 = ({ pick, onBack, onStart, progress = [3, 5] }: { pick: V7Pick; onBack: () => void; onStart: (s: V7Setup, day: "today" | "yesterday" | "tonight") => void; progress?: [number, number] }) => {
+  const { t } = useTranslation();
+  const plan = useMemo(() => planOf(pick), [pick]);
+  const { mains } = plan;
+  const [k, setK] = useState(0);
+  const [texts, setTexts] = useState<string[]>(() => mains.map((m) => m.base));
+  const [editing, setEditing] = useState<number | null>(null);
+  const [on, setOn] = useState<Set<string>>(() => new Set());
+  const [busy, setBusy] = useState(false);
+  // two per topic, from the topic's own list; one offered for an earlier topic is not offered again
+  const offers = useMemo(() => {
+    const mainTpls = mains.flatMap((m) => (m.tpl ? [m.tpl] : []));
+    const twins = new Set(mainTpls.flatMap(twinsOf));
+    const ownWords = pick.kind === "own" ? pick.text : pick.kind === "door" ? pick.own : undefined;
+    const named = ownWords ? namedBy(ownWords) : new Set<string>();
+    const used = new Set<string>();
+    return mains.map((m) => {
+      const pool = m.door ? [...m.door.contextTemplateIds] : pick.kind === "simple" ? SIMPLE.around : OWN_AROUND;
+      const two = pool.filter((id) => !mainTpls.includes(id) && !twins.has(id) && !named.has(id) && !used.has(id) && !!findTemplate(id)).slice(0, 2);
+      two.forEach((id) => used.add(id));
+      return two;
+    });
+  }, [mains, pick]);
+  if (mains.length === 0) return null;
+  const i = Math.min(k, mains.length - 1);
+  const m = mains[i], last = i === mains.length - 1;
+  const mainTr = m.tpl ? tplTracker(m.tpl) : null;
+  const mainClause = mainTr ? answerClause(t, mainTr, m.door?.mainValue ?? hardAnswer(mainTr), "result") : null;
+  // what it could show, as two linked chips (her note, Nov 15 2026: less writing)
+  const mainWord = mainTr ? answerPhrase(t, mainTr, m.door?.mainValue ?? hardAnswer(mainTr)) : t("onb8.yourQuestion");
+  const could = (id: string) => {
+    const tr = tplTracker(id);
+    if (!tr) return null;
+    return (
+      <span data-onb-could className="mt-1.5 flex flex-wrap items-center gap-1 text-[12.5px] font-bold">
+        <span className="mr-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{t("onb8.couldShow")}</span>
+        <span className="rounded-full bg-[hsl(var(--data-a)/0.14)] px-2 py-0.5 text-foreground/85">{answerPhrase(t, tr, hardAnswer(tr))}</span>
+        <Spline className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={2.6} />
+        <span className="rounded-full bg-[hsl(var(--pair-b)/0.2)] px-2 py-0.5 text-foreground/85">{mainWord}</span>
+      </span>
+    );
+  };
+  const toggle = (id: string) => setOn((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const nextName = last ? "" : mains[i + 1].door ? t(`doors.${mains[i + 1].door!.id}.name`) : t("onb8.yourQuestion");
+  const daytime = new Date().getHours() < 17;
+  const save = async (day: "today" | "yesterday" | "tonight") => {
+    if (busy) return;
+    setBusy(true);
+    try { track("onboarding_day", { day }); onStart(await saveSetup(pick, { ...plan, aroundTpls: offers.flat() }, texts, on, []), day); } finally { setBusy(false); }
+  };
+  const island = m.tpl ? islandOfTpl(m.tpl) : ("mine" as IslandId);
+  return (
+    <Screen
+      head={<>
+        <Top onBack={() => { if (i > 0) { setEditing(null); setK(i - 1); } else onBack(); }} step={progress[0]} steps={progress[1]} />
+        <H1 className="mt-5">{mains.length > 1 ? t("onb8.topicOf", { k: i + 1, n: mains.length }) : t("onb8.topicOne")}</H1>
+      </>}
+      foot={<>
+        <p className="pb-2 text-center text-[13.5px] font-semibold leading-snug text-muted-foreground">{t("onb8.addMore")}</p>
+        {!last ? (
+          <Main disabled={editing !== null} onClick={() => { setEditing(null); setK(i + 1); }}>{t("onb8.next", { name: nextName })} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
+        ) : daytime ? (
+          <>
+            <Main disabled={busy || editing !== null} onClick={() => void save("yesterday")}>{t("onb8.startYesterday")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
+            <button type="button" disabled={busy || editing !== null} onClick={() => { haptics.tap(); void save("tonight"); }} data-onb-interactive
+              className="-mt-3 mb-3 h-11 w-full text-[16px] font-bold text-muted-foreground">{t("onb8.startTonight")}</button>
+          </>
+        ) : (
+          <Main disabled={busy || editing !== null} onClick={() => void save("today")}>{t("onb8.start")} <ArrowRight className="h-5 w-5" strokeWidth={2.6} /></Main>
+        )}
+      </>}>
+      <div key={i} data-onb-topic-step={m.key} className="animate-fade-in">
+        <div className="surface pick-on mt-1 rounded-[20px] px-4 py-3.5">
+          <div className="flex items-start justify-between gap-2">
+            {editing === i ? (
+              <div className="flex min-w-0 flex-1 gap-2">
+                <input autoFocus value={texts[i]} onChange={(e) => { const v = e.target.value.slice(0, 80); setTexts((xs) => xs.map((x, n) => (n === i ? v : x))); }} aria-label={t("onb8.topicOne")} data-onb-interactive
+                  className="h-11 min-w-0 flex-1 rounded-[12px] bg-foreground/[0.05] px-3 text-[17px] font-bold outline-none" />
+                <button type="button" onClick={() => { haptics.tap(); setEditing(null); if (!texts[i].trim()) setTexts((xs) => xs.map((x, n) => (n === i ? m.base : x))); }} data-onb-interactive className="h-11 rounded-[12px] px-3 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("onb7.qDone")}</button>
+              </div>
+            ) : <p className="min-w-0 flex-1 text-[20px] font-bold leading-snug">{texts[i]}</p>}
+            {editing !== i && <button type="button" onClick={() => { haptics.tap(); setEditing(i); }} aria-label={t("onb7.qEdit")} data-onb-interactive className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[hsl(var(--coin-teal))]"><Pencil className="h-4 w-4" strokeWidth={2.6} /></button>}
+          </div>
+          <p data-onb-island className="mt-1 text-[14px] font-bold text-[hsl(var(--coin-teal))]">{t("onb8.goesTo", { island: islandName(t, island) })}</p>
+        </div>
+        <div className="mt-3 rounded-[18px] bg-foreground/[0.04] px-4 py-3">
+          <p className="text-[12px] font-extrabold uppercase tracking-[0.08em] text-[hsl(var(--coin-teal))]">{t("onb8.inTen")}</p>
+          <p data-onb-in-ten className="mt-0.5 text-[16px] font-bold leading-snug">{mainClause ? t("onb8.inTenLine", { main: mainClause }) : t("onb8.inTenOwn")}</p>
+        </div>
+        {offers[i].length > 0 && (
+          <>
+            <p className="mt-5 text-[12px] font-bold uppercase tracking-[0.06em] text-muted-foreground">{t("onb8.alsoNote")}</p>
+            <div className="mt-2 flex flex-col gap-2">
+              {offers[i].map((id) => (
+                <div key={id} data-onb-offer={id} className={cn("surface flex items-center gap-3 rounded-[18px] px-4 py-3", on.has(id) && "pick-on")}>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[16px] font-bold leading-snug">{qOf(id)}</span>
+                    {could(id)}
+                  </span>
+                  <button type="button" aria-pressed={on.has(id)} onClick={() => { haptics.tap(); toggle(id); }} data-onb-interactive
+                    className={cn("flex h-10 shrink-0 items-center gap-1 rounded-full border-[1.5px] px-3.5 text-[14px] font-bold",
+                      on.has(id) ? "border-transparent bg-[hsl(var(--coin-teal))] text-white" : "border-[hsl(var(--coin-teal))] text-[hsl(var(--coin-teal))]")}>
+                    {on.has(id) ? <Check className="h-4 w-4" strokeWidth={3} /> : <Plus className="h-4 w-4" strokeWidth={2.8} />}
+                    {on.has(id) ? t("onb8.added") : t("onb8.add")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </Screen>
   );
 };

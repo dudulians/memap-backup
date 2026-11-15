@@ -93,9 +93,11 @@ await p.goto("http://localhost:8080/"); await p.waitForTimeout(600);
 await p.evaluate(() => { localStorage.clear(); localStorage.setItem("memap_ab_onb_preview", "A"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); });
 await p.goto("http://localhost:8080/"); await p.waitForTimeout(1600);
 await p.locator("button").filter({ hasText: /^Get started/ }).last().click(); await p.waitForTimeout(1200);
+// v172: what MeMap will show comes first, then "What brings you here?"
+await p.locator("button").filter({ hasText: /^Continue/ }).last().click(); await p.waitForTimeout(1000);
 const onb = (await p.evaluate(() => document.body.innerText)).replace(/\s+/g, " ");
 await p.screenshot({ path: `${D}/6-onboarding-a.png` });
-check("6. Onboarding A: \"Something keeps bothering me\" on the second screen", /Something keeps bothering me/.test(onb), onb.slice(0, 300));
+check("6. Onboarding A: \"Something keeps bothering me\" after the value screen", /Something keeps bothering me/.test(onb), onb.slice(0, 300));
 
 await b.close();
 console.log(JSON.stringify(out, null, 1));

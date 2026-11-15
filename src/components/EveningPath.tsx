@@ -51,6 +51,7 @@ import { art, artOf, islandEvenings, stageOf, toNextStage } from "@/lib/globeArt
 import { islandHsl } from "@/lib/islandColors";
 import { NoteSheet, newDraft, type NoteDraft } from "@/components/NoteSheet";
 import { getDoorState, isoLocal } from "@/lib/doors";
+import { getNotificationSettings } from "@/lib/notifications";
 import { getNotes } from "@/lib/notes";
 import { DAY_AHEAD, LightLabel, PathNode, QuietLine, R_CHEST, R_CURRENT, R_DAY, R_STEP, StartBubble, WEEK_TITLES, WeekStrip, islandIcon, weekStops, type NodeLook } from "@/components/PathParts";
 import { WeekChest } from "@/components/WeekChest";
@@ -343,6 +344,18 @@ export const EveningPath = ({
   // card offers what's left, all optional — a card on tap, never one that stays
   // on the path ("не нравится эта табличка на постоянке").
   const eveningDone = steps.length > 0 && firstOpen < 0;
+  // the first evening done (not before the tour, her pick Nov 15 2026): now ask for the evening reminder, once
+  useEffect(() => {
+    if (!eveningDone || touring) return;
+    const door = getDoorState();
+    if (!door || door.startedAt !== isoDay(new Date()) || getNotificationSettings().enabled) return;
+    try { if (localStorage.getItem("memap_remind_asked") === "1") return; } catch { return; }
+    const id = window.setTimeout(() => {
+      try { localStorage.setItem("memap_remind_asked", "1"); } catch { /* asked again, harmless */ }
+      window.dispatchEvent(new Event("memap-ask-reminder"));
+    }, 1500);
+    return () => window.clearTimeout(id);
+  }, [eveningDone, touring]);
   // a partner shouted or said something hurtful today
   const hardHome = useMemo(() => { const d = isoDay(new Date()); return entries.some((e) => e.date === d && e.value === true && HOME_HARM_IDS.has(moodTemplateOf(trackers.find((x) => x.id === e.trackerId) ?? ({ id: "", title: "" } as Tracker)) ?? "")); }, [entries, trackers]);
   const openLeft = steps.filter((s) => isOpenStep(s) && s.kind !== "unload").length;
