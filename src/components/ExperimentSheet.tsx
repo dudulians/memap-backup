@@ -4,7 +4,7 @@
 // full-screen frame as the games. From an action point ("I'll try", Nov 5
 // 2026) her plan is the first choice, the island is the question's own, and
 // starting the test counts that action point again from today.
-import { ideasForIsland, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
+import { ideasForIsland, ideasForLink, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
 import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -36,7 +36,7 @@ import { EVENING_AT } from "@/lib/pathSteps";
 
 const PLAN = "__plan";
 
-export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, onClose }: {
+export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, linkIds, onClose }: {
   mode: "pick" | "result";
   experiment?: Experiment | null;
   trackers: Tracker[];
@@ -49,6 +49,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   from?: { trackerId: string; k: number };
   /** the link it was opened from ("What to try" under a link): the try remembers it, so the link shows it running */
   link?: string;
+  /** that link's two questions, the one she says comes first first: the ideas are theirs only */
+  linkIds?: string[];
   onClose: () => void;
 }) => {
   useScreen(`test:${mode}`);
@@ -110,11 +112,19 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const runningHere = island && !started ? runningExperiments().filter((x) => x.island === island) : [];
   // the changes on the question's own topic (from a plan), or for what is hardest on the island lately (Nov 9 2026)
   // ideas two people do together are off while a partner-harm card is lit (Nov 9 2026)
-  const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : []) : island ? ideasForIsland(island, trackers, entries) : [];
+  const linkQs = (linkIds ?? []).map((id) => trackers.find((x) => x.id === id)).filter((x): x is Tracker => !!x);
+  // under a link: the first question's own changes always count (the link is about the days she does it: "no coffee after
+  // 2 pm" is the try even if most days have none), the other's unless she already does them; not one already running
+  const linkPool = !plan && linkQs.length ? (() => {
+    const running = busyIdeas();
+    return ideasForLink(linkQs[0], linkQs[1], homeHarmLit(trackers, entries), (k) => !running.has(k), (k) => !running.has(k) && !alreadyDoing(k, trackers, entries));
+  })() : null;
+  const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : [])
+    : linkPool ?? (island ? ideasForIsland(island, trackers, entries) : []);
   const planIdea = plan ? ideaOf(plan) : null;
   const busy = busyIdeas();
   // never a change her own answers say she already does (alreadyDoing.ts)
-  const choices = [...(plan ? [PLAN] : []), ...pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries))];
+  const choices = [...(plan ? [PLAN] : []), ...(linkPool ?? pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries)))];
   const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
   // picking a try is What helps, wherever it was opened from (her note, Nov 14 2026: «когда ты из связи переходишь к
   // действию… видно где-то в заголовках… все действия реально делаем там, где они подразумеваются»), and it says

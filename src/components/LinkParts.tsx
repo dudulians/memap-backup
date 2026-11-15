@@ -265,7 +265,7 @@ export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDa
   const go = () => {
     haptics.tap();
     track("link_try_opened", { order: r.nextDay ? "next_day" : chosen === "unsure" ? "unsure" : "answered" });
-    window.dispatchEvent(new CustomEvent("memap-link-try", { detail: { island: islandOf(about), link: linkKey(a.id, b.id), ids: [r.first, r.second] } }));
+    window.dispatchEvent(new CustomEvent("memap-link-try", { detail: { island: islandOf(about), link: linkKey(a.id, b.id), ids: [r.first, r.second], about: about.id } }));
   };
   return <button type="button" data-link-try="ask" onClick={go} className="raised-btn mt-4 w-full justify-center">{t("link.tryAsk")}</button>;
 };

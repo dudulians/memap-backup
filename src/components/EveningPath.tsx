@@ -261,6 +261,9 @@ export const EveningPath = ({
   }, []);
   // the calendar opens on her main question, so it's named for it ("Your migraine days")
   const daysLabel = (() => { const door = getDoorState(); return t(door ? `path.daysLabel.${door.id}` : "path.daysLabel.any"); })();
+  // her own topic's question, when it is still there: "Done for today" → its calendar (her note, Nov 15 2026: the button
+  // named her topic and opened the calendar of another question)
+  const doorQ = (() => { const door = getDoorState(); return door ? trackers.find((x) => x.id === door.trackerId && !x.archived) : undefined; })();
   // evenings answered on each island: how far each has grown
   const evenings = useMemo(() => islandEvenings(trackers, entries), [trackers, entries]);
 
@@ -695,7 +698,12 @@ export const EveningPath = ({
       if (best !== lastBest) {
         const now = performance.now();
         if (lastBest && modeRef.current === "hand" && now - lastTick > 70) { haptics.tick(); lastTick = now; }
-        if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") setOpen(null);
+        // scrolled by hand: an open card closes only once it is out of sight (it closed as soon as another light passed
+        // the middle, while she was scrolling to see it whole)
+        if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") {
+          const cr = bubbleRef.current?.parentElement?.getBoundingClientRect(), mr = main.getBoundingClientRect();
+          if (!cr || cr.bottom < mr.top + 40 || cr.top > mr.bottom - 120) setOpen(null);
+        }
         lastBest = best;
       }
       // the strip's day: the day of the light in the middle, so scrolling goes day by day (her phone, Nov 15 2026 evening:
@@ -784,7 +792,7 @@ export const EveningPath = ({
   // (her note, Nov 10 2026). Measured once it is drawn, its light included.
   useEffect(() => {
     if (typeof open !== "number") return;
-    const raf = requestAnimationFrame(() => {
+    const place = () => {
       const card = bubbleRef.current?.parentElement, main = boxRef.current?.closest("main");
       const light = boxRef.current?.querySelector(`[data-path-stop="${open}"]`);
       if (!card || !main) return;
@@ -802,8 +810,12 @@ export const EveningPath = ({
       if (bottom > roomBottom) d = bottom - roomBottom;
       if (top - d < roomTop) d = top - roomTop;
       if (Math.abs(d) > 4) { modeRef.current = "auto"; main.scrollBy({ top: d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
-    });
-    return () => cancelAnimationFrame(raf);
+    };
+    // once drawn, and again once settled: its buttons and lines can come a moment later (her phone, Nov 15 2026: the
+    // card still stood half under the tabs now and then)
+    const raf = requestAnimationFrame(place);
+    const again = window.setTimeout(() => { if (modeRef.current !== "hand") place(); }, 420);
+    return () => { cancelAnimationFrame(raf); window.clearTimeout(again); };
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** How far a stop is from the middle of the screen. */
@@ -1119,7 +1131,10 @@ export const EveningPath = ({
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"))}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}
           {hasLinks && button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap, "links"), "plain")}
-          {m.totalDays >= 7 && button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => onTask("calendar"), "calendar"), "plain")}
+          {m.totalDays >= 7 && doorQ && button(<><CalendarDays className={ic} strokeWidth={2.4} /> {daysLabel}</>, go(() => {
+            window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }));
+            window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-open-days", { detail: { id: doorQ.id } })), 350);
+          }, "calendar"), "plain")}
         </>
       );
     }

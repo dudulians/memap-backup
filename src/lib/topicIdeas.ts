@@ -89,6 +89,19 @@ export const ideasForQuestion = (tr: Tracker, couplesOff = false): string[] => {
   return couplesOff ? list.filter((x) => !COUPLE_IDEAS.has(x)) : list;
 };
 
+/** "What to try" under a link (her note, Nov 15 2026: a coffee → tiredness link offered "charge your phone outside the
+ *  bedroom", the island's sleep ideas): only the two linked questions' own changes, in turn, the one she says comes first
+ *  leading. */
+export const ideasForLink = (first: Tracker, second: Tracker | undefined, couplesOff = false,
+  keepFirst: (k: string) => boolean = () => true, keepSecond: (k: string) => boolean = keepFirst): string[] => {
+  const a = ideasForQuestion(first, couplesOff).filter(keepFirst), b = second ? ideasForQuestion(second, couplesOff).filter(keepSecond) : [];
+  const out: string[] = [];
+  for (let k = 0; k < Math.max(a.length, b.length) && out.length < 4; k++) {
+    for (const l of [a, b]) { const id = l[k]; if (id && !out.includes(id) && out.length < 4) out.push(id); }
+  }
+  return out;
+};
+
 /** "Test one change" on an island: the changes for what is hardest there lately, a few questions in
  *  turn (questions of one topic without their own list share it, so it comes once). */
 export const ideasForIsland = (island: IslandId, trackers: Tracker[], entries: TrackerEntry[]): string[] => {
