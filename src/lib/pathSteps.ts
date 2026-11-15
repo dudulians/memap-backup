@@ -49,7 +49,8 @@ export type TaskId = "note" | "calendar" | "ownQuestion" | "chart" | "map" | "ne
 /** Week 1 teaches the app; later weeks open new islands, after her own. The
  *  calendar and the chart are shown by the "discover" steps now (Nov 5 2026). */
 // "Open your world" is gone (Nov 15 2026): the World tab glows by itself when it is time
-const TASKS_WEEK1: TaskId[] = ["note", "ownQuestion"];
+// the first week leads: add a question, then try one change, then a note (Nov 15 2026; the guess is a daily step)
+const TASKS_WEEK1: TaskId[] = ["ownQuestion", "experiment", "note"];
 
 /** "Look around" after the first questions: a tour of the real pages
  *  (src/components/AppTour.tsx). It replaced three pop-up cards (links, days,
@@ -390,9 +391,9 @@ export const syncTasks = (trackers: Tracker[], noteDays: string[], week: number)
 
 /** Today's task: the first one not done before today (one done today stays
  *  visible as a done step). Week 1 teaches the app; later weeks add islands. */
-const taskForToday = (week: number, today: string): { task: TaskId; done: boolean; skipped?: boolean } | null => {
+const taskForToday = (week: number, today: string, only?: TaskId): { task: TaskId; done: boolean; skipped?: boolean } | null => {
   const s = readTasks();
-  const list = week === 0 ? TASKS_WEEK1 : [...TASKS_WEEK1, ...TASKS_LATER];
+  const list = only ? [only] : week === 0 ? TASKS_WEEK1 : [...TASKS_WEEK1, ...TASKS_LATER];
   // Tasks skipped on an earlier day wait at the end.
   const later = (t: TaskId) => !!s[t]?.skipped && s[t]!.skipped !== today;
   const order = [...list.filter((t) => !later(t)), ...list.filter(later)];
@@ -750,7 +751,9 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
   for (const d of discover) steps.push({ id: `discover:${d}`, kind: "discover", discover: d, trackerIds: [], answered: 0, done: seen[d] === today });
   const discovering = discover.length > 0;
   // the first day has no task (it is long enough)
-  const task = discovering || (door && door.startedAt === today) ? null : taskForToday(week, today);
+  // the first day: with fewer than 3 questions, "Add a question" (her note, Nov 15 2026: "Start simple" ends with one)
+  const firstDay = !!door && door.startedAt === today;
+  const task = discovering ? null : firstDay ? (activeQuestions(trackers).length < 3 ? taskForToday(week, today, "ownQuestion") : null) : taskForToday(week, today);
   if (task && hasQuestions) {
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }

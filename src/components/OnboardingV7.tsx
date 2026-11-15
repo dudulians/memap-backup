@@ -558,10 +558,11 @@ export const ValueFirstV8 = ({ onBack, onNext, progress = [1, 5] }: { onBack: ()
     <div className="surface flex items-center gap-3 rounded-[18px] px-3.5 py-3">
       <span className="flex h-[52px] w-[60px] shrink-0 items-center justify-center" aria-hidden="true">{pic}</span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[17px] font-bold leading-tight">{title}</span>
-        <span data-onb-example className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-[12px] bg-foreground/[0.05] py-1 pl-1 pr-2.5">
-          <span className="shrink-0 rounded-full bg-background px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{t("onb8.eg")}</span>
-          <span className="min-w-0 text-[13.5px] font-semibold leading-snug">{line}</span>
+        <span className="block px-2.5 text-[17px] font-bold leading-tight">{title}</span>
+        {/* the example in its own box, its left edge on the title's (her note, Nov 15 2026) */}
+        <span data-onb-example className="mt-1.5 block rounded-[12px] bg-foreground/[0.05] px-2.5 py-1.5">
+          <span className="block text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{t("onb8.eg")}</span>
+          <span className="block text-[14px] font-semibold leading-snug">{line}</span>
         </span>
       </span>
     </div>

@@ -85,9 +85,13 @@ for (const lang of ["en", "ru"]) {
   check(`${lang}: the World's part is two cards, on the World`, worldCards.length === 2 && worldCards.every((c) => c.endsWith("World")), worldCards);
   check(`${lang}: it ends on the World`, (await p.locator(".path-box").count()) === 0);
   check(`${lang}: the line over the tab is gone`, (await p.locator("[data-world-ready]").count()) === 0);
+  // what to tap next (her rule, Nov 15 2026): after the World's tour the Today tab lights up with a line over it
+  check(`${lang}: after the World's tour, Today lights up with a line`, (await p.locator("[data-today-next]").count()) === 1 && (await p.locator('[data-tour="tab-cards"][data-glow]').count()) === 1);
+  await p.screenshot({ path: `${D}/${lang}-today-next.png` });
   await p.locator('[data-tour="tab-cards"]').click(); await p.waitForTimeout(900);
   await p.locator('[data-tour="tab-patterns"]').click(); await p.waitForTimeout(2600);
   check(`${lang}: no tour the second time`, (await p.locator("[data-tour-card]").count()) === 0);
+  check(`${lang}: once Today was opened, its line is gone`, (await p.locator("[data-today-next]").count()) === 0);
   await ctx.close();
 }
 console.log(JSON.stringify({ ...out, errs }, null, 1));

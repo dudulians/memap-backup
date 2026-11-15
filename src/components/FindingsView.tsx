@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { daysAgoIso, doorCounts, getDoor, getDoorState, strongestContextFact } from "@/lib/doors";
 import { factLine } from "@/lib/echo";
 import { LINKS_AT, countedDays } from "@/lib/pathSteps";
-import { ExampleLink } from "./Examples";
+import { ExampleBox, standIn } from "./Examples";
 import { OwnWordsPrompt } from "./AnswerWordsFields";
 import { LinkTry, OrderAsk, PAIR_A, PAIR_B, trackedTemplates } from "./LinkParts";
 import { reasonLabel, reasonTally, reasonTemplate, REASON_LINE_FROM } from "@/lib/reasons";
@@ -44,6 +44,34 @@ const routeOf = (c: CorrelationResult): Route => { const l = linkOf(c); return {
 const Said = ({ segs }: { segs: Seg[] }) => (
   <>{segs.map((x, i) => (x.side ? <span key={i} className={x.side === "a" ? "hl-a" : "hl-b"}>{x.text}</span> : <span key={i}>{x.text}</span>))}</>
 );
+/** The example while there are no links yet: the real card's own parts — its top line, the sentence with its two
+ *  answers lit, how often, the weeks' lines with the days under them (her note, Nov 15 2026). */
+const ExampleLinkCard = () => {
+  const { t } = useTranslation();
+  const a = standIn("slept-enough"), b = standIn("felt-stressed");
+  if (!a || !b) return null;
+  const of = trackerLookup([a, b]);
+  const r = { first: a.id, second: b.id, firstYes: false, secondYes: true, nextDay: true, k: 4, n: 5, other: { k: 3, n: 20 } };
+  const week = (on: number[]) => Array.from({ length: 7 }, (_, d) => on.includes(d));
+  const series: Series[] = [
+    { color: PAIR_A, values: [1, 2, 3, 2, 3, 4, 3, 4], days: [[0], [1, 4], [0, 2, 5], [1, 3], [0, 2, 6], [1, 2, 4, 6], [0, 3, 5], [1, 2, 4, 6]].map(week), label: cap(answerPhrase(t, a, false)) },
+    { color: PAIR_B, values: [1, 1, 2, 2, 3, 3, 3, 4], days: [[1], [2], [1, 3], [2, 4], [0, 1, 3], [2, 3, 5], [1, 4, 6], [0, 2, 3, 5]].map(week), label: cap(answerPhrase(t, b, true)) },
+  ];
+  return (
+    <ExampleBox kind="link" line={t("examples.links")}>
+      <div className="surface rounded-[22px] px-[18px] pb-3.5 pt-3.5">
+        <span className="mb-2 flex min-h-6 items-center gap-2">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[hsl(var(--coin-teal)/0.14)] text-[hsl(var(--coin-teal))]"><Link2 className="h-3.5 w-3.5" strokeWidth={2.6} /></span>
+          <span className="min-w-0 flex-1 truncate text-[12px] font-extrabold uppercase tracking-[0.08em] text-muted-foreground">{[...new Set([islandOf(a), islandOf(b)])].map((x) => islandName(t, x)).join(" · ")}</span>
+        </span>
+        <span className="block text-[16.5px] font-bold leading-snug tracking-tight"><Said segs={linkHeadSegs(t, r, of)} /></span>
+        <span className="mt-1.5 block text-[14px] font-semibold text-muted-foreground">{cap(linkTimes(t, 4, 5))}</span>
+        <p className="mt-3 text-[12.5px] font-medium text-muted-foreground">{t("charts.daysAWeekShort")}</p>
+        <Chart series={series} height={130} big calm />
+      </div>
+    </ExampleBox>
+  );
+};
 /** A day is a dot, coloured by what the answer means (the one look, Nov 6 2026). */
 const toneOf = (tr: Tracker | undefined, v: boolean) =>
   !tr || isNeutralQuestion(tr) || isTestQuestion(tr) ? "hsl(var(--data-a))" : isHardAnswer(tr, v) ? "hsl(var(--strong))" : "hsl(var(--balanced))";
@@ -153,8 +181,8 @@ export const FindingsView = ({
           </p>
           </>}
         </div>
-        {/* what a link will look like, marked as an example (her note, Nov 10 2026) */}
-        <ExampleLink />
+        {/* what a link will look like, marked as an example (her note, Nov 10 2026), built like the real card */}
+        <ExampleLinkCard />
         {fact && counts && (
           <div className="rounded-[22px] border border-foreground/[0.12] bg-foreground/[0.07] p-[18px]">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">{t("doors.echo.soFar")}</p>
@@ -428,9 +456,13 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
   // on the right where the person stands with it
   const isles = a && b ? [...new Set([islandOf(a), islandOf(b)])].map((x) => islandName(t, x)).join(" · ") : "";
   // the two lines and their days, in the colours of the lit words
+  // the weeks since her first answer to either, 2 to 8 (her note, Nov 15 2026: with two weeks of answers six empty
+  // weeks lay at zero and most of the day marks were grey, as if nothing had happened)
+  const first = entries.reduce((m, e) => ((e.trackerId === a?.id || e.trackerId === b?.id) && (!m || e.date < m) ? e.date : m), "");
+  const W = first ? Math.min(8, Math.max(2, Math.ceil((Date.now() - new Date(first + "T00:00:00").getTime() + 1) / 6048e5))) : 8;
   const series: Series[] = a && b ? [
-    { color: PAIR_A, values: weekly(a, entries, 8, r.firstYes), days: dayMarks(a, entries, 8, r.firstYes), label: cap(answerPhrase(t, a, r.firstYes)) },
-    { color: PAIR_B, values: weekly(b, entries, 8, r.secondYes), days: dayMarks(b, entries, 8, r.secondYes), label: cap(answerPhrase(t, b, r.secondYes)) },
+    { color: PAIR_A, values: weekly(a, entries, W, r.firstYes), days: dayMarks(a, entries, W, r.firstYes), label: cap(answerPhrase(t, a, r.firstYes)) },
+    { color: PAIR_B, values: weekly(b, entries, W, r.secondYes), days: dayMarks(b, entries, W, r.secondYes), label: cap(answerPhrase(t, b, r.secondYes)) },
   ] : [];
   return (
     <div ref={box} data-link-card data-together={r.together ? "1" : undefined} data-link-mark={mark?.kind ?? "new"} className="surface rounded-[22px]">
@@ -478,7 +510,7 @@ export const LinkCard = ({ c, hero, of, entries, tracked, startOpen, kicker, als
           </>)}
           {/* the same day can't tell which came first: the person's guess orders it (her idea, Nov 12 2026); here on
               the card, and after an answer it says how the link reads now */}
-          {step === "order" && <OrderAsk r={r} of={of} tracked={tracked} readsNow={<Said segs={segs} />} />}
+          {step === "order" && <OrderAsk r={r} of={of} tracked={tracked} />}
           {/* the link's next step, once its order is known: what to try (her note, Nov 13 2026: a link was a dead end) */}
           {step === "try" && <LinkTry r={r} of={of} />}
           {steps.length > 1 && (

@@ -23,7 +23,7 @@ const seed = async (p, { days = 1, cohort = "new", extra = {} } = {}) => {
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(700);
   await p.evaluate(async ({ days, cohort, extra }) => {
     const dz = await import("/src/lib/doors.ts"), st = await import("/src/lib/storage.ts");
-    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
+    localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light"); localStorage.setItem("memap_tour_world", "1"); /* v170: the World tour would cover the tiles */
     localStorage.setItem("memap_cohort", cohort); localStorage.setItem("memap_ab_onb", "C");
     localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"]));
     localStorage.setItem("memap_tour_seen", "true");
@@ -163,18 +163,20 @@ for (const [v, lang] of [["A", "en"], ["B", "en"], ["C", "en"], ["B", "ru"]]) {
   await p.reload(); await p.waitForTimeout(2200);
   await p.evaluate(() => { window.__fc = null; window.addEventListener("memap-first-checkin", (e) => { window.__fc = e.detail; }); });
   await p.getByRole("button", { name: lang === "ru" ? /^Начать/ : /^Get started/ }).first().click(); await p.waitForTimeout(700);
+  // v172: what MeMap will show comes first (A and B)
+  if (v !== "C") { await p.getByRole("button", { name: /^Continue|^Дальше|^Продолжить/ }).first().click(); await p.waitForTimeout(700); }
   if (v === "A") { await p.getByRole("button", { name: /bothering me|повторяется и мешает/i }).click(); await p.waitForTimeout(700); }
   const isl = (re) => p.getByRole("button", { name: re }).first();
   await isl(/^Health|^Здоровье/).click(); await p.waitForTimeout(300);
   await p.locator(".onb .flex-wrap [aria-pressed=false]").first().click();
   await p.getByRole("button", { name: /^Continue|^Дальше|^Продолжить/ }).first().click(); await p.waitForTimeout(1200);
   if (v !== "C") {
-    await p.getByRole("button", { name: /^Continue|^Дальше|^Продолжить/ }).first().click(); await p.waitForTimeout(900);
-    await p.locator(".onb button.raised-btn").last().click(); await p.waitForTimeout(800);
-    const rows = await p.locator("[role=dialog] button[aria-pressed]").evaluateAll((els) => els.map((e) => ({ text: e.innerText.split("\n")[0], on: e.getAttribute("aria-pressed") === "true" })));
+    // v172: the topic's own step ends with "Start with yesterday" in the daytime, "Tonight instead" under it
+    const main = p.locator(".onb button.raised-btn").last();
+    const label = (await main.innerText()).trim();
     await p.screenshot({ path: `${D}/6-${tag}-day-sheet.png` });
-    ok(`${tag} 09:10: yesterday first and picked`, rows.length === 2 && /Yesterday|За вчера/.test(rows[0].text) && rows[0].on && !rows[1].on, rows);
-    await p.locator("[role=dialog] button.raised-btn, [role=dialog] button", { hasText: /^Continue$|^Продолжить$|^Дальше$/ }).last().click(); await p.waitForTimeout(1200);
+    ok(`${tag} 09:10: yesterday first`, /Start with yesterday|Начать со вчера/.test(label) && (await p.locator(".onb button", { hasText: /Tonight instead|Лучше вечером/ }).count()) === 1, label);
+    await main.click(); await p.waitForTimeout(1200);
   }
   await p.waitForTimeout(900);
   const fc = await p.evaluate(() => window.__fc);

@@ -24,6 +24,8 @@ const seed = async () => {
     localStorage.setItem("memap_language", "en"); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_first_link_seen", "before"); localStorage.setItem("memap_discover_seen", JSON.stringify({ tour: iso(9) })); localStorage.setItem("memap_playful_asked", "seed");
     localStorage.setItem("memap_week_chests", JSON.stringify(Object.fromEntries(Array.from({ length: 9 }, (_, w) => [w, { openedAt: iso(1), lines: [], reward: "balloon" }]))));
+    // v174: week 1 leads with "Add a question" and "Try one change"; both done here, so the note is today's task
+    localStorage.setItem("memap_path_tasks", JSON.stringify({ ownQuestion: { done: iso(3) }, experiment: { done: iso(2) } }));
   });
   await p.goto("http://localhost:8080/"); await p.waitForTimeout(2200);
 };

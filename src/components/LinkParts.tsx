@@ -210,12 +210,9 @@ export const OrderAsk = ({ r, of, tracked, readsNow }: { r: Pick<Route, "first" 
         <span data-order-mine className="min-w-0 flex-1 text-[16px] font-bold leading-snug">{chosen === "unsure" ? t("link.orderMineUnsure") : t("link.orderMine", { what: firstOf(chosen) })}</span>
         <button type="button" data-order-change onClick={() => { haptics.tap(); setEditing(true); }} className="shrink-0 text-[15px] font-bold text-[hsl(var(--coin-teal))]">{t("link.orderChange")}</button>
       </div>
-      {chosen !== "unsure" && (readsNow ? (
-        <div data-order-reads className="mt-3 animate-fade-in">
-          <p className="text-[13px] font-bold text-[hsl(var(--coin-teal))]">{t("link.orderNowReads")}</p>
-          <p className="mt-1 text-[16px] font-bold leading-snug">{readsNow}</p>
-        </div>
-      ) : <p className="mt-1.5 text-[14px] font-semibold text-muted-foreground">{t("link.orderEffect")}</p>)}
+      {/* the sentence on top already reads in her order and lights up as it changes: no second copy of it here
+          (her note, Nov 15 2026) */}
+      {void readsNow}
       {watchList}
     </div>
   );

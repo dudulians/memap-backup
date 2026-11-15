@@ -337,7 +337,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   // the World's part of the tour, the first time she opens the World on its globe with something on it (Nov 15 2026)
   useEffect(() => {
     if (!loaded || !worldTourDue() || only || thing || open || helpsOpen || !islands.some((i) => i.trackerIds.length > 0)) return;
-    const id = window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-start-tour", { detail: { part: "world" } })), 450);
+    const id = window.setTimeout(() => window.dispatchEvent(new CustomEvent("memap-start-tour", { detail: { part: "world" } })), 150);
     return () => window.clearTimeout(id);
   }, [loaded]); // eslint-disable-line react-hooks/exhaustive-deps
   const onlyTitle = (o: Only) => t(o === "findings" || o === "linkchart" ? "world4.links" : o === "signals" ? "world4.whenToAct" : "world4.myDays");

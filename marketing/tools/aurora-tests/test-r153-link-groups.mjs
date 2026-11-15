@@ -1,6 +1,6 @@
 // r153 (Nov 13 2026, branch design/one-system): links about one thing sit on one card.
 // 1. The long "two things" sentence cards are gone.
-// 2. Fewer cards than links: a card holds every link about its thing; closed, it says how many more ("+2 more with it").
+// 2. Fewer cards than links: a card holds every link about its thing; closed, it says how many more ("2 more links with it"; words, never "+2", Nov 15 2026).
 // 3. Opened, it has one way on, "All about …", to the page of that thing, which lists all its links (Nov 14 2026).
 // 4. A tap on a row makes that link the card's sentence, open, with its own chart; the first one becomes a row.
 // 5. Every link is still reachable: sentences + rows = the links found.
@@ -54,7 +54,7 @@ for (const lang of ["en", "ru"]) {
   check(`${lang}: fewer cards than links, and the tile says the cards`, state.cards > 0 && state.cards < links && state.cards === found, { cards: state.cards, links, found });
   const moreN = state.counts.reduce((s, x) => s + Number(x.match(/\d+/)?.[0] ?? 0), 0);
   check(`${lang}: every link is on a card (sentences + rows = all links)`, state.cards + moreN === links, { cards: state.cards, moreN, links });
-  check(`${lang}: a closed card says how many more`, state.counts.some((x) => (lang === "en" ? /^·?\s*\+\d+ more with it$/ : /^·?\s*и ещё \d+ вместе с этим$/).test(x)), state.counts);
+  check(`${lang}: a closed card says how many more`, state.counts.some((x) => (lang === "en" ? /^·?\s*\d+ more links? with it$/ : /^·?\s*и ещё \d+ вместе с этим$/).test(x)), state.counts);
   // since Nov 14 2026 the opened card has no rows of the other links (her note: text rows under the steps distracted);
   // one way on, "All about …", opens the page of that thing, which lists all its links
   const card = p.locator("[data-link-card]").first();

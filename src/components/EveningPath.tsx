@@ -16,7 +16,7 @@
 // Plan: marketing/aurora-light-ux/MASTERPIECE-PLAN.md (top notes).
 import { ObserveTipSheet } from "@/components/ObserveTipSheet";
 import { OBSERVE_TIPS } from "@/lib/observeTipsData";
-import { TipCard, markTip as markTipSeen, maluPic, tipSeen } from "./Tips";
+import { TipCard, markTip as markTipSeen, maluPic, tipSeen, todayTourOver } from "./Tips";
 import { PLAYFUL_ASK_AT, markPlayfulAsked, playfulAsked, setPlayful, usePlayful } from "@/lib/playful";
 import { switchToOld } from "./UpgradeInvite";
 import { SupportSheet } from "./SupportSheet";
@@ -346,7 +346,7 @@ export const EveningPath = ({
   const eveningDone = steps.length > 0 && firstOpen < 0;
   // the first evening done (not before the tour, her pick Nov 15 2026): now ask for the evening reminder, once
   useEffect(() => {
-    if (!eveningDone || touring) return;
+    if (!eveningDone || touring || !todayTourOver()) return;
     const door = getDoorState();
     if (!door || door.startedAt !== isoDay(new Date()) || getNotificationSettings().enabled) return;
     try { if (localStorage.getItem("memap_remind_asked") === "1") return; } catch { return; }
@@ -604,7 +604,8 @@ export const EveningPath = ({
   const [maluTip, setMaluTip] = useState<number | null>(null);
   // the bright step is only a suggestion (her note, Nov 8 2026: "можно скипнуть яркий шар… но это
   // неочевидно"): Malu says so once, beside the boat, in the first days while two or more steps are open
-  const [orderTip, setOrderTip] = useState(() => !tipSeen("any-order"));
+  const [orderTipRaw, setOrderTip] = useState(() => !tipSeen("any-order"));
+  const orderTip = orderTipRaw && !touring && todayTourOver();
   // variant C (no tour): the same tip says what the steps are
   const shortOnb = onbVariant() === "C";
   const closeOrderTip = () => { haptics.tap(); markTipSeen("any-order"); setOrderTip(false); };
@@ -628,6 +629,8 @@ export const EveningPath = ({
   const [stripH, setStripH] = useState(0);
   const stripRef = useRef<HTMLDivElement | null>(null);
   const pinRef = useRef<string | null>(null);
+  // the day the strip shows now (a tap sets it too, so the next scroll by hand moves it on)
+  const lastDayRef = useRef("");
   const awayRef = useRef<"up" | "down" | null>(null);
   const hasPath = trackers.length > 0;
   const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
@@ -677,9 +680,16 @@ export const EveningPath = ({
         if (lastBest && modeRef.current === "hand" && now - lastTick > 70) { haptics.tick(); lastTick = now; }
         if (lastBest && modeRef.current === "hand" && typeof openRef.current === "number") setOpen(null);
         lastBest = best;
-        // this week's lights carry their day; another week's leave the strip as it was
-        const day = (best as HTMLElement | null)?.dataset.day;
-        if (day && !pinRef.current) setInViewDate(day);
+      }
+      // the strip's day: today while any of today's lights is on screen (the middle of a short page can fall on a coming
+      // day, her phone, Nov 15 2026); else the day of the light in the middle (another week's lights leave it as it was)
+      if (!pinRef.current) {
+        const mr = main.getBoundingClientRect();
+        const roomBottom = mr.bottom - (parseFloat(getComputedStyle(main).scrollPaddingBottom) || 0);
+        const today = isoDay(new Date());
+        const todayInSight = [...main.querySelectorAll<HTMLElement>(`[data-day="${today}"]`)].some((el) => { const y = yOf(el); return y > mr.top + 8 && y < roomBottom - 8; });
+        const day = todayInSight ? today : (best as HTMLElement | null)?.dataset.day;
+        if (day && day !== lastDayRef.current) { lastDayRef.current = day; setInViewDate(day); }
       }
       const fw = focusRef.current?.closest<HTMLElement>("[data-cy]");
       const fd = fw ? yOf(fw) - midY : NaN;
@@ -817,6 +827,7 @@ export const EveningPath = ({
     const at = i >= 0 ? toMiddle(i) : null;
     if (!at) return;
     pinRef.current = date;
+    lastDayRef.current = date;
     setInViewDate(date);
     modeRef.current = "auto";
     at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
@@ -1069,7 +1080,8 @@ export const EveningPath = ({
           {hardHome ? head(t("path.eveningSoft"), t("path.eveningSoftSub")) : playful ? head(t("path.eveningDone"), t("path.eveningDoneSub")) : head(t("path.eveningAll"))}
           {hardHome && button(t("support.chip"), go(() => setSupport("home"), "support"), "teal")}
           {!hardHome && playful && button(<><Wind className={ic} strokeWidth={2.4} /> {t("path.popBubbles")}</>, go(() => setUnloadOpen(true), "bubbles"), "teal")}
-          {nextUp && nextTreasure(nextUp, go(() => window.dispatchEvent(new CustomEvent("memap-open-you")), "next_treasure"))}
+          {/* the next treasure ("Moon · 3 evenings in a row" → You) is out for now: it said nothing she could use */}
+          {void nextUp}{void nextTreasure}
           {m.weekComplete && button(<><FileBarChart2 className={ic} strokeWidth={2.4} /> {t("path.openReport")}</>, go(openThisChest, "report"))}
           {button(<><Plus className={ic} strokeWidth={2.4} /> {t("path.exploreQuestions")}</>, go(() => onTask("ownQuestion"), "questions"), "plain")}
           {hasLinks && button(<><Link2 className={ic} strokeWidth={2.4} /> {t("path.seeLinks")}</>, go(onOpenMap, "links"), "plain")}
@@ -1493,7 +1505,7 @@ export const EveningPath = ({
                 <span className={cn("grid h-7 w-7 place-items-center rounded-full text-[12px] font-extrabold transition-[transform,box-shadow] duration-300",
                   done ? "bg-[linear-gradient(180deg,#FFD866_0%,#F6B92B_100%)] text-white"
                     : isToday ? "bg-[hsl(var(--coin-teal)/0.16)] text-[hsl(var(--coin-teal))]"
-                    : ahead ? "bg-white/30 text-foreground/40 dark:bg-white/10"
+                    : ahead ? "bg-white/40 text-foreground/55 dark:bg-white/10"
                     : "bg-white/55 text-foreground/50 dark:bg-white/15",
                   on && cn("scale-[1.18]", glow))}>{letter}</span>
               </button>

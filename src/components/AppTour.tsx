@@ -4,7 +4,7 @@
 // example picture, instead of telling her in a pop-up ("надо показать, где
 // конкретно это лежит… красивой инфографикой"). Started by the path's "Look
 // around" step (memap-start-tour); done or skipped = that step is done.
-import { TOUR_DONE_KEY, WORLD_TOUR_KEY } from "./Tips";
+import { TODAY_TOUR_KEY, TOUR_DONE_KEY, WORLD_TOUR_KEY } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -373,7 +373,8 @@ export const AppTour = () => {
       if (shown.current) await wait(same ? 210 : 230);
       // the first stop: Today's path is still gliding to its new step (the tour marks
       // "Look around" done as it starts), so measure once it has settled
-      else await wait(650);
+      // the World's part comes at once (her note: «какую-то мини-паузу берёт… надо сразу, но не резко»)
+      else await wait(part === "world" ? 120 : 650);
       if (!alive) return;
       window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: stop.tab } }));
       let r: DOMRect | null = null, link: { a: Pt; b: Pt } | undefined, isle: IslandId | undefined;
@@ -383,8 +384,9 @@ export const AppTour = () => {
       if (stop.isle) {
         // her island on the map (and, for a link, the nearest one to it)
         await findTarget("[data-isle]");
-        // the globe turns her island to face her first
-        if (mainIsle.current) await focusGlobe([mainIsle.current]);
+        // the globe turns her island to face her first, only when it isn't in sight already
+        const seen = (() => { const el = document.querySelector<HTMLElement>(`[data-isle="${mainIsle.current}"]`); if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.top > window.innerHeight * 0.3 && r.bottom < window.innerHeight * 0.85 && r.left > 0 && r.right < window.innerWidth; })();
+        if (mainIsle.current && !seen) await focusGlobe([mainIsle.current]);
         const all = [...document.querySelectorAll<HTMLElement>("[data-isle]")];
         const mine = all.find((e) => e.dataset.isle === mainIsle.current) ?? all[0];
         if (mine) {
@@ -457,11 +459,14 @@ export const AppTour = () => {
     markDiscovered("tour");
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
     document.documentElement.classList.remove("touring");
+    if (part === "today") { try { localStorage.setItem(TODAY_TOUR_KEY, "1"); } catch { /* the hints may come early */ } }
     window.dispatchEvent(new CustomEvent("memap-tour-done"));
     // the World's part ends on the World: walked to the end, the tour is done (the blocks then stay quiet); skipped, it
     // does not start again and the blocks explain themselves once
     if (part === "world") {
-      try { localStorage.setItem(WORLD_TOUR_KEY, toStep ? "1" : "skipped"); if (toStep) localStorage.setItem(TOUR_DONE_KEY, "1"); } catch { /* it may show again */ }
+      try { localStorage.setItem(WORLD_TOUR_KEY, toStep ? "1" : "skipped"); if (toStep) localStorage.setItem(TOUR_DONE_KEY, "1"); localStorage.setItem("memap_today_next", "1"); } catch { /* it may show again */ }
+      // what to tap next: the Today tab lights up (Index.tsx)
+      window.dispatchEvent(new Event("memap-today-next"));
       return;
     }
     // "and what now?" (her note, Nov 7 2026): Today opens her next step's card

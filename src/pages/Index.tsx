@@ -54,6 +54,16 @@ const Index = () => {
   useEffect(() => { setBaseScreen(`tab:${activeTab}`); track("screen_viewed", { screen: `tab:${activeTab}` }); }, [activeTab]);
   // The World tab glows after her first evening until she opens it (glowHints.ts, her note Nov 10 2026)
   const [worldGlow, setWorldGlow] = useState(false);
+  // what to tap next (her rule, Nov 15 2026): after the World's tour the Today tab lights up until she opens it
+  const [todayNext, setTodayNext] = useState(() => { try { return localStorage.getItem("memap_today_next") === "1"; } catch { return false; } });
+  useEffect(() => {
+    const on = () => setTodayNext(true);
+    window.addEventListener("memap-today-next", on);
+    return () => window.removeEventListener("memap-today-next", on);
+  }, []);
+  useEffect(() => {
+    if (activeTab === "cards" && todayNext) { setTodayNext(false); try { localStorage.removeItem("memap_today_next"); } catch { /* fine */ } }
+  }, [activeTab, todayNext]);
   useEffect(() => {
     if (activeTab === "patterns") markGlowSeen("world");
     let live = true;
@@ -430,6 +440,13 @@ const Index = () => {
       <DoctorReport />
       {/* the World tab glows once there are answers: a small line over it says so (board F, her pick Nov 15 2026); under
           the tour's dim while a tour runs; gone once the World is opened */}
+      {todayNext && activeTab !== "cards" && (
+        <button type="button" data-today-next onClick={() => { haptics.tap(); setTrip(null); setActiveTab("cards"); }}
+          className="fixed left-5 z-[11] w-fit animate-fade-in rounded-full bg-background px-3.5 py-1.5 text-[13px] font-bold text-[hsl(var(--coin-teal))] shadow-[0_8px_20px_-10px_rgba(16,42,56,0.45)]"
+          style={{ bottom: "calc(5.25rem + 6px + env(safe-area-inset-bottom, 0px))" }}>
+          {t("tour.todayNext")}
+        </button>
+      )}
       {worldGlow && activeTab !== "patterns" && (
         <button type="button" data-world-ready onClick={() => { haptics.tap(); setTrip(null); setActiveTab("patterns"); }}
           className="fixed inset-x-0 z-[11] mx-auto w-fit animate-fade-in rounded-full bg-background px-3.5 py-1.5 text-[13px] font-bold text-[hsl(var(--coin-teal))] shadow-[0_8px_20px_-10px_rgba(16,42,56,0.45)]"
@@ -462,8 +479,9 @@ const Index = () => {
                   flex flex-col items-center justify-center py-2.5 px-2 m-1 rounded-[20px] transition-all duration-300 active:scale-90
                   ${(activeTab === "questions" ? questionsFrom : activeTab) === tab ? "text-foreground bg-muted shadow-sm" : "text-muted-foreground hover:text-foreground"}
                   ${tab === "patterns" && worldGlow && activeTab !== "patterns" ? "glow-hint text-foreground" : ""}
+                  ${tab === "cards" && todayNext && activeTab !== "cards" ? "glow-hint text-foreground" : ""}
                 `}
-                data-glow={tab === "patterns" && worldGlow && activeTab !== "patterns" ? "" : undefined}
+                data-glow={(tab === "patterns" && worldGlow && activeTab !== "patterns") || (tab === "cards" && todayNext && activeTab !== "cards") ? "" : undefined}
               >
                 <Icon className="h-5 w-5 mb-0.5" />
                 <span className="text-[11px] font-medium">{label}</span>

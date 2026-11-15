@@ -76,6 +76,8 @@ export const WorldBegun = () => {
         else window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "cards" } }));
         return;
       }
+      // the Today tour comes after this screen: the path's hints and the reminder wait for it (Tips.todayTourOver)
+      try { localStorage.setItem("memap_tour_today", "pending"); } catch { /* they may come early */ }
       if (saved.length === 0) { setShown({ kind: "nothing", date, ids }); track("world_begun", { saved: 0 }); return; }
       const door = getDoorState();
       const main = trackers.find((x) => x.id === door?.trackerId) ?? trackers.find((x) => x.id === saved[0].trackerId);
@@ -90,7 +92,7 @@ export const WorldBegun = () => {
       // "Show me around"): it's asked when she taps the button, before the tour
       asked.current = false; tourAfter.current = false;
     };
-    const waiting = () => { setShown({ kind: "waiting" }); track("world_waiting"); };
+    const waiting = () => { try { localStorage.setItem("memap_tour_today", "pending"); } catch { /* fine */ } setShown({ kind: "waiting" }); track("world_waiting"); };
     // the end of the first evening (EveningPath): now the reminder (her pick, Nov 15 2026: not before the tour)
     const remind = () => { if (!getNotificationSettings().enabled) setShown({ kind: "remind" }); };
     window.addEventListener("memap-world-begun", begun);

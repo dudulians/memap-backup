@@ -196,7 +196,7 @@ export const Chart = ({ series, height, big = false, calm = false, at = null, on
       )}
       {rows.length > 0 && n <= WEEKS && (
         <div data-chart-days className="mt-4">
-          <p className="mb-2.5 text-[12.5px] font-medium text-muted-foreground">{t("charts.everyDay")}</p>
+          <p className="mb-2.5 text-[12.5px] font-medium text-muted-foreground">{t("charts.everyDay", { count: n })}</p>
           <svg width={W} height={stripH + 6} viewBox={`0 -3 ${W} ${stripH + 6}`} className="block overflow-visible" aria-hidden="true">
             {rows[0].days!.map((wk, w) => wk.map((_, i) => {
               const cx = x(w) - WK / 2 + i * (BW + GAP) + BW / 2;

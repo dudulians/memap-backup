@@ -17,6 +17,10 @@ export const TOUR_DONE_KEY = "memap_tour_completed";
 export const tourCompleted = () => { try { return localStorage.getItem(TOUR_DONE_KEY) === "1"; } catch { return false; } };
 /** The World's part of the tour (Nov 15 2026): it starts by itself the first time the World opens; "1" walked, "skipped". */
 export const WORLD_TOUR_KEY = "memap_tour_world";
+/** Today's part of the tour: "pending" from "Your world has begun" until it is walked or skipped ("1"). Until then the
+ *  path's own hints and the reminder wait (her notes, Nov 15 2026); someone who gets no tour never waits. */
+export const TODAY_TOUR_KEY = "memap_tour_today";
+export const todayTourOver = () => { try { return localStorage.getItem(TODAY_TOUR_KEY) !== "pending"; } catch { return true; } };
 export const worldTourDue = () => { try { return !tourCompleted() && !localStorage.getItem(WORLD_TOUR_KEY); } catch { return false; } };
 
 export const maluPic = () => avatarUrl(getAvatar() ?? DEFAULT_AVATAR);

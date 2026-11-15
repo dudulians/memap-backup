@@ -4,7 +4,10 @@
 // quotes what the four parts hold: every row opens its own place. No new counting here.
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, ChevronRight, Lightbulb, Link2, Sprout } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, FlaskConical, Hourglass, Lightbulb, Link2, Sprout } from "lucide-react";
+import { linkMark } from "@/lib/linkSeen";
+import { doneActions } from "@/lib/actionLog";
+import { countedDays, LINKS_AT } from "@/lib/pathSteps";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, type IslandId, type Route } from "@/lib/islands";
@@ -47,7 +50,13 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
     const lit = litTrackers(trackers, entries).has(tr.id);
     const pairKeys = new Set(links.map((c) => [c.trackerA.id, c.trackerB.id].sort().join("|")));
     const trying = runningExperiments().find((x) => x.from === tr.id || (!!x.link && pairKeys.has(x.link))) ?? null;
-    return { days, neutral, yes, hard: days.filter((d) => d === "hard").length, links, routes, route, word, said, lit, trying };
+    // what this question did lately: a once-off step marked Done in the last two weeks
+    const twoWeeks = daysAgoIso(14);
+    const doneOnce = [...doneActions()].reverse().find((x) => x.trackerId === tr.id && x.date >= twoWeeks) ?? null;
+    // its links: one not looked at yet, or all seen and none tried
+    const unseen = routes.find((rt) => !linkMark(rt.first, rt.second, !!rt.nextDay)) ?? null;
+    const evenings = countedDays(trackers, entries).length;
+    return { days, neutral, yes, hard: days.filter((d) => d === "hard").length, links, routes, route, word, said, lit, trying, doneOnce, unseen, evenings };
   }, [tr, trackers, entries, DAYS]);
   const of = trackerLookup(trackers);
   const icon = (I: typeof CalendarDays, on = false, dim = false) => (
@@ -63,8 +72,33 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
   const row = "relative grid w-full grid-cols-[36px_minmax(0,1fr)] gap-x-3 pb-5 text-left";
   const rail = "before:absolute before:left-[17px] before:top-[40px] before:bottom-[2px] before:border-l-[2.5px] before:border-dotted before:border-foreground/15";
   const go = (f: () => void) => () => { haptics.tap(); f(); };
+  // Now: where this question stands, one button for its next step (Nov 15 2026)
+  const now = data.trying
+    ? { kind: "trying", icon: FlaskConical, line: t("thingNow.trying", { what: data.trying.change }), sub: t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS }), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })) }
+    : data.doneOnce
+    ? { kind: "done", icon: Check, line: t("thingNow.done", { what: data.doneOnce.kind === "home" ? t(data.doneOnce.plan) : data.doneOnce.plan }), sub: t("thingNow.doneSub"), act: t("thingNow.see"), go: () => window.dispatchEvent(new CustomEvent("memap-open-helps")) }
+    : data.lit
+    ? { kind: "act", icon: Lightbulb, line: t("thingNow.act"), sub: t("thingNow.actSub"), act: t("thingNow.plan"), go: onAct }
+    : data.unseen
+    ? { kind: "new", icon: Link2, line: t("thingNow.newLink"), sub: undefined, act: t("thingNow.see"), go: () => onLinks(tr.id, [data.unseen!.first, data.unseen!.second]) }
+    : data.route
+    ? { kind: "seen", icon: Link2, line: t("thingNow.seenLink"), sub: t("thingNow.seenSub"), act: t("thingNow.choose"), go: () => onTry(islandOf(tr)) }
+    : data.evenings < LINKS_AT
+    ? { kind: "waiting", icon: Hourglass, line: t("thingNow.waiting", { count: LINKS_AT - data.evenings }), sub: undefined, act: undefined, go: undefined }
+    : { kind: "calm", icon: Hourglass, line: t("thingNow.calm"), sub: undefined, act: undefined, go: undefined };
+  const NowIcon = now.icon;
   return (
     <div data-thing={tr.id}>
+      <div data-thing-now={now.kind} className="mb-4 flex items-center gap-3 rounded-[18px] bg-[hsl(var(--coin-teal)/0.1)] px-3.5 py-2.5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[hsl(var(--coin-teal))] text-white"><NowIcon className="h-4 w-4" strokeWidth={2.6} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-bold leading-snug">{now.line}</span>
+          {now.sub && <span className="block text-[13px] font-semibold text-muted-foreground">{now.sub}</span>}
+        </span>
+        {now.act && now.go && (
+          <button type="button" data-thing-now-go onClick={go(now.go)} className="h-9 shrink-0 rounded-full bg-[hsl(var(--coin-teal))] px-3.5 text-[14px] font-bold text-white">{now.act}</button>
+        )}
+      </div>
       <button type="button" data-thing-row="days" onClick={go(() => onDays(tr.id))} className={cn(row, rail)}>
         {icon(CalendarDays)}
         <span>

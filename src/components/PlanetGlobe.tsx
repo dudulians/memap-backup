@@ -212,7 +212,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       return { key: isl.id, kind: "area", ll, v: vec(ll), name, size: size * STAGE_SCALE[stage], ar: ASPECT[name] ?? 0.55, island: isl, lit: lit?.has(isl.id), flag: stage === 4 };
     });
     for (const u of UNEXPLORED) list.push({ key: u.name, kind: "cloud", ll: u.ll, v: vec(u.ll), name: u.name, size: 0.85, ar: ASPECT[u.name] });
-    const boatLL: [number, number] = [C0[0] - 1, C0[1]];
+    // with one island the boat sails beside it, not under its name (her note, Nov 15 2026)
+    const boatLL: [number, number] = n === 1 ? [C0[0] - 4, C0[1] + 18] : [C0[0] - 1, C0[1]];
     list.push({ key: "boat", kind: "boat", ll: boatLL, v: vec(boatLL), name: "sailboat", size: 0.72, ar: 1 });
     return { things: list, wakes: links };
   }, [islands, routes, lit, days]);
@@ -441,7 +442,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           const key = `${a}|${b}`, prev = chipT.get(key);
           // a spot: t along the route, on the dotted line itself
           const at = (t: number) => { const pm = rot(slerp(A, B, t)); return { t, pm, cx: CX + R * pm[0], cy: CY - R * pm[1] }; };
-          const off = (boxes: typeof labelBoxes, c: { cx: number; cy: number }) => !boxes.some((l) => Math.abs(c.cx - l.x) < l.hw + 19 && Math.abs(c.cy - l.y) < l.hh + 19);
+          const off = (boxes: typeof labelBoxes, c: { cx: number; cy: number }) => !boxes.some((l) => Math.abs(c.cx - l.x) < l.hw + 14 && Math.abs(c.cy - l.y) < l.hh + 14);
           // only where the line is drawn (the ball's front), clear of the names, and of the pictures when it can be
           const front = (c: ReturnType<typeof at>) => c.pm[2] > 0.2;
           const ts = [...(prev !== undefined ? [prev] : []), ...CHIP_TS];
@@ -456,7 +457,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           const spot = at(now_t);
           const { pm, cx, cy } = spot;
           const cv = goal === null ? 0 : Math.max(0, Math.min(1, (pm[2] - 0.15) / 0.2));
-          chip.style.transform = `translate(${(cx - 17).toFixed(1)}px, ${(cy - 17).toFixed(1)}px)`;
+          chip.style.transform = `translate(${(cx - 11).toFixed(1)}px, ${(cy - 11).toFixed(1)}px)`;
           chip.style.opacity = String(cv * (L ? L.chip : 1)); chip.style.zIndex = String(Math.round(150 + pm[2] * 100));
           if (cv > 0.5) linkHits.push({ a: a as IslandId, b: b as IslandId, x: cx, y: cy, chip: true });
         }
@@ -842,7 +843,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         ))}
         {onLink && wakes.map(([a, b]) => (
           <div key={`${a}|${b}`} ref={(el) => { chipEls.current.set(`${a}|${b}`, el); }} aria-hidden="true" className="link-chip planet-link-chip" style={{ opacity: 0 }}>
-            <Link2 className="h-4 w-4" strokeWidth={2.6} />
+            <Link2 className="h-3 w-3" strokeWidth={2.8} />
           </div>
         ))}
       </div>

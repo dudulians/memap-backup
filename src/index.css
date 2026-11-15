@@ -2452,7 +2452,8 @@ html[data-ui="new"][data-theme="aurora"] .planet-map-isle .new-tool { background
 .planet-map-isle .new-tool-cap { position: absolute; left: 50%; top: calc(42% + 30px); transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: 800; color: hsl(var(--muted-foreground)); }
 /* the language button on the first screen: a soft teal ring so it's noticed (Nov 6 2026) */
 .lang-btn { box-shadow: 0 0 0 2px hsl(var(--coin-teal) / 0.35), 0 8px 18px -12px rgba(20, 40, 90, .45); }
-.link-chip { width: 34px; height: 34px; border-radius: 17px; background: #fff; color: hsl(var(--data-a)); display: flex; align-items: center; justify-content: center;
+/* 22px since Nov 15 2026 (her note: the circles were too big and always somewhere odd) */
+.link-chip { width: 22px; height: 22px; border-radius: 11px; background: #fff; color: hsl(var(--data-a)); display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 14px -8px rgba(20, 50, 90, .55); transition: transform .12s ease-out; }
 button.link-chip:active { transform: scale(.92); }
 .planet-link-chip { position: absolute; left: 0; top: 0; will-change: transform, opacity; }

@@ -171,7 +171,9 @@ const en = {
     deckHead_other: "{{count}} findings · swipe",
     asList: "See all as a list",
     asDeck: "Show one by one",
-    alsoMore: "+{{count}} more with it",
+    // words, never "+1" (her note, Nov 15 2026: «+2, чтобы это ни значило»)
+    alsoMore_one: "{{count}} more link with it",
+    alsoMore_other: "{{count}} more links with it",
     chainSameDay: "on those days {{result}}",
     // the top line of a chain card (Nov 15 2026)
     kindChain: "Two links in a row",
@@ -784,7 +786,8 @@ const en = {
     weeks8: "8 weeks",
     daysAWeekShort: "Days a week",
     touch: "touch the chart to see a week",
-    everyDay: "Every day of these 8 weeks",
+    everyDay_one: "Every day of this week",
+    everyDay_other: "Every day of these {{count}} weeks",
     links: "Links",
     each: "Each question",
     daysAWeek: "Days a week, last 8 weeks",
@@ -2728,6 +2731,23 @@ const en = {
     close: "Close",
   },
   // an island's questions, one at a time (Nov 15 2026, board C)
+  // where a question stands now, on top of it on its island (Nov 15 2026)
+  thingNow: {
+    trying: "Trying now: {{what}}",
+    done: "Done: {{what}}",
+    doneSub: "Now watching what changes",
+    act: "It happens often now",
+    actSub: "Time to act",
+    newLink: "A new link",
+    seenLink: "Link seen",
+    seenSub: "Try one change?",
+    waiting_one: "First links in about {{count}} evening",
+    waiting_other: "First links in about {{count}} evenings",
+    calm: "No link yet. Keep answering",
+    see: "See",
+    plan: "My plan",
+    choose: "Choose",
+  },
   islandQ: {
     of: "{{k}} of {{n}}",
     ofAria: "Question {{k}} of {{n}}: all questions",
@@ -2769,6 +2789,8 @@ const en = {
     parts: { title: "These open as evenings add up", line_one: "My days now, links in about {{count}} evening, then when to act and what helps.", line_other: "My days now, links in about {{count}} evenings, then when to act and what helps.", lineOpen: "My days, links, when to act and what helps: they fill in as evenings add up." },
     // over the World tab once it glows (board F)
     worldReady: "Your world is ready — tap World",
+    // after the World's tour: what to tap next (her rule, Nov 15 2026)
+    todayNext: "Your next step is on Today",
     steps: { title: "Today's steps", line: "A few small steps a day, top to bottom. The lit one is next — tap it.", done: "Done", now: "Now", later: "Later" },
     chart: { title: "Your weeks", line: "See if your weeks get better.", sample: "Hard days a week" },
     actions: { line: "Set your rule. When it's reached, the lighthouse lights up.", sample: "If 3 nights in a week are hard, put screens away after 10 pm." },
