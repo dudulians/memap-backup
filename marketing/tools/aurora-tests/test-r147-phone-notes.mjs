@@ -56,7 +56,7 @@ for (const [lang, playful] of [["en", true], ["ru", true], ["en", false]]) {
   const RU = lang === "ru", tag = `${lang}-${playful ? "on" : "off"}`;
   const { ctx, p } = await newPage();
   await seed(p, { lang, playful });
-  const found = await tapNode(p, RU ? "Конец сегодняшнего пути" : "The end of today");
+  const found = await tapNode(p, RU ? "На сегодня всё" : "Done for today");
   ok(`${tag}: the path's end light`, found);
   const card = await bubbleText(p);
   const btns = (await p.locator(".path-bubble button").allInnerTexts()).map((x) => x.trim());
@@ -110,7 +110,7 @@ for (const lang of ["en", "ru"]) {
     const st = await import("/src/lib/storage.ts"), rs = await import("/src/lib/reasons.ts"), dz = await import("/src/lib/doors.ts");
     return rs.pendingReasons(await st.getTrackers(), await st.getEntries(), dz.isoLocal(new Date())).length;
   });
-  const found = await tapNode(p, RU ? "Почему?" : "Why?");
+  const found = await tapNode(p, RU ? "Почему" : "Why");
   ok(`${lang}: a "Why?" step (${pend} answers wait)`, found && pend > 0, { found, pend });
   if (!found) { await ctx.close(); continue; }
   await p.locator(".path-bubble button").first().click(); await p.waitForTimeout(1200);
@@ -136,7 +136,7 @@ for (const lang of ["en", "ru"]) {
   ok(`${lang}: the skipped note on the path`, found);
   if (!found) { await ctx.close(); continue; }
   const card = await bubbleText(p);
-  const go = p.locator(".path-bubble button").filter({ hasText: RU ? /^Вперёд$/ : /^Go$/ }).first();
+  const go = p.locator(".path-bubble button").filter({ hasText: RU ? /^(Вперёд|Открыть)$/ : /^(Go|Open)$/ }).first();
   ok(`${lang}: "Skipped" with a way back`, /Skipped|Пропущено/.test(card) && (await go.count()) > 0, card);
   await p.screenshot({ path: `${D}/${lang}-note-skipped.png` });
   if (await go.count()) {

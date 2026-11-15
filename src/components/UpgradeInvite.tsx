@@ -40,6 +40,8 @@ export const switchToNew = (from: SwitchFrom = "invite") => {
     // the path starts today only the first time; coming back keeps her weeks and reports (QA, Nov 8 2026)
     if (!localStorage.getItem("memap_path_start")) localStorage.setItem("memap_path_start", isoLocal(new Date()));
     localStorage.setItem(KEY, "accepted");
+    // that day Today shows only her first step (EveningPath)
+    localStorage.setItem("memap_ui_new_since", isoLocal(new Date()));
     // the first time: the old users' onboarding opens in the new look (Nov 8 2026)
     startOldTour();
   } catch { /* stays classic; nothing lost */ }

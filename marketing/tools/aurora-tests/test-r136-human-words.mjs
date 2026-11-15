@@ -132,8 +132,8 @@ for (const lang of ["en", "ru"]) {
   const foot = await p.evaluate(() => /a “yes” to a hard question|«да» на трудный вопрос/.test(document.body.innerText));
   await p.locator("[data-hard-row]").first().scrollIntoViewIfNeeded().catch(() => {});
   await p.screenshot({ path: `${D}/${lang}-3-island.png` });
-  ok(`island card ${lang}: the hard answer in words, no quotes`, rows.length > 0 && rows.every((s) => !/[“”«»]/.test(s)) && rows.some((s) => (lang === "en" ? /^No compliment from partner\s?\d+ days?$/ : /^Без доброго слова от партнёра\s?\d+ (день|дня|дней)$/).test(s)), rows);
-  ok(`island card ${lang}: no yes/no footnote when every row is in words`, !foot);
+  // (part 5 is gone since v172: the island sheet is one page per question, the weather block with its hard rows was removed)
+  out[`island card ${lang}`] = rows.length ? rows : "no weather rows (v172 island page)";
   for (let i = 0; i < 3; i++) { await p.keyboard.press("Escape"); await p.waitForTimeout(400); }
 }
 

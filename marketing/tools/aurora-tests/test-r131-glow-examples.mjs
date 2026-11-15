@@ -20,7 +20,7 @@ const seed = async (p, { lang = "en", days = 1, cohort = "new" } = {}) => {
     localStorage.clear(); localStorage.setItem("memap_ui", "new"); localStorage.setItem("memap_links_view", "list"); localStorage.setItem("memap_language", lang); localStorage.setItem("memap_language_chosen", "true"); localStorage.setItem("memap_theme", "aurora-light");
     localStorage.setItem("memap_cohort", cohort); localStorage.setItem("memap_ab_onb", "C");
     localStorage.setItem("memap_tips_seen", JSON.stringify(["any-order"]));
-    localStorage.setItem("memap_tour_seen", "true");
+    localStorage.setItem("memap_tour_seen", "true"); localStorage.setItem("memap_tour_world", "1"); // the World tour (v172) has its own check, r170
     const now = new Date(); now.setHours(20, 0, 0, 0);
     const day = (k) => { const d = new Date(now); d.setDate(d.getDate() - k); return d; };
     const start = day(days - 1); start.setHours(9, 0, 0, 0);

@@ -201,19 +201,24 @@ export const EveningPath = ({
   }, [active, entries]);
   // which "Need to talk?" sheet: low mood, or a partner who shouted or said hurtful things tonight
   const [support, setSupport] = useState<null | "mood" | "home">(null);
+  // the day she came to the new look: the tour's last screen and Settings' first row both offer the way back, so Today
+  // shows only her first step (old-user walk, Nov 15 2026: the report card, then "Miss the old look?" over Start)
+  const newToday = useMemo(() => { try { return localStorage.getItem("memap_ui_new_since") === isoLocal(new Date()); } catch { return false; } }, []);
   // came from the old look: the first week, a card says how to go back (her ask, Nov 7 2026)
   const fromOld = useMemo(() => {
     try {
-      if (localStorage.getItem("memap_upgrade_invite") !== "accepted" || tipSeen("old-look")) return false;
+      if (newToday || localStorage.getItem("memap_upgrade_invite") !== "accepted" || tipSeen("old-look")) return false;
       const at = localStorage.getItem("memap_path_start");
       return !!at && (Date.now() - new Date(at + "T00:00:00").getTime()) / 864e5 < 7;
     } catch { return false; }
   }, []);
-  // after the first moments of the screen (a "grew" toast uses the same spot)
-  const [oldLookShown, setOldLookShown] = useState(false);
+  // at once (it waited 3 s and the screen jumped under it; the "grew" toasts are at the bottom now)
+  const [oldLookShown] = useState(fromOld);
   // the old-look card's height: the missed-days card stands under it in the first week (old-user walk, Nov 14 2026:
   // the missed days had no card while "Miss the old look?" was up)
   const [oldH, setOldH] = useState(0);
+  // the games-and-rewards ask's height: room is kept under it too
+  const [playH, setPlayH] = useState(0);
   // while "Look around" runs, the old-look card steps aside: the tour's first spotlight landed on it (Nov 14 2026)
   const [touring, setTouring] = useState(false);
   useEffect(() => {
@@ -225,13 +230,12 @@ export const EveningPath = ({
   // box that stays every evening); the report itself stays in World → Share
   const reportDay = isoLocal(new Date());
   const reportDays = (): string[] => { try { const v = JSON.parse(localStorage.getItem(REPORT_TIP_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
-  const reportTipOn = m.totalDays >= 5 && !heavyMood && !(fromOld && oldLookShown) && (() => { const d = reportDays(); return d.includes(reportDay) || d.length < REPORT_TIP_EVENINGS; })();
+  const reportTipOn = m.totalDays >= 5 && !heavyMood && !fromOld && !newToday && (() => { const d = reportDays(); return d.includes(reportDay) || d.length < REPORT_TIP_EVENINGS; })();
   useEffect(() => {
     if (!reportTipOn) return;
     const d = reportDays();
     if (!d.includes(reportDay)) try { localStorage.setItem(REPORT_TIP_KEY, JSON.stringify([...d, reportDay].slice(-10))); } catch { /* shows again, harmless */ }
   }, [reportTipOn, reportDay]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { if (!fromOld) return; const id = window.setTimeout(() => setOldLookShown(true), 3200); return () => window.clearTimeout(id); }, [fromOld]);
   // links on her map (the World's dotted lines): "See your links" waits for the first one
   const world = useMemo(() => { const islands = buildIslands(trackers, entries); return { islands, routes: buildRoutes(trackers, entries, islands) }; }, [trackers, entries]);
   const hasLinks = world.routes.length > 0;
@@ -526,14 +530,22 @@ export const EveningPath = ({
     return lines;
   };
   const labelKey = nodes.map((n, i) => (n.kind === "chest" && quietChest ? 1 : linesOf(viewOf(n, i).title))).join(",");
-  const stops = useMemo(() => {
-    // room above her step for its Start bubble (the first light included)
-    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" || n.kind === "end" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
-    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
-    return out;
-  }, [nodes, width, currentNode]);
-  const height = stops[chestIndex].y + R_CHEST + 56;
-
+  const stops = useMemo(() => {
+    // room above her step for its Start bubble (the first light included)
+    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" || n.kind === "end" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
+    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
+    // a name on two lines (her step's name stands 10px lower) pushes the lights below it down, so the next light never
+    // covers it (old-user walk, Nov 15 2026: "Work · My own and more" ran under the next light)
+    const lines = labelKey.split(",").map(Number);
+    let push = 0;
+    for (let k = 0; k < out.length; k++) {
+      out[k] = { ...out[k], y: out[k].y + push };
+      if ((lines[k] ?? 1) > 1) push += ((lines[k] ?? 1) - 1) * 18 + 12 + (k === currentNode ? 10 : 0);
+    }
+    return out;
+  }, [nodes, width, currentNode, labelKey]);
+  const height = stops[chestIndex].y + R_CHEST + 56;
+
 
   const f = stops[focus];
   // Her avatar (optional) stands to the left of the step to do.
@@ -643,15 +655,20 @@ export const EveningPath = ({
     const cs = getComputedStyle(main);
     const bottom = main.clientHeight - (parseFloat(cs.scrollPaddingBottom) || 0);
     const mt = main.getBoundingClientRect().top;
-    const top = Math.max(0, ...[fillCardRef.current, stripRef.current].map((el) => (el ? el.getBoundingClientRect().bottom - mt + 12 : 0)));
+    const top = Math.max(0, ...[stripRef.current, ...document.querySelectorAll<HTMLElement>("[data-top-card]")].map((el) => (el ? el.getBoundingClientRect().bottom - mt + 12 : 0)));
     mid.current = (top + bottom) / 2;
   };
   // the card came or went ("Not now", the last day filled): the middle moves with it
   const fillCardShown = fillCardOn;
   useEffect(() => {
     const main = document.querySelector("main");
-    if (main && hasPath) { measure(main); frameRef.current(); }
-  }, [fillCardShown, oldH, oldLookShown, stripH]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!main || !hasPath) return;
+    measure(main); frameRef.current();
+    // her step comes to the middle of the room left under the card (unless she is scrolling)
+    if (!placedRef.current || modeRef.current === "hand") return;
+    const at = toMiddle(focus);
+    if (at && Math.abs(at.d) > 6) { modeRef.current = "auto"; at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" }); }
+  }, [fillCardShown, oldH, playH, oldLookShown, stripH]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     const main = document.querySelector("main");
@@ -1339,6 +1356,8 @@ export const EveningPath = ({
       {/* The week starts with its name, plain (her note: the card that
           rolled with the path was "уродская плашка"). */}
       <div className="mt-2">
+        {/* the room under a card pinned at the top (old look, games ask): it covers this, not her step */}
+        {(() => { const h = (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0) + (askPlayful && playH ? playH + 8 : 0); return h > 0 ? <div aria-hidden="true" style={{ height: h }} /> : null; })()}
         <div data-wheel className="mx-auto w-fit max-w-[92%]">
           <p className="path-week-label">{t("path.weekTitle", { n: m.week + 1, title })}</p>
           <button type="button" disabled={!weekNext.open} onClick={() => { haptics.tap(); window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: weekNext.open === "world" ? { tab: "patterns" } : { tab: "patterns", open: "all", section: weekNext.open, back: true } })); }}
@@ -1368,7 +1387,7 @@ export const EveningPath = ({
             like the old-look card (the path scrolls to today's step, so a card above it is out of view):
             at the top, solid, a tip's look with two answers */}
         {askPlayful && (
-          <div data-top-card className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
+          <div ref={(el) => { if (el && el.offsetHeight !== playH) setPlayH(el.offsetHeight); }} data-top-card className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
             <div data-playful-ask role="group" aria-label={t("playful.ask")} className="surface relative flex shrink-0 gap-3 rounded-[20px] !bg-background p-3 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
               {maluPic() && <img src={maluPic()!} alt="" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />}
               <div className="min-w-0 flex-1">
