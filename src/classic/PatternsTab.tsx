@@ -320,13 +320,16 @@ export const PatternsTab = () => {
     emerging: 1,
     balanced: 2,
   };
-  const sortedTrackers = [...trackers].sort((a, b) => {
+  // only questions with a rule: the new look keeps "no rule" as threshold 0 and adds its tries as questions; here they
+  // read "8 of 0 signals · action point reached" (her note, Nov 15 2026)
+  const withRule = (t: Tracker) => !t.archived && t.threshold > 0 && !t.id.endsWith("-test") && t.source !== "play";
+  const sortedTrackers = [...trackers].filter(withRule).sort((a, b) => {
     const sa = getTrackerStats(a).status;
     const sb = getTrackerStats(b).status;
     return statusRank[sa] - statusRank[sb];
   });
 
-  const strongCount = trackers.filter((t) => getTrackerStats(t).status === "strong").length;
+  const strongCount = trackers.filter(withRule).filter((t) => getTrackerStats(t).status === "strong").length;
 
   return (
     <div className="space-y-3">

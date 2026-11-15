@@ -532,11 +532,15 @@ export const EveningPath = ({
     }
     return lines;
   };
+  // her step shows a Start bubble only when it has something to start ("Done for today" after the bubbles has none)
+  const bubbleOn = currentNode > 0 && !!nodes[currentNode] && !!viewOf(nodes[currentNode], currentNode).action;
   const labelKey = nodes.map((n, i) => (n.kind === "chest" && quietChest ? 1 : linesOf(viewOf(n, i).title))).join(",");
   const stops = useMemo(() => {
     // room above her step for its Start bubble (the first light included)
     const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" || n.kind === "end" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
-    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
+    // room for the Start bubble only over a step that has one: "Done for today" has none, and the room stood empty
+    // over it (her phone, Nov 15 2026: a big gap after "Guess the cause", then "Done for today")
+    if (bubbleOn) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
     // a name on two lines (her step's name stands 10px lower) pushes the lights below it down, so the next light never
     // covers it (old-user walk, Nov 15 2026: "Work · My own and more" ran under the next light)
     const lines = labelKey.split(",").map(Number);
@@ -546,7 +550,7 @@ export const EveningPath = ({
       if ((lines[k] ?? 1) > 1) push += ((lines[k] ?? 1) - 1) * 18 + 12 + (k === currentNode ? 10 : 0);
     }
     return out;
-  }, [nodes, width, currentNode, labelKey]);
+  }, [nodes, width, currentNode, labelKey, bubbleOn]);
   const height = stops[chestIndex].y + R_CHEST + 56;
 
 
