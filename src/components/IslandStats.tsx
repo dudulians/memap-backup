@@ -110,7 +110,8 @@ export const GrowthLadder = ({ island, days, real, bare = false, current = true,
         const width = `min(${LADDER_WIDTH[s]}%, ${Math.round(46 / (ASPECT[name] ?? 0.55))}px)`;
         return (
           <div key={s} className={cn("flex flex-col items-center text-center", pop && "tour-pop")} style={pop?.(s)}>
-            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", here && "surface pick-on", ahead && "opacity-50 saturate-50")}>
+            {/* stages ahead only paler: a colour filter on this block left its pictures blank on the iPhone (her note, Nov 15 2026) */}
+            <span className={cn("relative block w-full rounded-[14px] px-1 py-1.5", here && "surface pick-on", ahead && "opacity-45")}>
               <span className="flex h-[50px] items-end justify-center">
                 <IslandAsOnGlobe island={island} days={at} style={{ width }} {...(here ? real : {})} />
               </span>
