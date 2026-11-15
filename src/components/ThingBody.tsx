@@ -13,8 +13,9 @@ import { computeCorrelations } from "@/lib/correlations";
 import { isHardAnswer, isNeutralQuestion, islandOf, linkOf, linkWorthShowing, LINKS_TOP, type IslandId, type Route } from "@/lib/islands";
 import { linkHeadSegs, linkNumbers, linkTimes, trackerLookup } from "@/lib/linkText";
 import { litTrackers } from "@/lib/lighthouses";
-import { EXPERIMENT_DAYS, experimentDay, runningExperiments } from "@/lib/experiments";
-import { testNameOf } from "@/lib/testWords";
+import { EXPERIMENT_DAYS, experimentDay, experimentOver, runningExperiments } from "@/lib/experiments";
+import { ideaOf, testNameOf } from "@/lib/testWords";
+import { ideaTarget } from "@/lib/topicIdeas";
 import { reasonLabel, reasonTally } from "@/lib/reasons";
 import { cap } from "@/lib/answerPhrases";
 import { daysAgoIso } from "@/lib/doors";
@@ -27,7 +28,7 @@ export interface ThingActions {
   /** My days for this question */ onDays: (id: string) => void;
   /** Links of this question; the pair to show open */ onLinks: (id: string, pair: [string, string] | null) => void;
   /** When to act */ onAct: () => void;
-  /** pick something to try on its island */ onTry: (island: IslandId) => void;
+  /** pick something to try for this question (its own changes) */ onTry: (island: IslandId, forId?: string) => void;
 }
 
 export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onAct, onTry }: { tracker: Tracker; trackers: Tracker[]; entries: TrackerEntry[] } & ThingActions) => {
@@ -50,14 +51,17 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
     const word = tl.top ? ([tl.top, tl.k] as [string, number]) : null;
     const lit = litTrackers(trackers, entries).has(tr.id);
     const pairKeys = new Set(links.map((c) => [c.trackerA.id, c.trackerB.id].sort().join("|")));
-    const trying = runningExperiments().find((x) => x.from === tr.id || (!!x.link && pairKeys.has(x.link))) ?? null;
+    // every try for this question: from it, from one of its links, on its days, or picked on its island for it
+    const tries = runningExperiments().filter((x) => x.from === tr.id || (!!x.link && pairKeys.has(x.link)) || x.scope?.trackerId === tr.id
+      || (!x.link && !x.from && ideaTarget(ideaOf(x.change), x.island, trackers, entries)?.id === tr.id));
+    const trying = tries[0] ?? null;
     // what this question did lately: a once-off step marked Done in the last two weeks
     const twoWeeks = daysAgoIso(14);
     const doneOnce = [...doneActions()].reverse().find((x) => x.trackerId === tr.id && x.date >= twoWeeks) ?? null;
     // its links: one not looked at yet, or all seen and none tried
     const unseen = routes.find((rt) => !linkMark(rt.first, rt.second, !!rt.nextDay)) ?? null;
     const evenings = countedDays(trackers, entries).length;
-    return { days, neutral, yes, hard: days.filter((d) => d === "hard").length, links, routes, route, word, said, lit, trying, doneOnce, unseen, evenings };
+    return { days, neutral, yes, hard: days.filter((d) => d === "hard").length, links, routes, route, word, said, lit, trying, tries, doneOnce, unseen, evenings };
   }, [tr, trackers, entries, DAYS]);
   const of = trackerLookup(trackers);
   const icon = (I: typeof CalendarDays, on = false, dim = false) => (
@@ -83,7 +87,7 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
     : data.unseen
     ? { kind: "new", icon: Link2, line: t("thingNow.newLink"), sub: undefined, act: t("thingNow.see"), go: () => onLinks(tr.id, [data.unseen!.first, data.unseen!.second]) }
     : data.route
-    ? { kind: "seen", icon: Link2, line: t("thingNow.seenLink"), sub: t("thingNow.seenSub"), act: t("thingNow.choose"), go: () => onTry(islandOf(tr)) }
+    ? { kind: "seen", icon: Link2, line: t("thingNow.seenLink"), sub: t("thingNow.seenSub"), act: t("thingNow.choose"), go: () => onTry(islandOf(tr), tr.id) }
     : data.evenings < LINKS_AT
     ? { kind: "waiting", icon: Hourglass, line: t("thingNow.waiting", { count: LINKS_AT - data.evenings }), sub: undefined, act: undefined, go: undefined }
     : { kind: "calm", icon: Hourglass, line: t("thingNow.calm"), sub: undefined, act: undefined, go: undefined };
@@ -157,23 +161,34 @@ export const ThingBody = ({ tracker: tr, trackers, entries, onDays, onLinks, onA
         </div>
       )}
 
-      {data.trying ? (
-        // the try is the one in What helps: the row goes there (Nov 14 2026)
-        <button type="button" data-thing-row="helps" onClick={go(() => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: data.trying?.id } })))} className={cn(row, "pb-0")}>
+      {data.tries.length > 0 ? (
+        // every try for this question, each with its day and when its result comes; each opens in What helps
+        <div data-thing-row="helps" className={cn(row, "pb-0")}>
           {icon(Sprout, true)}
-          <span>
+          <span className="min-w-0 flex-1">
             {part("world4.whatHelps", false, true)}
-            <span data-thing-trying className={l1}>{t("thing.trying", { what: testNameOf(data.trying.change) })}</span>
-            <span className={l2}>{t("world4.testDay", { k: Math.min(experimentDay(data.trying), EXPERIMENT_DAYS), count: EXPERIMENT_DAYS })}</span>
+            {data.tries.map((x) => {
+              const k = Math.min(experimentDay(x), EXPERIMENT_DAYS), left = EXPERIMENT_DAYS - experimentDay(x) + 1;
+              return (
+                <button key={x.id} type="button" data-thing-trying onClick={go(() => window.dispatchEvent(new CustomEvent("memap-open-helps", { detail: { id: x.id } })))}
+                  className="mt-1.5 flex w-full items-center gap-2 text-left">
+                  <span className="min-w-0 flex-1">
+                    <span className={l1}>{t("thing.trying", { what: testNameOf(x.change) })}</span>
+                    <span className={l2}>{t("world4.testDay", { k, count: EXPERIMENT_DAYS })} · {experimentOver(x) ? t("thing.resultReady") : t("thing.resultIn", { count: Math.max(1, left) })}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+                </button>
+              );
+            })}
           </span>
-        </button>
+        </div>
       ) : (
         <div data-thing-row="helps" className={cn(row, "pb-0")}>
           {icon(Sprout, true)}
           <span>
             {part("world4.whatHelps")}
             <span className={l1}>{t("thing.tryOne")}</span>
-            <button type="button" data-thing-try onClick={go(() => (data.lit ? onAct() : onTry(islandOf(tr))))} className="raised-btn mt-3 justify-center">{t("link.tryAsk")}</button>
+            <button type="button" data-thing-try onClick={go(() => (data.lit ? onAct() : onTry(islandOf(tr), tr.id)))} className="raised-btn mt-3 justify-center">{t("link.tryAsk")}</button>
           </span>
         </div>
       )}

@@ -39,7 +39,7 @@ import { EVENING_AT } from "@/lib/pathSteps";
 
 const PLAN = "__plan";
 
-export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, linkIds, linkFirstYes, onClose }: {
+export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, linkIds, linkFirstYes, forId, onClose }: {
   mode: "pick" | "result";
   experiment?: Experiment | null;
   trackers: Tracker[];
@@ -56,6 +56,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   linkIds?: string[];
   /** which answer of the link's first question the link is about (its days, for a change on those days) */
   linkFirstYes?: boolean;
+  /** opened from a question's page: that question's own changes only (her note, Nov 15 2026) */
+  forId?: string;
   onClose: () => void;
 }) => {
   useScreen(`test:${mode}`);
@@ -140,15 +142,18 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     // a state (a period, a hard day, her own question): the second's changes on the first's days (her note, Nov 15 2026)
     return linkQs[1] ? ideasForQuestion(linkQs[1], harm).filter((k) => !running.has(k)).slice(0, 4).map((k) => SCOPED + k) : [];
   })() : null;
+  // from a question's page: its own changes (a library question); her own question has none ready
+  const forQ = forId ? trackers.find((x) => x.id === forId) : undefined;
+  const forPool = forQ && !plan && !linkPool ? (templateIdOf(forQ) ? ideasForQuestion(forQ, homeHarmLit(trackers, entries)) : []) : null;
   const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : [])
-    : linkPool ?? (island ? ideasForIsland(island, trackers, entries) : []);
+    : linkPool ?? forPool ?? (island ? ideasForIsland(island, trackers, entries) : []);
   const planIdea = plan ? ideaOf(plan) : null;
   const busy = busyIdeas();
   // never a change her own answers say she already does (alreadyDoing.ts)
   const choices = [...(plan ? [PLAN] : []), ...(linkPool ?? pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries)))];
   // an island's idea: the question there it is for (her note, Nov 15 2026: «не хватает, к чему я это делаю»)
   const forLine = (k: string): string | null => {
-    if (k === PLAN || k.startsWith(SCOPED) || linkPool || plan || !island) return null;
+    if (k === PLAN || k.startsWith(SCOPED) || linkPool || forPool || plan || !island) return null;
     const tr = ideaTarget(k, island, trackers, entries);
     return tr ? t("experiment.forWhat", { what: cap(answerPhrase(t, tr, tr.problemWhen === "yes")) }) : null;
   };
@@ -192,6 +197,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
           </p>
         )}
         {mode === "pick" && !started && fromLine && <p data-pick-from className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{fromLine}</p>}
+        {mode === "pick" && !started && !fromLine && forQ && <p data-pick-for className="mt-1 text-[15px] font-semibold leading-snug text-muted-foreground">{t("experiment.forWhat", { what: cap(answerPhrase(t, forQ, forQ.problemWhen === "yes")) })}</p>}
 
         {mode === "pick" && !started && (
           <>
@@ -229,16 +235,22 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
             {/* Which change */}
             {island && (
               <div className="mt-4 space-y-2.5">
-                {choices.map((k) => {
+                {/* an island's ideas under the question each is for, said plainly (her note, Nov 15 2026: the grey "For:" line under
+                    each was not seen) */}
+                {[...choices].sort((a, b) => { const fa = forLine(a), fb = forLine(b); return fa === fb ? 0 : choices.findIndex((x) => forLine(x) === fa) - choices.findIndex((x) => forLine(x) === fb); }).map((k, i, list) => {
                   const on = idea === k;
+                  const head = forLine(k), newHead = !!head && (i === 0 || forLine(list[i - 1]) !== head);
                   return (
-                    <button key={k} type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={on}
+                    <div key={k} className="contents">
+                    {newHead && <p data-idea-for className={cn("px-1 text-[15px] font-bold text-[hsl(var(--coin-teal))]", i > 0 && "pt-2")}>{head}</p>}
+                    <button type="button" onClick={() => { haptics.tap(); setIdea(k); setOwn(""); }} aria-pressed={on}
                       className={cn("surface flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3 text-left text-[17px] outline-none transition-shadow duration-150 active:scale-[0.99]", on ? "pick-on font-bold" : "font-semibold")}>
-                      <span className="min-w-0 flex-1">{label(k)}{forLine(k) && <span data-idea-for className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{forLine(k)}</span>}{k === PLAN && planDoing && <span data-already className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{t("rules.alreadyDoing", { k: planDoing.k, count: planDoing.n })}</span>}</span>
+                      <span className="min-w-0 flex-1">{label(k)}{k === PLAN && planDoing && <span data-already className="mt-0.5 block text-[14px] font-semibold text-muted-foreground">{t("rules.alreadyDoing", { k: planDoing.k, count: planDoing.n })}</span>}</span>
                       <span aria-hidden="true" className={cn("tick", on && "is-on")}>
                         {on && <Check className="h-4 w-4" strokeWidth={3} />}
                       </span>
                     </button>
+                    </div>
                   );
                 })}
                 {choices.length === 0 && <p data-no-more className="px-1 text-[16px] font-semibold leading-snug text-muted-foreground">{t("experiment.noMoreIdeas")}</p>}

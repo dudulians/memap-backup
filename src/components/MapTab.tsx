@@ -228,6 +228,8 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   useEffect(() => { if (loaded) syncTreasures(facts); }, [facts, loaded]);
   const items: ItemId[] = useMemo(() => ITEMS.filter((it) => owned(it.id, facts)).map((it) => it.id), [facts]);
   const [testFor, setTestFor] = useState<IslandId | null>(null);
+  // "What to try" from a question's page: that question's own changes
+  const [testForQ, setTestForQ] = useState<string | null>(null);
   // What helps: a finished try's result
   const [helpsResult, setHelpsResult] = useState<Experiment | null>(null);
   // "I'll try" on an action point: the Action points sheet steps aside for the
@@ -431,7 +433,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
                 onDays={(id) => fromIsland(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds([id]); setOnly("overview"); })}
                 onLinks={(id, pair) => fromIsland(() => { backTo.current = null; if (pair) reopenLink(pair); setOnlyIsland(null); setOnlyIds([id]); setOnly("findings"); })}
                 onAct={() => fromIsland(() => { backTo.current = null; setOnlyIsland(null); setOnlyIds(null); setOnly("signals"); })}
-                onTry={(isl) => fromIsland(() => { fromOutside.current = false; setTestFor(isl); })} />
+                onTry={(isl, q) => fromIsland(() => { fromOutside.current = false; setTestForQ(q ?? null); setTestFor(isl); })} />
               <div className="mt-6">
                 <GrowthLadder island={island.id} days={dayCount[island.id] ?? 0}
                   real={{ treasures: treasures.get(island.id), garden: garden.get(island.id), lit: lit.has(island.id) }} />
@@ -511,7 +513,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
         <ExperimentSheet mode="result" experiment={helpsResult} trackers={trackers} entries={entries} onClose={() => setHelpsResult(null)} />
       )}
       {testFor && (
-        <ExperimentSheet mode="pick" island={testFor} trackers={trackers} entries={entries} onClose={() => setTestFor(null)} />
+        <ExperimentSheet mode="pick" island={testFor} forId={testForQ ?? undefined} trackers={trackers} entries={entries} onClose={() => { setTestFor(null); setTestForQ(null); }} />
       )}
       {linkTry && (
         <ExperimentSheet mode="pick" island={linkTry.island} link={linkTry.link} trackers={trackers} entries={entries}

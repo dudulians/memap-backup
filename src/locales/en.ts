@@ -2738,6 +2738,9 @@ const en = {
     often: "This is often. Time to act",
     calm: "Calm for now",
     trying: "Trying: {{what}}",
+    resultIn_one: "Results in 1 day",
+    resultIn_other: "Results in {{count}} days",
+    resultReady: "Results are ready",
     tryOne: "One small change to try",
     // "All about…" at the top of the World: every question's own page (Nov 14 2026)
     listButton: "All about…",
