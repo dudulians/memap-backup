@@ -428,6 +428,8 @@ const ru: Translation = {
     suitcase: { name: "Чемодан", how: "60 дней" },
   },
   experiment: {
+    onDays: "В дни, когда {{when}}: {{change}}",
+    onDaysQ: "Сегодня был день, когда {{when}}? Если нет — отвечай «да». Если был: {{q}}",
     title: "Попробовать одно изменение",
     eyebrow: "Проверка одного изменения",
     remindMe: "Напоминать",

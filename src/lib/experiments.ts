@@ -18,6 +18,8 @@ const KEY = "memap_experiments";
 
 export interface Experiment {
   id: string;
+  /** a change on the days of a link's first thing: only the days with that answer count (Nov 15 2026) */
+  scope?: { trackerId: string; yes: boolean };
   /** the island it is for */
   island: string;
   /** the "Did you…?" question it added */
@@ -393,9 +395,9 @@ export const overlapping = (x: Experiment): Experiment[] => {
 };
 /** Start a test: adds "Did you…?" to the island, from today (a weekly goal adds nothing:
  *  it watches the question she has). */
-export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number; night?: boolean; later?: boolean; wake?: string; doneWhen?: boolean; link?: string } = {}): Promise<Experiment> => {
+export const startExperiment = async (island: string, change: string, question: string, from?: string, opts: { same?: boolean; perWeek?: number; night?: boolean; later?: boolean; wake?: string; doneWhen?: boolean; link?: string; scope?: { trackerId: string; yes: boolean }; askAs?: string } = {}): Promise<Experiment> => {
   track("experiment_started", { from: from ? "action_point" : opts.link ? "link" : "pick", goal: !!opts.same, night: !!opts.night });
-  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.later ? { later: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}), ...(opts.link ? { link: opts.link } : {}) };
+  const extra = { ...(opts.night ? { night: true } : {}), ...(opts.later ? { later: true } : {}), ...(opts.wake ? { wake: opts.wake } : {}), ...(opts.doneWhen === false ? { doneWhen: false } : {}), ...(opts.link ? { link: opts.link } : {}), ...(opts.scope ? { scope: opts.scope } : {}) };
   if (opts.same && from) {
     const g: Experiment = { id: `${Date.now()}-goal`, island, trackerId: from, change, start: isoLocal(new Date()), from, same: true, ...(opts.perWeek ? { perWeek: opts.perWeek } : {}), ...extra };
     save([...getExperiments().filter((e) => e.reviewed || !sameChange(e.change, change)), g]);
@@ -405,7 +407,7 @@ export const startExperiment = async (island: string, change: string, question: 
   const existing = await getTrackers();
   const tracker: Tracker = {
     id: `${Date.now()}-test`,
-    title: change.slice(0, 60),
+    title: change.slice(0, 120),
     category: "Curious",
     questionText: question,
     answerType: "boolean",
@@ -417,6 +419,7 @@ export const startExperiment = async (island: string, change: string, question: 
     createdAt: new Date().toISOString(),
     sortIndex: -1,
     island,
+    ...(opts.askAs ? { askAs: opts.askAs } : {}),
     // a night step is asked about the night before, a morning step started in the afternoon about tomorrow's morning:
     // from tomorrow evening
     ...(opts.night || opts.later ? { askFrom: (() => { const d = new Date(); d.setDate(d.getDate() + 1); return isoLocal(d); })() } : {}),
@@ -471,14 +474,16 @@ export const experimentResult = (x: Experiment, trackers: Tracker[], entries: Tr
     d.setDate(d.getDate() + from + i);
     return isoLocal(d);
   });
+  // a change on a link's days ("On period days: …"): only those days count, before and during
+  const scopeDays = x.scope ? new Set(entries.filter((e) => e.trackerId === x.scope!.trackerId && e.value === x.scope!.yes).map((e) => e.date)) : null;
   const dayList = span(0);
   const days = new Set(dayList);
-  const beforeDays = new Set(span(-EXPERIMENT_DAYS));
+  const beforeDays = new Set(span(-EXPERIMENT_DAYS).filter((d) => !scopeDays || scopeDays.has(d)));
   // The island's questions (not test questions), hard days by the one rule
   // (isHardAnswer: YES to a hard question, NO to a good one).
   const own = new Map(trackers.filter((t) => !t.archived && !isTestQuestion(t) && t.id !== x.trackerId && islandOf(t) === x.island).map((t) => [t.id, t]));
   const did = new Map<string, boolean>();
-  for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date)) did.set(e.date, doneBy(x, e.value));
+  for (const e of entries) if (e.trackerId === x.trackerId && days.has(e.date) && (!scopeDays || scopeDays.has(e.date))) did.set(e.date, doneBy(x, e.value));
   // a hard day by the islands' rule (QA re-check, Nov 9 2026: one hard answer made the day hard here while
   // the island counted half): her topic's question hard, or at least half of that day's answers hard
   const door = getDoorState(), lead = new Set(door ? [door.trackerId, ...(door.extra ?? []).map((y) => y.trackerId)] : []);

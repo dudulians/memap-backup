@@ -113,7 +113,7 @@ const TEMPLATES = new Map(LIFE_STREAMS.flatMap((s) => s.templates).map((t) => [t
  *  library's question, else the usual localized text (her own stays hers). */
 export const cardQuestion = (tracker: Tracker): string => {
   // a 2-week test: its name as a whole question in today's language (Nov 8 2026: "In bed by 23:00?")
-  if (tracker.id.endsWith("-test")) return testQuestionOf(tracker.title);
+  if (tracker.id.endsWith("-test")) return tracker.askAs ?? testQuestionOf(tracker.title);
   const shown = localizeTrackerQuestion(tracker.questionText, tracker.title);
   const id = matchTemplateIdByTitle(tracker.title);
   const short = id ? CARD_TEXT[id] : undefined;

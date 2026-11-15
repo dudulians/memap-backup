@@ -282,7 +282,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   }, []);
   // "What to try" under a link (LinkTry, Nov 13 2026): the try picker on that island; closing it goes back to that
   // link, open, where a started try now shows
-  const [linkTry, setLinkTry] = useState<{ island: IslandId; link: string; ids: string[]; about?: string } | null>(null);
+  const [linkTry, setLinkTry] = useState<{ island: IslandId; link: string; ids: string[]; about?: string; aboutYes?: boolean } | null>(null);
   // "Done for today" → the calendar of one question (her topic's)
   useEffect(() => {
     const go = (e: Event) => {
@@ -295,7 +295,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
   }, []);
   useEffect(() => {
     const go = (e: Event) => {
-      const d = (e as CustomEvent).detail as { island: IslandId; link: string; ids: string[]; about?: string } | undefined;
+      const d = (e as CustomEvent).detail as { island: IslandId; link: string; ids: string[]; about?: string; aboutYes?: boolean } | undefined;
       if (!d) return;
       backTo.current = null; setLinkRaw(null); setOnly(null); setOnlyIds(null);
       window.setTimeout(() => setLinkTry(d), 250);
@@ -512,7 +512,7 @@ export const MapTab = ({ initialOpen = null, initialIsland = null, onOpened }: {
       )}
       {linkTry && (
         <ExperimentSheet mode="pick" island={linkTry.island} link={linkTry.link} trackers={trackers} entries={entries}
-          linkIds={linkTry.about ? [linkTry.about, ...linkTry.ids.filter((x) => x !== linkTry.about)] : linkTry.ids}
+          linkIds={linkTry.about ? [linkTry.about, ...linkTry.ids.filter((x) => x !== linkTry.about)] : linkTry.ids} linkFirstYes={linkTry.aboutYes}
           onClose={() => {
             // a try started here lives in What helps: that is where it goes (her note, Nov 14 2026: «все действия
             // реально делаем там, где они подразумеваются»); closed without one, back to the link

@@ -393,6 +393,9 @@ const en = {
     suitcase: { name: "Suitcase", how: "60 days" },
   },
   experiment: {
+    // a change on the days of a link's first thing (Nov 15 2026)
+    onDays: "On days {{when}}: {{change}}",
+    onDaysQ: "Was today a day {{when}}? If not, answer “yes”. If it was: {{q}}",
     title: "Try one change",
     eyebrow: "Testing one change",
     planQ: "Did you do this: “{{plan}}”?",

@@ -232,7 +232,7 @@ export const OrderAsk = ({ r, of, tracked, readsNow }: { r: Pick<Route, "first" 
  *  Once the order is known (the next day, or the person's answer to "What comes first?"), "What to try" opens the try
  *  picker on the island of the thing that comes first; with "Not sure", on the island of the thing the sentence is
  *  about. A try started from this link shows here while it runs. */
-export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDay">; of: TrackerOf }) => {
+export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDay" | "firstYes" | "secondYes">; of: TrackerOf }) => {
   const { t } = useTranslation();
   const a = of(r.first), b = of(r.second);
   const [, again] = useState(0);
@@ -265,7 +265,7 @@ export const LinkTry = ({ r, of }: { r: Pick<Route, "first" | "second" | "nextDa
   const go = () => {
     haptics.tap();
     track("link_try_opened", { order: r.nextDay ? "next_day" : chosen === "unsure" ? "unsure" : "answered" });
-    window.dispatchEvent(new CustomEvent("memap-link-try", { detail: { island: islandOf(about), link: linkKey(a.id, b.id), ids: [r.first, r.second], about: about.id } }));
+    window.dispatchEvent(new CustomEvent("memap-link-try", { detail: { island: islandOf(about), link: linkKey(a.id, b.id), ids: [r.first, r.second], about: about.id, aboutYes: about.id === r.first ? r.firstYes : r.secondYes } }));
   };
   return <button type="button" data-link-try="ask" onClick={go} className="raised-btn mt-4 w-full justify-center">{t("link.tryAsk")}</button>;
 };

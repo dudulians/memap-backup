@@ -1,6 +1,8 @@
-// Her phone note (Nov 15 2026 evening): a "coffee after 2 pm → drained all day" link offered "charge your phone outside
-// the bedroom" and "read or listen in bed instead of the feed" (the island's sleep ideas). "What to try" under a link
-// offers only the two linked questions' own changes. Run from marketing/tools.
+// Her phone notes (Nov 15 2026 evening): a "coffee after 2 pm → tired" link offered the island's sleep ideas; and «к связи
+// месячные → голова не было идей только про голову… идеи про связи». "What to try" under a link A → B:
+//  - A can be changed (late coffee): A's own changes only;
+//  - A is a state (a period): B's changes on A's days ("On days you have your period: …"), the try keeping those days.
+// Run from marketing/tools.
 import { chromium } from "playwright-core";
 import { mkdirSync } from "fs";
 const D = `./aurora-tests/work/r183`; mkdirSync(D, { recursive: true });
@@ -15,31 +17,39 @@ await p.evaluate(async () => {
   for (const [k, v] of Object.entries({ memap_ui: "new", memap_tour_seen: "true", memap_tour_completed: "1", memap_tour_world: "1", memap_tour_today: "1", memap_language: "en", memap_language_chosen: "true", memap_theme: "aurora-light", memap_first_link_seen: "before", memap_playful_asked: "seed", memap_tips_seen: JSON.stringify(["any-order", "report", "block:world", "you", "notes", "block:helps"]), memap_examples_seen: JSON.stringify(["link", "month", "rule", "test", "chart", "chart-one"]) })) localStorage.setItem(k, v);
   localStorage.setItem("memap_trackers", JSON.stringify(r.newTrackers)); localStorage.setItem("memap_entries", JSON.stringify(r.newEntries));
   localStorage.setItem("memap_path_start", new Date(Date.now() - 59 * 864e5).toISOString().slice(0, 10));
-  // she said the period comes first (so the headache link has its "What to try")
-  const lo = await import("/src/lib/linkOrder.ts").catch(() => null);
-  const T = r.newTrackers, per = T.find((t) => /period/i.test(t.title) && !/pain|heavy/i.test(t.title)), head = T.find((t) => /headache/i.test(t.title));
-  if (lo?.setLinkOrder && per && head) lo.setLinkOrder(per.id, head.id, per.id);
 });
-await p.reload(); await p.waitForTimeout(2400);
-const ideasOf = async (re, tag) => {
-  await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns", open: "all", section: "findings", back: true } }))); await p.waitForTimeout(2000);
-  await p.evaluate(() => document.querySelector("[data-more-links]")?.click()); await p.waitForTimeout(400);
-  const opened = await p.evaluate((src) => { const re = new RegExp(src, "i"); const card = [...document.querySelectorAll("[role=dialog] [data-link-card]")].find((c) => re.test(c.textContent)); const btn = card?.querySelector("button[aria-expanded=false]") ?? card?.querySelector("button"); btn?.click(); return !!card; }, re);
-  if (!opened) { fails.push(`${tag}: no such link card`); return null; }
-  await p.waitForTimeout(900);
-  for (let k = 0; k < 4 && !(await p.locator("[data-link-try=ask]").count()); k++) { await p.locator("[role=dialog] button", { hasText: /^Next/ }).first().click().catch(() => {}); await p.waitForTimeout(700); }
-  if (!(await p.locator("[data-link-try=ask]").count())) { fails.push(`${tag}: no "What to try" button`); await p.screenshot({ path: `${D}/${tag}-no-try.png` }); return null; }
-  await p.locator("[data-link-try=ask]").first().click(); await p.waitForTimeout(1500);
+// opens "What to try" the way the button under a link does: its first thing (the one that comes first) and its side
+const openTry = async (firstRe, secondRe, yes, tag) => {
+  await p.reload(); await p.waitForTimeout(2200);
+  await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-switch-tab", { detail: { tab: "patterns" } }))); await p.waitForTimeout(1500);
+  const ok1 = await p.evaluate(async ({ firstRe, secondRe, yes }) => {
+    const T = JSON.parse(localStorage.getItem("memap_trackers"));
+    const a = T.find((t) => new RegExp(firstRe, "i").test(t.title)), c = T.find((t) => new RegExp(secondRe, "i").test(t.title));
+    if (!a || !c) return false;
+    const isl = await import("/src/lib/islands.ts");
+    window.dispatchEvent(new CustomEvent("memap-link-try", { detail: { island: isl.islandOf(a), link: [a.id, c.id].sort().join("|"), ids: [a.id, c.id], about: a.id, aboutYes: yes } }));
+    return true;
+  }, { firstRe, secondRe, yes });
+  if (!ok1) { fails.push(`${tag}: questions not found`); return ""; }
+  await p.waitForTimeout(1500);
   await p.screenshot({ path: `${D}/${tag}-ideas.png` });
-  const txt = await p.evaluate(() => ([...document.querySelectorAll("[role=dialog]")].pop()?.innerText ?? "").replace(/\s+/g, " "));
-  for (let i = 0; i < 4; i++) { await p.keyboard.press("Escape"); await p.waitForTimeout(400); }
-  return txt;
+  return p.evaluate(() => ([...document.querySelectorAll("[role=dialog]")].pop()?.innerText ?? "").replace(/\s+/g, " "));
 };
-const coffee = await ideasOf("coffee after 2 pm.*drained|drained.*coffee after 2 pm", "coffee");
-out.coffee = coffee?.slice(0, 600);
-if (coffee && /phone outside|charge|read or listen|instead of the feed|scroll/i.test(coffee)) fails.push("coffee: sleep ideas from the island are offered");
-if (coffee && !/coffee|caffeine/i.test(coffee)) fails.push("coffee: no idea about the coffee itself");
-const headache = await ideasOf("period.*headache|headache.*period", "headache");
-out.headache = headache?.slice(0, 600);
+const coffee = await openTry("^Coffee after", "^Slept enough", true, "coffee");
+out.coffee = coffee.slice(0, 500);
+if (!/coffee|decaf/i.test(coffee)) fails.push("coffee: no idea about the coffee itself");
+if (/phone outside|read or listen|same time|worries/i.test(coffee)) fails.push("coffee: ideas about the other question, not the link");
+const headache = await openTry("^Period day", "headache", true, "headache");
+out.headache = headache.slice(0, 500);
+if (!/On days you have your period: /.test(headache)) fails.push("headache: the ideas should be for the period days");
+// start the first one: the try keeps its days and its evening question
+await p.locator("[role=dialog] button", { hasText: /^On days you have your period/ }).first().click().catch(() => {}); await p.waitForTimeout(400);
+await p.locator("[role=dialog] button", { hasText: /^Start$/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
+out.started = await p.evaluate(() => {
+  const X = JSON.parse(localStorage.getItem("memap_experiments") || "[]"); const x = X[X.length - 1];
+  const T = JSON.parse(localStorage.getItem("memap_trackers")); const tr = T.find((t) => t.id === x?.trackerId);
+  return { change: x?.change, scope: x?.scope, ask: tr?.askAs };
+});
+if (!out.started?.scope || !/If not, answer/.test(out.started?.ask ?? "")) fails.push("headache: the try should keep its days and its question");
 console.log(JSON.stringify({ fails, errs, out }, null, 1));
 await b.close();

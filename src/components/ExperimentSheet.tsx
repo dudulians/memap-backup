@@ -4,7 +4,10 @@
 // full-screen frame as the games. From an action point ("I'll try", Nov 5
 // 2026) her plan is the first choice, the island is the question's own, and
 // starting the test counts that action point again from today.
-import { ideasForIsland, ideasForLink, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
+import { ideasForIsland, ideasForQuestion, homeHarmLit } from "@/lib/topicIdeas";
+import { answerClause } from "@/lib/answerPhrases";
+/** a change on the days of a link's first thing ("On days you have your period: …") */
+const SCOPED = "on:";
 import { KindTag } from "./KindTag";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -36,7 +39,7 @@ import { EVENING_AT } from "@/lib/pathSteps";
 
 const PLAN = "__plan";
 
-export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, linkIds, onClose }: {
+export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: startIsland, plan, from, link, linkIds, linkFirstYes, onClose }: {
   mode: "pick" | "result";
   experiment?: Experiment | null;
   trackers: Tracker[];
@@ -51,6 +54,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   link?: string;
   /** that link's two questions, the one she says comes first first: the ideas are theirs only */
   linkIds?: string[];
+  /** which answer of the link's first question the link is about (its days, for a change on those days) */
+  linkFirstYes?: boolean;
   onClose: () => void;
 }) => {
   useScreen(`test:${mode}`);
@@ -78,20 +83,29 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
 
   // a whole evening question (Nov 8 2026: "In bed by 23:00?" was no question); a plan that is a
   // weekly goal for her own question ("3 workouts a week") asks that question, with the goal
+  const linkQs = (linkIds ?? []).map((id) => trackers.find((x) => x.id === id)).filter((x): x is Tracker => !!x);
+  // "On days you have your period: …" and its evening question
+  const scopeQ = linkQs[0];
+  const scopeYes = linkFirstYes ?? (scopeQ ? scopeQ.problemWhen === "yes" : true);
+  const when = scopeQ ? answerClause(t, scopeQ, scopeYes, "cause") : "";
+  const lowFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+  const scopedChange = (k: string) => t("experiment.onDays", { when, change: lowFirst(t(`experiment.idea.${k}.change`)) });
+  const scopedQ = (k: string) => t("experiment.onDaysQ", { when, q: t(`experiment.idea.${k}.q`) });
   const source = from ? trackers.find((x) => x.id === from.trackerId) : undefined;
   const goal = idea === PLAN && source ? goalOf(source) : null;
-  const change = idea === PLAN ? plan!.trim() : idea ? t(`experiment.idea.${idea}.change`) : own.trim();
+  const scopedIdea = idea && idea.startsWith(SCOPED) ? idea.slice(SCOPED.length) : null;
+  const change = idea === PLAN ? plan!.trim() : scopedIdea ? scopedChange(scopedIdea) : idea ? t(`experiment.idea.${idea}.change`) : own.trim();
   // her note (Nov 10 2026, a bedtime test asked "Did you set a reminder…?" every evening): a night step is asked the
   // next evening about last night; a plan that is just the good answer of its own question watches that question
   // (no second one); a bedtime counts back from when she gets up ("во сколько надо лечь?")
-  const ideaKey = idea === PLAN ? ideaOf(plan!) : idea;
+  const ideaKey = idea === PLAN ? ideaOf(plan!) : scopedIdea ?? idea;
   const night = !!ideaKey && NIGHT_IDEAS.has(ideaKey);
   // the plan or idea is just the good answer of this very question (from its plan or from its own list of ideas)
   const watch = !!source && !!ideaKey && (WATCH_IDEAS[ideaKey] ?? []).includes(templateIdOf(source) ?? "");
   const bedHours = ideaKey ? BED_FROM_WAKE[ideaKey] : undefined;
   const [wake, setWake] = useState("07:00");
   const startedAfterAnswers = new Date().getHours() >= EVENING_AT && answeredToday(trackers, entries);
-  const question = (goal || watch) && source ? cardQuestion(source) : idea === PLAN ? testQuestionOf(plan!) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? testQuestionOf(own) : "";
+  const question = (goal || watch) && source ? cardQuestion(source) : idea === PLAN ? testQuestionOf(plan!) : scopedIdea ? scopedQ(scopedIdea) : idea ? t(`experiment.idea.${idea}.q`) : own.trim() ? testQuestionOf(own) : "";
   const start = async () => {
     if (!island || !change) return;
     haptics.rise();
@@ -103,7 +117,8 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
     // a hard question watched ("Smoked hookah?"): its "no" is the step done
     const watched = watch && source ? { same: true, ...(source.problemWhen === "yes" ? { doneWhen: false } : {}) } : null;
     const opts = goal ? { same: true, perWeek: goal } : watched ? { ...watched, ...more } : more;
-    const x = await startExperiment(island, change, question, from?.trackerId, link ? { ...opts, link } : opts);
+    const scoped = scopedIdea && scopeQ ? { scope: { trackerId: scopeQ.id, yes: scopeYes }, askAs: question } : {};
+    const x = await startExperiment(island, change, question, from?.trackerId, link ? { ...opts, link, ...scoped } : { ...opts, ...scoped });
     if (from) await countFromToday(from.trackerId, from.k);
     setRemindAt(bedHours ? beforeBed(bedtimeFrom(wake, bedHours)) : smartRemindTime(ideaKey, change));
     setStarted(x);
@@ -112,12 +127,15 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const runningHere = island && !started ? runningExperiments().filter((x) => x.island === island) : [];
   // the changes on the question's own topic (from a plan), or for what is hardest on the island lately (Nov 9 2026)
   // ideas two people do together are off while a partner-harm card is lit (Nov 9 2026)
-  const linkQs = (linkIds ?? []).map((id) => trackers.find((x) => x.id === id)).filter((x): x is Tracker => !!x);
   // under a link: the first question's own changes always count (the link is about the days she does it: "no coffee after
   // 2 pm" is the try even if most days have none), the other's unless she already does them; not one already running
   const linkPool = !plan && linkQs.length ? (() => {
-    const running = busyIdeas();
-    return ideasForLink(linkQs[0], linkQs[1], homeHarmLit(trackers, entries), (k) => !running.has(k), (k) => !running.has(k) && !alreadyDoing(k, trackers, entries));
+    const running = busyIdeas(), harm = homeHarmLit(trackers, entries);
+    // something she can change (a library question with its own changes): those changes, the link's own try
+    const cause = templateIdOf(linkQs[0]) ? ideasForQuestion(linkQs[0], harm).filter((k) => !running.has(k)) : [];
+    if (cause.length) return cause.slice(0, 4);
+    // a state (a period, a hard day, her own question): the second's changes on the first's days (her note, Nov 15 2026)
+    return linkQs[1] ? ideasForQuestion(linkQs[1], harm).filter((k) => !running.has(k)).slice(0, 4).map((k) => SCOPED + k) : [];
   })() : null;
   const pool = plan ? (source ? ideasForQuestion(source, homeHarmLit(trackers, entries)) : island ? ideasFor(island) : [])
     : linkPool ?? (island ? ideasForIsland(island, trackers, entries) : []);
@@ -125,7 +143,7 @@ export const ExperimentSheet = ({ mode, experiment, trackers, entries, island: s
   const busy = busyIdeas();
   // never a change her own answers say she already does (alreadyDoing.ts)
   const choices = [...(plan ? [PLAN] : []), ...(linkPool ?? pool.filter((k) => k !== planIdea && !busy.has(k) && !alreadyDoing(k, trackers, entries)))];
-  const label = (k: string) => (k === PLAN ? testNameOf(plan!) : t(`experiment.idea.${k}.change`));
+  const label = (k: string) => (k === PLAN ? testNameOf(plan!) : k.startsWith(SCOPED) ? scopedChange(k.slice(SCOPED.length)) : t(`experiment.idea.${k}.change`));
   // picking a try is What helps, wherever it was opened from (her note, Nov 14 2026: «когда ты из связи переходишь к
   // действию… видно где-то в заголовках… все действия реально делаем там, где они подразумеваются»), and it says
   // where it came from: a link or a When to act card
