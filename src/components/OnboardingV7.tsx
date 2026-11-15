@@ -404,7 +404,8 @@ const saveSetup = async (pick: V7Pick, { doors, mains, aroundTpls }: Plan, texts
   return { ids: [...mainIds, ...aroundIds, ...ownIds], mainId: lead?.trackerId ?? mainIds[0], doorId: lead?.id ?? null };
 };
 /** Variant C (Nov 8 2026): no questions screen — the questions a pick starts with are saved straight away. */
-export const quickSetup = (pick: V7Pick) => { const plan = planOf(pick); return saveSetup(pick, plan, plan.mains.map((m) => m.base), new Set(plan.ticked), [], true); };
+// nothing added for her: only the topics she picked (Nov 15 2026: the extras came with no word of what they were)
+export const quickSetup = (pick: V7Pick) => { const plan = planOf(pick); return saveSetup(pick, plan, plan.mains.map((m) => m.base), new Set<string>(), [], true); };
 
 export const QuestionsV7 = ({ pick, onBack, onDone, progress = [2, 5] }: { pick: V7Pick; onBack: () => void; onDone: (s: V7Setup) => void; progress?: [number, number] }) => {
   const { t } = useTranslation();

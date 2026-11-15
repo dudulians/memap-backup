@@ -69,7 +69,9 @@ export const onbVariant = (): OnbVariant => {
     // the check scripts drive a browser: there the draw is always A, so a check never lands in B or C by chance
     // (a check that wants B or C names it in memap_ab_onb, read above). Real phones are never "webdriver".
     if (typeof navigator !== "undefined" && navigator.webdriver) return "A";
-    const v =(["A", "B", "C"] as const)[Math.floor(Math.random() * 3)];
+    // A or B only (her decision, Nov 13 2026: «только A/B»; Nov 15 2026: the short C added questions without a word,
+    // "спала ли я 7 часов… без объяснения"); someone who already got C keeps it, with no extra questions (quickSetup)
+    const v = (["A", "B"] as const)[Math.floor(Math.random() * 2)];
     localStorage.setItem(ONB_KEY, v);
     return v;
   } catch { return "A"; }
