@@ -8,7 +8,7 @@ import { TOUR_DONE_KEY, WORLD_TOUR_KEY } from "./Tips";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, ArrowRight, Check, Link2, Spline, Sprout } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Link2, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GrowthLadder } from "./IslandStats";
 import { haptics } from "@/lib/haptics";
@@ -152,7 +152,7 @@ const WeekParts = ({ part }: { part: number }) => {
   const { t } = useTranslation();
   const pics = [
     <span key="d" className="grid grid-cols-3 gap-[3px]">{[0, 0, 1, 0, 1, 0].map((h, i) => <i key={i} className="block h-[7px] w-[7px] rounded-full" style={{ background: h ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />)}</span>,
-    <Spline key="l" className="h-6 w-6 text-[hsl(var(--data-a))]" strokeWidth={2.6} />,
+    <Link2 key="l" className="h-6 w-6 text-[hsl(var(--data-a))]" strokeWidth={2.6} />,
     <img key="a" src={mapPicFor("lighthouse", false)} alt="" className="h-7 w-auto" />,
     <Sprout key="h" className="h-6 w-6 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />,
   ];
@@ -347,11 +347,13 @@ export const AppTour = () => {
       markDiscovered("tour");
       window.dispatchEvent(new CustomEvent("memap-path-refresh"));
       setPart(which);
+      // nothing under the dim keeps moving while a card is up (index.css, html.touring)
+      document.documentElement.classList.add("touring");
       setAt(0);
       track("tour_started", { part: which });
     };
     window.addEventListener("memap-start-tour", start);
-    return () => window.removeEventListener("memap-start-tour", start);
+    return () => { window.removeEventListener("memap-start-tour", start); document.documentElement.classList.remove("touring"); };
   }, []);
 
   // A move between stops (her note, Nov 5 2026: "сначала появляется пояснение, потом
@@ -454,6 +456,7 @@ export const AppTour = () => {
     track("tour_finished", { part, completed: view?.at === STOPS.length - 1, at: view ? STOPS[view.at].id : "start" });
     markDiscovered("tour");
     setAt(null); setView(null); setMoving(true); setLit(false); shown.current = false; target.current = null;
+    document.documentElement.classList.remove("touring");
     window.dispatchEvent(new CustomEvent("memap-tour-done"));
     // the World's part ends on the World: walked to the end, the tour is done (the blocks then stay quiet); skipped, it
     // does not start again and the blocks explain themselves once

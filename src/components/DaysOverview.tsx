@@ -14,7 +14,7 @@ import { isHardAnswer, isNeutralQuestion, mapPic } from "@/lib/islands";
 import { litTrackers } from "@/lib/lighthouses";
 import { answeredEvenings, SHAPING_EVENINGS } from "@/lib/actionPoints";
 import { haptics } from "@/lib/haptics";
-import { Spline, Sprout } from "lucide-react";
+import { Link2, Sprout } from "lucide-react";
 import { currentExperiment, experimentDay, EXPERIMENT_DAYS, finishedExperiments, runningExperiments } from "@/lib/experiments";
 import { cn } from "@/lib/utils";
 import { countedDays, LINKS_AT } from "@/lib/pathSteps";
@@ -169,7 +169,7 @@ export const DaysOverview = ({ trackers, entries, onOpen, links = 0, onHelps }: 
       <button type="button" className={card + glowOf("findings")} onClick={() => open("findings")} data-tour="links-card">
         {head("world4.links")}
         <span className="mt-1 flex h-[17px] items-center gap-1 text-[17px] font-bold tabular-nums">
-          <Spline className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links > 0 ? links : null}
+          <Link2 className="h-4 w-4 text-[hsl(var(--data-a))]" strokeWidth={2.6} />{links > 0 ? links : null}
         </span>
         {/* whole words, no "0 · …" or "12 found" (QA, Nov 8 2026) */}
         {/* the same countdown as Today's header (walk, Nov 14 2026: "in about 2 evenings" there, "in 1–2 weeks" here) */}

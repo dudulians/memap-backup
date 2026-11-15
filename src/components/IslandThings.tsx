@@ -32,30 +32,29 @@ export const IslandThings = ({ island, islands, trackers, entries, pick, ...acts
   const tr = list[i];
   const mine = yoursOf(tr);
   const step = (d: number) => { haptics.tap(); setAt((k) => Math.max(0, Math.min(list.length - 1, k + d))); };
-  const arrow = "grid h-9 w-8 shrink-0 place-items-center text-foreground/70 disabled:text-foreground/20";
+  const arrow = "grid h-10 w-8 shrink-0 place-items-center rounded-full text-muted-foreground disabled:opacity-25";
   return (
     <div data-island-things>
-      {/* the question as plain text, a small pager beside it (no big card) */}
-      <div data-question-switcher className="flex items-start gap-2">
-        <p data-switcher-question className="min-w-0 flex-1 pt-1 text-[18px] font-bold leading-snug">{cardQuestion(tr)}</p>
-        <div className="flex h-9 shrink-0 items-center rounded-full bg-foreground/[0.06]">
-          <button type="button" onClick={() => step(-1)} disabled={i === 0} aria-label={t("islandQ.prev")} className={arrow}>
-            <ChevronLeft className="h-4 w-4" strokeWidth={2.8} />
-          </button>
-          <button type="button" data-question-list onClick={() => { haptics.tap(); setListOpen(true); }} aria-label={t("islandQ.ofAria", { k: i + 1, n: list.length })}
-            className="inline-flex h-9 items-center gap-0.5 text-[13px] font-bold tabular-nums text-foreground/80">
-            {t("islandQ.of", { k: i + 1, n: list.length })}<ChevronDown className="h-3.5 w-3.5" strokeWidth={2.8} />
-          </button>
-          <button type="button" onClick={() => step(1)} disabled={i === list.length - 1} aria-label={t("islandQ.next")} className={arrow}>
-            <ChevronRight className="h-4 w-4" strokeWidth={2.8} />
-          </button>
-        </div>
+      {/* like the calendar (her note, Nov 15 2026): arrows at both ends of the question, no card around it */}
+      <div data-question-switcher className="flex items-center gap-1">
+        <button type="button" onClick={() => step(-1)} disabled={i === 0} aria-label={t("islandQ.prev")} className={arrow}>
+          <ChevronLeft className="h-5 w-5" strokeWidth={2.4} />
+        </button>
+        <p data-switcher-question className="min-w-0 flex-1 text-center text-[18px] font-bold leading-snug">{cardQuestion(tr)}</p>
+        <button type="button" onClick={() => step(1)} disabled={i === list.length - 1} aria-label={t("islandQ.next")} className={arrow}>
+          <ChevronRight className="h-5 w-5" strokeWidth={2.4} />
+        </button>
       </div>
-      <p data-question-whose className={cn("mb-3 mt-1 flex items-center gap-1 text-[13px] font-bold",
-        mine ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")}>
-        {mine && <Star className="h-3 w-3 fill-current" strokeWidth={2.4} />}
-        {t(mine === "came" ? "islandQ.yoursCame" : mine === "own" ? "islandQ.yoursOwn" : "islandQ.suggested")}
-      </p>
+      <div className="mb-3 mt-0.5 flex flex-wrap items-center justify-center gap-x-2 text-[13px] font-bold">
+        <span data-question-whose className={cn("inline-flex items-center gap-1", mine ? "text-[hsl(var(--coin-teal))]" : "text-muted-foreground")}>
+          {mine && <Star className="h-3 w-3 fill-current" strokeWidth={2.4} />}
+          {t(mine === "came" ? "islandQ.yoursCame" : mine === "own" ? "islandQ.yoursOwn" : "islandQ.suggested")}
+        </span>
+        <button type="button" data-question-list onClick={() => { haptics.tap(); setListOpen(true); }} aria-label={t("islandQ.ofAria", { k: i + 1, n: list.length })}
+          className="inline-flex h-8 items-center gap-0.5 tabular-nums text-muted-foreground">
+          {t("islandQ.of", { k: i + 1, n: list.length })}<ChevronDown className="h-3.5 w-3.5" strokeWidth={2.6} />
+        </button>
+      </div>
       <ThingBody key={tr.id} tracker={tr} trackers={trackers} entries={entries} {...acts} />
 
       {/* ▾: the island's questions, hers first; pick one, move or remove one, add one here */}

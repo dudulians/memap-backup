@@ -755,8 +755,11 @@ export const pathModel = (trackers: Tracker[], entries: TrackerEntry[], now = ne
     steps.push({ id: `task:${task.task}`, kind: "task", task: task.task, trackerIds: [], answered: 0, done: task.done, skipped: task.skipped });
   }
   // Last week's report waits (QA, Nov 8 2026: on day 8 the Start bubble skipped it): the first step
-  // of the new week until it's opened. A quiet week (fewer than REPORT_MIN evenings) has none.
-  if (week > 0 && !pastWeeks[week - 1].quiet && !getChests()[week - 1]) steps.unshift({ id: "report", kind: "report", trackerIds: [], answered: 0, done: false });
+  // of the new week until it's opened. A quiet week (fewer than REPORT_MIN evenings) has none. Opened, it stays the
+  // rest of that day as a done step that opens again (her note, Nov 15 2026: after "See my map" it was gone).
+  const lastChest = week > 0 ? getChests()[week - 1] : undefined;
+  const lastOpened = lastChest ? (/^\d{4}-\d{2}-\d{2}$/.test(lastChest.openedAt ?? "") ? lastChest.openedAt : isoLocal(new Date(lastChest.openedAt))) : null;
+  if (week > 0 && !pastWeeks[week - 1].quiet && (!lastChest || lastOpened === today)) steps.unshift({ id: "report", kind: "report", trackerIds: [], answered: 0, done: !!lastChest });
   // A rule she set was reached (a lit lighthouse): her plan, once a day.
   const lit = litTrackers(trackers, entries);
   // only when a rule lit that she hasn't seen yet (or it was opened today, as done)

@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { isNight, toggleNight } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudDrizzle, Globe, Lock, Moon, Pencil, Plus, Spline, Sun, UserX } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronDown, ChevronUp, Clock, CloudDrizzle, Globe, Lock, Moon, Pencil, Plus, Link2, Sun, UserX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptics } from "@/lib/haptics";
 import { track } from "@/lib/analytics";
@@ -518,7 +518,7 @@ export const ValueV7 = ({ setup, pickKind, onBack, onStart, progress = [3, 5] }:
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb7.vSub")}</p>
       <div className="mt-4 flex flex-col gap-2.5">
         {row(<span className="grid grid-cols-4 gap-1">{[1, 0, 0, 1, 0, 1, 0, 0].map((h, i) => <i key={i} className="block h-3 w-3 rounded-full" style={{ background: h ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />)}</span>, t("onb7.v1t"), t("onb7.v1l"))}
-        {row(<span className="relative block h-12 w-[60px]"><Pic name="19_grassy_terraces" className="absolute bottom-0 left-0 w-[28px]" /><Pic name="09_waterfall" className="absolute bottom-1 right-0 w-[28px]" /><Spline className="absolute left-[20px] top-0 h-5 w-5 text-[hsl(var(--data-a))]" strokeWidth={2.6} /></span>, t("onb7.v2t"), t("onb7.v2l", { example: t(`onb7.example.${exKey}`) }))}
+        {row(<span className="relative block h-12 w-[60px]"><Pic name="19_grassy_terraces" className="absolute bottom-0 left-0 w-[28px]" /><Pic name="09_waterfall" className="absolute bottom-1 right-0 w-[28px]" /><Link2 className="absolute left-[20px] top-0 h-5 w-5 text-[hsl(var(--data-a))]" strokeWidth={2.6} /></span>, t("onb7.v2t"), t("onb7.v2l", { example: t(`onb7.example.${exKey}`) }))}
         {row(<Pic name="lighthouse" map className="w-[30px]" />, t("onb7.v3t"), t("onb7.v3l"))}
         {row(<Pic name="green_tree" map className="w-[40px]" />, t("onb7.v4t"), t("onb7.v4l"))}
       </div>
@@ -573,7 +573,7 @@ export const ValueFirstV8 = ({ onBack, onNext, progress = [1, 5] }: { onBack: ()
       <p className="mt-1.5 text-[16px] font-semibold text-muted-foreground">{t("onb8.vLead")}</p>
       <div data-onb-value className="mt-4 flex flex-col gap-2.5">
         {row(<span className="grid grid-cols-4 gap-1">{[1, 0, 0, 1, 0, 1, 0, 0].map((h, i) => <i key={i} className="block h-3 w-3 rounded-full" style={{ background: h ? "hsl(var(--strong))" : "hsl(var(--balanced))" }} />)}</span>, t("onb8.v1t"), t("onb8.v1l"))}
-        {row(<span className="relative block h-12 w-[60px]"><Pic name="19_grassy_terraces" className="absolute bottom-0 left-0 w-[28px]" /><Pic name="09_waterfall" className="absolute bottom-1 right-0 w-[28px]" /><Spline className="absolute left-[20px] top-0 h-5 w-5 text-[hsl(var(--data-a))]" strokeWidth={2.6} /></span>, t("onb8.v2t"), t("onb8.v2l"))}
+        {row(<span className="relative block h-12 w-[60px]"><Pic name="19_grassy_terraces" className="absolute bottom-0 left-0 w-[28px]" /><Pic name="09_waterfall" className="absolute bottom-1 right-0 w-[28px]" /><Link2 className="absolute left-[20px] top-0 h-5 w-5 text-[hsl(var(--data-a))]" strokeWidth={2.6} /></span>, t("onb8.v2t"), t("onb8.v2l"))}
         {row(<Pic name="lighthouse" map className="w-[30px]" />, t("onb8.v3t"), t("onb8.v3l"))}
         {row(<Pic name="green_tree" map className="w-[40px]" />, t("onb8.v4t"), t("onb8.v4l"))}
       </div>
@@ -630,7 +630,7 @@ export const TopicStepsV8 = ({ pick, onBack, onStart, progress = [3, 5] }: { pic
       <span data-onb-could className="mt-1.5 flex flex-wrap items-center gap-1 text-[12.5px] font-bold">
         <span className="mr-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-muted-foreground">{t("onb8.couldShow")}</span>
         <span className="rounded-full bg-[hsl(var(--data-a)/0.14)] px-2 py-0.5 text-foreground/85">{answerPhrase(t, tr, hardAnswer(tr))}</span>
-        <Spline className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={2.6} />
+        <Link2 className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={2.6} />
         <span className="rounded-full bg-[hsl(var(--pair-b)/0.2)] px-2 py-0.5 text-foreground/85">{mainWord}</span>
       </span>
     );

@@ -270,6 +270,7 @@ const en = {
     step: "When to act",
     // the path step names what lit (Nov 15 2026)
     stepOf: "Time to act: {{things}}",
+    stepMany: "Time to act",
     sub_one: "Time to act on {{count}} question",
     sub_other: "Time to act on {{count}} questions",
     open: "Open",
@@ -1645,6 +1646,8 @@ const en = {
     newQuestion_other: "Your {{count}} new questions",
     fillYesterdayDay: "Yesterday, {{day}}",
     fillDayTitle: "Fill in {{day}}",
+    // a step with questions from more than two islands (no "+2", her note Nov 15 2026)
+    islandsMore: "{{names}} and more",
     notFilled: "Not filled",
     // the week strip on top of Today (Nov 15 2026)
     stripToday: "Today · {{day}}",

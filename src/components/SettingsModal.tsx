@@ -725,8 +725,10 @@ export const SettingsModal = ({ open, onClose, onStartTour }: SettingsModalProps
   const handleResetData = () => {
     localStorage.clear();
     setResetDialogOpen(false);
-    // the app restarts empty right away: that is the feedback
-    window.location.reload();
+    // the app restarts empty right away: that is the feedback. The phone preview page (an artifact) has its own way
+    // back to its address and starts as a new user (her note, Nov 15 2026: reset showed "Not found", then the demo again)
+    const preview = (window as unknown as { __memapReset?: () => void }).__memapReset;
+    if (preview) preview(); else window.location.reload();
   };
 
   // Body scroll lock used to be needed when Settings was a fullscreen

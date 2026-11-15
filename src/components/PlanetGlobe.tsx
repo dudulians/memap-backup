@@ -574,7 +574,8 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       if (reduce) { yaw = y1; pitch = p1; if (z1 !== zoom) { zoom = z1; ox = oy = 0; place(); } dirty = true; kick(); done?.(); return; }
       anim = { t0: performance.now(), dur: 620, y0: yaw, y1, p0: pitch, p1, z0: zoom, z1, ox0: ox, oy0: oy, done }; kick();
     };
-    homeRef.current = () => { haptics.tap(); turnTo([C0[0] + 20, C0[1]], undefined, 1); };
+    // back to the view the World opens with (her note, Nov 15 2026: it tilted to the globe's top)
+    homeRef.current = () => { haptics.tap(); turnTo([Math.max(0, C0[0] - 20) + 6, C0[1]], undefined, 1); };
     zoomRef.current = (f: number) => {
       haptics.tap(); setHint(false);
       const z1 = Math.max(ZMIN, Math.min(ZMAX, zoom * f));
@@ -853,18 +854,18 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
           {/* Share: as pale as the rest of the column, over + and − (her pick B, Nov 15 2026) */}
           {onShare && (
             <button type="button" data-world-share onClick={() => { haptics.tap(); onShare(); }} aria-label={t("map.share")}
-              className="grid h-11 w-11 place-items-center rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
+              className="grid h-11 w-11 place-items-center rounded-full globe-btn">
               <Share2 className="h-[18px] w-[18px] text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />
             </button>
           )}
-          <div className="flex w-11 flex-col overflow-hidden rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
+          <div className="flex w-11 flex-col overflow-hidden rounded-full globe-btn">
             <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-10 w-11 items-center justify-center text-foreground/80"><Plus className="h-4 w-4" strokeWidth={2.6} /></button>
             <span className="mx-2.5 h-px bg-foreground/10" />
             <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-10 w-11 items-center justify-center text-foreground/80"><Minus className="h-4 w-4" strokeWidth={2.6} /></button>
           </div>
           {/* lit when the ball has been turned away or zoomed */}
           <button type="button" data-where-am-i onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
-            className={`grid h-11 w-11 place-items-center rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md transition-colors duration-200 dark:bg-[hsl(var(--surface)/0.5)] ${away ? "text-[hsl(var(--coin-teal))]" : "text-foreground/45"}`}>
+            className={`grid h-11 w-11 place-items-center rounded-full globe-btn transition-colors duration-200 ${away ? "text-[hsl(var(--coin-teal))]" : "text-foreground/45"}`}>
             <LocateFixed className="h-5 w-5" strokeWidth={2.4} />
           </button>
         </div>
@@ -874,7 +875,7 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
       {onNewIsland && !decor && (
         <div className="absolute left-4 z-[5] flex items-center gap-2" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
           <button type="button" data-new-island onClick={() => { haptics.tap(); onNewIsland(); }}
-            className="flex h-11 items-center gap-1.5 rounded-full bg-white/55 pl-3 pr-4 text-[15px] font-bold text-foreground/85 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
+            className="flex h-11 items-center gap-1.5 rounded-full globe-btn pl-3 pr-4 text-[15px] font-bold text-foreground/85">
             <Plus className="h-5 w-5 text-[hsl(var(--coin-teal))]" strokeWidth={2.6} />{t("islands.new")}
           </button>
         </div>

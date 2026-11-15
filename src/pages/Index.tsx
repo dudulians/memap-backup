@@ -332,7 +332,8 @@ const Index = () => {
       )}
       {/* Header — slim, single-line. Brand tagline removed to free
           vertical space; the gear icon stays anchored top-right. */}
-      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pb-2.5 pt-safe-plus-2${activeTab === "patterns" ? " app-head-map" : ""}${onGlobe ? " app-head-clear" : ""}`}>
+      <header ref={headerRef} className={`sticky top-0 z-10 px-4 pt-safe-plus-2${activeTab === "patterns" ? " app-head-map" : ""}${onGlobe ? " app-head-clear" : ""}`}>
+        <div className="relative pb-2.5">
         {/* Left of the title: Today's flame chip (EveningPath portals it in). */}
         <div id="memap-header-start" className="absolute left-3 bottom-1.5 flex items-center" />
         {/* Today puts "Week N · k/7" here once its week card has rolled away;
@@ -356,6 +357,9 @@ const Index = () => {
         >
           {avatar ? <img src={avatar} alt="" className="h-8 w-8 rounded-full object-contain" /> : <CircleUser className="h-6 w-6" strokeWidth={1.75} />}
         </button>
+        </div>
+        {/* Today's seven days (EveningPath portals them in): a row of the header, never over the lamb or the streak */}
+        <div id="memap-header-below" />
       </header>
 
       {/* Main Content

@@ -42,7 +42,7 @@ for (const lang of ["en", "ru"]) {
   await p.evaluate(() => window.dispatchEvent(new CustomEvent("memap-open-island", { detail: { island: "love" } }))); await p.waitForTimeout(1600);
   const sw = p.locator("[data-question-switcher]");
   check(`${lang}: the island has the question switcher`, (await sw.count()) === 1);
-  const of = (await sw.innerText()).replace(/\s+/g, " ");
+  const of = (await p.locator("[data-question-list]").innerText()).replace(/\s+/g, " ");
   check(`${lang}: it says which question of how many`, (lang === "en" ? new RegExp(`1 of ${ids.length}`) : new RegExp(`1 из ${ids.length}`)).test(of), of);
   const whose = (await p.locator("[data-question-whose]").innerText()).trim();
   check(`${lang}: the first is hers, the topic she came with`, lang === "en" ? /Yours · you came with this/.test(whose) : /Твой · с него всё началось/.test(whose), whose);
@@ -52,7 +52,7 @@ for (const lang of ["en", "ru"]) {
   const q1 = await p.locator("[data-switcher-question]").innerText();
   await sw.getByRole("button", { name: lang === "en" ? "Next question" : "Следующий вопрос" }).click(); await p.waitForTimeout(500);
   const q2 = await p.locator("[data-switcher-question]").innerText();
-  const of2 = (await sw.innerText()).replace(/\s+/g, " ");
+  const of2 = (await p.locator("[data-question-list]").innerText()).replace(/\s+/g, " ");
   check(`${lang}: › shows the next question`, q2 !== q1 && (lang === "en" ? /2 of/ : /2 из/).test(of2), { q1, q2, of2 });
   // 2. the list
   await p.locator("[data-question-list]").click(); await p.waitForTimeout(900);
@@ -66,7 +66,7 @@ for (const lang of ["en", "ru"]) {
   // 3. a question opened from elsewhere
   const last = ids[ids.length - 1];
   await p.evaluate((id) => window.dispatchEvent(new CustomEvent("memap-open-thing", { detail: { id } })), last); await p.waitForTimeout(1600);
-  const of3 = (await p.locator("[data-question-switcher]").innerText().catch(() => "")).replace(/\s+/g, " ");
+  const of3 = (await p.locator("[data-question-list]").innerText().catch(() => "")).replace(/\s+/g, " ");
   check(`${lang}: memap-open-thing opens its island on that question`, (lang === "en" ? new RegExp(`${ids.length} of ${ids.length}`) : new RegExp(`${ids.length} из ${ids.length}`)).test(of3) || ids.length === 1, of3);
   await p.screenshot({ path: `${D}/${lang}-opened.png` });
   await ctx.close();

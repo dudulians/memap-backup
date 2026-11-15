@@ -299,6 +299,7 @@ const ru: Translation = {
   act: {
     step: "Когда действовать",
     stepOf: "Пора действовать: {{things}}",
+    stepMany: "Пора действовать",
     sub_one: "Пора действовать: {{count}} вопрос",
     sub_few: "Пора действовать: {{count}} вопроса",
     sub_many: "Пора действовать: {{count}} вопросов",
@@ -1844,6 +1845,7 @@ const ru: Translation = {
     newQuestion_other: "Твои новые вопросы: {{count}}",
     fillYesterdayDay: "Вчера, {{day}}",
     fillDayTitle: "Заполнить {{day}}",
+    islandsMore: "{{names}} и ещё",
     notFilled: "Не заполнен",
     stripToday: "Сегодня · {{day}}",
     stripSteps_one: "{{count}} шаг · готово {{done}}",

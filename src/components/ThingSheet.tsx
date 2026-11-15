@@ -4,7 +4,7 @@
 // every row opens its own place. No new counting here.
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, ChevronRight, Lightbulb, Spline, Sprout } from "lucide-react";
+import { CalendarDays, ChevronRight, Lightbulb, Link2, Sprout } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import type { Tracker, TrackerEntry } from "@/types/tracker";
 import { computeCorrelations } from "@/lib/correlations";
@@ -85,7 +85,7 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
 
           {data.route || data.word ? (
             <div data-thing-row="links" className={cn(row, rail)}>
-              {icon(Spline)}
+              {icon(Link2)}
               <span>
                 {part("world4.links")}
                 {data.route && <span className="mt-1 block text-[13px] font-semibold text-muted-foreground">{t("thing.fromDays")}</span>}
@@ -112,7 +112,7 @@ export const ThingSheet = ({ tracker, trackers, entries, onClose, onDays, onLink
             </div>
           ) : (
             <div data-thing-row="links" className={cn(row, rail)}>
-              {icon(Spline, false, true)}
+              {icon(Link2, false, true)}
               <span>{part("world4.links", true)}<span className={cn(l1, "font-semibold text-muted-foreground")}>{t("thing.noLink")}</span></span>
             </div>
           )}

@@ -10,7 +10,7 @@
 // last chest (a house, a bridge, a special item…), next week's mission and
 // a new title.
 import { linkCount, linkHead, trackerLookup } from "@/lib/linkText";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Clock, Crown, FileBarChart2, FlaskConical, Lightbulb, Link2, Share2, Sparkles, Target, X } from "lucide-react";
@@ -93,8 +93,8 @@ export const WeekChest = ({
   useScreen("week_report");
   const { t, i18n } = useTranslation();
   const [rec, setRec] = useState<ChestRecord | null>(() => getChests()[week] ?? null);
-  // Cards shown so far; an already opened chest shows them all.
-  const [shown, setShown] = useState(() => (getChests()[week] ? 99 : 1));
+  // every card at once, each gliding in after the one before (her note, Nov 15 2026: no "Next" one by one)
+  const [shown, setShown] = useState(99);
   const [testOpen, setTestOpen] = useState(false);
   // "Games and rewards" (Nov 9 2026): off keeps the insight, the numbers, what grew and the mission
   const playful = usePlayful();
@@ -181,8 +181,12 @@ export const WeekChest = ({
     };
     saveChest(week, next);
     setRec(next);
-    setShown(1);
+    setShown(99);
   };
+
+  // opened from the path, the report comes up straight away: no "See the report" screen first (her note, Nov 15 2026)
+  const opening = useRef(false);
+  useEffect(() => { if (!rec && !opening.current) { opening.current = true; void open(); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const place = () => {
     if (!rec) return;
@@ -380,7 +384,7 @@ export const WeekChest = ({
             <span aria-hidden="true" className="report-badge is-small mt-1"><FileBarChart2 className="h-9 w-9" strokeWidth={2} /></span>
             <p className="mt-2 text-[28px] font-bold tracking-tight">{t("path.chest.mapOfWeek")}</p>
             {cards(rec).slice(0, shown).map((card, i) => (
-              <div key={i} className="chest-card mt-4 w-full max-w-sm">{card}</div>
+              <div key={i} className="chest-card mt-4 w-full max-w-sm" style={{ animationDelay: `${i * 140}ms` }}>{card}</div>
             ))}
             <div className="mt-6 w-full max-w-sm">
               {shown < cards(rec).length ? (

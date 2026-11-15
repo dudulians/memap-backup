@@ -307,7 +307,9 @@ export const placeTreasures = ({ islands, days, facts, routes, trackers }: {
   const next = ITEMS.filter((it) => !owned(it.id, facts))
     .map((it) => ({ id: it.id, p: itemProgress(it.id, facts) }))
     .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1])[0];
-  if (next) put(next.id, true);
+  // no pale preview on the globe any more (her note, Nov 15 2026: a grey rainbow behind Body & habits read as a broken
+  // picture, «не понимаю, должна быть или нет»): only what she earned stands there; what comes next is in You
+  void next;
   return out;
 };
 

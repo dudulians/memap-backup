@@ -367,14 +367,6 @@ export const EveningPath = ({
   // the reward, else tomorrow.
   const focus = currentNode >= 0 ? currentNode : m.weekComplete ? chestIndex : firstStep + steps.length;
 
-  const stops = useMemo(() => {
-    // room above her step for its Start bubble (the first light included)
-    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" || n.kind === "end" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
-    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
-    return out;
-  }, [nodes, width, currentNode]);
-  const height = stops[chestIndex].y + R_CHEST + 56;
-
   // --- Words ---------------------------------------------------------------
   // "Play" on the hunch is a game word: "Check" with "Games and rewards" off (Nov 9 2026)
   const playWord = playful ? t("game.play") : t("hunch.check");
@@ -397,7 +389,8 @@ export const EveningPath = ({
   const lowFirst = (s: string) => (s ? s.charAt(0).toLocaleLowerCase(lang) + s.slice(1) : s);
   const islandsLabel = (ids: string[]) => {
     const names = [...new Set(ids.map(byIdTr).filter((x): x is Tracker => !!x).map((tr) => islandName(t, islandOf(tr))))];
-    return names.length <= 2 ? names.join(" · ") : `${names.slice(0, 2).join(" · ")} +${names.length - 2}`;
+    // two steps never read the same (Nov 15 2026): the first two islands, then "and more" (never "+2")
+    return names.length <= 2 ? names.join(" · ") : t("path.islandsMore", { names: names.slice(0, 2).join(" · ") });
   };
   /** the hard answer of a question in its own short words ("argument with partner") */
   const hardWords = (tr: Tracker | undefined) => (tr ? answerPhrase(t, tr, tr.problemWhen !== "no") : "");
@@ -411,13 +404,12 @@ export const EveningPath = ({
     if (s.kind === "grew") return (s.grew?.length ?? 1) > 1 ? t("path.grewMany") : t("path.grew", { name: islandName(t, s.island!) });
     if (s.kind === "fill") {
       if (s.onPath) return t("path.fillYesterdayDay", { day: lang === "ru-RU" ? lowFirst(shortDay(s.date!)) : shortDay(s.date!) });
-      const where = islandsLabel(s.trackerIds);
-      return `${t("path.fillDayTitle", { day: dayToFill(s.date!) })}${where ? ` · ${where}` : ""}`;
+      return t("path.fillDayTitle", { day: dayToFill(s.date!) });
     }
     if (s.kind === "game") return t("hunch.stepName");
     if (s.kind === "act") {
       const things = s.trackerIds.map((id) => lowFirst(hardWords(byIdTr(id)))).filter(Boolean);
-      return things.length ? t("act.stepOf", { things: things.length <= 2 ? things.join(", ") : `${things.slice(0, 2).join(", ")} +${things.length - 2}` }) : t("act.step");
+      return things.length === 1 ? t("act.stepOf", { things: things[0] }) : t("act.stepMany");
     }
     if (s.kind === "test") return t("experiment.stepOver");
     if (s.kind === "unload") return t("unload.step");
@@ -518,6 +510,31 @@ export const EveningPath = ({
     };
   };
 
+  // Room under a light whose name takes two lines (her phone, Nov 15 2026: the next light covered the name): the
+  // names are measured as the label draws them (14px bold, 156px wide) and the lights below move down.
+  const measureCtx = useMemo(() => {
+    try { const c = document.createElement("canvas").getContext("2d"); if (c) c.font = `700 14px ${getComputedStyle(document.body).fontFamily}`; return c; } catch { return null; }
+  }, []);
+  const linesOf = (text: string) => {
+    if (!measureCtx) return Math.max(1, Math.ceil(text.length / 20));
+    const space = measureCtx.measureText(" ").width;
+    let lines = 1, w = 0;
+    for (const word of text.split(/\s+/).filter(Boolean)) {
+      const ww = measureCtx.measureText(word).width;
+      if (w > 0 && w + space + ww > 156) { lines += 1; w = ww; } else w += (w > 0 ? space : 0) + ww;
+    }
+    return lines;
+  };
+  const labelKey = nodes.map((n, i) => (n.kind === "chest" && quietChest ? 1 : linesOf(viewOf(n, i).title))).join(",");
+  const stops = useMemo(() => {
+    // room above her step for its Start bubble (the first light included)
+    const out = weekStops(width, nodes.map((n, i) => (n.kind === "chest" ? R_CHEST : n.kind === "step" || n.kind === "end" ? (i === currentNode ? R_CURRENT : R_STEP) : R_DAY)), 74);
+    if (currentNode > 0) for (let k = currentNode; k < out.length; k++) out[k] = { ...out[k], y: out[k].y + 70 };
+    return out;
+  }, [nodes, width, currentNode]);
+  const height = stops[chestIndex].y + R_CHEST + 56;
+
+
   const f = stops[focus];
   // Her avatar (optional) stands to the left of the step to do.
   // her boat (with her animal in it) waits beside the step to do
@@ -614,7 +631,8 @@ export const EveningPath = ({
   const awayRef = useRef<"up" | "down" | null>(null);
   const hasPath = trackers.length > 0;
   const [headerTitle, setHeaderTitle] = useState<HTMLElement | null>(null);
-  useEffect(() => setHeaderTitle(document.getElementById("memap-header-center")), []);
+  const [headerBelow, setHeaderBelow] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHeaderTitle(document.getElementById("memap-header-center")); setHeaderBelow(document.getElementById("memap-header-below")); }, []);
 
   // the "Missed a few days?" card at the top: her step comes to the middle of the room below it
   const fillCardRef = useRef<HTMLDivElement>(null);
@@ -803,12 +821,11 @@ export const EveningPath = ({
     modeRef.current = "auto";
     at.main.scrollBy({ top: at.d, behavior: reduceQuery().matches ? "auto" : "smooth" });
   };
+  // "Today · Sun 15", "Fri 13 · Not filled": short, the header's width (her note: less text)
   const stripLine = (() => {
-    const named = (iso: string) => `${cap(weekdayName(iso))} ${Number(iso.slice(8))}`;
-    if (inView === todayIso) return { day: t("path.stripToday", { day: named(todayIso) }), sub: t("path.stripSteps", { count: steps.length, done: steps.filter((s) => s.done).length }), today: true };
-    const name = named(inView);
-    if (inView > todayIso) return { day: name, sub: t("path.stripAhead"), today: false };
-    return m.pastInWeek.includes(inView) ? { day: name, sub: t("path.stripDone", { count: answersOn(inView) }), today: false } : { day: name, sub: t("path.stripMissed"), today: false };
+    const named = (iso: string) => `${cap(new Date(iso + "T00:00:00").toLocaleDateString(lang, { weekday: "short" }).replace(".", ""))} ${Number(iso.slice(8))}`;
+    if (inView === todayIso) return { day: t("path.stripToday", { day: named(todayIso) }), today: true, missed: false };
+    return { day: named(inView), today: false, missed: inView < todayIso && !m.pastInWeek.includes(inView) };
   })();
 
   if (trackers.length === 0) return null;
@@ -1097,8 +1114,8 @@ export const EveningPath = ({
     if (s.kind === "report") {
       return (
         <>
-          {head(stepName(s), t("path.lastReportLine"))}
-          {button(t("path.openReport"), () => startStep(s))}
+          {head(stepName(s), s.done ? t("path.done") : t("path.lastReportLine"))}
+          {button(t("path.openReport"), () => startStep(s), s.done ? "plain" : "teal")}
         </>
       );
     }
@@ -1278,10 +1295,11 @@ export const EveningPath = ({
         </span>,
         headerSlot,
       )}
+      {/* the header's title is the day in view (the week strip under it, Nov 15 2026) */}
       {headerTitle && createPortal(
-        <span className="animate-fade-in whitespace-nowrap text-[16px] font-bold leading-[1.5] tracking-tight text-foreground">
-          {t("path.weekN", { n: m.week + 1 })}
-          <span className="font-semibold tabular-nums text-muted-foreground"> · {t("path.kOf7", { k: daysDone, count: DAYS_PER_WEEK })}</span>
+        <span data-strip-day-line aria-live="polite" className={cn("whitespace-nowrap text-[16px] font-bold leading-[1.5] tracking-tight", stripLine.today ? "text-[hsl(var(--coin-teal))]" : "text-foreground")}>
+          {stripLine.day}
+          {stripLine.missed && <span data-strip-sub className="font-semibold text-muted-foreground"> · {t("path.notFilled")}</span>}
         </span>,
         headerTitle,
       )}
@@ -1309,7 +1327,7 @@ export const EveningPath = ({
             scrolls to today, so a card in the path would be out of view); at the top, solid,
             away from the "grew" toasts at the bottom */}
         {fromOld && oldLookShown && !touring && (
-          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${(stripH ? 50 + stripH + 8 : 64)}px)` }}>
+          <div ref={(el) => { if (el && el.offsetHeight !== oldH) setOldH(el.offsetHeight); }} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
             <TipCard id="old-look" title={t("tips.oldLookTitle")} line={t("tips.oldLookLine")} action={t("upgrade.oldLook")} onAction={() => switchToOld("card")}
               secondary={t("upgrade.keepNew")} onSecondary={() => track("ui_kept_new")} className="!bg-background shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)]" />
           </div>
@@ -1318,7 +1336,7 @@ export const EveningPath = ({
             like the old-look card (the path scrolls to today's step, so a card above it is out of view):
             at the top, solid, a tip's look with two answers */}
         {askPlayful && (
-          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${(stripH ? 50 + stripH + 8 : 64)}px)` }}>
+          <div className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH}px)` }}>
             <div data-playful-ask role="group" aria-label={t("playful.ask")} className="surface relative flex shrink-0 gap-3 rounded-[20px] !bg-background p-3 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
               {maluPic() && <img src={maluPic()!} alt="" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />}
               <div className="min-w-0 flex-1">
@@ -1436,7 +1454,7 @@ export const EveningPath = ({
           step), solid; a chip per day opens that evening's questions; "Not now" hides it until another
           day is missed. Not while another card holds the spot, or Malu's first tip is up. */}
       {fillCardOn && !askPlayful && !(orderTip && m.totalDays < 5 && (openLeft >= 2 || shortOnb)) && (
-        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${(stripH ? 50 + stripH + 8 : 64) + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
+        <div ref={fillCardRef} className="fixed inset-x-0 z-30 mx-auto w-[92%] max-w-[420px]" style={{ top: `calc(env(safe-area-inset-top) + ${64 + stripH + (fromOld && oldLookShown && !touring && oldH ? oldH + 8 : 0)}px)` }}>
           <div data-fill-card role="group" aria-label={t("path.fillCard", { count: missedToFill.length })}
             className="surface relative rounded-[20px] !bg-background p-3.5 shadow-[0_14px_30px_-12px_rgba(16,42,56,0.35)] animate-fade-in">
             <p className="text-[16px] font-bold leading-snug">{t("path.fillCard", { count: missedToFill.length })}</p>
@@ -1457,36 +1475,32 @@ export const EveningPath = ({
         </div>
       )}
 
-      {/* The week strip (her pick, Nov 15 2026, board E): the day in view and its seven days; solid, one card. */}
-      {createPortal(
+      {/* The week strip (her pick, board E; no card since her note, Nov 15 2026): seven days in a row of the header;
+          gold = answered, pale = not filled, today teal; the day in view lights up (no ring around it) */}
+      {headerBelow && createPortal(
         <div ref={(el) => { stripRef.current = el; if (el && el.offsetHeight !== stripH) setStripH(el.offsetHeight); }}
-          data-week-strip data-tour="week" className="fixed inset-x-0 z-[25] mx-auto w-[92%] max-w-[420px]" style={{ top: "calc(env(safe-area-inset-top) + 50px)" }}>
-          <div className="rounded-[20px] bg-background px-3.5 pb-2.5 pt-2 shadow-[0_10px_26px_-14px_rgba(16,42,56,0.45)]">
-            <div className="flex items-baseline justify-between gap-2" aria-live="polite">
-              {inView < todayIso && !m.pastInWeek.includes(inView)
-                ? <button type="button" data-strip-day-line onClick={() => { haptics.tap(); fillMissed(inView); }} className="truncate text-left text-[16px] font-bold">{stripLine.day}</button>
-                : <span data-strip-day-line className={cn("truncate text-[16px] font-bold", stripLine.today && "text-[hsl(var(--coin-teal))]")}>{stripLine.day}</span>}
-              <span data-strip-sub className="shrink-0 text-[13px] font-semibold text-muted-foreground">{stripLine.sub}</span>
-            </div>
-            <div className="mt-1.5 grid grid-cols-7 justify-items-center">
-              {m.weekDates.map((d) => {
-                const done = m.pastInWeek.includes(d) || (d === todayIso && m.todayCounted);
-                const isToday = d === todayIso;
-                const ahead = d > todayIso;
-                const letter = new Date(d + "T00:00:00").toLocaleDateString(lang, { weekday: "narrow" });
-                return (
-                  <button key={d} type="button" data-strip-cell={d} aria-label={dayTitle(d)} aria-current={d === inView ? "date" : undefined} onClick={() => goToDay(d)}
-                    className={cn("grid h-9 w-9 place-items-center rounded-full", d === inView && "ring-2 ring-foreground/70")}>
-                    <span className={cn("grid h-7 w-7 place-items-center rounded-full text-[12px] font-extrabold",
-                      done ? "bg-[linear-gradient(180deg,#FFD866_0%,#F6B92B_100%)] text-white" : ahead ? "bg-foreground/[0.06] text-foreground/40" : isToday ? "text-[hsl(var(--coin-teal))]" : "border-2 border-foreground/20 text-foreground/50",
-                      isToday && "ring-2 ring-[hsl(var(--coin-teal))]")}>{letter}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          data-week-strip data-tour="week" className="mx-auto grid max-w-[420px] grid-cols-7 justify-items-center pb-2">
+          {m.weekDates.map((d) => {
+            const done = m.pastInWeek.includes(d) || (d === todayIso && m.todayCounted);
+            const isToday = d === todayIso;
+            const ahead = d > todayIso;
+            const on = d === inView;
+            const letter = new Date(d + "T00:00:00").toLocaleDateString(lang, { weekday: "narrow" });
+            const glow = done ? "shadow-[0_0_14px_5px_hsl(43_96%_58%/0.8)]" : isToday ? "shadow-[0_0_14px_5px_hsl(var(--coin-teal)/0.6)]" : "shadow-[0_0_14px_5px_rgba(255,255,255,0.95)]";
+            return (
+              <button key={d} type="button" data-strip-cell={d} aria-label={dayTitle(d)} aria-current={on ? "date" : undefined} onClick={() => goToDay(d)}
+                className="grid h-10 w-10 place-items-center rounded-full">
+                <span className={cn("grid h-7 w-7 place-items-center rounded-full text-[12px] font-extrabold transition-[transform,box-shadow] duration-300",
+                  done ? "bg-[linear-gradient(180deg,#FFD866_0%,#F6B92B_100%)] text-white"
+                    : isToday ? "bg-[hsl(var(--coin-teal)/0.16)] text-[hsl(var(--coin-teal))]"
+                    : ahead ? "bg-white/30 text-foreground/40 dark:bg-white/10"
+                    : "bg-white/55 text-foreground/50 dark:bg-white/15",
+                  on && cn("scale-[1.18]", glow))}>{letter}</span>
+              </button>
+            );
+          })}
         </div>,
-        document.body,
+        headerBelow,
       )}
 
       {/* Away from her step: back to it, her avatar on the button. */}
