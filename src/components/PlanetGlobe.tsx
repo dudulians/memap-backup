@@ -846,12 +846,22 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
         ))}
       </div>
       {hint && !decor && !quietHint && <div className="planet-hint" style={below ? { bottom: "auto", top: "12.4rem" } : undefined}>{t("map.hint")}</div>}
-      {/* zoom in and out by hand too (pinch and the wheel still work) */}
-      <div className={`absolute right-4 z-[5] flex flex-col overflow-hidden rounded-full bg-white shadow-lg dark:bg-[hsl(var(--surface))]${decor ? " hidden" : ""}`} style={{ bottom: "calc(11.5rem + env(safe-area-inset-bottom, 0px))" }}>
-        <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-9 w-9 items-center justify-center text-foreground"><Plus className="h-4 w-4" strokeWidth={2.6} /></button>
-        <span className="mx-2 h-px bg-foreground/10" />
-        <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-9 w-9 items-center justify-center text-foreground"><Minus className="h-4 w-4" strokeWidth={2.6} /></button>
-      </div>
+      {/* zoom in and out by hand too (pinch and the wheel still work), and under them the way back to where you are,
+          as maps do it: one column, one width, centred, as pale as "New island" (her notes, Nov 15 2026) */}
+      {!decor && (
+        <div data-globe-controls className="absolute right-4 z-[5] flex flex-col items-center gap-3" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
+          <div className="flex w-11 flex-col overflow-hidden rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md dark:bg-[hsl(var(--surface)/0.5)]">
+            <button type="button" onClick={() => zoomRef.current(1.35)} aria-label={t("map.zoomIn")} className="flex h-10 w-11 items-center justify-center text-foreground/80"><Plus className="h-4 w-4" strokeWidth={2.6} /></button>
+            <span className="mx-2.5 h-px bg-foreground/10" />
+            <button type="button" onClick={() => zoomRef.current(1 / 1.35)} aria-label={t("map.zoomOut")} className="flex h-10 w-11 items-center justify-center text-foreground/80"><Minus className="h-4 w-4" strokeWidth={2.6} /></button>
+          </div>
+          {/* lit when the ball has been turned away or zoomed */}
+          <button type="button" data-where-am-i onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
+            className={`grid h-11 w-11 place-items-center rounded-full bg-white/55 shadow-[0_6px_18px_-10px_rgba(16,42,56,0.45)] backdrop-blur-md transition-colors duration-200 dark:bg-[hsl(var(--surface)/0.5)] ${away ? "text-[hsl(var(--coin-teal))]" : "text-foreground/45"}`}>
+            <LocateFixed className="h-5 w-5" strokeWidth={2.4} />
+          </button>
+        </div>
+      )}
       {/* a new island, always at hand (on the flat map it was a tile); half see-through, so it is quieter than the
           islands (her note, Nov 15 2026: «сейчас ярче остальных») */}
       {onNewIsland && !decor && (
@@ -868,15 +878,6 @@ export const PlanetGlobe = ({ islands, routes, avatar = null, lit, days = {}, tr
             </button>
           )}
         </div>
-      )}
-      {/* back to where you are, as maps do it (her note, Nov 15 2026: no words, and it no longer comes and goes):
-          always under + and −, lit when the ball has been turned away or zoomed */}
-      {!decor && (
-        <button type="button" data-where-am-i onClick={() => homeRef.current()} aria-label={t("map.backToMe")}
-          className={`absolute right-4 z-[5] grid h-11 w-11 place-items-center rounded-full bg-white shadow-lg transition-colors duration-200 dark:bg-[hsl(var(--surface))] ${away ? "text-[hsl(var(--coin-teal))]" : "text-foreground/40"}`}
-          style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
-          <LocateFixed className="h-5 w-5" strokeWidth={2.4} />
-        </button>
       )}
       {note && (
         <div className="absolute left-4 right-4 z-[5] flex items-center gap-3 rounded-[22px] bg-white/95 p-3.5 shadow-lg dark:bg-[hsl(var(--surface))]" style={{ bottom: "calc(7.5rem + env(safe-area-inset-bottom, 0px))" }}>
